@@ -860,17 +860,19 @@ necessary to make certain paragraph fills work properly."
 	      ;; fill-paragraph will not alter the fill prefix so
 	      ;; we win.  The post hook restores the old line prefix
 	      ;; after fill-paragraph has been called.
-	      (if (and paragraph (not debugging))
-		  (let (col)
-		    (setq col (nth 1 (car (filladapt-tail token-list))))
-		    (goto-char (point-min))
-		    (move-to-column col)
-		    (setq filladapt-old-line-prefix
-			  (buffer-substring (point-min) (point)))
-		    (delete-region (point-min) (point))
-		    (insert fill-prefix)
-		    (add-hook 'filladapt-fill-paragraph-post-hook
-			      'filladapt-cleanup-kludge-at-point-min)))))
+; mort: huh?  this behaves v oddly for me, so ripped it out for now...
+;	      (if (and paragraph (not debugging))
+;		  (let (col)
+;		    (setq col (nth 1 (car (filladapt-tail token-list))))
+;		    (goto-char (point-min))
+;		    (move-to-column col)
+;		    (setq filladapt-old-line-prefix
+;			  (buffer-substring (point-min) (point)))
+;		    (delete-region (point-min) (point))
+;		    (insert fill-prefix)
+;		    (add-hook 'filladapt-fill-paragraph-post-hook
+;			      'filladapt-cleanup-kludge-at-point-min)))
+))
 	t ))))
 
 (defun filladapt-cleanup-kludge-at-point-min ()
