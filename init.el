@@ -413,8 +413,18 @@ started from a shell."
 (push '("\\.markdown$" . markdown-mode) auto-mode-alist)
 
 ;; makefile-mode
+(defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab
+                                      activate)
+  "Fix whitespace-cleanup indent-tabs-mode bug"
+  (let ((whitespace-indent-tabs-mode indent-tabs-mode)
+        (whitespace-tab-width tab-width))
+    ad-do-it))
+
+;; (add-hook 'makefile-mode-hook 'indent-tabs-mode)
 ;; (add-hook 'makefile-mode-hook
 ;;           '(lambda ()
+;;              (message "running makefile mode hook")
+;;              (setq indent-tabs-mode t)
 ;;              ))
 (push '("sources$" . makefile-mode) auto-mode-alist)
 
