@@ -95,9 +95,9 @@ started from a shell."
   (move-to-window-line -1)
   )
 
-(defun reread-dot-emacs () "Re-read ~/.emacs"
+(defun reread-dot-emacs () "Re-read initialisation"
   (interactive)
-  (load-file "~/.emacs")
+  (load-file "~/.emacs.d/init.el")
   )
 
 (defun dos2unix () "Turn DOS file to Unix"
