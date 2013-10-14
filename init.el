@@ -291,6 +291,10 @@ started from a shell."
              (flyspell-mode t)
              (set-visual-wrap-column (+ fill-column 2))
              (auto-fill-mode t)
+             (setq whitespace-style
+                   '(face tabs spaces trailing space-before-tab
+                          newline indentation empty space-after-tab
+                          tab-mark))
              (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
              (local-set-key (kbd "S-<tab>")
                             'flyspell-auto-correct-previous-word)
