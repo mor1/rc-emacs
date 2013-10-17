@@ -54,8 +54,8 @@ started from a shell."
 ;; frame size
 (if window-system
     (set-frame-size (selected-frame) 90 50)
-    (set-frame-position (selected-frame) 0 0)
-    )
+  (set-frame-position (selected-frame) 0 0)
+  )
 
 ;; ispell
 (setq-default ispell-program-name "/usr/local/bin/aspell")
