@@ -292,7 +292,7 @@ started from a shell."
              (set-visual-wrap-column (+ fill-column 2))
              (auto-fill-mode t)
              (setq whitespace-style
-                   '(face tabs spaces trailing space-before-tab
+                   '(face tabs trailing space-before-tab
                           newline indentation empty space-after-tab
                           tab-mark))
              (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
@@ -317,6 +317,7 @@ started from a shell."
 (mapc (lambda (mode-hook) (add-hook mode-hook 'prog-mode-hook-f))
       '(tuareg-mode-hook
         coffee-mode-hook
+        nxml-mode-hook
         ))
 
 (add-hook 'org-mode-hook
