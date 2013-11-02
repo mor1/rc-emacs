@@ -42,6 +42,11 @@ started from a shell."
 (require 'color-theme)
 (color-theme-sanityinc-solarized-dark)
 
+(autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+(add-hook 'eshell-preoutput-filter-functions 'ansi-color-filter-apply)
+(add-hook 'comint-output-filter-functions 'ansi-color-process-output)
+
 (defun light () "light colour scheme"
   (interactive)
   (color-theme-sanityinc-solarized-light)
@@ -462,7 +467,8 @@ started from a shell."
 
 ;; ocp-indent
 (load-file (concat
-            (substring (shell-command-to-string "opam config var prefix") 0 -1)
+;;            (substring (shell-command-to-string "opam config var prefix") 0 -1)
+            "~/.opam/system"
             "/share/typerex/ocp-indent/ocp-indent.el"
             ))
 
@@ -860,6 +866,8 @@ started from a shell."
  '(holiday-other-holidays (quote ((holiday-float 1 1 3 "Martin Luther King Day") (holiday-float 2 1 3 "President's Day") (holiday-float 5 1 -1 "Memorial Day") (holiday-fixed 7 4 "Independence Day") (holiday-float 9 1 1 "Labor Day") (holiday-float 10 1 2 "Columbus Day") (holiday-fixed 11 11 "Veteran's Day") (holiday-float 11 4 4 "Thanksgiving"))))
  '(indent-tabs-mode nil)
  '(interprogram-paste-function (quote x-selection-value) t)
+ '(magit-process-connection-type nil)
+ '(magit-process-popup-time 5)
  '(make-backup-files nil)
  '(mouse-buffer-menu-mode-mult 1)
  '(msb-max-file-menu-items 1)
