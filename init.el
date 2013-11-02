@@ -271,6 +271,21 @@ started from a shell."
   (ispell-check-paragraph)
   )
 
+
+
+;; magit mode
+
+(autoload 'magit-status "magit" nil t)
+
+;; change magit diff colors
+(eval-after-load 'magit
+  '(progn
+     (set-face-foreground 'magit-diff-add "green3")
+     (set-face-foreground 'magit-diff-del "red3")
+     (when (not window-system)
+       (set-face-background 'magit-item-highlight "black")
+       )))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; mode hooks
@@ -743,6 +758,7 @@ started from a shell."
 (define-key my-keys-minor-mode-map (kbd "C-<return>") 'split-line)
 (define-key my-keys-minor-mode-map (kbd "M-n") 'next-buffer)
 (define-key my-keys-minor-mode-map (kbd "M-p") 'previous-buffer)
+(define-key my-keys-minor-mode-map (kbd "C-c C-s") 'mmagit-status)
 
 ;; | point-to  | previous   | next        |
 ;; |-----------+------------+-------------|
