@@ -758,7 +758,7 @@ started from a shell."
 (define-key my-keys-minor-mode-map (kbd "C-<return>") 'split-line)
 (define-key my-keys-minor-mode-map (kbd "M-n") 'next-buffer)
 (define-key my-keys-minor-mode-map (kbd "M-p") 'previous-buffer)
-(define-key my-keys-minor-mode-map (kbd "C-c C-s") 'mmagit-status)
+(define-key my-keys-minor-mode-map (kbd "C-c C-s") 'magit-status)
 
 ;; | point-to  | previous   | next        |
 ;; |-----------+------------+-------------|
