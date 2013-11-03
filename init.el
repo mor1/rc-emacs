@@ -37,6 +37,7 @@ started from a shell."
 (require 'fill-column-indicator)
 (require 'scroll-in-place)
 (require 'simple)
+(require 'filladapt)
 
 ;; colours
 (require 'color-theme)
@@ -765,6 +766,7 @@ started from a shell."
 (define-key my-keys-minor-mode-map (kbd "M-n") 'next-buffer)
 (define-key my-keys-minor-mode-map (kbd "M-p") 'previous-buffer)
 (define-key my-keys-minor-mode-map (kbd "C-c C-s") 'magit-status)
+(define-key my-keys-minor-mode-map (kbd "C-c C-SPC") 'whitespace-cleanup)
 
 ;; | point-to  | previous   | next        |
 ;; |-----------+------------+-------------|
