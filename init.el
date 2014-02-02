@@ -285,6 +285,7 @@ started from a shell."
 
 ;; magit mode
 
+;; (require 'gitsum)
 (autoload 'magit-status "magit" nil t)
 
 ;; change magit diff colors
@@ -769,7 +770,7 @@ started from a shell."
 (define-key my-keys-minor-mode-map (kbd "C-<return>") 'split-line)
 (define-key my-keys-minor-mode-map (kbd "M-n") 'next-buffer)
 (define-key my-keys-minor-mode-map (kbd "M-p") 'previous-buffer)
-(define-key my-keys-minor-mode-map (kbd "C-c C-s") 'magit-status)
+(define-key my-keys-minor-mode-map (kbd "C-c s") 'magit-status)
 (define-key my-keys-minor-mode-map (kbd "C-c C-SPC") 'whitespace-cleanup)
 
 ;; | point-to  | previous   | next        |
