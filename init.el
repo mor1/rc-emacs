@@ -335,6 +335,7 @@ started from a shell."
   (flyspell-prog-mode)
   (whitespace-cleanup)
   (auto-fill-mode nil)
+  (filladapt-mode t)
   (local-set-key (kbd "M-q") 'fill-paragraph)
   (local-set-key (kbd "%") 'match-paren)
   (local-unset-key (kbd "S-<tab>"))
