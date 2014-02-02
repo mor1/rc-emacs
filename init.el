@@ -2,6 +2,10 @@
 
 (add-to-list 'load-path "/Users/mort/.emacs.d")
 
+;; input method
+
+(setq default-input-method "TeX")
+
 ;;  http://stackoverflow.com/questions/8606954/path-and-exec-path-set-but-emacs-does-not-find-executable
 (defun set-exec-path-from-shell-PATH ()
   "Set up Emacs' `exec-path' and PATH environment variable to
