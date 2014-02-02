@@ -15,10 +15,10 @@ This is particularly useful under Mac OSX, where GUI apps are not
 started from a shell."
   (interactive)
   (let ((path-from-shell
-         (replace-regexp-in-string
-          "[ \t\n]*$" ""
-          (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))
-         ))
+     (replace-regexp-in-string
+      "[ \t\n]*$" ""
+      (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))
+     ))
     (setenv "PATH" path-from-shell)
     (setq exec-path (split-string path-from-shell path-separator)))
   )
@@ -27,7 +27,7 @@ started from a shell."
 ;; package management
 (require 'package)
 (add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/"))
+         '("marmalade" . "http://marmalade-repo.org/packages/"))
 (add-to-list 'package-archives '("ELPA" . "http://tromey.com/elpa/"))
 (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/"))
 
@@ -136,8 +136,8 @@ started from a shell."
   "Go to the matching parenthesis if on parenthesis otherwise insert %."
   (interactive "p")
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-        (t (self-insert-command (or arg 1))))
+    ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+    (t (self-insert-command (or arg 1))))
   )
 
 (defun my-kill-emacs () "Confirm before save-buffers-kill-emacs"
@@ -177,8 +177,8 @@ started from a shell."
 (defun ispell-check-paragraph () "Spell check each word in a paragraph"
   (interactive "*")
   (let ((ispell-check-only nil)
-        (ispell-quietly t)
-        )
+    (ispell-quietly t)
+    )
     (save-excursion
       (forward-paragraph) (setq end (point))
       (forward-paragraph -1) (setq start (point))
@@ -189,8 +189,8 @@ started from a shell."
 (defun tex-enclose-word (before after)
   (interactive "*Mbefore: \nMafter: ")
   (let* ((oldpoint (point))
-         (start oldpoint)
-         (end oldpoint))
+     (start oldpoint)
+     (end oldpoint))
 
     ;; get the start and end of the current word
     (skip-syntax-backward "w")
@@ -199,17 +199,17 @@ started from a shell."
     (skip-syntax-forward "w")
     (setq end (point))
     (if (and (eq start oldpoint)
-             (eq end oldpoint))
-        ;; insert the command as nothing to enclose
-        (progn (insert before) (insert after) (backward-char))
+         (eq end oldpoint))
+    ;; insert the command as nothing to enclose
+    (progn (insert before) (insert after) (backward-char))
 
       ;; enclose the word with the command
       (progn
-        (insert after)
-        (goto-char start)
-        (insert before)
-        (goto-char (+ oldpoint (length before)))
-        )
+    (insert after)
+    (goto-char start)
+    (insert before)
+    (goto-char (+ oldpoint (length before)))
+    )
       )))
 
 (defun todo ()
@@ -228,7 +228,7 @@ started from a shell."
   the week."
   (interactive "P*")
   (insert (calendar-date-string
-           (calendar-current-date) nil omit-day-of-week-p))
+       (calendar-current-date) nil omit-day-of-week-p))
   )
 
 ;; from <http://www.emacswiki.org/emacs/VisualLineMode>
@@ -238,13 +238,13 @@ started from a shell."
   (if (not visual-wrap-column)
       (set-window-margins nil nil)
     (let* ((current-margins (window-margins))
-           (right-margin (or (cdr current-margins) 0))
-           (current-width (window-width))
-           (current-available (+ current-width right-margin)))
+       (right-margin (or (cdr current-margins) 0))
+       (current-width (window-width))
+       (current-available (+ current-width right-margin)))
       (if (<= current-available visual-wrap-column)
-          (set-window-margins nil (car current-margins))
-        (set-window-margins nil (car current-margins)
-                            (- current-available visual-wrap-column))))))
+      (set-window-margins nil (car current-margins))
+    (set-window-margins nil (car current-margins)
+                (- current-available visual-wrap-column))))))
 
 (defun set-visual-wrap-column (new-wrap-column &optional buffer)
   "Force visual line wrap at NEW-WRAP-COLUMN in BUFFER (defaults
@@ -254,9 +254,9 @@ started from a shell."
   (interactive
    ;; add the extra 2 below to account for fci-mode indicator
    (list (read-number "New visual wrap column, 0 to disable: "
-                      (or visual-wrap-column (+ fill-column 2) 0))))
+              (or visual-wrap-column (+ fill-column 2) 0))))
   (if (and (numberp new-wrap-column)
-           (zerop new-wrap-column))
+       (zerop new-wrap-column))
       (setq new-wrap-column nil))
   (with-current-buffer (or buffer (current-buffer))
     (visual-line-mode t)
@@ -264,10 +264,10 @@ started from a shell."
     (add-hook 'window-configuration-change-hook 'update-visual-wrap-column nil t)
     (let ((windows (get-buffer-window-list)))
       (while windows
-        (when (window-live-p (car windows))
-          (with-selected-window (car windows)
-            (update-visual-wrap-column)))
-        (setq windows (cdr windows))))))
+    (when (window-live-p (car windows))
+      (with-selected-window (car windows)
+        (update-visual-wrap-column)))
+    (setq windows (cdr windows))))))
 
 (defun unfill-and-check ()
   (interactive)
@@ -302,29 +302,29 @@ started from a shell."
 ;; mode hooks
 
 (add-hook 'find-file-hook
-          '(lambda ()
-             (message "running find-file-hook")
-             (fci-mode t)
-             (whitespace-mode t)
-             (turn-on-visual-line-mode)
-             (hl-line-mode t)
-             (force-my-keys-minor-mode)
-             ))
+      '(lambda ()
+         (message "running find-file-hook")
+         (fci-mode t)
+         (whitespace-mode t)
+         (turn-on-visual-line-mode)
+         (hl-line-mode t)
+         (force-my-keys-minor-mode)
+         ))
 
 (add-hook 'text-mode-hook
-          '(lambda ()
-             (message "running text-mode-hook")
-             (flyspell-mode t)
-             (set-visual-wrap-column (+ fill-column 2))
-             (auto-fill-mode t)
-             (setq whitespace-style
-                   '(face tabs trailing space-before-tab
-                          newline indentation empty space-after-tab
-                          tab-mark))
-             (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
-             (local-set-key (kbd "S-<tab>")
-                            'flyspell-auto-correct-previous-word)
-             ))
+      '(lambda ()
+         (message "running text-mode-hook")
+         (flyspell-mode t)
+         (set-visual-wrap-column (+ fill-column 2))
+         (auto-fill-mode t)
+         (setq whitespace-style
+           '(face tabs trailing space-before-tab
+              newline indentation empty space-after-tab
+              tab-mark))
+         (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
+         (local-set-key (kbd "S-<tab>")
+                'flyspell-auto-correct-previous-word)
+         ))
 
 ;; prog-mode is not yet universally supported, so apply manually where missing
 (defun prog-mode-hook-f ()
@@ -409,43 +409,43 @@ started from a shell."
 ;;              ))
 
 (add-hook 'coffee-mode-hook
-          '(lambda ()
-             ;; Compile '.coffee' files on every save
-             ;; (and (file-exists-p (buffer-file-name))
-             ;;      (file-exists-p (coffee-compiled-file-name))
-             ;;      (coffee-cos-mode t))
-             (coffee-cos-mode t)
-             (setq coffee-tab-width 2)
-             (setq coffee-command "/usr/local/bin/coffee")
-             ))
+      '(lambda ()
+         ;; Compile '.coffee' files on every save
+         ;; (and (file-exists-p (buffer-file-name))
+         ;;      (file-exists-p (coffee-compiled-file-name))
+         ;;      (coffee-cos-mode t))
+         (coffee-cos-mode t)
+         (setq coffee-tab-width 2)
+         (setq coffee-command "/usr/local/bin/coffee")
+         ))
 
 ;; bibtex-mode
 (push '("\\.bibtex$" . bibtex-mode) auto-mode-alist)
 
 ;; xml-mode
 (add-hook 'nxml-mode-hook
-          '(lambda ()
-             (set-visual-wrap-column 0)
-             ))
+      '(lambda ()
+         (set-visual-wrap-column 0)
+         ))
 (push '("\\`<\\?xml" . nxml-mode) magic-mode-alist)
 (push '("\\.html$" . nxml-mode) auto-mode-alist)
 (push '("\\.tpl$" . nxml-mode) auto-mode-alist) ;; bottle templates
 
 ;; markdown-mode
 (add-hook 'markdown-mode-hook
-          '(lambda ()
-             (orgtbl-mode 1)
-             (auto-fill-mode 0)
-             ))
+      '(lambda ()
+         (orgtbl-mode 1)
+         (auto-fill-mode 0)
+         ))
 (push '("\\.md$" . markdown-mode) auto-mode-alist)
 (push '("\\.markdown$" . markdown-mode) auto-mode-alist)
 
 ;; makefile-mode
 (defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab
-                                      activate)
+                      activate)
   "Fix whitespace-cleanup indent-tabs-mode bug"
   (let ((whitespace-indent-tabs-mode indent-tabs-mode)
-        (whitespace-tab-width tab-width))
+    (whitespace-tab-width tab-width))
     ad-do-it))
 
 ;; (add-hook 'makefile-mode-hook 'indent-tabs-mode)
@@ -512,36 +512,36 @@ started from a shell."
 ;;UK public holidays, and other UK notable dates.
 (setq general-holidays
       '((holiday-fixed 1 1 "New Year's Day")
-        (holiday-new-year-bank-holiday)
-        (holiday-fixed 2 14 "Valentine's Day")
-        (holiday-fixed 3 17 "St. Patrick's Day")
-        (holiday-fixed 4 1 "April Fools' Day")
-        (holiday-easter-etc -47 "Shrove Tuesday")
-        (holiday-easter-etc -21 "Mother's Day")
-        (holiday-easter-etc -2 "Good Friday")
-        (holiday-easter-etc 0 "Easter Sunday")
-        (holiday-easter-etc 1 "Easter Monday")
-        (holiday-float 5 1 1 "Early May Bank Holiday")
-        (holiday-float 5 1 -1 "Spring Bank Holiday")
-        (holiday-float 6 0 3 "Father's Day")
-        (holiday-float 8 1 -1 "Summer Bank Holiday")
-        (holiday-fixed 10 31 "Halloween")
-        (holiday-fixed 12 24 "Christmas Eve")
-        (holiday-fixed 12 25 "Christmas Day")
-        (holiday-fixed 12 26 "Boxing Day")
-        (holiday-christmas-bank-holidays)
-        (holiday-fixed 12 31 "New Year's Eve")))
+    (holiday-new-year-bank-holiday)
+    (holiday-fixed 2 14 "Valentine's Day")
+    (holiday-fixed 3 17 "St. Patrick's Day")
+    (holiday-fixed 4 1 "April Fools' Day")
+    (holiday-easter-etc -47 "Shrove Tuesday")
+    (holiday-easter-etc -21 "Mother's Day")
+    (holiday-easter-etc -2 "Good Friday")
+    (holiday-easter-etc 0 "Easter Sunday")
+    (holiday-easter-etc 1 "Easter Monday")
+    (holiday-float 5 1 1 "Early May Bank Holiday")
+    (holiday-float 5 1 -1 "Spring Bank Holiday")
+    (holiday-float 6 0 3 "Father's Day")
+    (holiday-float 8 1 -1 "Summer Bank Holiday")
+    (holiday-fixed 10 31 "Halloween")
+    (holiday-fixed 12 24 "Christmas Eve")
+    (holiday-fixed 12 25 "Christmas Day")
+    (holiday-fixed 12 26 "Boxing Day")
+    (holiday-christmas-bank-holidays)
+    (holiday-fixed 12 31 "New Year's Eve")))
 
 ;;Major US holidays
 (setq other-holidays
       '((holiday-float 1 1 3 "Martin Luther King Day")
-        (holiday-float 2 1 3 "President's Day")
-        (holiday-float 5 1 -1 "Memorial Day")
-        (holiday-fixed 7 4 "Independence Day")
-        (holiday-float 9 1 1 "Labor Day")
-        (holiday-float 10 1 2 "Columbus Day")
-        (holiday-fixed 11 11 "Veteran's Day")
-        (holiday-float 11 4 4 "Thanksgiving")))
+    (holiday-float 2 1 3 "President's Day")
+    (holiday-float 5 1 -1 "Memorial Day")
+    (holiday-fixed 7 4 "Independence Day")
+    (holiday-float 9 1 1 "Labor Day")
+    (holiday-float 10 1 2 "Columbus Day")
+    (holiday-fixed 11 11 "Veteran's Day")
+    (holiday-float 11 4 4 "Thanksgiving")))
 
 ;;N.B. It is assumed that 1 January is defined with holiday-fixed -
 ;;this function only returns any extra bank holiday that is allocated
@@ -551,16 +551,16 @@ started from a shell."
 ;;holiday.
 (defun holiday-new-year-bank-holiday ()
   (let ((m displayed-month)
-        (y displayed-year))
+    (y displayed-year))
     (increment-calendar-month m y 1)
     (when (<= m 3)
       (let ((d (calendar-day-of-week (list 1 1 y))))
-        (cond ((= d 6)
-               (list (list (list 1 3 y)
-                           "New Year's Day Bank Holiday")))
-              ((= d 0)
-               (list (list (list 1 2 y)
-                           "New Year's Day Bank Holiday"))))))))
+    (cond ((= d 6)
+           (list (list (list 1 3 y)
+               "New Year's Day Bank Holiday")))
+          ((= d 0)
+           (list (list (list 1 2 y)
+               "New Year's Day Bank Holiday"))))))))
 
 ;;N.B. It is assumed that 25th and 26th are defined with holiday-fixed -
 ;;this function only returns any extra bank holiday(s) that are
@@ -604,22 +604,22 @@ started from a shell."
 ;;supplied.
 (defun holiday-christmas-bank-holidays ()
   (let ((m displayed-month)
-        (y displayed-year))
+    (y displayed-year))
     (increment-calendar-month m y -1)
     (when (>= m 10)
       (let ((d (calendar-day-of-week (list 12 25 y))))
-        (cond ((= d 5)
-               (list (list (list 12 28 y)
-                           "Boxing Day Bank Holiday")))
-              ((= d 6)
-               (list (list (list 12 27 y)
-                           "Boxing Day Bank Holiday")
-                     (list (list 12 28 y)
-                           "Christmas Day Bank Holiday")))
-              ((= d 0)
-               (list (list (list 12 27 y)
-                           "Christmas Day Bank Holiday")))
-              )))))
+    (cond ((= d 5)
+           (list (list (list 12 28 y)
+               "Boxing Day Bank Holiday")))
+          ((= d 6)
+           (list (list (list 12 27 y)
+               "Boxing Day Bank Holiday")
+             (list (list 12 28 y)
+               "Christmas Day Bank Holiday")))
+          ((= d 0)
+           (list (list (list 12 27 y)
+               "Christmas Day Bank Holiday")))
+          )))))
 
 ;;Comment out the Christian holidays that also have secular
 ;;significance in the UK (Shrove Tuesday, Good Friday, Easter Sunday,
@@ -628,117 +628,117 @@ started from a shell."
 ;;(where Chistmas is listed as Christmas Day).
 (setq christian-holidays
       '((if all-christian-calendar-holidays
-            (holiday-fixed 1 6 "Epiphany"))
-        ;;   (holiday-easter-etc 0 "Easter Sunday")
-        ;;   (holiday-easter-etc -2 "Good Friday")
-        (holiday-easter-etc -46 "Ash Wednesday")
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -63 "Septuagesima Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -56 "Sexagesima Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -49 "Shrove Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -48 "Shrove Monday"))
-        ;;   (if all-christian-calendar-holidays
-        ;;       (holiday-easter-etc -47 "Shrove Tuesday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -14 "Passion Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -7 "Palm Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc -3 "Maundy Thursday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc 35 "Rogation Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc 39 "Ascension Day"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc 49 "Pentecost (Whitsunday)"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc 50 "Whitmonday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc 56 "Trinity Sunday"))
-        (if all-christian-calendar-holidays
-            (holiday-easter-etc 60 "Corpus Christi"))
-        (if all-christian-calendar-holidays
-            (holiday-greek-orthodox-easter))
-        (if all-christian-calendar-holidays
-            (holiday-fixed 8 15 "Assumption"))
-        (if all-christian-calendar-holidays
-            (holiday-advent 0 "Advent"))
-                                        ;   (holiday-fixed 12 25 "Christmas")
-        (if all-christian-calendar-holidays
-            (holiday-julian 12 25 "Eastern Orthodox Christmas"))))
+        (holiday-fixed 1 6 "Epiphany"))
+    ;;   (holiday-easter-etc 0 "Easter Sunday")
+    ;;   (holiday-easter-etc -2 "Good Friday")
+    (holiday-easter-etc -46 "Ash Wednesday")
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -63 "Septuagesima Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -56 "Sexagesima Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -49 "Shrove Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -48 "Shrove Monday"))
+    ;;   (if all-christian-calendar-holidays
+    ;;       (holiday-easter-etc -47 "Shrove Tuesday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -14 "Passion Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -7 "Palm Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc -3 "Maundy Thursday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc 35 "Rogation Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc 39 "Ascension Day"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc 49 "Pentecost (Whitsunday)"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc 50 "Whitmonday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc 56 "Trinity Sunday"))
+    (if all-christian-calendar-holidays
+        (holiday-easter-etc 60 "Corpus Christi"))
+    (if all-christian-calendar-holidays
+        (holiday-greek-orthodox-easter))
+    (if all-christian-calendar-holidays
+        (holiday-fixed 8 15 "Assumption"))
+    (if all-christian-calendar-holidays
+        (holiday-advent 0 "Advent"))
+                    ;   (holiday-fixed 12 25 "Christmas")
+    (if all-christian-calendar-holidays
+        (holiday-julian 12 25 "Eastern Orthodox Christmas"))))
 
 (setq org-agenda-custom-commands
       '(
-        ;; ("O" "Office block agenda"
-        ;;  (
-        ;;   ;; limits the agenda display to a single day
-        ;;   (agenda "" ((org-agenda-ndays 1)))
+    ;; ("O" "Office block agenda"
+    ;;  (
+    ;;   ;; limits the agenda display to a single day
+    ;;   (agenda "" ((org-agenda-ndays 1)))
 
-        ;;   (tags-todo "+PRIORITY=\"A\"")
-        ;;   (tags-todo "computer|office|phone")
-        ;;   (tags "project+CATEGORY=\"elephants\"")
-        ;;   (tags "review" ((org-agenda-files '("~/org/circuspeanuts.org"))))
-        ;;   ;; limits the tag search to the file circuspeanuts.org
-        ;;   (todo "WAITING"))
+    ;;   (tags-todo "+PRIORITY=\"A\"")
+    ;;   (tags-todo "computer|office|phone")
+    ;;   (tags "project+CATEGORY=\"elephants\"")
+    ;;   (tags "review" ((org-agenda-files '("~/org/circuspeanuts.org"))))
+    ;;   ;; limits the tag search to the file circuspeanuts.org
+    ;;   (todo "WAITING"))
 
-        ;;  ;; options set here apply to the entire block
-        ;;  ((org-agenda-compact-blocks t))
-        ;;  )
+    ;;  ;; options set here apply to the entire block
+    ;;  ((org-agenda-compact-blocks t))
+    ;;  )
 
-        ;; ("c" todo #("DONE|CANCELLED" 0 14 (face org-warning)) nil)
+    ;; ("c" todo #("DONE|CANCELLED" 0 14 (face org-warning)) nil)
 
-        ;; ("w" todo #("WAITING" 0 7 (face org-warning)) nil)
+    ;; ("w" todo #("WAITING" 0 7 (face org-warning)) nil)
 
-        ("a" ""
-         ((agenda ""
-                  ((org-agenda-ndays 7)
-                   (org-agenda-start-on-weekday 1)
-                   (org-agenda-remove-tags t)
-                   (org-agenda-skip-deadline-if-done t)
-                   (org-agenda-skip-scheduled-if-done t)
-                   (org-agenda-skip-timestamp-if-done t)
-                   (org-agenda-time-grid nil)
-                   (org-agenda-repeating-timestamp-show-all t)
-                   (org-deadline-warning-days 15)
-                   (org-agenda-sorting-strategy
-                    '(habit-up
-                      time-up
-                      priority-down
-                      category-keep
-                      todo-state-down
-                      ))
-                   ))
-          )
-         ((org-agenda-compact-blocks t)
-          )
-         )
+    ("a" ""
+     ((agenda ""
+          ((org-agenda-ndays 7)
+           (org-agenda-start-on-weekday 1)
+           (org-agenda-remove-tags t)
+           (org-agenda-skip-deadline-if-done t)
+           (org-agenda-skip-scheduled-if-done t)
+           (org-agenda-skip-timestamp-if-done t)
+           (org-agenda-time-grid nil)
+           (org-agenda-repeating-timestamp-show-all t)
+           (org-deadline-warning-days 15)
+           (org-agenda-sorting-strategy
+            '(habit-up
+              time-up
+              priority-down
+              category-keep
+              todo-state-down
+              ))
+           ))
+      )
+     ((org-agenda-compact-blocks t)
+      )
+     )
 
-        ;; ("W" agenda "" ((org-agenda-ndays 21)))
+    ;; ("W" agenda "" ((org-agenda-ndays 21)))
 
-        ("A" agenda ""
-         ((org-agenda-skip-function
-           (lambda nil
-             (org-agenda-skip-entry-if
-              (quote notregexp) "\\=.*\\[#A\\]")))
-          (org-agenda-ndays 1)
-          (org-agenda-overriding-header "Today's Priority #A tasks: "))
-         )
+    ("A" agenda ""
+     ((org-agenda-skip-function
+       (lambda nil
+         (org-agenda-skip-entry-if
+          (quote notregexp) "\\=.*\\[#A\\]")))
+      (org-agenda-ndays 1)
+      (org-agenda-overriding-header "Today's Priority #A tasks: "))
+     )
 
-        ("u" "Unscheduled" todo ""
-         ((org-agenda-todo-ignore-scheduled t)))
+    ("u" "Unscheduled" todo ""
+     ((org-agenda-todo-ignore-scheduled t)))
 
 
-        ;; ("u" alltodo ""
-        ;;  ((org-agenda-skip-function
-        ;;    (lambda nil
-        ;;      (org-agenda-skip-entry-if
-        ;;       (quote scheduled) (quote deadline)
-        ;;       (quote regexp) "<[^>]+>")))
-        ;;   (org-agenda-overriding-header "Unscheduled TODO entries: ")))
-        ))
+    ;; ("u" alltodo ""
+    ;;  ((org-agenda-skip-function
+    ;;    (lambda nil
+    ;;      (org-agenda-skip-entry-if
+    ;;       (quote scheduled) (quote deadline)
+    ;;       (quote regexp) "<[^>]+>")))
+    ;;   (org-agenda-overriding-header "Unscheduled TODO entries: ")))
+    ))
 
 ;; http://orgmode.org/worg/org-hacks.html
 (defun org-agenda-reschedule-to-today ()
@@ -833,8 +833,8 @@ started from a shell."
   (interactive)
   (if (not (eq (car (car minor-mode-map-alist)) 'my-keys-minor-mode))
       (let ((mykeys (assq 'my-keys-minor-mode minor-mode-map-alist)))
-        (assq-delete-all 'my-keys-minor-mode minor-mode-map-alist)
-        (add-to-list 'minor-mode-map-alist mykeys))))
+    (assq-delete-all 'my-keys-minor-mode minor-mode-map-alist)
+    (add-to-list 'minor-mode-map-alist mykeys))))
 ;; (ad-activate 'load)
 
 ;; default font
