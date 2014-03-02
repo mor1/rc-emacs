@@ -1,9 +1,0 @@
-2013-11-10  Dmitry Gutov  <dgutov@yandex.ru>
-
-	Add 'packages/diff-hl/' from commit
-	'80abec80ea5c060470a34e2d2ed593f1bb9dc5eb'
-
-	git-subtree-dir: packages/diff-hl git-subtree-mainline:
-	34e3d94eb31cd286c429f12c2a318f7a79dcec4b git-subtree-split:
-	80abec80ea5c060470a34e2d2ed593f1bb9dc5eb
-
