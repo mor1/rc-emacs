@@ -579,15 +579,15 @@ started from a shell."
 (defun holiday-new-year-bank-holiday ()
   (let ((m displayed-month)
     (y displayed-year))
-    (increment-calendar-month m y 1)
+    (calendar-increment-month m y 1)
     (when (<= m 3)
       (let ((d (calendar-day-of-week (list 1 1 y))))
     (cond ((= d 6)
-           (list (list (list 1 3 y)
-               "New Year's Day Bank Holiday")))
-          ((= d 0)
-           (list (list (list 1 2 y)
-               "New Year's Day Bank Holiday"))))))))
+       (list (list (list 1 3 y)
+           "New Year's Day Bank Holiday")))
+      ((= d 0)
+       (list (list (list 1 2 y)
+           "New Year's Day Bank Holiday"))))))))
 
 ;;N.B. It is assumed that 25th and 26th are defined with holiday-fixed -
 ;;this function only returns any extra bank holiday(s) that are
@@ -632,21 +632,21 @@ started from a shell."
 (defun holiday-christmas-bank-holidays ()
   (let ((m displayed-month)
     (y displayed-year))
-    (increment-calendar-month m y -1)
+    (calendar-increment-month m y -1)
     (when (>= m 10)
       (let ((d (calendar-day-of-week (list 12 25 y))))
     (cond ((= d 5)
-           (list (list (list 12 28 y)
-               "Boxing Day Bank Holiday")))
-          ((= d 6)
-           (list (list (list 12 27 y)
-               "Boxing Day Bank Holiday")
-             (list (list 12 28 y)
-               "Christmas Day Bank Holiday")))
-          ((= d 0)
-           (list (list (list 12 27 y)
-               "Christmas Day Bank Holiday")))
-          )))))
+       (list (list (list 12 28 y)
+           "Boxing Day Bank Holiday")))
+      ((= d 6)
+       (list (list (list 12 27 y)
+           "Boxing Day Bank Holiday")
+         (list (list 12 28 y)
+           "Christmas Day Bank Holiday")))
+      ((= d 0)
+       (list (list (list 12 27 y)
+           "Christmas Day Bank Holiday")))
+      )))))
 
 ;;Comment out the Christian holidays that also have secular
 ;;significance in the UK (Shrove Tuesday, Good Friday, Easter Sunday,
@@ -655,47 +655,47 @@ started from a shell."
 ;;(where Chistmas is listed as Christmas Day).
 (setq christian-holidays
       '((if all-christian-calendar-holidays
-        (holiday-fixed 1 6 "Epiphany"))
+    (holiday-fixed 1 6 "Epiphany"))
     ;;   (holiday-easter-etc 0 "Easter Sunday")
     ;;   (holiday-easter-etc -2 "Good Friday")
     (holiday-easter-etc -46 "Ash Wednesday")
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -63 "Septuagesima Sunday"))
+    (holiday-easter-etc -63 "Septuagesima Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -56 "Sexagesima Sunday"))
+    (holiday-easter-etc -56 "Sexagesima Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -49 "Shrove Sunday"))
+    (holiday-easter-etc -49 "Shrove Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -48 "Shrove Monday"))
+    (holiday-easter-etc -48 "Shrove Monday"))
     ;;   (if all-christian-calendar-holidays
     ;;       (holiday-easter-etc -47 "Shrove Tuesday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -14 "Passion Sunday"))
+    (holiday-easter-etc -14 "Passion Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -7 "Palm Sunday"))
+    (holiday-easter-etc -7 "Palm Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc -3 "Maundy Thursday"))
+    (holiday-easter-etc -3 "Maundy Thursday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc 35 "Rogation Sunday"))
+    (holiday-easter-etc 35 "Rogation Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc 39 "Ascension Day"))
+    (holiday-easter-etc 39 "Ascension Day"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc 49 "Pentecost (Whitsunday)"))
+    (holiday-easter-etc 49 "Pentecost (Whitsunday)"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc 50 "Whitmonday"))
+    (holiday-easter-etc 50 "Whitmonday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc 56 "Trinity Sunday"))
+    (holiday-easter-etc 56 "Trinity Sunday"))
     (if all-christian-calendar-holidays
-        (holiday-easter-etc 60 "Corpus Christi"))
+    (holiday-easter-etc 60 "Corpus Christi"))
     (if all-christian-calendar-holidays
-        (holiday-greek-orthodox-easter))
+    (holiday-greek-orthodox-easter))
     (if all-christian-calendar-holidays
-        (holiday-fixed 8 15 "Assumption"))
+    (holiday-fixed 8 15 "Assumption"))
     (if all-christian-calendar-holidays
-        (holiday-advent 0 "Advent"))
-                    ;   (holiday-fixed 12 25 "Christmas")
+    (holiday-advent 0 "Advent"))
+            ;   (holiday-fixed 12 25 "Christmas")
     (if all-christian-calendar-holidays
-        (holiday-julian 12 25 "Eastern Orthodox Christmas"))))
+    (holiday-julian 12 25 "Eastern Orthodox Christmas"))))
 
 (setq org-agenda-custom-commands
       '(
@@ -748,8 +748,8 @@ started from a shell."
     ("A" agenda ""
      ((org-agenda-skip-function
        (lambda nil
-         (org-agenda-skip-entry-if
-          (quote notregexp) "\\=.*\\[#A\\]")))
+     (org-agenda-skip-entry-if
+      (quote notregexp) "\\=.*\\[#A\\]")))
       (org-agenda-ndays 1)
       (org-agenda-overriding-header "Today's Priority #A tasks: "))
      )
