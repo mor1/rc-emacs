@@ -356,69 +356,69 @@ started from a shell."
 (add-hook 'prog-mode-hook 'prog-mode-hook-f)
 (mapc (lambda (mode-hook) (add-hook mode-hook 'prog-mode-hook-f))
       '(tuareg-mode-hook
-        coffee-mode-hook
+;;        coffee-mode-hook
         nxml-mode-hook
         ))
 
 (add-hook 'filladapt-mode-hook
       '(lambda ()
-         (message "running filladapt-mode-hook")
-         ))
+     (message "running filladapt-mode-hook")
+     ))
 
 (add-hook 'org-mode-hook
       '(lambda ()
-         (local-set-key (kbd "C-c a") 'org-agenda)
-         (local-set-key (kbd "S-<up>") 'org-move-line-up)
-         (local-set-key (kbd "S-<down>") 'org-move-line-down)
-         (local-set-key (kbd "S-C-<tab>") 'org-shifttab)
-         (local-set-key (kbd "C-x C-d") `insdate-insert-current-date)
-         (local-unset-key (kbd "M-<return>"))
-         ))
+     (local-set-key (kbd "C-c a") 'org-agenda)
+     (local-set-key (kbd "S-<up>") 'org-move-line-up)
+     (local-set-key (kbd "S-<down>") 'org-move-line-down)
+     (local-set-key (kbd "S-C-<tab>") 'org-shifttab)
+     (local-set-key (kbd "C-x C-d") `insdate-insert-current-date)
+     (local-unset-key (kbd "M-<return>"))
+     ))
 
 (add-hook 'org-agenda-mode-hook
       '(lambda ()
-         (hl-line-mode 1)
-         (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-         ))
+     (hl-line-mode 1)
+     (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+     ))
 
 (add-hook 'latex-mode-hook
       '(lambda ()
-         (auto-fill-mode 0)
-         ;; (local-set-key (kbd "M-q") 'ispell-check-paragraph) ;fill-and-check)
-         ;; (local-set-key (kbd "C-c C-b") 'latex-insert-block)
-         (local-set-key (kbd "{") 'tex-insert-braces)
-         (local-set-key (kbd "M-[")
-                '(lambda () (interactive) (insert "{")))
-         (local-set-key (kbd "M-]")
-                '(lambda () (interactive) (insert "}")))
-         (local-set-key (kbd "C-c m")
-                '(lambda () (interactive "*")
-                   (tex-enclose-word "\\emph{" "}")))
-         (local-set-key (kbd "C-c C-m")
-                '(lambda () (interactive "*")
-                   (tex-enclose-word "\\emph{" "}")))
-         (local-set-key (kbd "C-c b")
-                '(lambda () (interactive "*")
-                   (tex-enclose-word "{\\bf " "}")))
-         ))
+     (auto-fill-mode 0)
+     ;; (local-set-key (kbd "M-q") 'ispell-check-paragraph) ;fill-and-check)
+     ;; (local-set-key (kbd "C-c C-b") 'latex-insert-block)
+     (local-set-key (kbd "{") 'tex-insert-braces)
+     (local-set-key (kbd "M-[")
+        '(lambda () (interactive) (insert "{")))
+     (local-set-key (kbd "M-]")
+        '(lambda () (interactive) (insert "}")))
+     (local-set-key (kbd "C-c m")
+        '(lambda () (interactive "*")
+           (tex-enclose-word "\\emph{" "}")))
+     (local-set-key (kbd "C-c C-m")
+        '(lambda () (interactive "*")
+           (tex-enclose-word "\\emph{" "}")))
+     (local-set-key (kbd "C-c b")
+        '(lambda () (interactive "*")
+           (tex-enclose-word "{\\bf " "}")))
+     ))
 (push '("\\.tex$" . latex-mode) auto-mode-alist)
 (push '("\\.latex$" . latex-mode) auto-mode-alist)
 
 (add-hook 'java-mode-hook
       '(lambda ()
-         (setq c-basic-offset 4)
-         (setq c-set-style "java")
-         ))
+     (setq c-basic-offset 4)
+     (setq c-set-style "java")
+     ))
 
 (add-hook 'emacs-lisp-mode-hook
       '(lambda ()
-         (turn-on-eldoc-mode)
-         ))
+     (turn-on-eldoc-mode)
+     ))
 
 (add-hook 'lisp-interaction-mode-hook
       '(lambda ()
-         (turn-on-eldoc-mode)
-         ))
+     (turn-on-eldoc-mode)
+     ))
 
 ;; (add-hook 'ecmascript-mode-hook
 ;;           '(lambda ()
@@ -428,14 +428,17 @@ started from a shell."
 
 (add-hook 'coffee-mode-hook
       '(lambda ()
-         ;; Compile '.coffee' files on every save
-         ;; (and (file-exists-p (buffer-file-name))
-         ;;      (file-exists-p (coffee-compiled-file-name))
-         ;;      (coffee-cos-mode t))
-         (coffee-cos-mode t)
-         (setq coffee-tab-width 2)
-         (setq coffee-command "/usr/local/bin/coffee")
-         ))
+     ;; Compile '.coffee' files on every save
+     ;; (and (file-exists-p (buffer-file-name))
+     ;;      (file-exists-p (coffee-compiled-file-name))
+     ;;      (coffee-cos-mode t))
+     (coffee-cos-mode t)
+     (setq coffee-tab-width 2)
+     (setq coffee-command "/usr/local/bin/coffee")
+     ))
+
+;; php-mode
+(push '("\\.php$" . php-mode) auto-mode-alist)
 
 ;; bibtex-mode
 (push '("\\.bibtex$" . bibtex-mode) auto-mode-alist)
@@ -886,6 +889,8 @@ started from a shell."
  '(auto-hscroll-mode nil)
  '(bibtex-autokey-titleword-separator ".")
  '(bibtex-autokey-year-title-separator ":")
+ '(c-basic-offset 4)
+ '(c-default-style (quote ((java-mode . "java") (awk-mode . "awk") (other . "linux"))))
  '(calendar-bahai-all-holidays-flag nil)
  '(calendar-christian-all-holidays-flag t)
  '(calendar-date-style (quote iso))
@@ -893,7 +898,7 @@ started from a shell."
  '(coffee-command "/usr/local/bin/coffee")
  '(coffee-tab-width 2)
  '(column-number-mode t)
- '(custom-enabled-themes (quote (sanityinc-solarized-light)))
+ '(custom-enabled-themes (quote (sanityinc-solarized-dark)))
  '(custom-safe-themes (quote ("4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
  '(default-major-mode (quote text-mode) t)
  '(fci-rule-color "#0a2832")
