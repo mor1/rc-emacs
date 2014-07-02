@@ -43,7 +43,7 @@ started from a shell."
 ;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
 
 ;; non-package-managed libraries
-(require 'fill-column-indicator)
+;; (require 'fill-column-indicator)
 (require 'scroll-in-place)
 (require 'simple)
 (require 'filladapt)
@@ -266,9 +266,9 @@ started from a shell."
   (interactive
    ;; add the extra 2 below to account for fci-mode indicator
    (list (read-number "New visual wrap column, 0 to disable: "
-              (or visual-wrap-column (+ fill-column 2) 0))))
+                      (or visual-wrap-column 0))))
   (if (and (numberp new-wrap-column)
-       (zerop new-wrap-column))
+           (zerop new-wrap-column))
       (setq new-wrap-column nil))
   (with-current-buffer (or buffer (current-buffer))
     (visual-line-mode t)
@@ -314,29 +314,29 @@ started from a shell."
 ;; mode hooks
 
 (add-hook 'find-file-hook
-      '(lambda ()
-         (message "running find-file-hook")
-         (fci-mode t)
-         (whitespace-mode t)
-         (turn-on-visual-line-mode)
-         (hl-line-mode t)
-         (force-my-keys-minor-mode)
-         ))
+          '(lambda ()
+             (message "running find-file-hook")
+             ;; (fci-mode t)
+             (whitespace-mode t)
+             (turn-on-visual-line-mode)
+             (hl-line-mode t)
+             (force-my-keys-minor-mode)
+             ))
 
 (add-hook 'text-mode-hook
-      '(lambda ()
-         (message "running text-mode-hook")
-         (flyspell-mode t)
-         (set-visual-wrap-column (+ fill-column 2))
-         (auto-fill-mode t)
-         (setq whitespace-style
-           '(face tabs trailing space-before-tab
-              newline indentation empty space-after-tab
-              tab-mark))
-         (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
-         (local-set-key (kbd "S-<tab>")
-                'flyspell-auto-correct-previous-word)
-         ))
+          '(lambda ()
+             (message "running text-mode-hook")
+             (flyspell-mode t)
+             (set-visual-wrap-column (+ fill-column 2))
+             (auto-fill-mode t)
+             (setq whitespace-style
+                   '(face tabs trailing space-before-tab
+                          newline indentation empty space-after-tab
+                          tab-mark))
+             (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
+             (local-set-key (kbd "S-<tab>")
+                            'flyspell-auto-correct-previous-word)
+             ))
 
 ;; prog-mode is not yet universally supported, so apply manually where missing
 (defun prog-mode-hook-f ()
@@ -344,6 +344,7 @@ started from a shell."
   (message "running prog-mode-hook")
   (linum-mode)
   (set-visual-wrap-column 0)
+  (fci-mode t)
   (flyspell-prog-mode)
   (whitespace-cleanup)
   (auto-fill-mode nil)
