@@ -15,10 +15,10 @@ This is particularly useful under Mac OSX, where GUI apps are not
 started from a shell."
   (interactive)
   (let ((path-from-shell
-     (replace-regexp-in-string
-      "[ \t\n]*$" ""
-      (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))
-     ))
+         (replace-regexp-in-string
+          "[ \t\n]*$" ""
+          (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))
+         ))
     (setenv "PATH" path-from-shell)
     (setq exec-path (split-string path-from-shell path-separator)))
   )
@@ -27,7 +27,7 @@ started from a shell."
 ;; package management
 (require 'package)
 (add-to-list 'package-archives
-         '("marmalade" . "http://marmalade-repo.org/packages/"))
+             '("marmalade" . "http://marmalade-repo.org/packages/"))
 (add-to-list 'package-archives '("ELPA" . "http://tromey.com/elpa/"))
 (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/"))
 
@@ -136,8 +136,8 @@ started from a shell."
   "Go to the matching parenthesis if on parenthesis otherwise insert %."
   (interactive "p")
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-    ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-    (t (self-insert-command (or arg 1))))
+        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+        (t (self-insert-command (or arg 1))))
   )
 
 (defun my-kill-emacs () "Confirm before save-buffers-kill-emacs"
@@ -177,8 +177,8 @@ started from a shell."
 (defun ispell-check-paragraph () "Spell check each word in a paragraph"
   (interactive "*")
   (let ((ispell-check-only nil)
-    (ispell-quietly t)
-    )
+        (ispell-quietly t)
+        )
     (save-excursion
       (forward-paragraph) (setq end (point))
       (forward-paragraph -1) (setq start (point))
@@ -189,8 +189,8 @@ started from a shell."
 (defun tex-enclose-word (before after)
   (interactive "*Mbefore: \nMafter: ")
   (let* ((oldpoint (point))
-     (start oldpoint)
-     (end oldpoint))
+         (start oldpoint)
+         (end oldpoint))
 
     ;; get the start and end of the current word
     (skip-syntax-backward "w")
@@ -199,17 +199,17 @@ started from a shell."
     (skip-syntax-forward "w")
     (setq end (point))
     (if (and (eq start oldpoint)
-         (eq end oldpoint))
-    ;; insert the command as nothing to enclose
-    (progn (insert before) (insert after) (backward-char))
+             (eq end oldpoint))
+        ;; insert the command as nothing to enclose
+        (progn (insert before) (insert after) (backward-char))
 
       ;; enclose the word with the command
       (progn
-    (insert after)
-    (goto-char start)
-    (insert before)
-    (goto-char (+ oldpoint (length before)))
-    )
+        (insert after)
+        (goto-char start)
+        (insert before)
+        (goto-char (+ oldpoint (length before)))
+        )
       )))
 
 (defun todo ()
@@ -228,7 +228,7 @@ started from a shell."
   the week."
   (interactive "P*")
   (insert (calendar-date-string
-       (calendar-current-date) nil omit-day-of-week-p))
+           (calendar-current-date) nil omit-day-of-week-p))
   )
 
 ;; from <http://www.emacswiki.org/emacs/VisualLineMode>
@@ -238,13 +238,13 @@ started from a shell."
   (if (not visual-wrap-column)
       (set-window-margins nil nil)
     (let* ((current-margins (window-margins))
-       (right-margin (or (cdr current-margins) 0))
-       (current-width (window-width))
-       (current-available (+ current-width right-margin)))
+           (right-margin (or (cdr current-margins) 0))
+           (current-width (window-width))
+           (current-available (+ current-width right-margin)))
       (if (<= current-available visual-wrap-column)
-      (set-window-margins nil (car current-margins))
-    (set-window-margins nil (car current-margins)
-                (- current-available visual-wrap-column))))))
+          (set-window-margins nil (car current-margins))
+        (set-window-margins nil (car current-margins)
+                            (- current-available visual-wrap-column))))))
 
 (defun set-visual-wrap-column (new-wrap-column &optional buffer)
   "Force visual line wrap at NEW-WRAP-COLUMN in BUFFER (defaults
@@ -264,10 +264,10 @@ started from a shell."
     (add-hook 'window-configuration-change-hook 'update-visual-wrap-column nil t)
     (let ((windows (get-buffer-window-list)))
       (while windows
-    (when (window-live-p (car windows))
-      (with-selected-window (car windows)
-        (update-visual-wrap-column)))
-    (setq windows (cdr windows))))))
+        (when (window-live-p (car windows))
+          (with-selected-window (car windows)
+            (update-visual-wrap-column)))
+        (setq windows (cdr windows))))))
 
 (defun unfill-and-check ()
   (interactive)
@@ -430,8 +430,8 @@ started from a shell."
 ;; xml-mode
 (add-hook 'nxml-mode-hook
       '(lambda ()
-         (set-visual-wrap-column 0)
-         ))
+     (set-visual-wrap-column 0)
+     ))
 (push '("\\`<\\?xml" . nxml-mode) magic-mode-alist)
 (push '("\\.html$" . nxml-mode) auto-mode-alist)
 (push '("\\.tpl$" . nxml-mode) auto-mode-alist) ;; bottle templates
@@ -439,15 +439,15 @@ started from a shell."
 ;; markdown-mode
 (add-hook 'markdown-mode-hook
       '(lambda ()
-         (orgtbl-mode 1)
-         (auto-fill-mode 0)
-         ))
+     (orgtbl-mode 1)
+     (auto-fill-mode 0)
+     ))
 (push '("\\.md$" . markdown-mode) auto-mode-alist)
 (push '("\\.markdown$" . markdown-mode) auto-mode-alist)
 
 ;; makefile-mode
 (defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab
-                      activate)
+              activate)
   "Fix whitespace-cleanup indent-tabs-mode bug"
   (let ((whitespace-indent-tabs-mode indent-tabs-mode)
     (whitespace-tab-width tab-width))
@@ -709,23 +709,23 @@ started from a shell."
 
     ("a" ""
      ((agenda ""
-          ((org-agenda-ndays 7)
-           (org-agenda-start-on-weekday 1)
-           (org-agenda-remove-tags t)
-           (org-agenda-skip-deadline-if-done t)
-           (org-agenda-skip-scheduled-if-done t)
-           (org-agenda-skip-timestamp-if-done t)
-           (org-agenda-time-grid nil)
-           (org-agenda-repeating-timestamp-show-all t)
-           (org-deadline-warning-days 15)
-           (org-agenda-sorting-strategy
-            '(habit-up
-              time-up
-              priority-down
-              category-keep
-              todo-state-down
-              ))
-           ))
+      ((org-agenda-ndays 7)
+       (org-agenda-start-on-weekday 1)
+       (org-agenda-remove-tags t)
+       (org-agenda-skip-deadline-if-done t)
+       (org-agenda-skip-scheduled-if-done t)
+       (org-agenda-skip-timestamp-if-done t)
+       (org-agenda-time-grid nil)
+       (org-agenda-repeating-timestamp-show-all t)
+       (org-deadline-warning-days 15)
+       (org-agenda-sorting-strategy
+        '(habit-up
+          time-up
+          priority-down
+          category-keep
+          todo-state-down
+          ))
+       ))
       )
      ((org-agenda-compact-blocks t)
       )
@@ -933,12 +933,12 @@ started from a shell."
  '(x-select-enable-clipboard t)
  '(x-stretch-cursor t))
 
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+;; (custom-set-faces
+;;  ;; custom-set-faces was added by Custom.
+;;  ;; If you edit it by hand, you could mess it up, so be careful.
+;;  ;; Your init file should contain only one such instance.
+;;  ;; If there is more than one, they won't work right.
+;;  '(default ((t (:inherit nil :stipple nil :background "#042028" :foreground "lightslategrey" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 110 :width normal :foundry "apple" :family "Consolas")))))
 
 ;; (with-temp-buffer
 ;;   (insert
@@ -946,3 +946,9 @@ started from a shell."
 ;;    )
 ;;   (eval-buffer)
 ;;   )
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
