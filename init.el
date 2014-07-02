@@ -2,6 +2,11 @@
 
 (add-to-list 'load-path "/Users/mort/.emacs.d")
 
+;; server
+
+(load "server")
+(unless (server-running-p) (server-start))
+
 ;; input method
 
 (setq default-input-method "TeX")
@@ -144,6 +149,13 @@ started from a shell."
   (interactive)
   (if (y-or-n-p "Really kill emacs? ")
       (save-buffers-kill-emacs)
+    (message "Aborted"))
+  )
+
+(defun my-suspend-frame () "Confirm before suspend emacs"
+  (interactive)
+  (if (y-or-n-p "Really minimise? ")
+      (suspend-frame)
     (message "Aborted"))
   )
 
@@ -774,6 +786,11 @@ started from a shell."
 
 (defvar my-keys-minor-mode-map (make-keymap) "my-keys-minor-mode keymap.")
 (define-key my-keys-minor-mode-map (kbd "C-x C-c") 'my-kill-emacs)
+
+(define-key my-keys-minor-mode-map (kbd "C-x z") 'my-suspend-frame)
+(define-key my-keys-minor-mode-map (kbd "C-x C-z") 'my-suspend-frame)
+(define-key my-keys-minor-mode-map (kbd "C-z") 'my-suspend-frame)
+
 (define-key my-keys-minor-mode-map (kbd "C-x p")
   '(lambda () (interactive) (other-window -1)))
 (define-key my-keys-minor-mode-map (kbd "C-c C-g") 'goto-line)
