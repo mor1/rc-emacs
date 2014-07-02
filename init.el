@@ -494,26 +494,25 @@ started from a shell."
 ;; ocaml
 
 ;; ocp-indent
-
-(load-file (concat
-;;            (substring (shell-command-to-string "opam config var prefix") 0 -1)
-            "~/.opam/system"
-                        "/share/typerex/ocp-indent/ocp-indent.el"
-                                    ))
-(push (concat
-       (substring (shell-command-to-string "opam config var share") 0 -1)
-       "/emacs/site-lisp"
-       )
-      load-path)
+;; (load-file (concat
+;; ;;            (substring (shell-command-to-string "opam config var prefix") 0 -1)
+;;             "~/.opam/system"
+;;             "/share/typerex/ocp-indent/ocp-indent.el"
+;;             ))
+;; (push (concat
+;;        (substring (shell-command-to-string "opam config var share") 0 -1)
+;;        "/emacs/site-lisp"
+;;        )
+;;       load-path)
 
 ;;; for when ocp-indent.1.4.x or higher works with emacs again
-;; (add-to-list 'load-path
-;;              (concat
-;;               (replace-regexp-in-string
-;;                "\n$" ""
-;;                (shell-command-to-string "opam config var share"))
-;;               "/emacs/site-lisp"))
-;; (require 'ocp-indent)
+(add-to-list 'load-path
+             (concat
+              (replace-regexp-in-string
+               "\n$" ""
+               (shell-command-to-string "opam config var share"))
+              "/emacs/site-lisp"))
+(require 'ocp-indent)
 
 ;; merlin-mode
 (setq merlin-command
@@ -524,19 +523,20 @@ started from a shell."
 (autoload 'merlin-mode "merlin" "Merlin mode" t)
 (add-hook 'caml-mode-hook 'merlin-mode)
 (add-hook 'tuareg-mode-hook
-      '(lambda ()
-         (merlin-mode)
-         (setq indent-line-function 'ocp-indent-line)
-         (setq indent-region-function 'ocp-indent-region)
-         (setq merlin-use-auto-complete-mode t)
-         ;; (setq tuareg-lazy-= t) ; indent `=' like a standard keyword
-         ;; (setq tuareg-lazy-paren t) ; indent [({ like standard keywords
-         ;; (setq tuareg-in-indent 0) ; no indentation after `in' keywords
-         (local-set-key (kbd "C-S-<up>") 'merlin-type-enclosing-go-up)
-         (local-set-key (kbd "C-S-<down>") 'merlin-type-enclosing-go-down)
-         ))
+          '(lambda ()
+             (merlin-mode)
+             (setq indent-line-function 'ocp-indent-line)
+             (setq indent-region-function 'ocp-indent-region)
+             (setq merlin-use-auto-complete-mode t)
+             ;; (setq tuareg-lazy-= t) ; indent `=' like a standard keyword
+             ;; (setq tuareg-lazy-paren t) ; indent [({ like standard keywords
+             ;; (setq tuareg-in-indent 0) ; no indentation after `in' keywords
+             (local-set-key (kbd "C-S-<up>") 'merlin-type-enclosing-go-up)
+             (local-set-key (kbd "C-S-<down>") 'merlin-type-enclosing-go-down)
+             ))
 (push'("\\.ml[iylp]?" . tuareg-mode) auto-mode-alist)
 (push '("\\.fs[ix]?" . tuareg-mode) auto-mode-alist)
+(push '("[i]?ocamlinit$" . tuareg-mode) auto-mode-alist)
 
 ;; org-mode: Holidays -- from <http://www.gnomon.org.uk/diary.html>
 
