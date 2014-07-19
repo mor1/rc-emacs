@@ -493,19 +493,14 @@ started from a shell."
 
 ;; ocaml
 
-;; ocp-indent
-;; (load-file (concat
-;; ;;            (substring (shell-command-to-string "opam config var prefix") 0 -1)
-;;             "~/.opam/system"
-;;             "/share/typerex/ocp-indent/ocp-indent.el"
-;;             ))
-;; (push (concat
-;;        (substring (shell-command-to-string "opam config var share") 0 -1)
-;;        "/emacs/site-lisp"
-;;        )
-;;       load-path)
+(add-to-list 'load-path
+             (concat
+              (replace-regexp-in-string
+               "\n$" ""
+               (shell-command-to-string "opam config var share"))
+              "/emacs/site-lisp"))
+(require 'ocp-index)
 
-;;; for when ocp-indent.1.4.x or higher works with emacs again
 (add-to-list 'load-path
              (concat
               (replace-regexp-in-string
