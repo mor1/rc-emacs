@@ -1,4 +1,13 @@
 (1
+ (clojure-env .
+	      [(0 0 3)
+	       nil "manage clojure environments with Emacs" single])
+ (snakehump .
+	    [(0 1 1)
+	     nil "Convert between compound word conventions" tar])
+ (env-var-import .
+		 [(2 1)
+		  nil "Import shell environment variables in GUI Emacs" single])
  (eldoro .
 	 [(0 1 0)
 	  nil "A pomodoro timer/tracker that works with org-mode." tar])
@@ -1690,8 +1699,8 @@
 	       (1 1)))
 	     "Mote minor mode" single])
  (monokai-theme .
-		[(0 0 11)
-		 nil "REQUIRES EMACS 24: Monokai Color Theme for Emacs." single])
+		[(0 0 12)
+		 nil "DEPRECATED: Monokai Color Theme for Emacs." single])
  (monky .
 	[(0 1)
 	 nil "control Hg from Emacs." single])
@@ -1835,7 +1844,7 @@
 	    [(1 2 2)
 	     nil "modeline replacement forked from an early version of powerline.el" single])
  (maildir .
-	  [(0 0 23)
+	  [(0 0 25)
 	   ((kv
 	     (0 0 17))
 	    (dash
@@ -2629,12 +2638,8 @@
 	    [(0 1 0)
 	     nil "Minor mode that assigns a unique number to each frame for easy switching" single])
  (frame-restore .
-		[(0 4)
-		 ((dash
-		   (1 2))
-		  (f
-		   (0 11))
-		  (emacs
+		[(0 5)
+		 ((emacs
 		   (24 1)))
 		 "Restore Emacs frame" single])
  (foo .
@@ -3140,7 +3145,7 @@
 	     [(0 4)
 	      nil "Handy functions for inspecting and comparing package archives" single])
  (elnode .
-	 [(0 9 9 7 8)
+	 [(0 9 9 7 9)
 	  ((web
 	    (0 1 4))
 	   (dash
@@ -3476,7 +3481,7 @@
 	      [(0 0 5)
 	       nil "a markup mode for creole" single])
  (creole .
-	 [(1 0 4)
+	 [(1 0 5)
 	  ((noflet
       (0 0 3))
 	   (kv
@@ -4027,7 +4032,7 @@
 		      (1 2 0)))
 		    "Yasnippets for AngularJS" tar])
  (android-mode .
-	       [(0 2 5)
+	       [(0 3 0)
 		nil "Minor mode for Android application development" single])
  (anaphora .
 	   [(1 0 0)
