@@ -356,69 +356,69 @@ started from a shell."
 (add-hook 'prog-mode-hook 'prog-mode-hook-f)
 (mapc (lambda (mode-hook) (add-hook mode-hook 'prog-mode-hook-f))
       '(tuareg-mode-hook
-;;        coffee-mode-hook
+        ;;        coffee-mode-hook
         nxml-mode-hook
         ))
 
 (add-hook 'filladapt-mode-hook
-      '(lambda ()
-     (message "running filladapt-mode-hook")
-     ))
+          '(lambda ()
+             (message "running filladapt-mode-hook")
+             ))
 
 (add-hook 'org-mode-hook
-      '(lambda ()
-     (local-set-key (kbd "C-c a") 'org-agenda)
-     (local-set-key (kbd "S-<up>") 'org-move-line-up)
-     (local-set-key (kbd "S-<down>") 'org-move-line-down)
-     (local-set-key (kbd "S-C-<tab>") 'org-shifttab)
-     (local-set-key (kbd "C-x C-d") `insdate-insert-current-date)
-     (local-unset-key (kbd "M-<return>"))
-     ))
+          '(lambda ()
+             (local-set-key (kbd "C-c a") 'org-agenda)
+             (local-set-key (kbd "S-<up>") 'org-move-line-up)
+             (local-set-key (kbd "S-<down>") 'org-move-line-down)
+             (local-set-key (kbd "S-C-<tab>") 'org-shifttab)
+             (local-set-key (kbd "C-x C-d") `insdate-insert-current-date)
+             (local-unset-key (kbd "M-<return>"))
+             ))
 
 (add-hook 'org-agenda-mode-hook
-      '(lambda ()
-     (hl-line-mode 1)
-     (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-     ))
+          '(lambda ()
+             (hl-line-mode 1)
+             (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+             ))
 
 (add-hook 'latex-mode-hook
-      '(lambda ()
-     (auto-fill-mode 0)
-     ;; (local-set-key (kbd "M-q") 'ispell-check-paragraph) ;fill-and-check)
-     ;; (local-set-key (kbd "C-c C-b") 'latex-insert-block)
-     (local-set-key (kbd "{") 'tex-insert-braces)
-     (local-set-key (kbd "M-[")
-        '(lambda () (interactive) (insert "{")))
-     (local-set-key (kbd "M-]")
-        '(lambda () (interactive) (insert "}")))
-     (local-set-key (kbd "C-c m")
-        '(lambda () (interactive "*")
-           (tex-enclose-word "\\emph{" "}")))
-     (local-set-key (kbd "C-c C-m")
-        '(lambda () (interactive "*")
-           (tex-enclose-word "\\emph{" "}")))
-     (local-set-key (kbd "C-c b")
-        '(lambda () (interactive "*")
-           (tex-enclose-word "{\\bf " "}")))
-     ))
+          '(lambda ()
+             (auto-fill-mode 0)
+             ;; (local-set-key (kbd "M-q") 'ispell-check-paragraph) ;fill-and-check)
+             ;; (local-set-key (kbd "C-c C-b") 'latex-insert-block)
+             (local-set-key (kbd "{") 'tex-insert-braces)
+             (local-set-key (kbd "M-[")
+                            '(lambda () (interactive) (insert "{")))
+             (local-set-key (kbd "M-]")
+                            '(lambda () (interactive) (insert "}")))
+             (local-set-key (kbd "C-c m")
+                            '(lambda () (interactive "*")
+                               (tex-enclose-word "\\emph{" "}")))
+             (local-set-key (kbd "C-c C-m")
+                            '(lambda () (interactive "*")
+                               (tex-enclose-word "\\emph{" "}")))
+             (local-set-key (kbd "C-c b")
+                            '(lambda () (interactive "*")
+                               (tex-enclose-word "{\\bf " "}")))
+             ))
 (push '("\\.tex$" . latex-mode) auto-mode-alist)
 (push '("\\.latex$" . latex-mode) auto-mode-alist)
 
 (add-hook 'java-mode-hook
-      '(lambda ()
-     (setq c-basic-offset 4)
-     (setq c-set-style "java")
-     ))
+          '(lambda ()
+             (setq c-basic-offset 4)
+             (setq c-set-style "java")
+             ))
 
 (add-hook 'emacs-lisp-mode-hook
-      '(lambda ()
-     (turn-on-eldoc-mode)
-     ))
+          '(lambda ()
+             (turn-on-eldoc-mode)
+             ))
 
 (add-hook 'lisp-interaction-mode-hook
-      '(lambda ()
-     (turn-on-eldoc-mode)
-     ))
+          '(lambda ()
+             (turn-on-eldoc-mode)
+             ))
 
 ;; (add-hook 'ecmascript-mode-hook
 ;;           '(lambda ()
@@ -427,15 +427,15 @@ started from a shell."
 ;;              ))
 
 (add-hook 'coffee-mode-hook
-      '(lambda ()
-     ;; Compile '.coffee' files on every save
-     ;; (and (file-exists-p (buffer-file-name))
-     ;;      (file-exists-p (coffee-compiled-file-name))
-     ;;      (coffee-cos-mode t))
-     (coffee-cos-mode t)
-     (setq coffee-tab-width 2)
-     (setq coffee-command "/usr/local/bin/coffee")
-     ))
+          '(lambda ()
+             ;; Compile '.coffee' files on every save
+             ;; (and (file-exists-p (buffer-file-name))
+             ;;      (file-exists-p (coffee-compiled-file-name))
+             ;;      (coffee-cos-mode t))
+             (coffee-cos-mode t)
+             (setq coffee-tab-width 2)
+             (setq coffee-command "/usr/local/bin/coffee")
+             ))
 
 ;; php-mode
 (push '("\\.php$" . php-mode) auto-mode-alist)
@@ -445,28 +445,28 @@ started from a shell."
 
 ;; xml-mode
 (add-hook 'nxml-mode-hook
-      '(lambda ()
-     (set-visual-wrap-column 0)
-     ))
+          '(lambda ()
+             (set-visual-wrap-column 0)
+             ))
 (push '("\\`<\\?xml" . nxml-mode) magic-mode-alist)
 (push '("\\.html$" . nxml-mode) auto-mode-alist)
 (push '("\\.tpl$" . nxml-mode) auto-mode-alist) ;; bottle templates
 
 ;; markdown-mode
 (add-hook 'markdown-mode-hook
-      '(lambda ()
-     (orgtbl-mode 1)
-     (auto-fill-mode 0)
-     ))
+          '(lambda ()
+             (orgtbl-mode 1)
+             (auto-fill-mode 0)
+             ))
 (push '("\\.md$" . markdown-mode) auto-mode-alist)
 (push '("\\.markdown$" . markdown-mode) auto-mode-alist)
 
 ;; makefile-mode
 (defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab
-              activate)
+                                      activate)
   "Fix whitespace-cleanup indent-tabs-mode bug"
   (let ((whitespace-indent-tabs-mode indent-tabs-mode)
-    (whitespace-tab-width tab-width))
+        (whitespace-tab-width tab-width))
     ad-do-it))
 
 ;; (add-hook 'makefile-mode-hook 'indent-tabs-mode)
@@ -538,36 +538,36 @@ started from a shell."
 ;;UK public holidays, and other UK notable dates.
 (setq general-holidays
       '((holiday-fixed 1 1 "New Year's Day")
-    (holiday-new-year-bank-holiday)
-    (holiday-fixed 2 14 "Valentine's Day")
-    (holiday-fixed 3 17 "St. Patrick's Day")
-    (holiday-fixed 4 1 "April Fools' Day")
-    (holiday-easter-etc -47 "Shrove Tuesday")
-    (holiday-easter-etc -21 "Mother's Day")
-    (holiday-easter-etc -2 "Good Friday")
-    (holiday-easter-etc 0 "Easter Sunday")
-    (holiday-easter-etc 1 "Easter Monday")
-    (holiday-float 5 1 1 "Early May Bank Holiday")
-    (holiday-float 5 1 -1 "Spring Bank Holiday")
-    (holiday-float 6 0 3 "Father's Day")
-    (holiday-float 8 1 -1 "Summer Bank Holiday")
-    (holiday-fixed 10 31 "Halloween")
-    (holiday-fixed 12 24 "Christmas Eve")
-    (holiday-fixed 12 25 "Christmas Day")
-    (holiday-fixed 12 26 "Boxing Day")
-    (holiday-christmas-bank-holidays)
-    (holiday-fixed 12 31 "New Year's Eve")))
+        (holiday-new-year-bank-holiday)
+        (holiday-fixed 2 14 "Valentine's Day")
+        (holiday-fixed 3 17 "St. Patrick's Day")
+        (holiday-fixed 4 1 "April Fools' Day")
+        (holiday-easter-etc -47 "Shrove Tuesday")
+        (holiday-easter-etc -21 "Mother's Day")
+        (holiday-easter-etc -2 "Good Friday")
+        (holiday-easter-etc 0 "Easter Sunday")
+        (holiday-easter-etc 1 "Easter Monday")
+        (holiday-float 5 1 1 "Early May Bank Holiday")
+        (holiday-float 5 1 -1 "Spring Bank Holiday")
+        (holiday-float 6 0 3 "Father's Day")
+        (holiday-float 8 1 -1 "Summer Bank Holiday")
+        (holiday-fixed 10 31 "Halloween")
+        (holiday-fixed 12 24 "Christmas Eve")
+        (holiday-fixed 12 25 "Christmas Day")
+        (holiday-fixed 12 26 "Boxing Day")
+        (holiday-christmas-bank-holidays)
+        (holiday-fixed 12 31 "New Year's Eve")))
 
 ;;Major US holidays
 (setq other-holidays
       '((holiday-float 1 1 3 "Martin Luther King Day")
-    (holiday-float 2 1 3 "President's Day")
-    (holiday-float 5 1 -1 "Memorial Day")
-    (holiday-fixed 7 4 "Independence Day")
-    (holiday-float 9 1 1 "Labor Day")
-    (holiday-float 10 1 2 "Columbus Day")
-    (holiday-fixed 11 11 "Veteran's Day")
-    (holiday-float 11 4 4 "Thanksgiving")))
+        (holiday-float 2 1 3 "President's Day")
+        (holiday-float 5 1 -1 "Memorial Day")
+        (holiday-fixed 7 4 "Independence Day")
+        (holiday-float 9 1 1 "Labor Day")
+        (holiday-float 10 1 2 "Columbus Day")
+        (holiday-fixed 11 11 "Veteran's Day")
+        (holiday-float 11 4 4 "Thanksgiving")))
 
 ;;N.B. It is assumed that 1 January is defined with holiday-fixed -
 ;;this function only returns any extra bank holiday that is allocated
@@ -577,16 +577,16 @@ started from a shell."
 ;;holiday.
 (defun holiday-new-year-bank-holiday ()
   (let ((m displayed-month)
-    (y displayed-year))
+        (y displayed-year))
     (calendar-increment-month m y 1)
     (when (<= m 3)
       (let ((d (calendar-day-of-week (list 1 1 y))))
-    (cond ((= d 6)
-       (list (list (list 1 3 y)
-           "New Year's Day Bank Holiday")))
-      ((= d 0)
-       (list (list (list 1 2 y)
-           "New Year's Day Bank Holiday"))))))))
+        (cond ((= d 6)
+               (list (list (list 1 3 y)
+                           "New Year's Day Bank Holiday")))
+              ((= d 0)
+               (list (list (list 1 2 y)
+                           "New Year's Day Bank Holiday"))))))))
 
 ;;N.B. It is assumed that 25th and 26th are defined with holiday-fixed -
 ;;this function only returns any extra bank holiday(s) that are
@@ -630,22 +630,22 @@ started from a shell."
 ;;supplied.
 (defun holiday-christmas-bank-holidays ()
   (let ((m displayed-month)
-    (y displayed-year))
+        (y displayed-year))
     (calendar-increment-month m y -1)
     (when (>= m 10)
       (let ((d (calendar-day-of-week (list 12 25 y))))
-    (cond ((= d 5)
-       (list (list (list 12 28 y)
-           "Boxing Day Bank Holiday")))
-      ((= d 6)
-       (list (list (list 12 27 y)
-           "Boxing Day Bank Holiday")
-         (list (list 12 28 y)
-           "Christmas Day Bank Holiday")))
-      ((= d 0)
-       (list (list (list 12 27 y)
-           "Christmas Day Bank Holiday")))
-      )))))
+        (cond ((= d 5)
+               (list (list (list 12 28 y)
+                           "Boxing Day Bank Holiday")))
+              ((= d 6)
+               (list (list (list 12 27 y)
+                           "Boxing Day Bank Holiday")
+                     (list (list 12 28 y)
+                           "Christmas Day Bank Holiday")))
+              ((= d 0)
+               (list (list (list 12 27 y)
+                           "Christmas Day Bank Holiday")))
+              )))))
 
 ;;Comment out the Christian holidays that also have secular
 ;;significance in the UK (Shrove Tuesday, Good Friday, Easter Sunday,
@@ -654,117 +654,117 @@ started from a shell."
 ;;(where Chistmas is listed as Christmas Day).
 (setq christian-holidays
       '((if all-christian-calendar-holidays
-    (holiday-fixed 1 6 "Epiphany"))
-    ;;   (holiday-easter-etc 0 "Easter Sunday")
-    ;;   (holiday-easter-etc -2 "Good Friday")
-    (holiday-easter-etc -46 "Ash Wednesday")
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -63 "Septuagesima Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -56 "Sexagesima Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -49 "Shrove Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -48 "Shrove Monday"))
-    ;;   (if all-christian-calendar-holidays
-    ;;       (holiday-easter-etc -47 "Shrove Tuesday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -14 "Passion Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -7 "Palm Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc -3 "Maundy Thursday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc 35 "Rogation Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc 39 "Ascension Day"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc 49 "Pentecost (Whitsunday)"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc 50 "Whitmonday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc 56 "Trinity Sunday"))
-    (if all-christian-calendar-holidays
-    (holiday-easter-etc 60 "Corpus Christi"))
-    (if all-christian-calendar-holidays
-    (holiday-greek-orthodox-easter))
-    (if all-christian-calendar-holidays
-    (holiday-fixed 8 15 "Assumption"))
-    (if all-christian-calendar-holidays
-    (holiday-advent 0 "Advent"))
-            ;   (holiday-fixed 12 25 "Christmas")
-    (if all-christian-calendar-holidays
-    (holiday-julian 12 25 "Eastern Orthodox Christmas"))))
+            (holiday-fixed 1 6 "Epiphany"))
+        ;;   (holiday-easter-etc 0 "Easter Sunday")
+        ;;   (holiday-easter-etc -2 "Good Friday")
+        (holiday-easter-etc -46 "Ash Wednesday")
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -63 "Septuagesima Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -56 "Sexagesima Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -49 "Shrove Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -48 "Shrove Monday"))
+        ;;   (if all-christian-calendar-holidays
+        ;;       (holiday-easter-etc -47 "Shrove Tuesday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -14 "Passion Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -7 "Palm Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc -3 "Maundy Thursday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc 35 "Rogation Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc 39 "Ascension Day"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc 49 "Pentecost (Whitsunday)"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc 50 "Whitmonday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc 56 "Trinity Sunday"))
+        (if all-christian-calendar-holidays
+            (holiday-easter-etc 60 "Corpus Christi"))
+        (if all-christian-calendar-holidays
+            (holiday-greek-orthodox-easter))
+        (if all-christian-calendar-holidays
+            (holiday-fixed 8 15 "Assumption"))
+        (if all-christian-calendar-holidays
+            (holiday-advent 0 "Advent"))
+                                        ;   (holiday-fixed 12 25 "Christmas")
+        (if all-christian-calendar-holidays
+            (holiday-julian 12 25 "Eastern Orthodox Christmas"))))
 
 (setq org-agenda-custom-commands
       '(
-    ;; ("O" "Office block agenda"
-    ;;  (
-    ;;   ;; limits the agenda display to a single day
-    ;;   (agenda "" ((org-agenda-ndays 1)))
+        ;; ("O" "Office block agenda"
+        ;;  (
+        ;;   ;; limits the agenda display to a single day
+        ;;   (agenda "" ((org-agenda-ndays 1)))
 
-    ;;   (tags-todo "+PRIORITY=\"A\"")
-    ;;   (tags-todo "computer|office|phone")
-    ;;   (tags "project+CATEGORY=\"elephants\"")
-    ;;   (tags "review" ((org-agenda-files '("~/org/circuspeanuts.org"))))
-    ;;   ;; limits the tag search to the file circuspeanuts.org
-    ;;   (todo "WAITING"))
+        ;;   (tags-todo "+PRIORITY=\"A\"")
+        ;;   (tags-todo "computer|office|phone")
+        ;;   (tags "project+CATEGORY=\"elephants\"")
+        ;;   (tags "review" ((org-agenda-files '("~/org/circuspeanuts.org"))))
+        ;;   ;; limits the tag search to the file circuspeanuts.org
+        ;;   (todo "WAITING"))
 
-    ;;  ;; options set here apply to the entire block
-    ;;  ((org-agenda-compact-blocks t))
-    ;;  )
+        ;;  ;; options set here apply to the entire block
+        ;;  ((org-agenda-compact-blocks t))
+        ;;  )
 
-    ;; ("c" todo #("DONE|CANCELLED" 0 14 (face org-warning)) nil)
+        ;; ("c" todo #("DONE|CANCELLED" 0 14 (face org-warning)) nil)
 
-    ;; ("w" todo #("WAITING" 0 7 (face org-warning)) nil)
+        ;; ("w" todo #("WAITING" 0 7 (face org-warning)) nil)
 
-    ("a" ""
-     ((agenda ""
-      ((org-agenda-ndays 7)
-       (org-agenda-start-on-weekday 1)
-       (org-agenda-remove-tags t)
-       (org-agenda-skip-deadline-if-done t)
-       (org-agenda-skip-scheduled-if-done t)
-       (org-agenda-skip-timestamp-if-done t)
-       (org-agenda-time-grid nil)
-       (org-agenda-repeating-timestamp-show-all t)
-       (org-deadline-warning-days 15)
-       (org-agenda-sorting-strategy
-        '(habit-up
-          time-up
-          priority-down
-          category-keep
-          todo-state-down
-          ))
-       ))
-      )
-     ((org-agenda-compact-blocks t)
-      )
-     )
+        ("a" ""
+         ((agenda ""
+                  ((org-agenda-ndays 7)
+                   (org-agenda-start-on-weekday 1)
+                   (org-agenda-remove-tags t)
+                   (org-agenda-skip-deadline-if-done t)
+                   (org-agenda-skip-scheduled-if-done t)
+                   (org-agenda-skip-timestamp-if-done t)
+                   (org-agenda-time-grid nil)
+                   (org-agenda-repeating-timestamp-show-all t)
+                   (org-deadline-warning-days 15)
+                   (org-agenda-sorting-strategy
+                    '(habit-up
+                      time-up
+                      priority-down
+                      category-keep
+                      todo-state-down
+                      ))
+                   ))
+          )
+         ((org-agenda-compact-blocks t)
+          )
+         )
 
-    ;; ("W" agenda "" ((org-agenda-ndays 21)))
+        ;; ("W" agenda "" ((org-agenda-ndays 21)))
 
-    ("A" agenda ""
-     ((org-agenda-skip-function
-       (lambda nil
-     (org-agenda-skip-entry-if
-      (quote notregexp) "\\=.*\\[#A\\]")))
-      (org-agenda-ndays 1)
-      (org-agenda-overriding-header "Today's Priority #A tasks: "))
-     )
+        ("A" agenda ""
+         ((org-agenda-skip-function
+           (lambda nil
+             (org-agenda-skip-entry-if
+              (quote notregexp) "\\=.*\\[#A\\]")))
+          (org-agenda-ndays 1)
+          (org-agenda-overriding-header "Today's Priority #A tasks: "))
+         )
 
-    ("u" "Unscheduled" todo ""
-     ((org-agenda-todo-ignore-scheduled t)))
+        ("u" "Unscheduled" todo ""
+         ((org-agenda-todo-ignore-scheduled t)))
 
 
-    ;; ("u" alltodo ""
-    ;;  ((org-agenda-skip-function
-    ;;    (lambda nil
-    ;;      (org-agenda-skip-entry-if
-    ;;       (quote scheduled) (quote deadline)
-    ;;       (quote regexp) "<[^>]+>")))
-    ;;   (org-agenda-overriding-header "Unscheduled TODO entries: ")))
-    ))
+        ;; ("u" alltodo ""
+        ;;  ((org-agenda-skip-function
+        ;;    (lambda nil
+        ;;      (org-agenda-skip-entry-if
+        ;;       (quote scheduled) (quote deadline)
+        ;;       (quote regexp) "<[^>]+>")))
+        ;;   (org-agenda-overriding-header "Unscheduled TODO entries: ")))
+        ))
 
 ;; http://orgmode.org/worg/org-hacks.html
 (defun org-agenda-reschedule-to-today ()
@@ -864,8 +864,8 @@ started from a shell."
   (interactive)
   (if (not (eq (car (car minor-mode-map-alist)) 'my-keys-minor-mode))
       (let ((mykeys (assq 'my-keys-minor-mode minor-mode-map-alist)))
-    (assq-delete-all 'my-keys-minor-mode minor-mode-map-alist)
-    (add-to-list 'minor-mode-map-alist mykeys))))
+        (assq-delete-all 'my-keys-minor-mode minor-mode-map-alist)
+        (add-to-list 'minor-mode-map-alist mykeys))))
 ;; (ad-activate 'load)
 
 ;; default font
