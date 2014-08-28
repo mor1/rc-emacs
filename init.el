@@ -293,8 +293,6 @@ started from a shell."
   (ispell-check-paragraph)
   )
 
-
-
 ;; magit mode
 
 ;; (require 'gitsum)
@@ -350,7 +348,7 @@ started from a shell."
   (whitespace-cleanup)
   (auto-fill-mode nil)
   (filladapt-mode t)
-  (setq indent-region-function 'nil) ;; clean up ocp-indent bug
+  ;; (setq indent-region-function 'nil) ;; clean up ocp-indent bug
   (local-set-key (kbd "M-q") 'fill-paragraph)
   (local-set-key (kbd "%") 'match-paren)
   (local-unset-key (kbd "S-<tab>"))
@@ -478,6 +476,7 @@ started from a shell."
 ;;              (setq indent-tabs-mode t)
 ;;              ))
 (push '("sources$" . makefile-mode) auto-mode-alist)
+(push '("Makefile." . makefile-mode) auto-mode-alist)
 
 ;; sh-mode
 ;; (add-hook 'sh-mode-hook
@@ -495,13 +494,17 @@ started from a shell."
 
 ;; ocaml
 
-(add-to-list 'load-path
-             (concat
-              (replace-regexp-in-string
-               "\n$" ""
-               (shell-command-to-string "opam config var share"))
-              "/emacs/site-lisp"))
-(require 'ocp-index)
+(setq opam-share
+      (substring (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
+(add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
+
+(require 'merlin)
+
+(add-hook 'tuareg-mode-hook 'merlin-mode t)
+(add-hook 'caml-mode-hook 'merlin-mode t)
+
+(setq merlin-use-auto-complete-mode 'easy)
+(setq merlin-command 'opam)
 
 (add-to-list 'load-path
              (concat
@@ -511,19 +514,11 @@ started from a shell."
               "/emacs/site-lisp"))
 (require 'ocp-indent)
 
-;; merlin-mode
-(setq merlin-command
-      (concat
-       (substring (shell-command-to-string "opam config var bin") 0 -1)
-       "/ocamlmerlin"
-       ))
-(autoload 'merlin-mode "merlin" "Merlin mode" t)
-(add-hook 'caml-mode-hook 'merlin-mode)
 (add-hook 'tuareg-mode-hook
           '(lambda ()
              (merlin-mode)
-             (setq indent-line-function 'ocp-indent-line)
-             (setq indent-region-function 'ocp-indent-region)
+             ;; (setq indent-line-function 'ocp-indent-line)
+             ;; (setq indent-region-function 'ocp-indent-region)
              (setq merlin-use-auto-complete-mode t)
              ;; (setq tuareg-lazy-= t) ; indent `=' like a standard keyword
              ;; (setq tuareg-lazy-paren t) ; indent [({ like standard keywords
@@ -919,7 +914,7 @@ started from a shell."
  '(nobreak-char-display t t)
  '(ns-command-modifier (quote meta))
  '(nxml-slash-auto-complete-flag t)
- '(ocp-indent-syntax (quote ("lwt")))
+ '(ocp-indent-syntax (quote ("lwt" "cstruct")))
  '(org-agenda-files (quote ("~/me/todo/todo.org")))
  '(org-agenda-include-diary t)
  '(org-agenda-ndays 7)
