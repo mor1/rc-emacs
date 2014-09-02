@@ -4,7 +4,7 @@
 
 
 ;;;### (autoloads (vline-global-mode vline-mode) "vline" "vline.el"
-;;;;;;  (21450 17645 0 0))
+;;;;;;  (21508 15978 0 0))
 ;;; Generated autoloads from vline.el
 
 (autoload 'vline-mode "vline" "\
@@ -35,7 +35,7 @@ See `vline-mode' for more information on Vline mode.
 
 ;;;***
 
-;;;### (autoloads nil nil ("vline-pkg.el") (21450 17645 986393 0))
+;;;### (autoloads nil nil ("vline-pkg.el") (21508 15980 186524 0))
 
 ;;;***
 
