@@ -4,7 +4,8 @@
 ;; Description: Emacs lisp interface to work with git-config variables
 ;; Author: Samuel Tonini
 ;; Maintainer: Samuel Tonini
-;; Version: 1.0.0
+;; Version: 20130718.235
+;; X-Original-Version: 1.0.0
 ;; URL:
 ;; Keywords: git, gitconfig, git-config
 
