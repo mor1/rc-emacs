@@ -1,17 +1,37 @@
-;; -*- mode: Emacs-Lisp; fill-column: 78; -*-
+;; Copyright (C) 2000--2014 Richard Mortier <mort@cantab.net> except where
+;; noted. All Rights Reserved.
+;;
+;; Permission to use, copy, modify, and distribute this software for any
+;; purpose with or without fee is hereby granted, provided that the above
+;; copyright notice and this permission notice appear in all copies.
+;;
+;; THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+;; WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+;; MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+;; SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+;; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+;; IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-(add-to-list 'load-path "/Users/mort/.emacs.d")
+;; tidy-up display on startup <http://whattheemacsd.com/>
+(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(setq inhibit-startup-message t)
+
+;; non-package-managed packages
+(add-to-list 'load-path "/Users/mort/.emacs.d/lisp")
+(require 'filladapt)
 
 ;; server
-
 (load "server")
 (unless (server-running-p) (server-start))
 
 ;; input method
-
 (setq default-input-method "TeX")
 
-;;  http://stackoverflow.com/questions/8606954/path-and-exec-path-set-but-emacs-does-not-find-executable
+;; <http://stackoverflow.com/questions/8606954/
+;;    path-and-exec-path-set-but-emacs-does-not-find-executable>
 (defun set-exec-path-from-shell-PATH ()
   "Set up Emacs' `exec-path' and PATH environment variable to
   match that used by the user's shell.
@@ -41,12 +61,6 @@ started from a shell."
 ;; evaluate locally if behind nottingham proxy
 ;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
 ;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
-
-;; non-package-managed libraries
-;; (require 'fill-column-indicator)
-(require 'scroll-in-place)
-(require 'simple)
-(require 'filladapt)
 
 ;; colours
 (require 'color-theme)
