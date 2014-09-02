@@ -3,10 +3,11 @@
 ;;; Code:
 
 
-;;;### (autoloads (color-theme-install color-theme-make-snapshot
-;;;;;;  color-theme-analyze-defun color-theme-print color-theme-install-at-point-for-current-frame
+;;;### (autoloads (color-theme-initialize color-theme-submit color-theme-install
+;;;;;;  color-theme-compare color-theme-make-snapshot color-theme-analyze-defun
+;;;;;;  color-theme-print color-theme-install-at-point-for-current-frame
 ;;;;;;  color-theme-install-at-mouse color-theme-describe color-theme-select)
-;;;;;;  "color-theme" "color-theme.el" (21415 3952 0 0))
+;;;;;;  "color-theme" "color-theme.el" (21508 16061 0 0))
 ;;; Generated autoloads from color-theme.el
 
 (autoload 'color-theme-select "color-theme" "\
@@ -55,8 +56,8 @@ Example:
       (interactive)
       (color-theme-install
        '(...
-         ...
-         ...)))
+	 ...
+	 ...)))
     (my-color-theme)
 
 If you want to use a specific color theme function, you can call the
@@ -82,6 +83,17 @@ Return the definition of the current color-theme.
 The function returned will recreate the color-theme in use at the moment.
 
 \(fn)" nil nil)
+
+(autoload 'color-theme-compare "color-theme" "\
+Compare two color themes.
+This will print the differences between installing THEME-A and
+installing THEME-B.  Note that the order is important: If a face is
+defined in THEME-A and not in THEME-B, then this will not show up as a
+difference, because there is no reset before installing THEME-B.  If a
+face is defined in THEME-B and not in THEME-A, then this will show up as
+a difference.
+
+\(fn THEME-A THEME-B)" t nil)
 
 (autoload 'color-theme-install "color-theme" "\
 Install a color theme defined by frame parameters, variables and faces.
@@ -118,9 +130,19 @@ frame-parameter settings of previous color themes.
 
 \(fn THEME)" nil nil)
 
+(autoload 'color-theme-submit "color-theme" "\
+Submit your color-theme to the maintainer.
+
+\(fn)" t nil)
+
+(autoload 'color-theme-initialize "color-theme" "\
+Initialize the color theme package by loading color-theme-libraries.
+
+\(fn)" t nil)
+
 ;;;***
 
-;;;### (autoloads nil nil ("color-theme-pkg.el") (21415 3952 939171
+;;;### (autoloads nil nil ("color-theme-pkg.el") (21508 16062 1062
 ;;;;;;  0))
 
 ;;;***
