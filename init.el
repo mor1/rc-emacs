@@ -20,11 +20,12 @@
 (setq inhibit-startup-message t)
 
 ;; non-package-managed packages
-(add-to-list 'load-path "/Users/mort/.emacs.d/lisp")
-(require 'filladapt)
+(add-to-list 'load-path "~/.emacs.d/lisp")
+;; (require 'filladapt)
 
 ;; server
 (load "server")
+(setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))
 (unless (server-running-p) (server-start))
 
 ;; input method
