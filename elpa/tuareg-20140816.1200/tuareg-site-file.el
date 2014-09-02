@@ -1,10 +1,10 @@
-;;; tuareg-autoloads.el --- automatically extracted autoloads
-;;
+;;; tuareg-site-file.el --- Automatically extracted autoloads.
 ;;; Code:
-
+(add-to-list 'load-path
+             (or (file-name-directory load-file-name) (car load-path)))
 
-;;;### (autoloads (ocamldebug) "ocamldebug" "ocamldebug.el" (21227
-;;;;;;  34724 0 0))
+;;;### (autoloads (ocamldebug) "ocamldebug" "ocamldebug.el" (21289
+;;;;;;  25149 485562 840000))
 ;;; Generated autoloads from ocamldebug.el
 
 (autoload 'ocamldebug "ocamldebug" "\
@@ -20,7 +20,7 @@ the ocamldebug commands `cd DIR' and `directory'.
 ;;;***
 
 ;;;### (autoloads (tuareg-run-ocaml tuareg-mode) "tuareg" "tuareg.el"
-;;;;;;  (21227 34724 0 0))
+;;;;;;  (21460 65510 558295 692000))
 ;;; Generated autoloads from tuareg.el
 (add-to-list 'auto-mode-alist '("\\.ml[iylp]?\\'" . tuareg-mode))
 (dolist (ext '(".cmo" ".cmx" ".cma" ".cmxa" ".cmi" ".annot"))
@@ -30,7 +30,7 @@ the ocamldebug commands `cd DIR' and `directory'.
 Major mode for editing OCaml code.
 
 Dedicated to Emacs and XEmacs, version 21 and higher.  Provides
-automatic indentation and compilation interface. Performs font/color
+automatic indentation and compilation interface.  Performs font/color
 highlighting using Font-Lock.  It is designed for OCaml but handles
 Caml Light as well.
 
@@ -41,7 +41,7 @@ You have better byte-compile tuareg.el.
 
 For customization purposes, you should use `tuareg-mode-hook'
 \(run for every file) or `tuareg-load-hook' (run once) and not patch
-the mode itself. You should add to your configuration file something like:
+the mode itself.  You should add to your configuration file something like:
   (add-hook 'tuareg-mode-hook
             (lambda ()
                ... ; your customization code
@@ -68,7 +68,7 @@ For the best indentation experience, some elementary rules must be followed.
     in a top level.)
   - Long sequences of `and's may slow down indentation slightly, since
     some computations (few) require to go back to the beginning of the
-    sequence. Some very long nested blocks may also lead to slow
+    sequence.  Some very long nested blocks may also lead to slow
     processing of `end's, `else's, `done's...
   - Multiline strings are handled properly, but you may prefer string
     concatenation `^' to break long strings (the C-j keystroke can help).
@@ -82,7 +82,7 @@ Known bugs:
   - When writing a line with mixed code and comments, avoid putting
     comments at the beginning or middle of the text. More precisely,
     writing comments immediately after `=' or parentheses then writing
-    some more code on the line leads to indentation errors. You may write
+    some more code on the line leads to indentation errors.  You may write
     `let x (* blah *) = blah' but should avoid `let x = (* blah *) blah'.
 
 Short cuts for the Tuareg mode:
@@ -94,24 +94,20 @@ Short cuts for interactions with the toplevel:
 \(fn)" t nil)
 
 (autoload 'tuareg-run-ocaml "tuareg" "\
-Run an OCaml toplevel process. I/O via buffer `*ocaml-toplevel*'.
+Run an OCaml toplevel process.  I/O via buffer `*ocaml-toplevel*'.
 
 \(fn)" t nil)
 
 (defalias 'run-ocaml 'tuareg-run-ocaml)
 
-;;;***
-
-;;;### (autoloads nil nil ("tuareg-pkg.el" "tuareg-site-file.el")
-;;;;;;  (21227 34724 354890 0))
+(add-to-list 'interpreter-mode-alist '("ocamlrun" . tuareg-mode))
+
+(add-to-list 'interpreter-mode-alist '("ocaml" . tuareg-mode))
 
 ;;;***
 
-(provide 'tuareg-autoloads)
-;; Local Variables:
-;; version-control: never
-;; no-byte-compile: t
-;; no-update-autoloads: t
-;; coding: utf-8
-;; End:
-;;; tuareg-autoloads.el ends here
+;;;### (autoloads nil nil ("tuareg-light.el" "tuareg_indent.el")
+;;;;;;  (21460 65517 72036 927000))
+
+;;;***
+
