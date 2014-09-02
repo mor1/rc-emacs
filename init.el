@@ -97,9 +97,25 @@ started from a shell."
 (set-coding-priority (list 'coding-category-utf-8))
 (prefer-coding-system 'utf-8)
 
+(defun screen-width nil -1) ;; squash some spurious error when using pgup, etc
+
+;; remember cursor position in file after close
+(setq-default save-place t)
+(require 'saveplace)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun screen-width nil -1) ;; squash some spurious error when using pgup, etc
+
+;; http://whattheemacsd.com/
+(defun goto-line-with-feedback ()
+  "Show line numbers temporarily, while prompting for the line number input"
+  (interactive)
+  (unwind-protect
+      (progn
+        (linum-mode 1)
+        (goto-line (read-number "Goto line: ")))
+    (linum-mode -1)))
+(global-set-key [remap goto-line] 'goto-line-with-feedback)
 
 (defun insert-euro () "Insert euro character"
   (interactive)
