@@ -4,19 +4,20 @@
 
 
 ;;;### (autoloads (gitignore-mode) "gitignore-mode" "gitignore-mode.el"
-;;;;;;  (21109 1324))
+;;;;;;  (21508 16041 0 0))
 ;;; Generated autoloads from gitignore-mode.el
 
 (autoload 'gitignore-mode "gitignore-mode" "\
-A major mode for editing .gitconfig files.
+A major mode for editing .gitignore files.
 
 \(fn)" t nil)
 
-(setq auto-mode-alist (append '(("/\\.gitignore\\'" . gitignore-mode) ("/\\.git/info/exclude\\'" . gitignore-mode)) auto-mode-alist))
+(dolist (pattern (list "/\\.gitignore\\'" "/\\.git/info/exclude\\'" "/git/ignore\\'")) (add-to-list 'auto-mode-alist (cons pattern 'gitignore-mode)))
 
 ;;;***
 
-;;;### (autoloads nil nil ("gitignore-mode-pkg.el") (21109 1324 988905))
+;;;### (autoloads nil nil ("gitignore-mode-pkg.el") (21508 16041
+;;;;;;  489963 0))
 
 ;;;***
 
