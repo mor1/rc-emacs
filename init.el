@@ -280,7 +280,6 @@ started from a shell."
     window that displays BUFFER.  A value of NIL or 0 for
     NEW-WRAP-COLUMN disables this behavior."
   (interactive
-   ;; add the extra 2 below to account for fci-mode indicator
    (list (read-number "New visual wrap column, 0 to disable: "
                       (or visual-wrap-column 0))))
   (if (and (numberp new-wrap-column)
@@ -311,8 +310,8 @@ started from a shell."
 
 ;; magit mode
 
-;; (require 'gitsum)
 (autoload 'magit-status "magit" nil t)
+(add-hook 'magit-status-mode-hook 'magit-filenotify-mode)
 
 ;; change magit diff colors
 (eval-after-load 'magit
@@ -322,6 +321,42 @@ started from a shell."
      (when (not window-system)
        (set-face-background 'magit-item-highlight "black")
        )))
+
+;; magit whitespace in diffs <http://whattheemacsd.com/>
+(defun magit-toggle-whitespace ()
+  (interactive)
+  (if (member "-w" magit-diff-options)
+      (magit-dont-ignore-whitespace)
+    (magit-ignore-whitespace)))
+
+(defun magit-ignore-whitespace ()
+  (interactive)
+  (add-to-list 'magit-diff-options "-w")
+  (magit-refresh))
+
+(defun magit-dont-ignore-whitespace ()
+  (interactive)
+  (setq magit-diff-options (remove "-w" magit-diff-options))
+  (magit-refresh))
+
+;; (define-key magit-status-mode-map (kbd "W") 'magit-toggle-whitespace)
+
+;; full screen magit-status
+(defadvice magit-status (around magit-fullscreen activate)
+  (window-configuration-to-register :magit-fullscreen)
+  ad-do-it
+  (delete-other-windows))
+
+(defun magit-quit-session ()
+  "Restores the previous window configuration and kills the magit buffer"
+  (interactive)
+  (kill-buffer)
+  (jump-to-register :magit-fullscreen))
+
+;; (define-key magit-status-mode-map (kbd "q") 'magit-quit-session)
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
