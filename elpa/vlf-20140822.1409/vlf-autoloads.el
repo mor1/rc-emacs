@@ -3,30 +3,22 @@
 ;;; Code:
 
 
-;;;### (autoloads (vlf) "vlf" "vlf.el" (21450 17648 0 0))
+;;;### (autoloads (vlf) "vlf" "vlf.el" (21508 15987 0 0))
 ;;; Generated autoloads from vlf.el
 
 (autoload 'vlf "vlf" "\
-View Large FILE in batches.
+View Large FILE in batches.  When MINIMAL load just a few bytes.
 You can customize number of bytes displayed by customizing
 `vlf-batch-size'.
 Return newly created buffer.
 
-\(fn FILE)" t nil)
+\(fn FILE &optional MINIMAL)" t nil)
 
 ;;;***
 
-;;;### (autoloads (vlf-ediff-files vlf-ediff-buffers) "vlf-ediff"
-;;;;;;  "vlf-ediff.el" (21450 17648 0 0))
+;;;### (autoloads (vlf-ediff-files) "vlf-ediff" "vlf-ediff.el" (21508
+;;;;;;  15987 0 0))
 ;;; Generated autoloads from vlf-ediff.el
-
-(autoload 'vlf-ediff-buffers "vlf-ediff" "\
-Run batch by batch ediff over VLF buffers BUFFER-A and BUFFER-B.
-Batch size is determined by the size in BUFFER-A.
-Requesting next or previous difference at the end or beginning
-respectively of difference list, runs ediff over the adjacent chunks.
-
-\(fn BUFFER-A BUFFER-B)" t nil)
 
 (autoload 'vlf-ediff-files "vlf-ediff" "\
 Run batch by batch ediff over FILE-A and FILE-B.
@@ -38,9 +30,20 @@ respectively of difference list, runs ediff over the adjacent chunks.
 
 ;;;***
 
+;;;### (autoloads (vlf-occur-load) "vlf-occur" "vlf-occur.el" (21508
+;;;;;;  15987 0 0))
+;;; Generated autoloads from vlf-occur.el
+
+(autoload 'vlf-occur-load "vlf-occur" "\
+Load serialized `vlf-occur' results from current buffer.
+
+\(fn)" t nil)
+
+;;;***
+
 ;;;### (autoloads nil nil ("vlf-base.el" "vlf-follow.el" "vlf-integrate.el"
-;;;;;;  "vlf-occur.el" "vlf-pkg.el" "vlf-search.el" "vlf-write.el")
-;;;;;;  (21450 17648 681396 0))
+;;;;;;  "vlf-pkg.el" "vlf-search.el" "vlf-write.el") (21508 15988
+;;;;;;  745942 0))
 
 ;;;***
 
