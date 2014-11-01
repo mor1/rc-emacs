@@ -59,15 +59,17 @@ started from a shell."
 (set-exec-path-from-shell-PATH)
 
 ;; package management
-(require 'package)
-(add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/"))
-(add-to-list 'package-archives '("ELPA" . "http://tromey.com/elpa/"))
-(add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/"))
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.milkbox.net/packages/") t)
+(eval-after-load "package"
+  '(progn
+     (add-to-list 'package-archives
+                  '("marmalade" . "http://marmalade-repo.org/packages/"))
+     (add-to-list 'package-archives '("ELPA" . "http://tromey.com/elpa/"))
+     (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/"))
+     (add-to-list 'package-archives
+                  '("melpa" . "http://melpa.milkbox.net/packages/") t)
 
-(package-initialize)
+     (package-initialize)
+     ))
 
 ;; evaluate locally if behind nottingham proxy
 ;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
