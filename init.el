@@ -13,6 +13,12 @@
 ;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 ;; IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+;; time emacs startup; updated to new (current-time)
+;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
+(require 'cl) ; a rare necessary use of REQUIRE
+(defvar *emacs-load-start* (current-time))
+
+;; split out customisations
 (setq custom-file "~/.emacs.d/init-custom.el")
 
 ;; tidy-up display on startup <http://whattheemacsd.com/>
@@ -927,3 +933,11 @@ started from a shell."
 (put 'eval-expression 'disabled nil)
 (put 'narrow-to-region 'disabled nil)
 (load custom-file)
+
+;; (load-theme 'solarized-dark)
+
+(message "My .emacs loaded in %ds"
+         (destructuring-bind (hi lo ms ps) (current-time)
+           (- (+ hi lo) (+ (first *emacs-load-start*)
+                           (second *emacs-load-start*))))
+         )
