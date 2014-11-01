@@ -1,10 +1,10 @@
 ;;; tuareg-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-
+(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads (ocamldebug) "ocamldebug" "ocamldebug.el" (21508
-;;;;;;  16000 0 0))
+;;;### (autoloads nil "ocamldebug" "ocamldebug.el" (21589 21412 0
+;;;;;;  0))
 ;;; Generated autoloads from ocamldebug.el
 
 (autoload 'ocamldebug "ocamldebug" "\
@@ -19,8 +19,7 @@ the ocamldebug commands `cd DIR' and `directory'.
 
 ;;;***
 
-;;;### (autoloads (tuareg-run-ocaml tuareg-mode) "tuareg" "tuareg.el"
-;;;;;;  (21508 16000 0 0))
+;;;### (autoloads nil "tuareg" "tuareg.el" (21589 21412 0 0))
 ;;; Generated autoloads from tuareg.el
 (add-to-list 'auto-mode-alist '("\\.ml[iylp]?\\'" . tuareg-mode))
 (dolist (ext '(".cmo" ".cmx" ".cma" ".cmxa" ".cmi"
@@ -108,15 +107,13 @@ Run an OCaml toplevel process.  I/O via buffer `*ocaml-toplevel*'.
 ;;;***
 
 ;;;### (autoloads nil nil ("tuareg-light.el" "tuareg-pkg.el" "tuareg-site-file.el"
-;;;;;;  "tuareg_indent.el") (21508 16000 869339 0))
+;;;;;;  "tuareg_indent.el") (21589 21412 768229 0))
 
 ;;;***
 
-(provide 'tuareg-autoloads)
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
-;; coding: utf-8
 ;; End:
 ;;; tuareg-autoloads.el ends here
