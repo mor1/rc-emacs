@@ -86,10 +86,6 @@
   "Face used to highlight changed lines."
   :group 'diff-hl)
 
-(defface diff-hl-unknown
-  '((default :inherit diff-header))
-  "Face used to highlight unregistered files.")
-
 (defcustom diff-hl-command-prefix (kbd "C-x v")
   "The prefix for all `diff-hl' commands."
   :group 'diff-hl
@@ -114,6 +110,12 @@
                  (const diff-hl-fringe-bmp-from-type)
                  function))
 
+(defcustom diff-hl-fringe-face-function 'diff-hl-fringe-face-from-type
+  "Function to choose the fringe face for a given change type
+  and position within a hunk.  Should accept two arguments."
+  :group 'diff-hl
+  :type 'function)
+
 (defvar diff-hl-reference-revision nil
   "Revision to diff against.  nil means the most recent one.")
 
@@ -122,11 +124,11 @@
                          (numberp text-scale-mode-amount))
                     (expt text-scale-mode-step text-scale-mode-amount)
                   1))
-         (spacing (or (default-value 'line-spacing) 0))
-         (h (round (+ (* (frame-char-height) scale)
-                      (if (floatp spacing)
-                          (* (frame-char-height) spacing)
-                        spacing))))
+         (spacing (or (and (display-graphic-p) (default-value 'line-spacing)) 0))
+         (h (+ (ceiling (* (frame-char-height) scale))
+               (if (floatp spacing)
+                   (truncate (* (frame-char-height) spacing))
+                 spacing)))
          (w (frame-parameter nil 'left-fringe))
          (middle (make-vector h (expt 2 (1- w))))
          (ones (1- (expt 2 w)))
@@ -152,8 +154,7 @@
       (aset insert-bmp (1+ middle-pos) delete-row)
       (aset insert-bmp (1- w2) 0)
       (define-fringe-bitmap 'diff-hl-bmp-insert insert-bmp w2 w2)
-      (define-fringe-bitmap 'diff-hl-bmp-change (make-vector
-                                                 w2 (* 3 middle-bit)) w2 w2))))
+      )))
 
 (defun diff-hl-maybe-define-bitmaps ()
   (when (window-system) ;; No fringes in the console.
@@ -167,19 +168,24 @@
   (let* ((key (list type pos diff-hl-fringe-bmp-function))
          (val (gethash key diff-hl-spec-cache)))
     (unless val
-      (let* ((face-sym (intern (format "diff-hl-%s" type)))
+      (let* ((face-sym (funcall diff-hl-fringe-face-function type pos))
              (bmp-sym (funcall diff-hl-fringe-bmp-function type pos)))
         (setq val (propertize " " 'display `((left-fringe ,bmp-sym ,face-sym))))
         (puthash key val diff-hl-spec-cache)))
     val))
 
+(defun diff-hl-fringe-face-from-type (type _pos)
+  (intern (format "diff-hl-%s" type)))
+
 (defun diff-hl-fringe-bmp-from-pos (_type pos)
   (intern (format "diff-hl-bmp-%s" pos)))
 
 (defun diff-hl-fringe-bmp-from-type (type _pos)
-  (if (eq type 'unknown)
-      'question-mark
-    (intern (format "diff-hl-bmp-%s" type))))
+  (cl-case type
+    (unknown 'question-mark)
+    (change 'exclamation-mark)
+    (ignored 'filled-square)
+    (t (intern (format "diff-hl-bmp-%s" type)))))
 
 (defvar vc-svn-diff-switches)
 
