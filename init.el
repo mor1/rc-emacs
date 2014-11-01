@@ -82,11 +82,11 @@ started from a shell."
 
 (defun light () "light colour scheme"
   (interactive)
-  (color-theme-sanityinc-solarized-light)
+  (load-theme 'solarized-light)
   )
 (defun dark () "dark colour scheme"
   (interactive)
-  (color-theme-sanityinc-solarized-dark)
+  (load-theme 'solarized-dark)
   )
 
 ;; frame size
