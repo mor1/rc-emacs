@@ -556,6 +556,8 @@ started from a shell."
 
 ;; ocaml
 
+(setq explicit-bash-args '("--login" "-i"))
+
 (setq opam-share
       (substring
        (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
@@ -574,7 +576,7 @@ started from a shell."
              (merlin-mode)
              ;; (setq indent-line-function 'ocp-indent-line)
              ;; (setq indent-region-function 'ocp-indent-region)
-             (setq merlin-use-auto-complete-mode t)
+             (setq merlin-use-auto-complete-mode 'easy)
              ;; (setq tuareg-lazy-= t) ; indent `=' like a standard keyword
              ;; (setq tuareg-lazy-paren t) ; indent [({ like standard keywords
              ;; (setq tuareg-in-indent 0) ; no indentation after `in' keywords
