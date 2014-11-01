@@ -1,15 +1,16 @@
-;;; d-mode.el --- D Programming Language mode for (X)Emacs
+;;; d-mode.el --- D Programming Language major mode for (X)Emacs
 ;;;               Requires a cc-mode of version 5.30 or greater
 
-;; Author:  2007 William Baxter
+;; Author:  William Baxter
 ;; Contributors:  Andrei Alexandrescu
 ;; Contributors:  Russel Winder
-;; Maintainer:  Russel Winder
+;; Maintainer:  Russel Winder <russel@winder.org.uk>
 ;; Created:  March 2007
-;; Date:  2014-02-06
-;; Version: 20140825.717
-;; X-Original-Version:  2.0.7-SNAPSHOT
+;; Version: 20141017.2243
+;; X-Original-Version:  201410180537
 ;; Keywords:  D programming language emacs cc-mode
+
+;;;; NB Version number is date and time yyyymmddhhMM in GMT (aka UTC).
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
-;; Usage:
+;;; Usage:
 ;; Put these lines in your init file.
 ;;   (autoload 'd-mode "d-mode" "Major mode for editing D code." t)
 ;;   (add-to-list 'auto-mode-alist '("\\.d[i]?\\'" . d-mode))
@@ -34,8 +35,8 @@
 ;; cc-mode version 5.30 or greater is required.
 ;; You can check your cc-mode with the command M-x c-version.
 ;; You can get the latest version of cc-mode at http://cc-mode.sourceforge.net
-;;
-;; Commentary:
+
+;;; Commentary:
 ;;   This mode supports most of D's syntax, including nested /+ +/
 ;;   comments and backquote `string literals`.
 ;;
@@ -43,20 +44,17 @@
 ;;   from scratch.  The previous d-mode was based on cc-mode 5.28 or
 ;;   so.  This version is based on the cc-mode 5.30 derived mode
 ;;   example by Martin Stjernholm, 2002.
-;;
-;;
-;; TODO:
+
+;;; TODO:
 ;;   Issues with this code are managed via the project issue management
 ;;   on GitHub: https://github.com/Emacs-D-Mode-Maintainers/Emacs-D-Mode/issues?state=open
-;;
-;;
-;; History:
+
+;;; History:
 ;;   History is tracked in the Git repository rather than in this file.
 ;;   See https://github.com/Emacs-D-Mode-Maintainers/Emacs-D-Mode/commits/master
-;;
 
 ;;----------------------------------------------------------------------------
-;; Code:
+;;; Code:
 
 (require 'cc-mode)
 
@@ -309,6 +307,13 @@ operators."
 (defvar d-font-lock-keywords d-font-lock-keywords-3
   "Default expressions to highlight in D mode.")
 
+(defun d-font-lock-keywords-2 ()
+  (c-compose-keywords-list d-font-lock-keywords-2))
+(defun d-font-lock-keywords-3 ()
+  (c-compose-keywords-list d-font-lock-keywords-3))
+(defun d-font-lock-keywords ()
+  (c-compose-keywords-list d-font-lock-keywords))
+
 (defvar d-mode-syntax-table nil
   "Syntax table used in d-mode buffers.")
 (or d-mode-syntax-table
@@ -419,6 +424,13 @@ operators."
 ;;----------------------------------------------------------------------------
 ;;;###autoload (add-to-list 'auto-mode-alist '("\\.d[i]?\\'" . d-mode))
 
+;; Custom variables
+;;;###autoload
+(defcustom d-mode-hook nil
+  "*Hook called by `d-mode'."
+  :type 'hook
+  :group 'c)
+
 ;; For compatibility with Emacs < 24
 (defalias 'd-parent-mode
   (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
@@ -426,7 +438,9 @@ operators."
 ;;;###autoload
 (define-derived-mode d-mode d-parent-mode "D"
   "Major mode for editing code written in the D Programming Language.
+
 See http://www.digitalmars.com/d for more information about the D language.
+
 The hook `c-mode-common-hook' is run with no args at mode
 initialization, then `d-mode-hook'.
 
@@ -446,9 +460,10 @@ Key bindings:
     (setq-local syntax-propertize-function
             (syntax-propertize-rules ("`\\(\\\\\\)`" (1 "."))))))
 
-;; Hideous hacks!
+;;----------------------------------------------------------------------------
+;; "Hideous hacks" to support appropriate font-lock behaviour.
 ;;
-;; * auto/immutable: If we leve them in c-modifier-kwds (like
+;; * auto/immutable: If we leave them in c-modifier-kwds (like
 ;;   c++-mode) then in the form "auto var;" var will be highlighted in
 ;;   type name face. Moving auto/immutable to font-lock-add-keywords
 ;;   lets cc-mode seeing them as a type name, so the next symbol can
@@ -490,7 +505,75 @@ Key bindings:
    (d-match-fun-decl (1 font-lock-type-face) (2 font-lock-function-name-face)))
  t)
 
-
+;;----------------------------------------------------------------------------
+;;
+;; Support for "Adjusting Alignment Rules for UCFS-Chains in D",
+;; cf. https://stackoverflow.com/questions/25797945/adjusting-alignment-rules-for-ucfs-chains-in-d
+;;
+;; The code here was originally created by Sergei Nosov
+;; (https://stackoverflow.com/users/1969069/sergei-nosov) based on the c-lineup-cascaded-calls code, see
+;; StackOverflow, and then amended by Nordlöw (https://stackoverflow.com/users/683710/nordl%C3%B6w) it
+;; provides a function that people can make use of in their d-mode-hook thus:
+;;
+;; (add-hook 'd-mode-hook
+;;                  '(lambda ()
+;;                     (add-to-list 'c-offsets-alist '(arglist-cont-nonempty . d-lineup-cascaded-calls))
+;;                     (add-to-list 'c-offsets-alist '(statement-cont . d-lineup-cascaded-calls))))
+
+(defun d-lineup-cascaded-calls (langelem)
+  "This is a modified `c-lineup-cascaded-calls' function for the
+D programming language which accounts for optional parenthesis
+and compile-time parameters in function calls."
+
+  (if (and (eq (c-langelem-sym langelem) 'arglist-cont-nonempty)
+           (not (eq (c-langelem-2nd-pos c-syntactic-element)
+                    (c-most-enclosing-brace (c-parse-state)))))
+      ;; The innermost open paren is not our one, so don't do
+      ;; anything. This can occur for arglist-cont-nonempty with
+      ;; nested arglist starts on the same line.
+      nil
+
+    (save-excursion
+      (back-to-indentation)
+      (let ((operator (and (looking-at "\\.")
+                           (regexp-quote (match-string 0))))
+            (stmt-start (c-langelem-pos langelem)) col)
+
+        (when (and operator
+                   (looking-at operator)
+                   (or (and
+                        (zerop (c-backward-token-2 1 t stmt-start))
+                        (eq (char-after) ?\()
+                        (zerop (c-backward-token-2 2 t stmt-start))
+                        (looking-at operator))
+                       (and
+                        (zerop (c-backward-token-2 1 t stmt-start))
+                        (looking-at operator))
+                       (and
+                        (zerop (c-backward-token-2 1 t stmt-start))
+                        (looking-at operator))
+                       )
+                   )
+          (setq col (current-column))
+
+          (while (or (and
+                      (zerop (c-backward-token-2 1 t stmt-start))
+                      (eq (char-after) ?\()
+                      (zerop (c-backward-token-2 2 t stmt-start))
+                      (looking-at operator))
+                     (and
+                      (zerop (c-backward-token-2 1 t stmt-start))
+                      (looking-at operator))
+                     (and
+                      (zerop (c-backward-token-2 1 t stmt-start))
+                      (looking-at operator))
+                     )
+            (setq col (current-column)))
+
+          (vector col))))))
+
+;;----------------------------------------------------------------------------
+
 (provide 'd-mode)
 
 ;;; d-mode.el ends here
