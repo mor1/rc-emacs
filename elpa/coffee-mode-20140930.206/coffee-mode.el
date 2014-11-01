@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2010 Chris Wanstrath
 
-;; Version: 20140821.239
+;; Version: 20140930.206
 ;; X-Original-Version: 0.5.5
 ;; Keywords: CoffeeScript major mode
 ;; Author: Chris Wanstrath <chris@ozmm.org>
@@ -337,7 +337,22 @@ called `coffee-compiled-buffer-name'."
 (defsubst coffee-generate-sourcemap-p ()
   (cl-find-if (lambda (opt) (member opt '("-m" "--map"))) coffee-args-compile))
 
-(defun coffee-compile-sentinel (file)
+(defun coffee--coffeescript-version ()
+  (with-temp-buffer
+    (unless (zerop (process-file coffee-command nil t nil "--version"))
+      (error "Failed: 'coffee --version'"))
+    (goto-char (point-min))
+    (let ((line (buffer-substring-no-properties (point) (line-end-position))))
+      (when (string-match "[0-9.]+\\'" line)
+        (string-to-number (match-string-no-properties 0 line))))))
+
+(defun coffee--map-file-name (coffee-file)
+  (let* ((version (coffee--coffeescript-version))
+         (extension (if (>= version 1.8) ".js.map" ".map")))
+    ;; foo.js: foo.js.map(>= 1.8), foo.map(< 1.8)
+    (concat (file-name-sans-extension coffee-file) extension)))
+
+(defun coffee-compile-sentinel (file line column)
   (lambda (proc _event)
     (when (eq (process-status proc) 'exit)
       (save-selected-window
@@ -346,23 +361,22 @@ called `coffee-compiled-buffer-name'."
         (goto-char (point-min))
         (if (not (= (process-exit-status proc) 0))
             (message "Failed: compiling to JavaScript")
-          (let ((props (list :sourcemap (concat (file-name-sans-extension file) ".map")
-                             :line (line-number-at-pos) :column (current-column)
-                             :source file)))
+          (let ((props (list :sourcemap (coffee--map-file-name file)
+                             :line line :column column :source file)))
             (let ((buffer-file-name "tmp.js"))
               (setq buffer-read-only t)
               (set-auto-mode)
               (forward-line 1) ;; 1st line is comment
               (run-hook-with-args 'coffee-after-compile-hook props))))))))
 
-(defun coffee-start-compile-process (curbuf)
+(defun coffee-start-compile-process (curbuf line column)
   (lambda (start end)
     (let ((proc (apply 'start-process "coffee-mode"
                        (get-buffer-create coffee-compiled-buffer-name)
                        coffee-command (append coffee-args-compile '("-s" "-p"))))
           (curfile (buffer-file-name curbuf)))
       (set-process-query-on-exit-flag proc nil)
-      (set-process-sentinel proc (coffee-compile-sentinel curfile))
+      (set-process-sentinel proc (coffee-compile-sentinel curfile line column))
       (with-current-buffer curbuf
         (process-send-region proc start end))
       (process-send-eof proc))))
@@ -371,7 +385,10 @@ called `coffee-compiled-buffer-name'."
   (let* ((file (buffer-file-name))
          (sourcemap-buf (get-buffer-create "*coffee-sourcemap*"))
          (proc (start-process "coffee-sourcemap" sourcemap-buf
-                              coffee-command "-m" file)))
+                              coffee-command "-m" file))
+         (curbuf (current-buffer))
+         (line (line-number-at-pos))
+         (column (current-column)))
     (set-process-query-on-exit-flag proc nil)
     (set-process-sentinel
      proc
@@ -380,7 +397,7 @@ called `coffee-compiled-buffer-name'."
          (if (not (= (process-exit-status proc) 0))
              (message "Error: generating sourcemap file")
            (kill-buffer sourcemap-buf)
-           (funcall (coffee-start-compile-process (current-buffer)) start end)))))))
+           (funcall (coffee-start-compile-process curbuf line column) start end)))))))
 
 (defun coffee-cleanup-compile-buffer ()
   (let ((buffer (get-buffer coffee-compiled-buffer-name)))
@@ -396,7 +413,9 @@ called `coffee-compiled-buffer-name'."
   (coffee-cleanup-compile-buffer)
   (if (coffee-generate-sourcemap-p)
       (coffee-start-generate-sourcemap-process start end)
-    (funcall (coffee-start-compile-process (current-buffer)) start end)))
+    (funcall (coffee-start-compile-process
+              (current-buffer) (line-number-at-pos) (current-column))
+             start end)))
 
 (defun coffee-get-repl-proc ()
   (unless (comint-check-proc coffee-repl-buffer)
@@ -511,7 +530,7 @@ called `coffee-compiled-buffer-name'."
   '("if" "else" "new" "return" "try" "catch"
     "finally" "throw" "break" "continue" "for" "in" "while"
     "delete" "instanceof" "typeof" "switch" "super" "extends"
-    "class" "until" "loop"))
+    "class" "until" "loop" "yield"))
 
 ;; Reserved keywords either by JS or CS.
 (defvar coffee-js-reserved
@@ -661,25 +680,101 @@ output in a compilation buffer."
 
 ;;; The theory is explained in the README.
 
+(defsubst coffee--in-string-or-comment-p ()
+  (nth 8 (syntax-ppss)))
+
+(defun coffee--block-type ()
+  (save-excursion
+    (back-to-indentation)
+    (unless (coffee--in-string-or-comment-p)
+      (cond ((looking-at-p "else\\(\\s-+if\\)?\\_>") 'if-else)
+            ((looking-at-p "\\(?:catch\\|finally\\)\\_>") 'try-catch)))))
+
+(defun coffee--closed-if-else-p (curindent if-indent)
+  (let (else-if-p else-p)
+    (when (looking-at "else\\(?:\\s-+\\(if\\)\\)?\\_>")
+      (if (string= (match-string 1) "if")
+          (setq else-if-p t)
+        (setq else-p t)))
+    (or (and (not (or else-p else-if-p)) (<= curindent if-indent))
+        (and else-p (= curindent if-indent)))))
+
+(defun coffee--closed-try-catch-p (curindent if-indent)
+  (and (not (looking-at-p "\\(?:finally\\|catch\\)\\_>"))
+       (<= curindent if-indent)))
+
+(defun coffee--closed-block-p (type if-indent limit)
+  (let ((limit-line (line-number-at-pos limit))
+        (closed-pred (cl-case type
+                       (if-else 'coffee--closed-if-else-p)
+                       (try-catch 'coffee--closed-try-catch-p)))
+        finish)
+    (save-excursion
+      (while (and (not finish) (< (point) limit))
+        (forward-line 1)
+        (when (< (line-number-at-pos) limit-line)
+          (let ((curindent (current-indentation)))
+            (unless (coffee--in-string-or-comment-p)
+              (back-to-indentation)
+              (when (funcall closed-pred curindent if-indent)
+                (setq finish t))))))
+      finish)))
+
+(defun coffee--find-if-else-indents (limit cmpfn)
+  (let (indents)
+    (while (re-search-forward "^\\s-*if\\_>" limit t)
+      (let ((indent (current-indentation)))
+        (unless (coffee--closed-block-p 'if-else indent limit)
+          (push indent indents))))
+    (sort indents cmpfn)))
+
+(defun coffee--find-try-catch-indents (limit cmpfn)
+  (let (indents)
+    (while (re-search-forward "^\\s-*try\\_>" limit t)
+      (let ((indent (current-indentation)))
+        (unless (coffee--closed-block-p 'try-catch indent limit)
+          (push indent indents))))
+    (sort indents cmpfn)))
+
+(defun coffee--find-indents (type limit cmpfn)
+  (save-excursion
+    (coffee-beginning-of-defun 1)
+    (cl-case type
+      (if-else (coffee--find-if-else-indents limit cmpfn))
+      (try-catch (coffee--find-try-catch-indents limit cmpfn)))))
+
+(defsubst coffee--decide-indent (curindent if-indents cmpfn)
+  (cl-loop for if-indent in if-indents
+           when (funcall cmpfn if-indent curindent)
+           return if-indent
+           finally
+           return (car if-indents)))
+
+(defun coffee--indent-insert-spaces (indent-size)
+  (unless (= (current-indentation) indent-size)
+    (save-excursion
+      (goto-char (line-beginning-position))
+      (delete-horizontal-space)
+      (coffee-insert-spaces indent-size)))
+  (when (< (current-column) (current-indentation))
+    (back-to-indentation)))
+
 (defun coffee-indent-line ()
   "Indent current line as CoffeeScript."
   (interactive)
-
-  (if (= (point) (line-beginning-position))
-      (coffee-insert-spaces coffee-tab-width)
-    (save-excursion
-      (let ((prev-indent (coffee-previous-indent)))
-        ;; Shift one column to the left
-        (beginning-of-line)
-        (coffee-insert-spaces coffee-tab-width)
-
-        (when (= (point-at-bol) (point))
-          (forward-char coffee-tab-width))
-
-        ;; We're too far, remove all indentation.
-        (when (> (- (current-indentation) prev-indent) coffee-tab-width)
-          (backward-to-indentation 0)
-          (delete-region (point-at-bol) (point)))))))
+  (let* ((curindent (current-indentation))
+         (limit (+ (line-beginning-position) curindent))
+         (type (coffee--block-type))
+         indent-size
+         begin-indents)
+    (if (and type (setq begin-indents (coffee--find-indents type limit '<)))
+        (setq indent-size (coffee--decide-indent curindent begin-indents '>))
+      (let ((prev-indent (coffee-previous-indent))
+            (next-indent-size (+ curindent coffee-tab-width)))
+        (if (> (- next-indent-size prev-indent) coffee-tab-width)
+            (setq indent-size 0)
+          (setq indent-size (+ curindent coffee-tab-width)))))
+    (coffee--indent-insert-spaces indent-size)))
 
 (defun coffee-previous-indent ()
   "Return the indentation level of the previous non-blank line."
