@@ -1,9 +1,9 @@
 ;;; vlf-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-
+(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads (vlf) "vlf" "vlf.el" (21508 15987 0 0))
+;;;### (autoloads nil "vlf" "vlf.el" (21589 21394 0 0))
 ;;; Generated autoloads from vlf.el
 
 (autoload 'vlf "vlf" "\
@@ -16,8 +16,7 @@ Return newly created buffer.
 
 ;;;***
 
-;;;### (autoloads (vlf-ediff-files) "vlf-ediff" "vlf-ediff.el" (21508
-;;;;;;  15987 0 0))
+;;;### (autoloads nil "vlf-ediff" "vlf-ediff.el" (21589 21394 0 0))
 ;;; Generated autoloads from vlf-ediff.el
 
 (autoload 'vlf-ediff-files "vlf-ediff" "\
@@ -30,8 +29,7 @@ respectively of difference list, runs ediff over the adjacent chunks.
 
 ;;;***
 
-;;;### (autoloads (vlf-occur-load) "vlf-occur" "vlf-occur.el" (21508
-;;;;;;  15987 0 0))
+;;;### (autoloads nil "vlf-occur" "vlf-occur.el" (21589 21394 0 0))
 ;;; Generated autoloads from vlf-occur.el
 
 (autoload 'vlf-occur-load "vlf-occur" "\
@@ -42,16 +40,14 @@ Load serialized `vlf-occur' results from current buffer.
 ;;;***
 
 ;;;### (autoloads nil nil ("vlf-base.el" "vlf-follow.el" "vlf-integrate.el"
-;;;;;;  "vlf-pkg.el" "vlf-search.el" "vlf-write.el") (21508 15988
-;;;;;;  745942 0))
+;;;;;;  "vlf-pkg.el" "vlf-search.el" "vlf-tune.el" "vlf-write.el")
+;;;;;;  (21589 21394 756998 0))
 
 ;;;***
 
-(provide 'vlf-autoloads)
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
-;; coding: utf-8
 ;; End:
 ;;; vlf-autoloads.el ends here

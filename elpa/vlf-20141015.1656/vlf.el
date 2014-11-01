@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2006, 2012-2014 Free Software Foundation, Inc.
 
-;; Version: 1.6
+;; Version: 1.7
 ;; Keywords: large files, utilities
 ;; Maintainer: Andrey Kotlarski <m00naticus@gmail.com>
 ;; Authors: 2006 Mathias Dahl <mathias.dahl@gmail.com>
@@ -39,8 +39,7 @@
 
 ;;; Code:
 
-(defgroup vlf nil "View Large Files in Emacs."
-  :prefix "vlf-" :group 'files)
+(require 'vlf-base)
 
 (defcustom vlf-before-batch-functions nil
   "Hook that runs before multiple batch operations.
@@ -54,7 +53,7 @@ One argument is supplied that specifies current action.  Possible
 values are: `write', `ediff', `occur', `search', `goto-line'."
   :group 'vlf :type 'hook)
 
-(require 'vlf-base)
+(defvar hexl-bits)
 
 (autoload 'vlf-write "vlf-write" "Write current chunk to file." t)
 (autoload 'vlf-re-search-forward "vlf-search"
@@ -62,6 +61,8 @@ values are: `write', `ediff', `occur', `search', `goto-line'."
 (autoload 'vlf-re-search-backward "vlf-search"
   "Search backward for REGEXP prefix COUNT number of times." t)
 (autoload 'vlf-goto-line "vlf-search" "Go to line." t)
+(autoload 'vlf-query-replace "vlf-search"
+  "Query replace regexp over whole file." t)
 (autoload 'vlf-occur "vlf-occur"
   "Make whole file occur style index for REGEXP." t)
 (autoload 'vlf-toggle-follow "vlf-follow"
@@ -82,6 +83,7 @@ values are: `write', `ediff', `occur', `search', `goto-line'."
         (vlf-change-batch-size t)))
     (define-key map "s" 'vlf-re-search-forward)
     (define-key map "r" 'vlf-re-search-backward)
+    (define-key map "%" 'vlf-query-replace)
     (define-key map "o" 'vlf-occur)
     (define-key map "[" 'vlf-beginning-of-file)
     (define-key map "]" 'vlf-end-of-file)
@@ -128,13 +130,23 @@ values are: `write', `ediff', `occur', `search', `goto-line'."
          (remove-hook 'write-file-functions 'vlf-write t)
          (remove-hook 'after-change-major-mode-hook
                       'vlf-keep-alive t)
-         (let ((hexl (derived-mode-p 'hexl-mode)))
-           (if hexl (hexl-mode-exit))
+         (if (derived-mode-p 'hexl-mode)
+             (let ((line (/ (1+ vlf-start-pos) hexl-bits))
+                   (pos (point)))
+               (if (consp buffer-undo-list)
+                   (setq buffer-undo-list nil))
+               (vlf-with-undo-disabled
+                (insert-file-contents-literally buffer-file-name
+                                                t nil nil t)
+                (hexlify-buffer))
+               (set-buffer-modified-p nil)
+               (goto-char (point-min))
+               (forward-line line)
+               (forward-char pos))
            (let ((pos (+ vlf-start-pos (position-bytes (point)))))
              (vlf-with-undo-disabled
               (insert-file-contents buffer-file-name t nil nil t))
-             (goto-char (byte-to-position pos)))
-           (if hexl (hexl-mode)))
+             (goto-char (byte-to-position pos))))
          (rename-buffer (file-name-nondirectory buffer-file-name) t))
         (t (setq vlf-mode t))))
 
@@ -172,6 +184,9 @@ When prefix argument is negative
  append next APPEND number of batches to the existing buffer."
   (interactive "p")
   (vlf-verify-size)
+  (vlf-tune-load (if (derived-mode-p 'hexl-mode)
+                     '(:hexl :raw)
+                   '(:insert :encode)))
   (let* ((end (min (+ vlf-end-pos (* vlf-batch-size (abs append)))
                    vlf-file-size))
          (start (if (< append 0)
@@ -188,6 +203,9 @@ When prefix argument is negative
   (interactive "p")
   (if (zerop vlf-start-pos)
       (error "Already at BOF"))
+  (vlf-tune-load (if (derived-mode-p 'hexl-mode)
+                     '(:hexl :raw)
+                   '(:insert :encode)))
   (let* ((start (max 0 (- vlf-start-pos (* vlf-batch-size (abs prepend)))))
          (end (if (< prepend 0)
                   vlf-end-pos
@@ -238,6 +256,16 @@ When prefix argument is negative
        (if (and vlf-mode (pos-visible-in-window-p (point-min)))
            (progn (vlf-prev-batch 1)
                   (goto-char (point-max)))
+         ad-do-it))
+
+     (defadvice hexl-mode-exit (around vlf-hexl-mode-exit
+                                       activate compile)
+       "Exit `hexl-mode' gracefully in case `vlf-mode' is active."
+       (if (and vlf-mode (not (buffer-modified-p)))
+           (vlf-with-undo-disabled
+            (erase-buffer)
+            ad-do-it
+            (vlf-move-to-chunk-2 vlf-start-pos vlf-end-pos))
          ad-do-it))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -253,19 +281,30 @@ with the prefix argument DECREASE it is halved."
 
 (defun vlf-set-batch-size (size)
   "Set batch to SIZE bytes and update chunk."
-  (interactive (list (read-number "Size in bytes: " vlf-batch-size)))
+  (interactive
+   (list (read-number "Size in bytes: "
+                      (vlf-tune-optimal-load
+                       (if (derived-mode-p 'hexl-mode)
+                           '(:hexl :raw)
+                         '(:insert :encode))))))
   (setq vlf-batch-size size)
   (vlf-move-to-batch vlf-start-pos))
 
 (defun vlf-beginning-of-file ()
   "Jump to beginning of file content."
   (interactive)
+  (vlf-tune-load (if (derived-mode-p 'hexl-mode)
+                     '(:hexl :raw)
+                   '(:insert :encode)))
   (vlf-move-to-batch 0))
 
 (defun vlf-end-of-file ()
   "Jump to end of file content."
   (interactive)
   (vlf-verify-size)
+  (vlf-tune-load (if (derived-mode-p 'hexl-mode)
+                     '(:hexl :raw)
+                   '(:insert :encode)))
   (vlf-move-to-batch vlf-file-size))
 
 (defun vlf-revert (&optional _auto noconfirm)
@@ -281,6 +320,9 @@ Ask for confirmation if NOCONFIRM is nil."
 (defun vlf-jump-to-chunk (n)
   "Go to to chunk N."
   (interactive "nGoto to chunk: ")
+  (vlf-tune-load (if (derived-mode-p 'hexl-mode)
+                     '(:hexl :raw)
+                   '(:insert :encode)))
   (vlf-move-to-batch (* (1- n) vlf-batch-size)))
 
 (defun vlf-no-modifications ()

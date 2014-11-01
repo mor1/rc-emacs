@@ -44,6 +44,8 @@
 (defvar vlf-occur-lines 0 "Number of lines scanned by `vlf-occur'.")
 (make-variable-buffer-local 'vlf-occur-lines)
 
+(defvar tramp-verbose)
+
 (defvar vlf-occur-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "n" 'vlf-occur-next-match)
@@ -144,65 +146,93 @@ EVENT may hold details of the invocation."
           (vlf-move-to-chunk chunk-start chunk-end)
           (goto-char match-pos)))))
 
+(defun vlf-occur-other-buffer (regexp)
+  "Make whole file occur style index for REGEXP branching to new buffer.
+Prematurely ending indexing will still show what's found so far."
+  (let ((vlf-buffer (current-buffer))
+        (file buffer-file-name)
+        (file-size vlf-file-size)
+        (batch-size vlf-batch-size)
+        (is-hexl (derived-mode-p 'hexl-mode))
+        (insert-bps vlf-tune-insert-bps)
+        (insert-raw-bps vlf-tune-insert-raw-bps))
+    (with-temp-buffer
+      (setq buffer-file-name file
+            buffer-file-truename file
+            buffer-undo-list t
+            vlf-file-size file-size)
+      (set-buffer-modified-p nil)
+      (set (make-local-variable 'vlf-batch-size) batch-size)
+      (when vlf-tune-enabled
+        (setq vlf-tune-insert-bps insert-bps)
+        (if is-hexl
+            (progn (setq vlf-tune-insert-raw-bps insert-raw-bps)
+                   (vlf-tune-batch '(:hexl :raw) t))
+          (vlf-tune-batch '(:insert :encode) t)))
+      (vlf-mode 1)
+      (if is-hexl (hexl-mode))
+      (goto-char (point-min))
+      (vlf-build-occur regexp vlf-buffer)
+      (when vlf-tune-enabled
+        (setq insert-bps vlf-tune-insert-bps)
+        (if is-hexl
+            (setq insert-raw-bps vlf-tune-insert-raw-bps))))
+    (when vlf-tune-enabled              ;merge back tune measurements
+      (setq vlf-tune-insert-bps insert-bps)
+      (if is-hexl
+          (setq vlf-tune-insert-raw-bps insert-raw-bps)))))
+
 (defun vlf-occur (regexp)
   "Make whole file occur style index for REGEXP.
 Prematurely ending indexing will still show what's found so far."
   (interactive (list (read-regexp "List lines matching regexp"
                                   (if regexp-history
                                       (car regexp-history)))))
-  (if (buffer-modified-p) ;use temporary buffer not to interfere with modifications
-      (let ((vlf-buffer (current-buffer))
-            (file buffer-file-name)
-            (batch-size vlf-batch-size)
-            (is-hexl (derived-mode-p 'hexl-mode)))
-        (with-temp-buffer
-          (setq buffer-file-name file
-                buffer-file-truename file
-                buffer-undo-list t)
-          (set-buffer-modified-p nil)
-          (set (make-local-variable 'vlf-batch-size) batch-size)
-          (vlf-mode 1)
-          (if is-hexl
-              (hexl-mode))
-          (run-hook-with-args 'vlf-before-batch-functions 'occur)
-          (goto-char (point-min))
-          (vlf-with-undo-disabled
-           (vlf-build-occur regexp vlf-buffer))
-          (run-hook-with-args 'vlf-after-batch-functions 'occur)))
-    (run-hook-with-args 'vlf-before-batch-functions 'occur)
+  (run-hook-with-args 'vlf-before-batch-functions 'occur)
+  (if (or (buffer-modified-p)
+          (< vlf-batch-size vlf-start-pos))
+      (vlf-occur-other-buffer regexp)
     (let ((start-pos vlf-start-pos)
           (end-pos vlf-end-pos)
-          (pos (point)))
+          (pos (point))
+          (batch-size vlf-batch-size))
+      (vlf-tune-batch (if (derived-mode-p 'hexl-mode)
+                          '(:hexl :raw)
+                        '(:insert :encode)) t)
       (vlf-with-undo-disabled
-       (vlf-beginning-of-file)
+       (vlf-move-to-batch 0)
        (goto-char (point-min))
        (unwind-protect (vlf-build-occur regexp (current-buffer))
          (vlf-move-to-chunk start-pos end-pos)
-         (goto-char pos))))
-    (run-hook-with-args 'vlf-after-batch-functions 'occur)))
+         (goto-char pos)
+         (setq vlf-batch-size batch-size)))))
+  (run-hook-with-args 'vlf-after-batch-functions 'occur))
 
 (defun vlf-build-occur (regexp vlf-buffer)
   "Build occur style index for REGEXP over VLF-BUFFER."
-  (let ((tramp-verbose (if (boundp 'tramp-verbose)
-                           (min tramp-verbose 2)))
-        (case-fold-search t)
-        (line 1)
-        (last-match-line 0)
-        (last-line-pos (point-min))
-        (total-matches 0)
-        (match-end-pos (+ vlf-start-pos (position-bytes (point))))
-        (occur-buffer (generate-new-buffer
-                       (concat "*VLF-occur " (file-name-nondirectory
-                                              buffer-file-name)
-                               "*")))
-        (line-regexp (concat "\\(?5:[\n\C-m]\\)\\|\\(?10:"
-                             regexp "\\)"))
-        (batch-step (/ vlf-batch-size 8))
-        (is-hexl (derived-mode-p 'hexl-mode))
-        (end-of-file nil)
-        (reporter (make-progress-reporter
-                   (concat "Building index for " regexp "...")
-                   vlf-start-pos vlf-file-size)))
+  (let* ((tramp-verbose (if (boundp 'tramp-verbose)
+                            (min tramp-verbose 1)))
+         (case-fold-search t)
+         (line 1)
+         (last-match-line 0)
+         (last-line-pos (point-min))
+         (total-matches 0)
+         (match-end-pos (+ vlf-start-pos (position-bytes (point))))
+         (occur-buffer (generate-new-buffer
+                        (concat "*VLF-occur " (file-name-nondirectory
+                                               buffer-file-name)
+                                "*")))
+         (line-regexp (concat "\\(?5:[\n\C-m]\\)\\|\\(?10:"
+                              regexp "\\)"))
+         (batch-step (min 1024 (/ vlf-batch-size 8)))
+         (is-hexl (derived-mode-p 'hexl-mode))
+         (end-of-file nil)
+         (time (float-time))
+         (tune-types (if is-hexl '(:hexl :raw)
+                       '(:insert :encode)))
+         (reporter (make-progress-reporter
+                    (concat "Building index for " regexp "...")
+                    vlf-start-pos vlf-file-size)))
     (with-current-buffer occur-buffer
       (setq buffer-undo-list t))
     (unwind-protect
@@ -255,12 +285,14 @@ Prematurely ending indexing will still show what's found so far."
                                          total-matches))))))))
               (setq end-of-file (= vlf-end-pos vlf-file-size))
               (unless end-of-file
-                (let ((batch-move (- vlf-end-pos batch-step)))
-                  (vlf-move-to-batch (if (or is-hexl
-                                             (< match-end-pos
-                                                batch-move))
-                                         batch-move
-                                       match-end-pos) t))
+                (vlf-tune-batch tune-types)
+                (let* ((batch-move (- vlf-end-pos batch-step))
+                       (start (if (or is-hexl (< match-end-pos
+                                                 batch-move))
+                                  batch-move
+                                match-end-pos)))
+                  (vlf-move-to-chunk start (+ start
+                                              vlf-batch-size) t))
                 (goto-char (if (or is-hexl
                                    (<= match-end-pos vlf-start-pos))
                                (point-min)
@@ -274,7 +306,8 @@ Prematurely ending indexing will still show what's found so far."
       (set-buffer-modified-p nil)
       (if (zerop total-matches)
           (progn (kill-buffer occur-buffer)
-                 (message "No matches for \"%s\"" regexp))
+                 (message "No matches for \"%s\" (%f secs)"
+                          regexp (- (float-time) time)))
         (let ((file buffer-file-name)
               (dir default-directory))
           (with-current-buffer occur-buffer
@@ -292,10 +325,12 @@ in file: %s" total-matches line regexp file)
                   vlf-occur-regexp regexp
                   vlf-occur-hexl is-hexl
                   vlf-occur-lines line)))
-        (display-buffer occur-buffer)))))
+        (display-buffer occur-buffer)
+        (message "Occur finished for \"%s\" (%f secs)"
+                 regexp (- (float-time) time))))))
 
-
-;; save, load vlf-occur data
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; save, load vlf-occur data
 
 (defun vlf-occur-save (file)
   "Serialize `vlf-occur' results to FILE which can later be reloaded."
