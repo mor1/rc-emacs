@@ -3720,8 +3720,9 @@ tracked in the current repository are reverted if
                 (save-excursion
                   (goto-char (magit-section-end section))
                   (when (re-search-backward
-                         magit-process-error-message-re nil
-                         (magit-section-content-beginning section))
+                         magit-process-error-message-re
+                         (magit-section-content-beginning section)
+                         t)
                     (match-string 1)))))
          "Git failed")
      (let ((key (and (buffer-live-p command-buf)
@@ -4372,8 +4373,9 @@ can be used to override this."
               (and (yes-or-no-p
                     (format "There is no Git repository in %s.  Create one? "
                             dir))
-                   (magit-init dir)
-                   (setq topdir (magit-get-top-dir dir))))
+                   (progn
+                     (magit-init dir)
+                     (setq topdir (magit-get-top-dir dir)))))
       (let ((default-directory topdir))
         (magit-mode-setup magit-status-buffer-name
                           (or switch-function
@@ -4701,7 +4703,8 @@ to consider it or not when called with that buffer current."
 As determined by the directory passed to `magit-status'."
   (and buffer-file-name
        (let ((topdir (magit-get-top-dir magit-default-directory)))
-         (and (string-prefix-p topdir buffer-file-name)
+         (and topdir
+              (equal (file-remote-p topdir) (file-remote-p buffer-file-name))
               ;; ^ Avoid needlessly connecting to unrelated tramp remotes.
               (string= topdir (magit-get-top-dir
                                (file-name-directory buffer-file-name)))))))
@@ -5266,7 +5269,8 @@ Works with local or remote branches.
        ((and is-current is-master)
         (message "Cannot delete master branch while it's checked out."))
        (is-current
-        (if (y-or-n-p "Cannot delete current branch.  Switch to master first? ")
+        (if (and (magit-ref-exists-p "refs/heads/master")
+                 (y-or-n-p "Cannot delete current branch.  Switch to master first? "))
             (progn
               (magit-checkout "master")
               (magit-run-git args))
@@ -6339,7 +6343,7 @@ Other key binding:
 
 (defconst magit-log-oneline-re
   (concat "^"
-          "\\(?4:\\(?:[-_/|\\*o.] *\\)+ *\\)?"     ; graph
+          "\\(?4:\\(?: *[-_/|\\*o.] *\\)+ *\\)?"   ; graph
           "\\(?:"
           "\\(?1:[0-9a-fA-F]+\\) "                 ; sha1
           "\\(?:\\(?3:([^()]+)\\) \\)?"            ; refs
@@ -7668,8 +7672,7 @@ blame to center around the line point is on."
      (list revision filename
            (and (equal filename
                        (ignore-errors
-                         (magit-file-relative-name
-                          (file-name-directory (buffer-file-name)))))
+                         (magit-file-relative-name (buffer-file-name))))
                 (line-number-at-pos)))))
   (let ((default-directory (magit-get-top-dir)))
     (apply #'call-process magit-git-executable nil 0 nil "gui" "blame"
