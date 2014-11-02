@@ -15,7 +15,7 @@
 
 ;; time emacs startup; updated to new (current-time)
 ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
-(require 'cl) ; a rare necessary use of REQUIRE
+(require 'cl)
 (defvar *emacs-load-start* (current-time))
 
 ;; split out customisations
@@ -75,6 +75,7 @@ started from a shell."
 ;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
 ;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
 
+;; colours and fonts
 (autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
 (add-hook 'eshell-preoutput-filter-functions 'ansi-color-filter-apply)
@@ -617,18 +618,19 @@ started from a shell."
         (holiday-fixed 12 25 "Christmas Day")
         (holiday-fixed 12 26 "Boxing Day")
         (holiday-christmas-bank-holidays)
-        (holiday-fixed 12 31 "New Year's Eve")))
+        (holiday-fixed 12 31 "New Year's Eve")
+        ))
 
 ;;Major US holidays
-(setq other-holidays
-      '((holiday-float 1 1 3 "Martin Luther King Day")
-        (holiday-float 2 1 3 "President's Day")
-        (holiday-float 5 1 -1 "Memorial Day")
-        (holiday-fixed 7 4 "Independence Day")
-        (holiday-float 9 1 1 "Labor Day")
-        (holiday-float 10 1 2 "Columbus Day")
-        (holiday-fixed 11 11 "Veteran's Day")
-        (holiday-float 11 4 4 "Thanksgiving")))
+;; (setq other-holidays
+;;       '((holiday-float 1 1 3 "Martin Luther King Day")
+;;         (holiday-float 2 1 3 "President's Day")
+;;         (holiday-float 5 1 -1 "Memorial Day")
+;;         (holiday-fixed 7 4 "Independence Day")
+;;         (holiday-float 9 1 1 "Labor Day")
+;;         (holiday-float 10 1 2 "Columbus Day")
+;;         (holiday-fixed 11 11 "Veteran's Day")
+;;         (holiday-float 11 4 4 "Thanksgiving")))
 
 ;;N.B. It is assumed that 1 January is defined with holiday-fixed -
 ;;this function only returns any extra bank holiday that is allocated
@@ -929,15 +931,7 @@ started from a shell."
         (add-to-list 'minor-mode-map-alist mykeys))))
 ;; (ad-activate 'load)
 
-;; default font
-
-(set-default-font "-apple-Consolas-medium-normal-normal-*-11-*-*-*-m-0-fontset-auto3")
-
-(put 'eval-expression 'disabled nil)
-(put 'narrow-to-region 'disabled nil)
 (load custom-file)
-
-;; (load-theme 'solarized-dark)
 
 (message "My .emacs loaded in %ds"
          (destructuring-bind (hi lo ms ps) (current-time)
