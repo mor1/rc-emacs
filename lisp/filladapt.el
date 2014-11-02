@@ -18,10 +18,10 @@
 ;;;
 ;;; Send bug reports to kyle_jones@wonderworks.com
 
-;; LCD Archive Entry: 
-;; filladapt|Kyle Jones|kyle_jones@wonderworks.com| 
+;; LCD Archive Entry:
+;; filladapt|Kyle Jones|kyle_jones@wonderworks.com|
 ;; Minor mode to adaptively set fill-prefix and overload filling functions|
-;; 28-February-1998|2.12|~/packages/filladapt.el| 
+;; 28-February-1998|2.12|~/packages/filladapt.el|
 
 ;; These functions enhance the default behavior of Emacs' Auto Fill
 ;; mode and the commands fill-paragraph, lisp-fill-paragraph,
@@ -85,7 +85,7 @@
     ;; We have the old custom-library, hack around it!
     (defmacro defgroup (&rest args)
       nil)
-    (defmacro defcustom (var value doc &rest args) 
+    (defmacro defcustom (var value doc &rest args)
       (` (defvar (, var) (, value) (, doc))))))
 
 (defgroup filladapt nil
@@ -115,7 +115,7 @@ A nil value means behave normally, that is, don't try refilling
 paragraphs to make filled line lengths fit within any particular
 range."
   :type '(choice (const nil)
-		 integer)
+                 integer)
   :group 'filladapt)
 
 (defcustom filladapt-fill-column-forward-fuzz 5
@@ -135,8 +135,8 @@ range specified by filladapt-fill-column-tolerance."
 ;; install on minor-mode-alist
 (or (assq 'filladapt-mode minor-mode-alist)
     (setq minor-mode-alist (cons (list 'filladapt-mode
-				       'filladapt-mode-line-string)
-				 minor-mode-alist)))
+                                       'filladapt-mode-line-string)
+                                 minor-mode-alist)))
 
 (defcustom filladapt-token-table
   '(
@@ -205,13 +205,13 @@ range specified by filladapt-fill-column-tolerance."
     ("[-~*+]+[ \t]" bullet)
     ;;
     ;; o  xx xxx xxxx xx x xx xxx x xxx xx x xxx
-    ;;    xxx xx xx 
+    ;;    xxx xx xx
     ;;
     ("o[ \t]" bullet)
     ;; don't touch
     ("[ \t]+" space)
     ("$" end-of-line)
-   )
+    )
   "Table of tokens filladapt knows about.
 Format is
 
@@ -233,7 +233,7 @@ the table that matches what is at point."
     "[Ii]\\.e\\.[ \t,]"
     ;; end-of-line isn't a token if whole line is empty
     "^$"
-   )
+    )
   "List of regexps that can never be a token.
 Before trying the regular expressions in filladapt-token-table,
 the regexps in this list are tried.  If any regexp in this list
@@ -256,7 +256,7 @@ Regexp matching is done case-sensitively."
     (bullet)
     (space bullet space)
     (beginning-of-line beginning-of-line)
-   )
+    )
   "Table describing what tokens a certain token will match.
 
 To decide whether a line belongs in the current paragraph,
@@ -276,7 +276,7 @@ tokens that SYM will match."
 (defcustom filladapt-token-match-many-table
   '(
     space
-   )
+    )
   "List of tokens that can match multiple tokens.
 If one of these tokens appears in a token list, it will eat all
 matching tokens in a token list being matched against it until it
@@ -288,7 +288,7 @@ a greater column number."
 (defcustom filladapt-token-paragraph-start-table
   '(
     bullet
-   )
+    )
   "List of tokens that indicate the start of a paragraph.
 If parsing a line generates a token list containing one of
 these tokens, then the line is considered to be the start of a
@@ -308,7 +308,7 @@ paragraph."
     (bullet . spaces)
     (space . exact)
     (end-of-line . exact)
-   )
+    )
   "Table that specifies how to convert a token into a fill prefix.
 Table format is
 
@@ -318,24 +318,24 @@ SYM is the symbol naming the token to be converted.
 HOWTO specifies how to do the conversion.
   `exact' means copy the token's string directly into the fill prefix.
   `spaces' means convert all characters in the token string that are
-      not a TAB or a space into spaces and copy the resulting string into 
+      not a TAB or a space into spaces and copy the resulting string into
       the fill prefix."
   :type '(repeat (cons symbol (choice (const exact)
-				      (const spaces))))
+                                      (const spaces))))
   :group 'filladapt)
 
 (defvar filladapt-function-table
   (let ((assoc-list
-	 (list (cons 'fill-paragraph (symbol-function 'fill-paragraph))
-	       (cons 'fill-region (symbol-function 'fill-region))
-	       (cons 'fill-region-as-paragraph
-		     (symbol-function 'fill-region-as-paragraph))
-	       (cons 'do-auto-fill (symbol-function 'do-auto-fill)))))
+         (list (cons 'fill-paragraph (symbol-function 'fill-paragraph))
+               (cons 'fill-region (symbol-function 'fill-region))
+               (cons 'fill-region-as-paragraph
+                     (symbol-function 'fill-region-as-paragraph))
+               (cons 'do-auto-fill (symbol-function 'do-auto-fill)))))
     ;; v18 Emacs doesn't have lisp-fill-paragraph
     (if (fboundp 'lisp-fill-paragraph)
-	(nconc assoc-list
-	       (list (cons 'lisp-fill-paragraph
-			   (symbol-function 'lisp-fill-paragraph)))))
+        (nconc assoc-list
+               (list (cons 'lisp-fill-paragraph
+                           (symbol-function 'lisp-fill-paragraph)))))
     assoc-list )
   "Table containing the old function definitions that filladapt usurps.")
 
@@ -388,73 +388,73 @@ With debugging enabled, filladapt will
 (defun do-auto-fill ()
   (catch 'done
     (if (and filladapt-mode (null fill-prefix))
-	(save-restriction
-	  (let ((paragraph-ignore-fill-prefix nil)
-		;; if the user wanted this stuff, they probably
-		;; wouldn't be using filladapt-mode.
-		(adaptive-fill-mode nil)
-		(adaptive-fill-regexp nil)
-		;; need this or Emacs 19 ignores fill-prefix when
-		;; inside a comment.
-		(comment-multi-line t)
-		(filladapt-inside-filladapt t)
-		fill-prefix retval)
-	    (if (filladapt-adapt nil nil)
-		(progn
-		  (setq retval (filladapt-funcall 'do-auto-fill))
-		  (throw 'done retval))))))
+        (save-restriction
+          (let ((paragraph-ignore-fill-prefix nil)
+                ;; if the user wanted this stuff, they probably
+                ;; wouldn't be using filladapt-mode.
+                (adaptive-fill-mode nil)
+                (adaptive-fill-regexp nil)
+                ;; need this or Emacs 19 ignores fill-prefix when
+                ;; inside a comment.
+                (comment-multi-line t)
+                (filladapt-inside-filladapt t)
+                fill-prefix retval)
+            (if (filladapt-adapt nil nil)
+                (progn
+                  (setq retval (filladapt-funcall 'do-auto-fill))
+                  (throw 'done retval))))))
     (filladapt-funcall 'do-auto-fill)))
 
 (defun filladapt-fill-paragraph (function arg)
   (catch 'done
     (if (and filladapt-mode (null fill-prefix))
-	(save-restriction
-	  (let ((paragraph-ignore-fill-prefix nil)
-		;; if the user wanted this stuff, they probably
-		;; wouldn't be using filladapt-mode.
-		(adaptive-fill-mode nil)
-		(adaptive-fill-regexp nil)
-		;; need this or Emacs 19 ignores fill-prefix when
-		;; inside a comment.
-		(comment-multi-line t)
-		fill-prefix retval)
-	    (if (filladapt-adapt t nil)
-		(progn
-		  (if filladapt-fill-column-tolerance
-		      (let* ((low (- fill-column
-				     filladapt-fill-column-backward-fuzz))
-			     (high (+ fill-column
-				      filladapt-fill-column-forward-fuzz))
-			     (old-fill-column fill-column)
-			     (fill-column fill-column)
-			     (lim (- high low))
-			     (done nil)
-			     (sign 1)
-			     (delta 0))
-			(while (not done)
-			  (setq retval (filladapt-funcall function arg))
-			  (if (filladapt-paragraph-within-fill-tolerance)
-			      (setq done 'success)
-			    (setq delta (1+ delta)
-				  sign (* sign -1)
-				  fill-column (+ fill-column (* delta sign)))
-			    (while (and (<= delta lim)
-					(or (< fill-column low)
-					    (> fill-column high)))
-			      (setq delta (1+ delta)
-				    sign (* sign -1)
-				    fill-column (+ fill-column
-						   (* delta sign))))
-			    (setq done (> delta lim))))
-			;; if the paragraph lines never fell
-			;; within the tolerances, refill using
-			;; the old fill-column.
-			(if (not (eq done 'success))
-			    (let ((fill-column old-fill-column))
-			      (setq retval (filladapt-funcall function arg)))))
-		    (setq retval (filladapt-funcall function arg)))
-		  (run-hooks 'filladapt-fill-paragraph-post-hook)
-		  (throw 'done retval))))))
+        (save-restriction
+          (let ((paragraph-ignore-fill-prefix nil)
+                ;; if the user wanted this stuff, they probably
+                ;; wouldn't be using filladapt-mode.
+                (adaptive-fill-mode nil)
+                (adaptive-fill-regexp nil)
+                ;; need this or Emacs 19 ignores fill-prefix when
+                ;; inside a comment.
+                (comment-multi-line t)
+                fill-prefix retval)
+            (if (filladapt-adapt t nil)
+                (progn
+                  (if filladapt-fill-column-tolerance
+                      (let* ((low (- fill-column
+                                     filladapt-fill-column-backward-fuzz))
+                             (high (+ fill-column
+                                      filladapt-fill-column-forward-fuzz))
+                             (old-fill-column fill-column)
+                             (fill-column fill-column)
+                             (lim (- high low))
+                             (done nil)
+                             (sign 1)
+                             (delta 0))
+                        (while (not done)
+                          (setq retval (filladapt-funcall function arg))
+                          (if (filladapt-paragraph-within-fill-tolerance)
+                              (setq done 'success)
+                            (setq delta (1+ delta)
+                                  sign (* sign -1)
+                                  fill-column (+ fill-column (* delta sign)))
+                            (while (and (<= delta lim)
+                                        (or (< fill-column low)
+                                            (> fill-column high)))
+                              (setq delta (1+ delta)
+                                    sign (* sign -1)
+                                    fill-column (+ fill-column
+                                                   (* delta sign))))
+                            (setq done (> delta lim))))
+                        ;; if the paragraph lines never fell
+                        ;; within the tolerances, refill using
+                        ;; the old fill-column.
+                        (if (not (eq done 'success))
+                            (let ((fill-column old-fill-column))
+                              (setq retval (filladapt-funcall function arg)))))
+                    (setq retval (filladapt-funcall function arg)))
+                  (run-hooks 'filladapt-fill-paragraph-post-hook)
+                  (throw 'done retval))))))
     ;; filladapt-adapt failed, so do fill-paragraph normally.
     (filladapt-funcall function arg)))
 
@@ -467,7 +467,7 @@ If `sentence-end-double-space' is non-nil, then period followed by one
 space does not end a sentence, so don't break a line there.
 
 If `fill-paragraph-function' is non-nil, we call it (passing our
-argument to it), and if it returns non-nil, we simply return its value."
+                                                             argument to it), and if it returns non-nil, we simply return its value."
   (interactive "*P")
   (let ((filladapt-inside-filladapt t))
     (filladapt-fill-paragraph 'fill-paragraph arg)))
@@ -485,7 +485,7 @@ and initial semicolons."
     (filladapt-fill-paragraph 'lisp-fill-paragraph arg)))
 
 (defun fill-region-as-paragraph (beg end &optional justify
-				 nosqueeze squeeze-after)
+                                     nosqueeze squeeze-after)
   "Fill the region as one paragraph.
 
 (This function has been overloaded with the `filladapt' version.)
@@ -508,47 +508,47 @@ space does not end a sentence, so don't break a line there."
   (interactive "*r\nP")
   (if (and filladapt-mode (not filladapt-inside-filladapt))
       (save-restriction
-	(narrow-to-region beg end)
-	(let ((filladapt-inside-filladapt t)
-	      line-start last-token)
-	  (goto-char beg)
-	  (while (equal (char-after (point)) ?\n)
-	    (delete-char 1))
-	  (end-of-line)
-	  (while (zerop (forward-line))
-	    (if (setq last-token
-		      (car (filladapt-tail (filladapt-parse-prefixes))))
-		(progn
-		  (setq line-start (point))
-		  (move-to-column (nth 1 last-token))
-		  (delete-region line-start (point))))
-	    ;; Dance...
-	    ;;
-	    ;; Do this instead of (delete-char -1) to keep
-	    ;; markers on the correct side of the whitespace.
-	    (goto-char (1- (point)))
-	    (insert " ")
-	    (delete-char 1)
+    (narrow-to-region beg end)
+    (let ((filladapt-inside-filladapt t)
+          line-start last-token)
+      (goto-char beg)
+      (while (equal (char-after (point)) ?\n)
+        (delete-char 1))
+      (end-of-line)
+      (while (zerop (forward-line))
+        (if (setq last-token
+              (car (filladapt-tail (filladapt-parse-prefixes))))
+        (progn
+          (setq line-start (point))
+          (move-to-column (nth 1 last-token))
+          (delete-region line-start (point))))
+        ;; Dance...
+        ;;
+        ;; Do this instead of (delete-char -1) to keep
+        ;; markers on the correct side of the whitespace.
+        (goto-char (1- (point)))
+        (insert " ")
+        (delete-char 1)
 
-	    (end-of-line))
-	  (goto-char beg)
-	  (fill-paragraph justify))
-	;; In XEmacs 19.12 and Emacs 18.59 fill-region relies on
-	;; fill-region-as-paragraph to do this.  If we don't do
-	;; it, fill-region will spin in an endless loop.
-	(goto-char (point-max)))
+        (end-of-line))
+      (goto-char beg)
+      (fill-paragraph justify))
+    ;; In XEmacs 19.12 and Emacs 18.59 fill-region relies on
+    ;; fill-region-as-paragraph to do this.  If we don't do
+    ;; it, fill-region will spin in an endless loop.
+    (goto-char (point-max)))
     (condition-case nil
-	;; five args for Emacs 19.31
-	(filladapt-funcall 'fill-region-as-paragraph beg end
-			   justify nosqueeze squeeze-after)
+    ;; five args for Emacs 19.31
+    (filladapt-funcall 'fill-region-as-paragraph beg end
+               justify nosqueeze squeeze-after)
       (wrong-number-of-arguments
        (condition-case nil
-	   ;; four args for Emacs 19.29
-	   (filladapt-funcall 'fill-region-as-paragraph beg end
-			      justify nosqueeze)
-	 ;; three args for the rest of the world.
-	 (wrong-number-of-arguments
-	  (filladapt-funcall 'fill-region-as-paragraph beg end justify)))))))
+       ;; four args for Emacs 19.29
+       (filladapt-funcall 'fill-region-as-paragraph beg end
+                  justify nosqueeze)
+     ;; three args for the rest of the world.
+     (wrong-number-of-arguments
+      (filladapt-funcall 'fill-region-as-paragraph beg end justify)))))))
 
 (defun fill-region (beg end &optional justify nosqueeze to-eop)
   "Fill each of the paragraphs in the region.
@@ -560,45 +560,45 @@ Prefix arg (non-nil third arg, if called from program) means justify as well.
 Noninteractively, fourth arg NOSQUEEZE non-nil means to leave
 whitespace other than line breaks untouched, and fifth arg TO-EOP
 non-nil means to keep filling to the end of the paragraph (or next
-hard newline, if `use-hard-newlines' is on).
+                                                              hard newline, if `use-hard-newlines' is on).
 
 If `sentence-end-double-space' is non-nil, then period followed by one
 space does not end a sentence, so don't break a line there."
   (interactive "*r\nP")
   (if (and filladapt-mode (not filladapt-inside-filladapt))
       (save-restriction
-	(narrow-to-region beg end)
-	(let ((filladapt-inside-filladapt t)
-	      start)
-	  (goto-char beg)
-	  (while (not (eobp))
-	    (setq start (point))
-	    (while (and (not (eobp)) (not (filladapt-parse-prefixes)))
-	      (forward-line 1))
-	    (if (not (equal start (point)))
-		(progn
-		  (save-restriction
-		    (narrow-to-region start (point))
-		    (fill-region start (point) justify nosqueeze to-eop)
-		    (goto-char (point-max)))
-		  (if (and (not (bolp)) (not (eobp)))
-		      (forward-line 1))))
-	    (if (filladapt-parse-prefixes)
-		(progn
-		  (save-restriction
-		    ;; for the clipping region
-		    (filladapt-adapt t t)
-		    (fill-paragraph justify)
-		    (goto-char (point-max)))
-		  (if (and (not (bolp)) (not (eobp)))
-		      (forward-line 1)))))))
+    (narrow-to-region beg end)
+    (let ((filladapt-inside-filladapt t)
+          start)
+      (goto-char beg)
+      (while (not (eobp))
+        (setq start (point))
+        (while (and (not (eobp)) (not (filladapt-parse-prefixes)))
+          (forward-line 1))
+        (if (not (equal start (point)))
+        (progn
+          (save-restriction
+            (narrow-to-region start (point))
+            (fill-region start (point) justify nosqueeze to-eop)
+            (goto-char (point-max)))
+          (if (and (not (bolp)) (not (eobp)))
+              (forward-line 1))))
+        (if (filladapt-parse-prefixes)
+        (progn
+          (save-restriction
+            ;; for the clipping region
+            (filladapt-adapt t t)
+            (fill-paragraph justify)
+            (goto-char (point-max)))
+          (if (and (not (bolp)) (not (eobp)))
+              (forward-line 1)))))))
     (condition-case nil
-	(filladapt-funcall 'fill-region beg end justify nosqueeze to-eop)
+    (filladapt-funcall 'fill-region beg end justify nosqueeze to-eop)
       (wrong-number-of-arguments
        (condition-case nil
-	   (filladapt-funcall 'fill-region beg end justify nosqueeze)
-	 (wrong-number-of-arguments
-	  (filladapt-funcall 'fill-region beg end justify)))))))
+       (filladapt-funcall 'fill-region beg end justify nosqueeze)
+     (wrong-number-of-arguments
+      (filladapt-funcall 'fill-region beg end justify)))))))
 
 (defvar zmacs-region-stays) ; for XEmacs
 
@@ -613,7 +613,7 @@ paragraphs are used."
   ;; don't deactivate the region.
   (setq zmacs-region-stays t)
   (setq filladapt-mode (or (and arg (> (prefix-numeric-value arg) 0))
-			   (and (null arg) (null filladapt-mode))))
+                           (and (null arg) (null filladapt-mode))))
   (if (fboundp 'force-mode-line-update)
       (force-mode-line-update)
     (set-buffer-modified-p (buffer-modified-p))))
@@ -636,7 +636,7 @@ LIST should be a token list as returned by filladapt-parse-prefixes."
   (catch 'done
     (while list
       (if (memq (car (car list)) filladapt-token-paragraph-start-table)
-	  (throw 'done t))
+          (throw 'done t))
       (setq list (cdr list)))))
 
 (defun filladapt-parse-prefixes ()
@@ -651,33 +651,33 @@ COL is the column at which the token ended.
 STRING is the token's text."
   (save-excursion
     (let ((token-list nil)
-	  (done nil)
-	  (old-point (point))
-	  (case-fold-search nil)
-	  token-table not-token-table moved)
+          (done nil)
+          (old-point (point))
+          (case-fold-search nil)
+          token-table not-token-table moved)
       (catch 'done
-	(while (not done)
-	  (setq not-token-table filladapt-not-token-table)
-	  (while not-token-table
-	    (if (looking-at (car not-token-table))
-		(throw 'done t))
-	    (setq not-token-table (cdr not-token-table)))
-	  (setq token-table filladapt-token-table
-		done t)
-	  (while token-table
-	    (if (null (looking-at (car (car token-table))))
-		(setq token-table (cdr token-table))
-	      (goto-char (match-end 0))
-	      (setq token-list (cons (list (nth 1 (car token-table))
-					   (current-column)
-					   (buffer-substring
-					    (match-beginning 0)
-					    (match-end 0)))
-				     token-list)
-		    moved (not (eq (point) old-point))
-		    token-table (if moved nil (cdr token-table))
-		    done (not moved)
-		    old-point (point))))))
+        (while (not done)
+          (setq not-token-table filladapt-not-token-table)
+          (while not-token-table
+            (if (looking-at (car not-token-table))
+                (throw 'done t))
+            (setq not-token-table (cdr not-token-table)))
+          (setq token-table filladapt-token-table
+                done t)
+          (while token-table
+            (if (null (looking-at (car (car token-table))))
+                (setq token-table (cdr token-table))
+              (goto-char (match-end 0))
+              (setq token-list (cons (list (nth 1 (car token-table))
+                                           (current-column)
+                                           (buffer-substring
+                                            (match-beginning 0)
+                                            (match-end 0)))
+                                     token-list)
+                    moved (not (eq (point) old-point))
+                    token-table (if moved nil (cdr token-table))
+                    done (not moved)
+                    old-point (point))))))
       (nreverse token-list))))
 
 (defun filladapt-tokens-match-p (list1 list2)
@@ -704,75 +704,75 @@ the other list in the next iteration of the matching loop.
 All tokens must be matched in order for the lists to be considered
 matching."
   (let ((matched t)
-	(done nil))
+        (done nil))
     (while (and (not done) list1 list2)
       (let* ((token1 (car (car list1)))
-	     (token1-matches-many-p
-	         (memq token1 filladapt-token-match-many-table))
-	     (token1-matches (cdr (assq token1 filladapt-token-match-table)))
-	     (token1-endcol (nth 1 (car list1)))
-	     (token2 (car (car list2)))
-	     (token2-matches-many-p
-	         (memq token2 filladapt-token-match-many-table))
-	     (token2-matches (cdr (assq token2 filladapt-token-match-table)))
-	     (token2-endcol (nth 1 (car list2)))
-	     (tokens-match (or (memq token1 token2-matches)
-			       (memq token2 token1-matches))))
-	(cond ((not tokens-match)
-	       (setq matched nil
-		     done t))
-	      ((and token1-matches-many-p token2-matches-many-p)
-	       (cond ((= token1-endcol token2-endcol)
-		      (setq list1 (cdr list1)
-			    list2 (cdr list2)))
-		     ((< token1-endcol token2-endcol)
-		      (setq list1 (cdr list1)))
-		     (t
-		      (setq list2 (cdr list2)))))
-	      (token1-matches-many-p
-	       (cond ((= token1-endcol token2-endcol)
-		      (setq list1 (cdr list1)
-			    list2 (cdr list2)))
-		     ((< token1-endcol token2-endcol)
-		      (setq matched nil
-			    done t))
-		     (t
-		      (setq list2 (cdr list2)))))
-	      (token2-matches-many-p
-	       (cond ((= token1-endcol token2-endcol)
-		      (setq list1 (cdr list1)
-			    list2 (cdr list2)))
-		     ((< token2-endcol token1-endcol)
-		      (setq matched nil
-			    done t))
-		     (t
-		      (setq list1 (cdr list1)))))
-	      ((= token1-endcol token2-endcol)
-	       (setq list1 (cdr list1)
-		     list2 (cdr list2)))
-	      (t
-	       (setq matched nil
-		     done t)))))
+             (token1-matches-many-p
+              (memq token1 filladapt-token-match-many-table))
+             (token1-matches (cdr (assq token1 filladapt-token-match-table)))
+             (token1-endcol (nth 1 (car list1)))
+             (token2 (car (car list2)))
+             (token2-matches-many-p
+              (memq token2 filladapt-token-match-many-table))
+             (token2-matches (cdr (assq token2 filladapt-token-match-table)))
+             (token2-endcol (nth 1 (car list2)))
+             (tokens-match (or (memq token1 token2-matches)
+                               (memq token2 token1-matches))))
+        (cond ((not tokens-match)
+               (setq matched nil
+                     done t))
+              ((and token1-matches-many-p token2-matches-many-p)
+               (cond ((= token1-endcol token2-endcol)
+                      (setq list1 (cdr list1)
+                            list2 (cdr list2)))
+                     ((< token1-endcol token2-endcol)
+                      (setq list1 (cdr list1)))
+                     (t
+                      (setq list2 (cdr list2)))))
+              (token1-matches-many-p
+               (cond ((= token1-endcol token2-endcol)
+                      (setq list1 (cdr list1)
+                            list2 (cdr list2)))
+                     ((< token1-endcol token2-endcol)
+                      (setq matched nil
+                            done t))
+                     (t
+                      (setq list2 (cdr list2)))))
+              (token2-matches-many-p
+               (cond ((= token1-endcol token2-endcol)
+                      (setq list1 (cdr list1)
+                            list2 (cdr list2)))
+                     ((< token2-endcol token1-endcol)
+                      (setq matched nil
+                            done t))
+                     (t
+                      (setq list1 (cdr list1)))))
+              ((= token1-endcol token2-endcol)
+               (setq list1 (cdr list1)
+                     list2 (cdr list2)))
+              (t
+               (setq matched nil
+                     done t)))))
     (and matched (null list1) (null list2)) ))
 
 (defun filladapt-make-fill-prefix (list)
   "Build a fill-prefix for a token LIST.
 filladapt-token-conversion-table specifies how this is done."
   (let ((prefix-list nil)
-	(conversion-spec nil))
+        (conversion-spec nil))
     (while list
       (setq conversion-spec (cdr (assq (car (car list))
-				       filladapt-token-conversion-table)))
+                                       filladapt-token-conversion-table)))
       (cond ((eq conversion-spec 'spaces)
-	     (setq prefix-list
-		   (cons
-		    (filladapt-convert-to-spaces (nth 2 (car list)))
-		    prefix-list)))
-	    ((eq conversion-spec 'exact)
-	     (setq prefix-list
-		   (cons
-		    (nth 2 (car list))
-		    prefix-list))))
+             (setq prefix-list
+                   (cons
+                    (filladapt-convert-to-spaces (nth 2 (car list)))
+                    prefix-list)))
+            ((eq conversion-spec 'exact)
+             (setq prefix-list
+                   (cons
+                    (nth 2 (car list))
+                    prefix-list))))
       (setq list (cdr list)))
     (apply (function concat) (nreverse prefix-list)) ))
 
@@ -780,26 +780,26 @@ filladapt-token-conversion-table specifies how this is done."
   (catch 'done
     (save-excursion
       (let ((low (- fill-column filladapt-fill-column-tolerance))
-	    (shortline nil))
-	(goto-char (point-min))
-	(while (not (eobp))
-	  (if shortline
-	      (throw 'done nil)
-	    (end-of-line)
-	    (setq shortline (< (current-column) low))
-	    (forward-line 1)))
-	t ))))
+            (shortline nil))
+        (goto-char (point-min))
+        (while (not (eobp))
+          (if shortline
+              (throw 'done nil)
+            (end-of-line)
+            (setq shortline (< (current-column) low))
+            (forward-line 1)))
+        t ))))
 
 (defun filladapt-convert-to-spaces (string)
   "Return a copy of STRING, with all non-tabs and non-space changed to spaces."
   (let ((i 0)
-	(space-list '(?\  ?\t))
-	(space ?\ )
-	(lim (length string)))
+        (space-list '(?\  ?\t))
+        (space ?\ )
+        (lim (length string)))
     (setq string (copy-sequence string))
     (while (< i lim)
       (if (not (memq (aref string i) space-list))
-	  (aset string i space))
+          (aset string i space))
       (setq i (1+ i)))
     string ))
 
@@ -814,64 +814,64 @@ necessary to make certain paragraph fills work properly."
   (save-excursion
     (beginning-of-line)
     (let ((token-list (filladapt-parse-prefixes))
-	  curr-list done)
+          curr-list done)
       (if (null token-list)
-	  nil
-	(setq fill-prefix (filladapt-make-fill-prefix token-list))
-	(if paragraph
-	    (let (beg end)
-	      (if (filladapt-paragraph-start token-list)
-		  (setq beg (point))
-		(save-excursion
-		  (setq done nil)
-		  (while (not done)
-		    (cond ((not (= 0 (forward-line -1)))
-			   (setq done t
-				 beg (point)))
-			  ((not (filladapt-tokens-match-p
-				 token-list
-				 (setq curr-list (filladapt-parse-prefixes))))
-			   (forward-line 1)
-			   (setq done t
-				 beg (point)))
-			  ((filladapt-paragraph-start curr-list)
-			   (setq done t
-				 beg (point)))))))
-	      (save-excursion
-		(setq done nil)
-		(while (not done)
-		  (cond ((not (= 0 (progn (end-of-line) (forward-line 1))))
-			 (setq done t
-			       end (point)))
-			((not (filladapt-tokens-match-p
-			       token-list
-			       (setq curr-list (filladapt-parse-prefixes))))
-			 (setq done t
-			       end (point)))
-			((filladapt-paragraph-start curr-list)
-			 (setq done t
-			       end (point))))))
-	      (narrow-to-region beg end)
-	      ;; Multiple spaces after the bullet at the start of
-	      ;; a hanging list paragraph get squashed by
-	      ;; fill-paragraph.  We kludge around this by
-	      ;; replacing the line prefix with the fill-prefix
-	      ;; used by the rest of the lines in the paragraph.
-	      ;; fill-paragraph will not alter the fill prefix so
-	      ;; we win.  The post hook restores the old line prefix
-	      ;; after fill-paragraph has been called.
-	      (if (and paragraph (not debugging))
-		  (let (col)
-		    (setq col (nth 1 (car (filladapt-tail token-list))))
-		    (goto-char (point-min))
-		    (move-to-column col)
-		    (setq filladapt-old-line-prefix
-			  (buffer-substring (point-min) (point)))
-		    (delete-region (point-min) (point))
-		    (insert fill-prefix)
-		    (add-hook 'filladapt-fill-paragraph-post-hook
-			      'filladapt-cleanup-kludge-at-point-min)))))
-	t ))))
+          nil
+        (setq fill-prefix (filladapt-make-fill-prefix token-list))
+        (if paragraph
+            (let (beg end)
+              (if (filladapt-paragraph-start token-list)
+                  (setq beg (point))
+                (save-excursion
+                  (setq done nil)
+                  (while (not done)
+                    (cond ((not (= 0 (forward-line -1)))
+                           (setq done t
+                                 beg (point)))
+                          ((not (filladapt-tokens-match-p
+                                 token-list
+                                 (setq curr-list (filladapt-parse-prefixes))))
+                           (forward-line 1)
+                           (setq done t
+                                 beg (point)))
+                          ((filladapt-paragraph-start curr-list)
+                           (setq done t
+                                 beg (point)))))))
+              (save-excursion
+                (setq done nil)
+                (while (not done)
+                  (cond ((not (= 0 (progn (end-of-line) (forward-line 1))))
+                         (setq done t
+                               end (point)))
+                        ((not (filladapt-tokens-match-p
+                               token-list
+                               (setq curr-list (filladapt-parse-prefixes))))
+                         (setq done t
+                               end (point)))
+                        ((filladapt-paragraph-start curr-list)
+                         (setq done t
+                               end (point))))))
+              (narrow-to-region beg end)
+              ;; Multiple spaces after the bullet at the start of
+              ;; a hanging list paragraph get squashed by
+              ;; fill-paragraph.  We kludge around this by
+              ;; replacing the line prefix with the fill-prefix
+              ;; used by the rest of the lines in the paragraph.
+              ;; fill-paragraph will not alter the fill prefix so
+              ;; we win.  The post hook restores the old line prefix
+              ;; after fill-paragraph has been called.
+              (if (and paragraph (not debugging))
+                  (let (col)
+                    (setq col (nth 1 (car (filladapt-tail token-list))))
+                    (goto-char (point-min))
+                    (move-to-column col)
+                    (setq filladapt-old-line-prefix
+                          (buffer-substring (point-min) (point)))
+                    (delete-region (point-min) (point))
+                    (insert fill-prefix)
+                    (add-hook 'filladapt-fill-paragraph-post-hook
+                              'filladapt-cleanup-kludge-at-point-min)))))
+        t ))))
 
 (defun filladapt-cleanup-kludge-at-point-min ()
   "Cleanup the paragraph fill kludge.
@@ -881,7 +881,7 @@ See filladapt-adapt."
     (insert filladapt-old-line-prefix)
     (delete-char (length fill-prefix))
     (remove-hook 'filladapt-fill-paragraph-post-hook
-		 'filladapt-cleanup-kludge-at-point-min)))
+                 'filladapt-cleanup-kludge-at-point-min)))
 
 (defun filladapt-tail (list)
   "Returns the last cons in LIST."
@@ -913,69 +913,69 @@ See filladapt-adapt."
 
 (defun filladapt-debug ()
   "Toggle filladapt debugging on/off in the current buffer."
-;;  (interactive)
+  ;;  (interactive)
   (make-local-variable 'filladapt-debug)
   (setq filladapt-debug (not filladapt-debug))
   (if (null filladapt-debug)
       (progn
-	(mapcar (function (lambda (e) (filladapt-set-extent-endpoints e 1 1)))
-		filladapt-debug-indentation-extents)
-	(if filladapt-debug-paragraph-extent
-	    (progn
-	      (filladapt-delete-extent filladapt-debug-paragraph-extent)
-	      (setq filladapt-debug-paragraph-extent nil)))))
+        (mapcar (function (lambda (e) (filladapt-set-extent-endpoints e 1 1)))
+                filladapt-debug-indentation-extents)
+        (if filladapt-debug-paragraph-extent
+            (progn
+              (filladapt-delete-extent filladapt-debug-paragraph-extent)
+              (setq filladapt-debug-paragraph-extent nil)))))
   (add-hook 'post-command-hook 'filladapt-display-debug-info-maybe))
 
 (defun filladapt-display-debug-info-maybe ()
   (cond ((null filladapt-debug) nil)
-	(fill-prefix nil)
-	(t
-	 (if (null filladapt-debug-paragraph-extent)
-	     (let ((e (filladapt-make-extent 1 1)))
-	       (filladapt-set-extent-property e 'detachable nil)
-	       (filladapt-set-extent-property e 'evaporate nil)
-	       (filladapt-set-extent-property e 'face
-					      filladapt-debug-paragraph-face)
-	       (setq filladapt-debug-paragraph-extent e)))
-	 (save-excursion
-	   (save-restriction
-	     (let ((ei-list filladapt-debug-indentation-extents)
-		   (ep filladapt-debug-paragraph-extent)
-		   (face filladapt-debug-indentation-face-1)
-		   fill-prefix token-list)
-	       (if (null (filladapt-adapt t t))
-		   (progn
-		     (filladapt-set-extent-endpoints ep 1 1)
-		     (while ei-list
-		       (filladapt-set-extent-endpoints (car ei-list) 1 1)
-		       (setq ei-list (cdr ei-list))))
-		 (filladapt-set-extent-endpoints ep (point-min) (point-max))
-		 (beginning-of-line)
-		 (setq token-list (filladapt-parse-prefixes))
-		 (message "(%s)" (mapconcat (function
-					   (lambda (q) (symbol-name (car q))))
-					  token-list
-					  " "))
-		 (while token-list
-		   (if ei-list
-		       (setq e (car ei-list)
-			     ei-list (cdr ei-list))
-		     (setq e (filladapt-make-extent 1 1))
-		     (filladapt-set-extent-property e 'detachable nil)
-		     (filladapt-set-extent-property e 'evaporate nil)
-		     (setq filladapt-debug-indentation-extents
-			   (cons e filladapt-debug-indentation-extents)))
-		   (filladapt-set-extent-property e 'face face)
-		   (filladapt-set-extent-endpoints e (point)
-						   (progn
-						     (move-to-column
-						      (nth 1
-							   (car token-list)))
-						     (point)))
-		   (if (eq face filladapt-debug-indentation-face-1)
-		       (setq face filladapt-debug-indentation-face-2)
-		     (setq face filladapt-debug-indentation-face-1))
-		   (setq token-list (cdr token-list)))
-		 (while ei-list
-		   (filladapt-set-extent-endpoints (car ei-list) 1 1)
-		   (setq ei-list (cdr ei-list))))))))))
+        (fill-prefix nil)
+        (t
+         (if (null filladapt-debug-paragraph-extent)
+             (let ((e (filladapt-make-extent 1 1)))
+               (filladapt-set-extent-property e 'detachable nil)
+               (filladapt-set-extent-property e 'evaporate nil)
+               (filladapt-set-extent-property e 'face
+                                              filladapt-debug-paragraph-face)
+               (setq filladapt-debug-paragraph-extent e)))
+         (save-excursion
+           (save-restriction
+             (let ((ei-list filladapt-debug-indentation-extents)
+                   (ep filladapt-debug-paragraph-extent)
+                   (face filladapt-debug-indentation-face-1)
+                   fill-prefix token-list)
+               (if (null (filladapt-adapt t t))
+                   (progn
+                     (filladapt-set-extent-endpoints ep 1 1)
+                     (while ei-list
+                       (filladapt-set-extent-endpoints (car ei-list) 1 1)
+                       (setq ei-list (cdr ei-list))))
+                 (filladapt-set-extent-endpoints ep (point-min) (point-max))
+                 (beginning-of-line)
+                 (setq token-list (filladapt-parse-prefixes))
+                 (message "(%s)" (mapconcat (function
+                                             (lambda (q) (symbol-name (car q))))
+                                            token-list
+                                            " "))
+                 (while token-list
+                   (if ei-list
+                       (setq e (car ei-list)
+                             ei-list (cdr ei-list))
+                     (setq e (filladapt-make-extent 1 1))
+                     (filladapt-set-extent-property e 'detachable nil)
+                     (filladapt-set-extent-property e 'evaporate nil)
+                     (setq filladapt-debug-indentation-extents
+                           (cons e filladapt-debug-indentation-extents)))
+                   (filladapt-set-extent-property e 'face face)
+                   (filladapt-set-extent-endpoints e (point)
+                                                   (progn
+                                                     (move-to-column
+                                                      (nth 1
+                                                           (car token-list)))
+                                                     (point)))
+                   (if (eq face filladapt-debug-indentation-face-1)
+                       (setq face filladapt-debug-indentation-face-2)
+                     (setq face filladapt-debug-indentation-face-1))
+                   (setq token-list (cdr token-list)))
+                 (while ei-list
+                   (filladapt-set-extent-endpoints (car ei-list) 1 1)
+                   (setq ei-list (cdr ei-list))))))))))
