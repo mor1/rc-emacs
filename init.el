@@ -13,6 +13,10 @@
 ;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 ;; IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+;;
+;; config
+;;
+
 ;; time emacs startup; updated to new (current-time)
 ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
 (require 'cl)
@@ -289,7 +293,6 @@ started from a shell."
   )
 
 ;; from <http://www.emacswiki.org/emacs/VisualLineMode>
-
 (defvar visual-wrap-column nil)
 (defun update-visual-wrap-column ()
   (if (not visual-wrap-column)
@@ -459,8 +462,6 @@ started from a shell."
 (add-hook 'latex-mode-hook
           '(lambda ()
              (auto-fill-mode 0)
-             ;; (local-set-key (kbd "M-q") 'ispell-check-paragraph) ;fill-and-check)
-             ;; (local-set-key (kbd "C-c C-b") 'latex-insert-block)
              (local-set-key (kbd "{") 'tex-insert-braces)
              (local-set-key (kbd "M-[")
                             '(lambda () (interactive) (insert "{")))
@@ -495,18 +496,8 @@ started from a shell."
              (turn-on-eldoc-mode)
              ))
 
-;; (add-hook 'ecmascript-mode-hook
-;;           '(lambda ()
-;;              (setq c-basic-offset 4)
-;;              (c-set-style "java")
-;;              ))
-
 (add-hook 'coffee-mode-hook
           '(lambda ()
-             ;; Compile '.coffee' files on every save
-             ;; (and (file-exists-p (buffer-file-name))
-             ;;      (file-exists-p (coffee-compiled-file-name))
-             ;;      (coffee-cos-mode t))
              (coffee-cos-mode t)
              (setq coffee-tab-width 2)
              (setq coffee-command "/usr/local/bin/coffee")
@@ -519,9 +510,6 @@ started from a shell."
 (push '("\\.bibtex$" . bibtex-mode) auto-mode-alist)
 
 ;; xml-mode
-(add-hook 'nxml-mode-hook
-          '(lambda ()
-             ))
 (push '("\\`<\\?xml" . nxml-mode) magic-mode-alist)
 (push '("\\.html$" . nxml-mode) auto-mode-alist)
 (push '("\\.tpl$" . nxml-mode) auto-mode-alist) ;; bottle templates
@@ -536,38 +524,21 @@ started from a shell."
 (push '("\\.markdown$" . markdown-mode) auto-mode-alist)
 
 ;; makefile-mode
-(defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab
-                                      activate)
+(defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab activate)
   "Fix whitespace-cleanup indent-tabs-mode bug"
   (let ((whitespace-indent-tabs-mode indent-tabs-mode)
         (whitespace-tab-width tab-width))
     ad-do-it))
 
-;; (add-hook 'makefile-mode-hook 'indent-tabs-mode)
-;; (add-hook 'makefile-mode-hook
-;;           '(lambda ()
-;;              (message "running makefile mode hook")
-;;              (setq indent-tabs-mode t)
-;;              ))
 (push '("sources$" . makefile-mode) auto-mode-alist)
 (push '("Makefile." . makefile-mode) auto-mode-alist)
 
-;; sh-mode
-;; (add-hook 'sh-mode-hook
-;;           '(lambda ()
-;;              ))
 (push '("bash_" . sh-mode) auto-mode-alist)
 
 ;; css-mode
 (push '("\\.less$" . css-mode) auto-mode-alist)
 
-;; python-mode
-;; (add-hook 'python-mode-hook
-;;           '(lambda ()
-;;              ))
-
 ;; ocaml
-
 (setq explicit-bash-args '("--login" "-i"))
 
 (setq opam-share
@@ -625,7 +596,7 @@ started from a shell."
         (holiday-fixed 12 31 "New Year's Eve")
         ))
 
-;;Major US holidays
+;; ;;Major US holidays
 ;; (setq other-holidays
 ;;       '((holiday-float 1 1 3 "Martin Luther King Day")
 ;;         (holiday-float 2 1 3 "President's Day")
@@ -918,8 +889,6 @@ started from a shell."
 (define-minor-mode my-keys-minor-mode
   "A minor mode so that my key settings override annoying major modes."
   t " my-keys" 'my-keys-minor-mode-map)
-
-;; (my-keys-minor-mode 1)
 
 (defun my-minibuffer-setup-hook ()
   (my-keys-minor-mode 0))
