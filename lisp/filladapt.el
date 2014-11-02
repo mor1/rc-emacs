@@ -18,10 +18,10 @@
 ;;;
 ;;; Send bug reports to kyle_jones@wonderworks.com
 
-;; LCD Archive Entry:
-;; filladapt|Kyle Jones|kyle_jones@wonderworks.com|
+;; LCD Archive Entry: 
+;; filladapt|Kyle Jones|kyle_jones@wonderworks.com| 
 ;; Minor mode to adaptively set fill-prefix and overload filling functions|
-;; 28-February-1998|2.12|~/packages/filladapt.el|
+;; 28-February-1998|2.12|~/packages/filladapt.el| 
 
 ;; These functions enhance the default behavior of Emacs' Auto Fill
 ;; mode and the commands fill-paragraph, lisp-fill-paragraph,
@@ -85,7 +85,7 @@
     ;; We have the old custom-library, hack around it!
     (defmacro defgroup (&rest args)
       nil)
-    (defmacro defcustom (var value doc &rest args)
+    (defmacro defcustom (var value doc &rest args) 
       (` (defvar (, var) (, value) (, doc))))))
 
 (defgroup filladapt nil
@@ -205,7 +205,7 @@ range specified by filladapt-fill-column-tolerance."
     ("[-~*+]+[ \t]" bullet)
     ;;
     ;; o  xx xxx xxxx xx x xx xxx x xxx xx x xxx
-    ;;    xxx xx xx
+    ;;    xxx xx xx 
     ;;
     ("o[ \t]" bullet)
     ;; don't touch
@@ -318,7 +318,7 @@ SYM is the symbol naming the token to be converted.
 HOWTO specifies how to do the conversion.
   `exact' means copy the token's string directly into the fill prefix.
   `spaces' means convert all characters in the token string that are
-      not a TAB or a space into spaces and copy the resulting string into
+      not a TAB or a space into spaces and copy the resulting string into 
       the fill prefix."
   :type '(repeat (cons symbol (choice (const exact)
 				      (const spaces))))
@@ -860,19 +860,17 @@ necessary to make certain paragraph fills work properly."
 	      ;; fill-paragraph will not alter the fill prefix so
 	      ;; we win.  The post hook restores the old line prefix
 	      ;; after fill-paragraph has been called.
-; mort: huh?  this behaves v oddly for me, so ripped it out for now...
-;	      (if (and paragraph (not debugging))
-;		  (let (col)
-;		    (setq col (nth 1 (car (filladapt-tail token-list))))
-;		    (goto-char (point-min))
-;		    (move-to-column col)
-;		    (setq filladapt-old-line-prefix
-;			  (buffer-substring (point-min) (point)))
-;		    (delete-region (point-min) (point))
-;		    (insert fill-prefix)
-;		    (add-hook 'filladapt-fill-paragraph-post-hook
-;			      'filladapt-cleanup-kludge-at-point-min)))
-))
+	      (if (and paragraph (not debugging))
+		  (let (col)
+		    (setq col (nth 1 (car (filladapt-tail token-list))))
+		    (goto-char (point-min))
+		    (move-to-column col)
+		    (setq filladapt-old-line-prefix
+			  (buffer-substring (point-min) (point)))
+		    (delete-region (point-min) (point))
+		    (insert fill-prefix)
+		    (add-hook 'filladapt-fill-paragraph-post-hook
+			      'filladapt-cleanup-kludge-at-point-min)))))
 	t ))))
 
 (defun filladapt-cleanup-kludge-at-point-min ()
@@ -881,7 +879,7 @@ See filladapt-adapt."
   (save-excursion
     (goto-char (point-min))
     (insert filladapt-old-line-prefix)
-; XXX mort - appears to break now?!     (delete-char (length fill-prefix))
+    (delete-char (length fill-prefix))
     (remove-hook 'filladapt-fill-paragraph-post-hook
 		 'filladapt-cleanup-kludge-at-point-min)))
 
