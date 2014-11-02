@@ -388,30 +388,27 @@ started from a shell."
 
 ;; (define-key magit-status-mode-map (kbd "q") 'magit-quit-session)
 
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;
 ;; mode hooks
+;;
 
 (add-hook 'find-file-hook
           '(lambda ()
              (message "running find-file-hook")
-             (fci-mode t)
              (whitespace-mode t)
              (turn-on-visual-line-mode)
              (hl-line-mode t)
              (force-my-keys-minor-mode)
-             ))
+             (auto-fill-mode t)
+            ))
 
 (add-hook 'text-mode-hook
           '(lambda ()
              (message "running text-mode-hook")
              (flyspell-mode t)
-             (set-visual-wrap-column (+ fill-column 2))
-             (auto-fill-mode t)
-             (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
+             (set-visual-wrap-column (+ fill-column 1))
+
+             ;; (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
              (local-set-key (kbd "S-<tab>")
                             'flyspell-auto-correct-previous-word)
              ))
@@ -420,13 +417,11 @@ started from a shell."
 (defun prog-mode-hook-f ()
   (interactive)
   (message "running prog-mode-hook")
-  ;; (linum-mode)
+
   (set-visual-wrap-column 0)
   (fci-mode t)
   (flyspell-prog-mode)
   (whitespace-cleanup)
-  (auto-fill-mode nil)
-  (filladapt-mode t)
   ;; (setq indent-region-function 'nil) ;; clean up ocp-indent bug
   (local-set-key (kbd "M-q") 'fill-paragraph)
   (local-set-key (kbd "%") 'match-paren)
