@@ -116,8 +116,13 @@ started from a shell."
 (setq-default save-place t)
 (require 'saveplace)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; tweak auto-fill
+(setq paragraph-start "\f\\|[ \t]*$\\| *[-*+] +.+$"
+      paragraph-separate "$")
 
+;;
+;; functions
+;;
 
 ;; http://whattheemacsd.com/
 (defun goto-line-with-feedback ()
