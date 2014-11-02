@@ -82,12 +82,13 @@ started from a shell."
 
 (defun light () "light colour scheme"
   (interactive)
-  (load-theme 'solarized-light)
+  (color-theme-sanityinc-solarized-light)
   )
 (defun dark () "dark colour scheme"
   (interactive)
-  (load-theme 'solarized-dark)
+  (color-theme-sanityinc-solarized-dark)
   )
+(set-default-font "-apple-Consolas-medium-normal-normal-*-11-*-*-*-m-0-fontset-auto3")
 
 ;; frame size
 (if window-system
