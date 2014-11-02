@@ -81,6 +81,10 @@ started from a shell."
 (add-hook 'eshell-preoutput-filter-functions 'ansi-color-filter-apply)
 (add-hook 'comint-output-filter-functions 'ansi-color-process-output)
 
+;; need to initialise packages as themes are loaded *after* `init.el` processed
+(setq package-enable-at-startup nil)
+(package-initialize)
+
 (defun light () "light colour scheme"
   (interactive)
   (color-theme-sanityinc-solarized-light)

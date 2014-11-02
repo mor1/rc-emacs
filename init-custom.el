@@ -23,18 +23,40 @@
  '(coffee-command "/usr/local/bin/coffee")
  '(coffee-tab-width 2)
  '(column-number-mode t)
- '(custom-enabled-themes (quote (solarized-light)))
+ '(compilation-message-face (quote default))
+ '(cua-global-mark-cursor-color "#2aa198")
+ '(cua-normal-cursor-color "#657b83")
+ '(cua-overwrite-cursor-color "#b58900")
+ '(cua-read-only-cursor-color "#859900")
+ '(custom-enabled-themes (quote (sanityinc-solarized-dark)))
  '(custom-safe-themes
    (quote
     ("d677ef584c6dfc0697901a44b885cc18e206f05114c8a3b7fde674fce6180879" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
  '(custom-theme-load-path
    (quote
-    ("/Users/mort/.emacs.d/elpa/solarized-theme-20141030.1052/" custom-theme-directory t)))
+    ("/Users/mort/.emacs.d/elpa/color-theme-sanityinc-solarized-2.25/" custom-theme-directory t)))
  '(default-major-mode (quote text-mode) t)
  '(fci-rule-color "#0a2832")
  '(fci-rule-width 2)
  '(fill-column 80)
  '(frame-title-format "%b  %f" t)
+ '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
+ '(highlight-symbol-colors
+   (--map
+    (solarized-color-blend it "#fdf6e3" 0.25)
+    (quote
+     ("#b58900" "#2aa198" "#dc322f" "#6c71c4" "#859900" "#cb4b16" "#268bd2"))))
+ '(highlight-symbol-foreground-color "#586e75")
+ '(highlight-tail-colors
+   (quote
+    (("#eee8d5" . 0)
+     ("#B4C342" . 20)
+     ("#69CABF" . 30)
+     ("#69B7F0" . 50)
+     ("#DEB542" . 60)
+     ("#F2804F" . 70)
+     ("#F771AC" . 85)
+     ("#eee8d5" . 100))))
  '(holiday-bahai-holidays nil)
  '(holiday-hebrew-holidays nil)
  '(holiday-islamic-holidays nil)
@@ -95,7 +117,10 @@
  '(sentence-end-double-space nil)
  '(show-paren-mode t)
  '(show-paren-style (quote expression))
+ '(smartrep-mode-line-active-bg (solarized-color-blend "#859900" "#eee8d5" 0.2))
  '(tab-width 4)
+ '(term-default-bg-color "#fdf6e3")
+ '(term-default-fg-color "#657b83")
  '(tool-bar-mode nil)
  '(uniquify-buffer-name-style (quote post-forward-angle-brackets) nil (uniquify))
  '(vc-annotate-background nil)
@@ -123,6 +148,9 @@
  '(vc-follow-symlinks t)
  '(visible-bell t)
  '(visual-line-fringe-indicators (quote (right-triangle right-curly-arrow)))
+ '(weechat-color-list
+   (quote
+    (unspecified "#fdf6e3" "#eee8d5" "#990A1B" "#dc322f" "#546E00" "#859900" "#7B6000" "#b58900" "#00629D" "#268bd2" "#93115C" "#d33682" "#00736F" "#2aa198" "#657b83" "#839496")))
  '(whitespace-style
    (quote
     (face trailing tabs lines space-before-tab newline empty tab-mark)))
