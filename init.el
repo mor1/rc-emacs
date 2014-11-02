@@ -430,14 +430,9 @@ started from a shell."
 (add-hook 'prog-mode-hook 'prog-mode-hook-f)
 (mapc (lambda (mode-hook) (add-hook mode-hook 'prog-mode-hook-f))
       '(tuareg-mode-hook
-        ;;        coffee-mode-hook
         nxml-mode-hook
+        emacs-lisp-mode-hook
         ))
-
-(add-hook 'filladapt-mode-hook
-          '(lambda ()
-             (message "running filladapt-mode-hook")
-             ))
 
 (add-hook 'org-mode-hook
           '(lambda ()
