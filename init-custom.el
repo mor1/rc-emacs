@@ -33,10 +33,8 @@
  '(custom-safe-themes
    (quote
     ("d677ef584c6dfc0697901a44b885cc18e206f05114c8a3b7fde674fce6180879" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
- '(custom-theme-load-path
-   (quote
-    ("/Users/mort/.emacs.d/elpa/color-theme-sanityinc-solarized-2.25/" custom-theme-directory t)))
  '(default-major-mode (quote text-mode) t)
+ '(fci-handle-truncate-lines nil)
  '(fci-rule-color "#0a2832")
  '(fci-rule-width 2)
  '(fill-column 80)
@@ -111,6 +109,7 @@
      (110 "* %u %?" "~/me/todo/notes.org" "Notes"))))
  '(org-reverse-note-order t)
  '(org-tags-match-list-sublevels t)
+ '(paradox-github-token t)
  '(remember-annotation-functions (quote (org-remember-annotation)))
  '(remember-handler-functions (quote (org-remember-handler)))
  '(safe-local-variable-values (quote ((TeX-master . "propB"))))
@@ -120,6 +119,7 @@
  '(sentence-end-double-space nil)
  '(show-paren-mode t)
  '(show-paren-style (quote expression))
+ '(size-indication-mode t)
  '(smartrep-mode-line-active-bg (solarized-color-blend "#859900" "#eee8d5" 0.2))
  '(tab-width 4)
  '(term-default-bg-color "#fdf6e3")
@@ -178,4 +178,4 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
+ '(whitespace-line ((t (:underline t)))))
