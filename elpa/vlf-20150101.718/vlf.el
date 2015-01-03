@@ -1,13 +1,13 @@
 ;;; vlf.el --- View Large Files  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2006, 2012-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2006, 2012-2015 Free Software Foundation, Inc.
 
 ;; Version: 1.7
 ;; Keywords: large files, utilities
 ;; Maintainer: Andrey Kotlarski <m00naticus@gmail.com>
 ;; Authors: 2006 Mathias Dahl <mathias.dahl@gmail.com>
 ;;          2012 Sam Steingold <sds@gnu.org>
-;;          2013-2014 Andrey Kotlarski <m00naticus@gmail.com>
+;;          2013-2015 Andrey Kotlarski <m00naticus@gmail.com>
 ;; URL: https://github.com/m00natic/vlfi
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -31,7 +31,7 @@
 ;; which provides several commands for moving around, searching,
 ;; comparing and editing selected part of file.
 ;; To have it offered when opening large files:
-;; (require 'vlf-integrate)
+;; (require 'vlf-setup)
 
 ;; This package was inspired by a snippet posted by Kevin Rodgers,
 ;; showing how to use `insert-file-contents' to extract part of a
@@ -103,7 +103,11 @@ values are: `write', `ediff', `occur', `search', `goto-line'."
 
 (define-minor-mode vlf-mode
   "Mode to browse large files in."
-  :lighter " VLF" :group 'vlf :keymap vlf-prefix-map
+  :group 'vlf :keymap vlf-prefix-map
+  :lighter (:eval (format " VLF[%d/%d](%s)"
+                          (/ vlf-end-pos vlf-batch-size)
+                          (/ vlf-file-size vlf-batch-size)
+                          (file-size-human-readable vlf-file-size)))
   (cond (vlf-mode
          (set (make-local-variable 'require-final-newline) nil)
          (add-hook 'write-file-functions 'vlf-write nil t)
@@ -136,18 +140,19 @@ values are: `write', `ediff', `occur', `search', `goto-line'."
                (if (consp buffer-undo-list)
                    (setq buffer-undo-list nil))
                (vlf-with-undo-disabled
-                (insert-file-contents-literally buffer-file-name
-                                                t nil nil t)
-                (hexlify-buffer))
+                (let ((inhibit-read-only t))
+                  (insert-file-contents-literally buffer-file-name
+                                                  t nil nil t)
+                  (hexlify-buffer)))
                (set-buffer-modified-p nil)
                (goto-char (point-min))
                (forward-line line)
                (forward-char pos))
-           (let ((pos (+ vlf-start-pos (position-bytes (point)))))
+           (let ((pos (+ vlf-start-pos (position-bytes (point))))
+                 (inhibit-read-only t))
              (vlf-with-undo-disabled
               (insert-file-contents buffer-file-name t nil nil t))
-             (goto-char (byte-to-position pos))))
-         (rename-buffer (file-name-nondirectory buffer-file-name) t))
+             (goto-char (byte-to-position pos)))))
         (t (setq vlf-mode t))))
 
 (defun vlf-keep-alive ()
@@ -331,16 +336,15 @@ Ask for confirmation if NOCONFIRM is nil."
       (error "Save or discard your changes first")
     t))
 
-(defun vlf-move-to-batch (start &optional minimal)
+(defun vlf-move-to-batch (start)
   "Move to batch determined by START.
-Adjust according to file start/end and show `vlf-batch-size' bytes.
-When given MINIMAL flag, skip non important operations."
+Adjust according to file start/end and show `vlf-batch-size' bytes."
   (vlf-verify-size)
   (let* ((start (max 0 start))
          (end (min (+ start vlf-batch-size) vlf-file-size)))
     (if (= vlf-file-size end)          ; re-adjust start
         (setq start (max 0 (- end vlf-batch-size))))
-    (vlf-move-to-chunk start end minimal)))
+    (vlf-move-to-chunk start end)))
 
 (defun vlf-next-batch-from-point ()
   "Display batch of file data starting from current point."

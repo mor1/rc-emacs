@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "vlf" "vlf.el" (21589 21394 0 0))
+;;;### (autoloads nil "vlf" "vlf.el" (21671 46371 0 0))
 ;;; Generated autoloads from vlf.el
 
 (autoload 'vlf "vlf" "\
@@ -16,7 +16,7 @@ Return newly created buffer.
 
 ;;;***
 
-;;;### (autoloads nil "vlf-ediff" "vlf-ediff.el" (21589 21394 0 0))
+;;;### (autoloads nil "vlf-ediff" "vlf-ediff.el" (21671 46371 0 0))
 ;;; Generated autoloads from vlf-ediff.el
 
 (autoload 'vlf-ediff-files "vlf-ediff" "\
@@ -29,7 +29,7 @@ respectively of difference list, runs ediff over the adjacent chunks.
 
 ;;;***
 
-;;;### (autoloads nil "vlf-occur" "vlf-occur.el" (21589 21394 0 0))
+;;;### (autoloads nil "vlf-occur" "vlf-occur.el" (21671 46371 0 0))
 ;;; Generated autoloads from vlf-occur.el
 
 (autoload 'vlf-occur-load "vlf-occur" "\
@@ -39,9 +39,9 @@ Load serialized `vlf-occur' results from current buffer.
 
 ;;;***
 
-;;;### (autoloads nil nil ("vlf-base.el" "vlf-follow.el" "vlf-integrate.el"
-;;;;;;  "vlf-pkg.el" "vlf-search.el" "vlf-tune.el" "vlf-write.el")
-;;;;;;  (21589 21394 756998 0))
+;;;### (autoloads nil nil ("vlf-base.el" "vlf-follow.el" "vlf-pkg.el"
+;;;;;;  "vlf-search.el" "vlf-setup.el" "vlf-tune.el" "vlf-write.el")
+;;;;;;  (21671 46372 107134 0))
 
 ;;;***
 

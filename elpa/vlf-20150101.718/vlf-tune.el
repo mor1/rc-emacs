@@ -56,10 +56,11 @@ but don't change batch size.  If t, measure and change."
             (* 1000 (string-to-number (substring free match-from
                                                  (match-end 0))))))))
 
-(defcustom vlf-tune-max (let ((ram-size (vlf-tune-ram-size)))
-                          (if ram-size
-                              (/ ram-size 20)
-                            large-file-warning-threshold))
+(defcustom vlf-tune-max (max (let ((ram-size (vlf-tune-ram-size)))
+                               (if ram-size
+                                   (/ ram-size 20)
+                                 0))
+                             large-file-warning-threshold)
   "Maximum batch size in bytes when auto tuning.
 Avoid increasing this after opening file with VLF."
   :group 'vlf :type 'integer)
@@ -85,6 +86,8 @@ Avoid decreasing this after opening file with VLF."
 
 (defvar vlf-tune-encode-bps nil
   "Vector of bytes per second encode measurements.")
+(make-variable-buffer-local 'vlf-tune-encode-bps)
+(put 'vlf-tune-encode-bps 'permanent-local t)
 
 (defvar vlf-tune-write-bps nil
   "Vector of bytes per second write measurements.")
@@ -95,10 +98,28 @@ Avoid decreasing this after opening file with VLF."
 (defvar vlf-tune-dehexlify-bps nil
   "Vector of bytes per second dehexlify measurements.")
 
+(defvar vlf-start-pos)
 (defvar hexl-bits)
 (defvar hexl-max-address)
 (declare-function hexl-line-displen "hexl")
 (declare-function dehexlify-buffer "hexl")
+
+(defun vlf-tune-copy-profile (from-buffer &optional to-buffer)
+  "Copy specific profile vectors of FROM-BUFFER to TO-BUFFER.
+If TO-BUFFER is nil, copy to current buffer."
+  (let (insert-bps insert-raw-bps encode-bps)
+    (with-current-buffer from-buffer
+      (setq insert-bps vlf-tune-insert-bps
+            insert-raw-bps vlf-tune-insert-raw-bps
+            encode-bps vlf-tune-encode-bps))
+    (if to-buffer
+        (with-current-buffer to-buffer
+          (setq vlf-tune-insert-bps insert-bps
+                vlf-tune-insert-raw-bps insert-raw-bps
+                vlf-tune-encode-bps encode-bps))
+      (setq vlf-tune-insert-bps insert-bps
+            vlf-tune-insert-raw-bps insert-raw-bps
+            vlf-tune-encode-bps encode-bps))))
 
 (defun vlf-tune-closest-index (size)
   "Get closest measurement index corresponding to SIZE."
@@ -178,7 +199,7 @@ FILE-NAME if given is to be used instead of `buffer-file-name'."
   (let ((pos (point))
         (address vlf-start-pos))
     (goto-char (point-min))
-    (while (re-search-forward "^[0-9a-f]+" nil t)
+    (while (re-search-forward "^[[:xdigit:]]+" nil t)
       (replace-match (format "%08x" address))
       (setq address (+ address hexl-bits)))
     (goto-char pos)))
