@@ -429,19 +429,19 @@ This command is convenient when reading novel, documentation."
           '(lambda ()
              (message "running find-file-hook")
              (whitespace-mode t)
-             (turn-on-visual-line-mode)
              (hl-line-mode t)
              (force-my-keys-minor-mode)
              (auto-fill-mode t)
-            ))
+             ))
 
 (add-hook 'text-mode-hook
           '(lambda ()
              (message "running text-mode-hook")
              (flyspell-mode t)
+             (turn-on-visual-line-mode)
              (set-visual-wrap-column (+ fill-column 1))
 
-             ;; (local-set-key (kbd "M-q") 'unfill-and-check) ;; 'fill-and-check)
+             (local-set-key (kbd "M-q") 'fill-and-check)
              (local-set-key (kbd "S-<tab>")
                             'flyspell-auto-correct-previous-word)
              ))
@@ -451,7 +451,7 @@ This command is convenient when reading novel, documentation."
   (interactive)
   (message "running prog-mode-hook")
 
-  (set-visual-wrap-column 0)
+  ;; (set-visual-wrap-column 0)
   (fci-mode t)
   (flyspell-prog-mode)
   (whitespace-cleanup)
@@ -486,6 +486,7 @@ This command is convenient when reading novel, documentation."
 (add-hook 'latex-mode-hook
           '(lambda ()
              (auto-fill-mode 0)
+             (local-set-key (kbd "M-q") 'unfill-and-check)
              (local-set-key (kbd "{") 'tex-insert-braces)
              (local-set-key (kbd "M-[")
                             '(lambda () (interactive) (insert "{")))
@@ -543,9 +544,11 @@ This command is convenient when reading novel, documentation."
           '(lambda ()
              (orgtbl-mode 1)
              (auto-fill-mode 0)
+             ;; (local-set-key (kbd "M-q") 'unfill-and-check)
              ))
 (push '("\\.md$" . markdown-mode) auto-mode-alist)
 (push '("\\.markdown$" . markdown-mode) auto-mode-alist)
+(push '("\\`==\\+==" . markdown-mode) magic-mode-alist)
 
 ;; makefile-mode
 (defadvice whitespace-cleanup (around whitespace-cleanup-indent-tab activate)
