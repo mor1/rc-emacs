@@ -938,3 +938,4 @@ This command is convenient when reading novel, documentation."
            (- (+ hi lo) (+ (first *emacs-load-start*)
                            (second *emacs-load-start*))))
          )
+(put 'narrow-to-region 'disabled nil)
