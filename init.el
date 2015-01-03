@@ -209,6 +209,19 @@ started from a shell."
     (message "Aborted"))
   )
 
+;; visual wrap mode breaks split-window-right
+(defun my-split-window-right () "split window while toggling visual wrap"
+       (interactive)
+       (let (saved-visual-wrap-column visual-wrap-column)
+         (set-visual-wrap-column 0)
+         (split-window-right)
+         (other-window 1)
+         (visual-line-mode t)
+         (set-visual-wrap-column saved-visual-wrap-column)
+         (redraw-display)
+         )
+)
+
 ;;; Stefan Monnier <foo at acm.org>. It is the opposite of fill-paragraph
 ;;; Takes a multi-line paragraph and makes it into a single line of text.
 (defun unfill-paragraph ()
@@ -340,6 +353,26 @@ started from a shell."
   (fill-paragraph)
   (ispell-check-paragraph)
   )
+
+;; http://ergoemacs.org/emacs/emacs_make_modern.html
+(defun xah-toggle-margin-right ()
+  "Toggle the right margin between `fill-column' or window width.
+This command is convenient when reading novel, documentation."
+  (interactive)
+  (if (eq (cdr (window-margins)) nil)
+      (set-window-margins nil 0 (- (window-body-width) (+ fill-column 2)))
+    (set-window-margins nil 0 0)
+    ))
+
+;; http://ergoemacs.org/emacs/emacs_toggle_line_spacing.html
+(defun xah-toggle-line-spacing ()
+  "Toggle line spacing between no extra space to extra half line height."
+  (interactive)
+  (if (eq line-spacing nil)
+      (setq line-spacing 0.5) ; add 0.5 height between lines
+    (setq line-spacing nil)   ; no extra height between lines
+    )
+  (redraw-frame (selected-frame)))
 
 ;; magit mode
 
