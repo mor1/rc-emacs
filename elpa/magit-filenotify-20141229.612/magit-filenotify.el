@@ -1,12 +1,12 @@
 ;;; magit-filenotify.el --- Refresh status buffer when git tree changes -*- lexical-binding: t -*-
-;; Version: 20140807.340
+;; Version: 20141229.612
 
 ;; Copyright (C) 2013 Rüdiger Sonderfeld
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 ;; Created: 17 Jul 2013
 ;; Keywords: tools
-;; Package-Requires: ((magit "1.3.0"))
+;; Package-Requires: ((magit "1.3.0") (emacs "24.4"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -41,8 +41,7 @@
   :prefix "magit-filenotify"
   :group 'magit-extensions)
 
-(defcustom magit-filenotify-ignored '("\\`\\.#"
-                                   "\\`flycheck_")
+(defcustom magit-filenotify-ignored '("\\`\\.#" "\\`flycheck_")
   "A list of regexp for filenames that will be ignored by the callback."
   :group 'magit-filenotify
   :type '(repeat regexp))
@@ -86,8 +85,8 @@ This can only be called from a magit status buffer."
     (error "Only works in magit status buffer"))
   (dolist (dir (magit-filenotify--directories))
     (puthash (file-notify-add-watch dir
-                                '(change attribute-change)
-                                #'magit-filenotify--callback)
+                                    '(change attribute-change)
+                                    #'magit-filenotify--callback)
              (list dir (current-buffer))
              magit-filenotify-data)))
 
