@@ -2,8 +2,8 @@
 
 ;; Copyright (C) 2010 Chris Wanstrath
 
-;; Version: 20140930.206
-;; X-Original-Version: 0.5.5
+;; Version: 20150101.1816
+;; X-Original-Version: 0.5.7
 ;; Keywords: CoffeeScript major mode
 ;; Author: Chris Wanstrath <chris@ozmm.org>
 ;; URL: http://github.com/defunkt/coffee-mode
@@ -138,7 +138,7 @@
 ;; Customizable Variables
 ;;
 
-(defconst coffee-mode-version "0.5.5"
+(defconst coffee-mode-version "0.5.7"
   "The version of `coffee-mode'.")
 
 (defgroup coffee nil
@@ -371,7 +371,7 @@ called `coffee-compiled-buffer-name'."
 
 (defun coffee-start-compile-process (curbuf line column)
   (lambda (start end)
-    (let ((proc (apply 'start-process "coffee-mode"
+    (let ((proc (apply 'start-file-process "coffee-mode"
                        (get-buffer-create coffee-compiled-buffer-name)
                        coffee-command (append coffee-args-compile '("-s" "-p"))))
           (curfile (buffer-file-name curbuf)))
@@ -384,8 +384,8 @@ called `coffee-compiled-buffer-name'."
 (defun coffee-start-generate-sourcemap-process (start end)
   (let* ((file (buffer-file-name))
          (sourcemap-buf (get-buffer-create "*coffee-sourcemap*"))
-         (proc (start-process "coffee-sourcemap" sourcemap-buf
-                              coffee-command "-m" file))
+         (proc (start-file-process "coffee-sourcemap" sourcemap-buf
+                                   coffee-command "-m" file))
          (curbuf (current-buffer))
          (line (line-number-at-pos))
          (column (current-column)))
@@ -498,13 +498,13 @@ called `coffee-compiled-buffer-name'."
 (defvar coffee-this-regexp "\\(?:@\\w+\\|\\<this\\)\\>")
 
 ;; Prototype::access
-(defvar coffee-prototype-regexp "[[:word:].$]+?::")
+(defvar coffee-prototype-regexp "[_[:word:].$]+?::")
 
 ;; Assignment
-(defvar coffee-assign-regexp "\\(@?[[:word:].$]+?\\)\\s-*:")
+(defvar coffee-assign-regexp "\\(@?[_[:word:].$]+?\\)\\s-*:")
 
 ;; Local Assignment
-(defvar coffee-local-assign-regexp "\\s-*\\([[:word:].$]+\\)\\s-*=\\(?:[^>=]\\|$\\)")
+(defvar coffee-local-assign-regexp "\\s-*\\([_[:word:].$]+\\)\\s-*=\\(?:[^>=]\\|$\\)")
 
 ;; Lambda
 (defvar coffee-lambda-regexp "\\(?:(.*)\\)?\\s-*\\(->\\|=>\\)")
@@ -514,9 +514,10 @@ called `coffee-compiled-buffer-name'."
 
 ;; Booleans
 (defvar coffee-boolean-regexp
-  (concat "\\(?:^\\|[^.]\\)"
-          (regexp-opt '("true" "false" "yes" "no" "on" "off" "null" "undefined")
-                      'words)))
+  (rx (or bol (not (any ".")))
+      (group symbol-start
+             (or "true" "false" "yes" "no" "on" "off" "null" "undefined")
+             symbol-end)))
 
 ;; Regular expressions
 (eval-and-compile
@@ -567,7 +568,7 @@ called `coffee-compiled-buffer-name'."
     (,coffee-prototype-regexp . font-lock-type-face)
     (,coffee-assign-regexp . font-lock-type-face)
     (,coffee-local-assign-regexp 1 font-lock-variable-name-face)
-    (,coffee-boolean-regexp . font-lock-constant-face)
+    (,coffee-boolean-regexp 1 font-lock-constant-face)
     (,coffee-lambda-regexp 1 font-lock-function-name-face)
     (,coffee-keywords-regexp 1 font-lock-keyword-face)
     (,coffee-string-interpolation-regexp 0 font-lock-variable-name-face t)))
@@ -582,7 +583,8 @@ For details, see `comment-dwim'."
   (interactive "*P")
   (require 'newcomment)
   (let ((deactivate-mark nil) (comment-start "#") (comment-end ""))
-    (comment-dwim arg)))
+    (comment-dwim arg)
+    (deactivate-mark t)))
 
 (defsubst coffee-command-compile-arg-as-string (output)
   (mapconcat 'identity
@@ -626,7 +628,7 @@ output in a compilation buffer."
           "\\|"
           coffee-namespace-regexp ; $4
           "\\|"
-          "\\(@?[[:word:]:.$]+\\)\\s-*=\\(?:[^>]\\|$\\)" ; $5 match prototype access too
+          "\\(@?[_[:word:]:.$]+\\)\\s-*=\\(?:[^>]\\|$\\)" ; $5 match prototype access too
           "\\(?:" "\\s-*" "\\(" coffee-lambda-regexp "\\)" "\\)?" ; $6
           "\\)"))
 
@@ -780,11 +782,9 @@ output in a compilation buffer."
   "Return the indentation level of the previous non-blank line."
   (save-excursion
     (forward-line -1)
-    (if (bobp)
-        0
-      (while (and (looking-at "^[ \t]*$") (not (bobp)))
-        (forward-line -1))
-      (current-indentation))))
+    (while (and (looking-at "^[ \t]*$") (not (bobp)))
+      (forward-line -1))
+    (current-indentation)))
 
 (defun coffee-newline-and-indent ()
   "Insert a newline and indent it to the same level as the previous line."
@@ -964,7 +964,7 @@ comments such as the following:
           "\\|"
           coffee-namespace-regexp
           "\\|"
-          "@?[[:word:]:.$]+\\s-*=\\(?:[^>]\\|$\\)"
+          "@?[_[:word:]:.$]+\\s-*=\\(?:[^>]\\|$\\)"
           "\\s-*"
           coffee-lambda-regexp
           "\\)"))
@@ -990,7 +990,7 @@ comments such as the following:
 (defun coffee-current-line-is-assignment ()
   (save-excursion
     (goto-char (line-end-position))
-    (re-search-backward "^[[:word:].$]+\\s-*=\\(?:[^>]\\|$\\)"
+    (re-search-backward "^[_[:word:].$]+\\s-*=\\(?:[^>]\\|$\\)"
                         (line-beginning-position) t)))
 
 (defun coffee-curline-defun-type (parent-indent start-is-defun)
@@ -1194,9 +1194,6 @@ comments such as the following:
 
   ;; code for syntax highlighting
   (setq font-lock-defaults '((coffee-font-lock-keywords)))
-
-  ;; treat "_" as part of a word
-  (modify-syntax-entry ?_ "w" coffee-mode-syntax-table)
 
   ;; perl style comment: "# ..."
   (modify-syntax-entry ?# "< b" coffee-mode-syntax-table)
