@@ -534,10 +534,10 @@ This command is convenient when reading novel, documentation."
 ;; bibtex-mode
 (push '("\\.bibtex$" . bibtex-mode) auto-mode-alist)
 
-;; xml-mode
-(push '("\\`<\\?xml" . nxml-mode) magic-mode-alist)
-(push '("\\.html$" . nxml-mode) auto-mode-alist)
-(push '("\\.tpl$" . nxml-mode) auto-mode-alist) ;; bottle templates
+;; web-mode
+(push '("\\`<\\?xml" . web-mode) magic-mode-alist)
+(push '("\\.html$" . web-mode) auto-mode-alist)
+(push '("\\.tpl$" . web-mode) auto-mode-alist) ;; bottle templates
 
 ;; markdown-mode
 (add-hook 'markdown-mode-hook
