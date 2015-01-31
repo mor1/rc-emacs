@@ -1,18 +1,16 @@
 ;;; python-mode-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-
+(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
 ;;;### (autoloads nil nil ("python-mode-pkg.el" "python-mode.el")
-;;;;;;  (21227 34738 983625 0))
+;;;;;;  (21709 20796 251768 0))
 
 ;;;***
 
-(provide 'python-mode-autoloads)
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
-;; coding: utf-8
 ;; End:
 ;;; python-mode-autoloads.el ends here
