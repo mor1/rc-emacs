@@ -439,7 +439,7 @@ This command is convenient when reading novel, documentation."
              (message "running text-mode-hook")
              (flyspell-mode t)
              (turn-on-visual-line-mode)
-             (set-visual-wrap-column (+ fill-column 1))
+             (set-visual-wrap-column (+ fill-column 2))
 
              (local-set-key (kbd "M-q") 'fill-and-check)
              (local-set-key (kbd "S-<tab>")
