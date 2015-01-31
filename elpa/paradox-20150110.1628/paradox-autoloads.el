@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "paradox" "paradox.el" (21671 46381 0 0))
+;;;### (autoloads nil "paradox" "paradox.el" (21709 20815 0 0))
 ;;; Generated autoloads from paradox.el
 
 (autoload 'paradox-list-packages "paradox" "\
@@ -59,11 +59,6 @@ By default, the current package database (stored in
 Passing a non-nil REFRESH argument forces this update.
 
 \(fn FEATURE &optional FILENAME NOERROR PACKAGE REFRESH)" nil nil)
-
-;;;***
-
-;;;### (autoloads nil nil ("paradox-compat.el" "paradox-pkg.el")
-;;;;;;  (21671 46381 342767 0))
 
 ;;;***
 
