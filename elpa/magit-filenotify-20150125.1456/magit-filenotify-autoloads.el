@@ -3,19 +3,14 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "magit-filenotify" "magit-filenotify.el" (21671
-;;;;;;  46497 0 0))
+;;;### (autoloads nil "magit-filenotify" "magit-filenotify.el" (21709
+;;;;;;  20849 0 0))
 ;;; Generated autoloads from magit-filenotify.el
 
 (autoload 'magit-filenotify-mode "magit-filenotify" "\
 Refresh status buffer if source tree changes.
 
 \(fn &optional ARG)" t nil)
-
-;;;***
-
-;;;### (autoloads nil nil ("magit-filenotify-pkg.el") (21671 46497
-;;;;;;  599363 0))
 
 ;;;***
 

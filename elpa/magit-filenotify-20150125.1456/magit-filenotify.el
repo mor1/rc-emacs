@@ -1,7 +1,7 @@
 ;;; magit-filenotify.el --- Refresh status buffer when git tree changes -*- lexical-binding: t -*-
-;; Version: 20141229.612
+;; Version: 20150125.1456
 
-;; Copyright (C) 2013 Rüdiger Sonderfeld
+;; Copyright (C) 2013-2015 Rüdiger Sonderfeld
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 ;; Created: 17 Jul 2013
@@ -48,14 +48,13 @@
 
 (defun magit-filenotify--directories ()
   "List all directories containing files watched by git."
-  ;; TODO: add .git directory?
   (cons
    default-directory
    (cl-remove-duplicates
     (cl-loop for file in (magit-git-lines "ls-files")
-             for tmp = (file-name-directory file)
-             when tmp
-             collect (expand-file-name tmp))
+             for dir = (file-name-directory (magit-decode-git-path file))
+             when dir
+             collect (expand-file-name dir))
     :test #'string=)))
 
 (defvar magit-filenotify-data (make-hash-table)
@@ -84,11 +83,12 @@ This can only be called from a magit status buffer."
   (unless (derived-mode-p 'magit-status-mode)
     (error "Only works in magit status buffer"))
   (dolist (dir (magit-filenotify--directories))
-    (puthash (file-notify-add-watch dir
-                                    '(change attribute-change)
-                                    #'magit-filenotify--callback)
-             (list dir (current-buffer))
-             magit-filenotify-data)))
+    (when (file-exists-p dir)
+      (puthash (file-notify-add-watch dir
+                                      '(change attribute-change)
+                                      #'magit-filenotify--callback)
+               (list dir (current-buffer))
+               magit-filenotify-data))))
 
 (defun magit-filenotify-stop ()
   "Stop watching for changes to the source tree using filenotify.
@@ -152,5 +152,7 @@ This can only be called from a magit status buffer."
   (easy-menu-remove-item magit-mode-menu nil "Auto Refresh"))
 
 (provide 'magit-filenotify)
-
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-filenotify.el ends here
