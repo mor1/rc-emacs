@@ -2,8 +2,8 @@
 
 ;; Copyright (C) 2010 Chris Wanstrath
 
-;; Version: 20150101.1816
-;; X-Original-Version: 0.5.7
+;; Version: 20150130.1627
+;; X-Original-Version: 0.5.8
 ;; Keywords: CoffeeScript major mode
 ;; Author: Chris Wanstrath <chris@ozmm.org>
 ;; URL: http://github.com/defunkt/coffee-mode
@@ -138,7 +138,7 @@
 ;; Customizable Variables
 ;;
 
-(defconst coffee-mode-version "0.5.7"
+(defconst coffee-mode-version "0.5.8"
   "The version of `coffee-mode'.")
 
 (defgroup coffee nil
@@ -524,7 +524,8 @@ called `coffee-compiled-buffer-name'."
   (defvar coffee-regexp-regexp "\\s/\\(\\(?:\\\\/\\|[^/\n\r]\\)*\\)\\s/"))
 
 ;; String Interpolation(This regexp is taken from ruby-mode)
-(defvar coffee-string-interpolation-regexp "#{[^}\n\\\\]*\\(?:\\\\.[^}\n\\\\]*\\)*}")
+(eval-and-compile
+  (defvar coffee-string-interpolation-regexp "#{[^}\n\\\\]*\\(?:\\\\.[^}\n\\\\]*\\)*}"))
 
 ;; JavaScript Keywords
 (defvar coffee-js-keywords
@@ -1165,6 +1166,19 @@ comments such as the following:
         (put-text-property (- curpoint 3) curpoint
                            'syntax-table (string-to-syntax "!"))))))
 
+(defun coffee-syntax-string-interpolation ()
+  (let ((end (point))
+        finish)
+    (goto-char (match-beginning 0))
+    (while (not finish)
+      (skip-chars-forward "^\"")
+      (if (or (eobp) (>= (point) end))
+          (setq finish t)
+        (put-text-property (point) (1+ (point))
+                           'syntax-table (string-to-syntax "_"))
+        (forward-char 1)))
+    (goto-char (1+ end))))
+
 (defun coffee-syntax-propertize-function (start end)
   (goto-char start)
   (funcall
@@ -1180,6 +1194,8 @@ comments such as the following:
              (put-text-property (match-beginning 1) (match-end 1)
                                 'syntax-table (string-to-syntax "_")))))))
     (coffee-regexp-regexp (1 (string-to-syntax "_")))
+    (coffee-string-interpolation-regexp
+     (0 (ignore (coffee-syntax-string-interpolation))))
     ("###"
      (0 (ignore (coffee-syntax-propertize-block-comment)))))
    (point) end))
