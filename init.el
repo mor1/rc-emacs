@@ -377,7 +377,7 @@ This command is convenient when reading novel, documentation."
 ;; magit mode
 
 (autoload 'magit-status "magit" nil t)
-(add-hook 'magit-status-mode-hook 'magit-filenotify-mode)
+;; (add-hook 'magit-status-mode-hook 'magit-filenotify-mode)
 
 ;; change magit diff colors
 (eval-after-load 'magit
