@@ -25,9 +25,9 @@
 
 ;; Installation:
 ;; If you have permissions to the local `site-lisp' directory, you
-;; only have to copy `tuareg.el' and `ocamldebug.el' Otherwise, copy
-;; `tuareg.el' and `ocamldebug.el' to a local directory and add the
-;; following line to your `.emacs'
+;; only have to copy `tuareg.el', `tuareg_indent.el', `ocamldebug.el'
+;; and `tuareg-site-file.el'.  Otherwise, copy the previous files
+;; to a local directory and add the following line to your `.emacs':
 ;;
 ;; (add-to-list 'load-path "DIR")
 
@@ -333,7 +333,7 @@ Valid names are `browse-url', `browse-url-firefox', etc."
   `(("Automatic indentation of leading keywords" . 'tuareg-use-abbrev-mode)
     ("Automatic indentation of ), ] and }" . 'tuareg-electric-indent)
     ,@(unless tuareg-use-smie
-        '("Automatic matching of [| and {<" . 'tuareg-electric-close-vector))
+        '(("Automatic matching of [| and {<" . 'tuareg-electric-close-vector)))
     "---"
     ,@(unless tuareg-use-smie
         '(("Indent body of comments" . 'tuareg-indent-comments)
@@ -1032,6 +1032,10 @@ Regexp match data 0 points to the chars."
           (let ((b "\\(?:[^()]\\|(")
                 (e ")\\)*"))
             (concat b b b "[^()]*" e e e)))
+         (balanced-braces-no-string
+          (let ((b "\\(?:[^()\"]\\|(")
+                (e ")\\)*"))
+            (concat b b b "[^()\"]*" e e e)))
          (unbraced-tuple (concat lid " *\\(?:, *" lid " *\\)*"))
          (tuple (concat "(" balanced-braces ")")); much more than tuple!
          (module-path (concat uid "\\(?:\\." uid "\\)*"))
@@ -1060,7 +1064,9 @@ Regexp match data 0 points to the chars."
          ;; group of variables
          (gvars (concat "\\(\\(?:" tuareg--whitespace-re
                         "\\(?:" lid "\\|()\\|" tuple ; = any balanced (...)
-                        "\\|[~?]\\(?:" lid "\\|(" balanced-braces ")\\)"
+                        "\\|[~?]\\(?:" lid
+                        "\\(?::\\(?:" lid "\\|(" balanced-braces ")\\)\\)?"
+                        "\\|(" balanced-braces ")\\)"
                         "\\)\\)+\\)"))
          ;; group for possible class param
          (class-gparams
@@ -1146,7 +1152,8 @@ Regexp match data 0 points to the chars."
           'words))
       . tuareg-font-lock-operator-face)
      ;;; (lid: t) and (lid :> t)
-     (,(concat "( *" lid " *:>?\\([ \n'_A-Za-z]" balanced-braces "\\))")
+     (,(concat "( *" lid " *:>?\\([ \n'_A-Za-z]"
+               balanced-braces-no-string "\\))")
       1 font-lock-type-face keep)
      (,(concat "\\<external +\\(" lid "\\)")  1 font-lock-function-name-face)
      (,(concat "\\<exception +\\(" uid "\\)") 1 font-lock-variable-name-face)
@@ -1195,9 +1202,11 @@ Regexp match data 0 points to the chars."
       ;; module paths, types, constructors already colored by the above
       (1 font-lock-variable-name-face keep)
       (2 font-lock-type-face keep t))
-     (,(concat let-binding " *\\(" lid "\\)" gvars "?")
+     (,(concat let-binding " *\\(" lid "\\)" gvars "?\\(?: +:"
+               tuareg--whitespace-re "\\([a-z_]\\|[^ =][^=]*[^ =]\\) *=\\)?")
       (1 font-lock-function-name-face nil t)
-      (2 font-lock-variable-name-face keep t))
+      (2 font-lock-variable-name-face keep t)
+      (3 font-lock-type-face keep t))
      (,(concat "\\<function\\>" tuareg--whitespace-re "\\(" lid "\\)")
       1 font-lock-variable-name-face)
      (,(concat "\\<fun +" gvars " *->")
@@ -2365,14 +2374,16 @@ otherwise return non-nil."
 ;;                               OPAM
 
 (defconst tuareg-opam-compilers
-  (cons "~/.opam/system"
-        (directory-files "~/.opam" t "[0-9]+\\.[0-9]+\\.[0-9]+")))
+  (when (file-directory-p "~/.opam")
+    (cons "~/.opam/system"
+          (directory-files "~/.opam" t "[0-9]+\\.[0-9]+\\.[0-9]+")))
+  "The list of OPAM directories for the installed compilers.")
 
 (defvar tuareg-opam
   (let ((opam (executable-find "opam")))
     (if opam opam
       (let ((opam (locate-file "bin/opam" tuareg-opam-compilers)))
-        (if (file-executable-p opam) opam)))) ; or nil
+        (if (and opam (file-executable-p opam)) opam)))) ; or nil
   "The full path of the opam executable.")
 
 (when tuareg-opam
@@ -2388,10 +2399,22 @@ otherwise return non-nil."
   ;; before launching the compilation.
   (defadvice compile (before tuareg-compile-opam activate)
       "Run opam to update environment variables."
-      (let* ((env (opam-config-env)))
+      (let* ((env (tuareg-opam-config-env)))
 	(set (make-local-variable 'compilation-environment)
 	     ;; Quotes MUST be removed.
 	     (split-string (replace-regexp-in-string "\"" "" env)))))
+
+  (eval-after-load "merlin"
+    (defun merlin-command ()
+      "Return path of ocamlmerlin binary using the opam executable
+detected by Tuareg"
+      (if (equal merlin-command 'opam)
+          (let* ((opam (concat tuareg-opam " config var bin"))
+                 (bin (replace-regexp-in-string
+                       "\n$" "" (shell-command-to-string opam)))
+                 (merlin (concat bin "/ocamlmerlin")))
+            (if (file-executable-p merlin) merlin "ocamlmerlin"))
+        merlin-command)))
   )
 
 
@@ -2656,23 +2679,28 @@ current phrase else insert a newline and indent."
 
 (when tuareg-use-smie
   (defconst tuareg-beginning-of-phrase-syms
-    '("module" "open" "type" "d-let"))
+    '("module" "open" "include" "type" "d-let"))
+
+  (defconst tuareg-beginning-of-phrase-syms-re
+    (concat (regexp-opt '("open" "include") 'words) " *")
+    "A regular expression matching tokens at beginning of a phrase for
+which `smie-backward-sexp' returns `nil'.")
 
   (defun tuareg--beginning-of-phrase ()
-      (interactive)
-      (while
-          (let ((td (smie-backward-sexp 'halfsexp)))
-            (cond
-             ((member (nth 2 td) tuareg-beginning-of-phrase-syms)
-              (goto-char (nth 1 td))
-              nil)
-             ((null td)
-              (let ((tk (tuareg-smie-backward-token)))
-                ;; Stop if in the list
-                (not (member tk tuareg-beginning-of-phrase-syms))))
-             ((and (car td) (not(numberp (car td))))
-              (unless (bobp) (goto-char (nth 1 td)) t))
-             (t t)))))
+    (while
+        (let ((td (smie-backward-sexp 'halfsexp)))
+          (cond
+           ((member (nth 2 td) tuareg-beginning-of-phrase-syms)
+            (goto-char (nth 1 td))
+            nil)
+           ;; When we are after, say, "open X", `td' is `nil'
+           ((and (null td)
+                 (looking-back tuareg-beginning-of-phrase-syms-re))
+            (tuareg-smie-backward-token)
+            nil)
+           ((and (car td) (not(numberp (car td))))
+            (unless (bobp) (goto-char (nth 1 td)) t))
+           (t t)))))
 
     (defun tuareg-discover-phrase (&optional quiet stop-at-and)
       "Return a triplet '(begin end end-with-comments)."
