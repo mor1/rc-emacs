@@ -6,13 +6,13 @@
 
 ;;; Author: Eric James Michael Ritz
 ;;; URL: https://github.com/ejmr/php-mode
-;; Version: 20150131.302
-;;; X-Original-Version: 1.15.3
+;; Package-Version: 20150308.1835
+;;; Version: 1.15.3
 
 (defconst php-mode-version-number "1.15.3"
   "PHP Mode version number.")
 
-(defconst php-mode-modified "2015-01-31"
+(defconst php-mode-modified "2015-03-09"
   "PHP Mode build date.")
 
 ;;; License
@@ -88,18 +88,15 @@
 
 ;; Work around emacs bug#18845, cc-mode expects cl to be loaded
 ;; while php-mode only uses cl-lib (without compatibility aliases)
-(eval-when-compile
+(eval-and-compile
   (if (and (= emacs-major-version 24) (= emacs-minor-version 4))
     (require 'cl)))
 
 ;; Use the recommended cl functions in php-mode but alias them to the
 ;; old names when we detect emacs < 24.3
 (if (and (= emacs-major-version 24) (< emacs-minor-version 3))
-    (progn
-      (unless (fboundp 'cl-flet)
-        (defalias 'cl-flet 'flet))
-      (unless (fboundp 'cl-set-difference)
-        (defalias 'cl-set-difference 'set-difference))))
+    (unless (fboundp 'cl-set-difference)
+      (defalias 'cl-set-difference 'set-difference)))
 
 
 ;; Local variables
@@ -111,7 +108,8 @@
   :link '(url-link :tag "Official Site" "https://github.com/ejmr/php-mode")
   :link '(url-link :tag "PHP Mode Wiki" "https://github.com/ejmr/php-mode/wiki"))
 
-(defcustom php-executable "/usr/bin/php"
+(defcustom php-executable (or (executable-find "php")
+                              "/usr/bin/php")
   "The location of the PHP executable."
   :type 'string
   :group 'php)
@@ -633,7 +631,8 @@ code and modules."
   (c-set-style "pear")
 
   ;; Undo drupal/PSR-2 coding style whitespace effects
-  (set (make-local-variable 'show-trailing-whitespace) nil))
+  (set (make-local-variable 'show-trailing-whitespace)
+       (default-value 'show-trailing-whitespace)))
 
 (c-add-style
  "drupal"
@@ -667,7 +666,8 @@ working with Wordpress."
   (c-set-style "wordpress")
 
   ;; Undo drupal/PSR-2 coding style whitespace effects
-  (set (make-local-variable 'show-trailing-whitespace) nil))
+  (set (make-local-variable 'show-trailing-whitespace)
+       (default-value 'show-trailing-whitespace)))
 
 (c-add-style
   "symfony2"
@@ -685,7 +685,8 @@ working with Symfony2."
   (c-set-style "symfony2")
 
   ;; Undo drupal/PSR-2 coding style whitespace effects
-  (set (make-local-variable 'show-trailing-whitespace) nil))
+  (set (make-local-variable 'show-trailing-whitespace)
+       (default-value 'show-trailing-whitespace)))
 
 (c-add-style
   "psr2"
@@ -827,7 +828,8 @@ example `html-mode'.  Known such libraries are:\n\t"
         (move-beginning-of-line nil)
         ;; Don't indent heredoc end mark
         (save-match-data
-          (unless (looking-at "[a-zA-Z0-9_]+;\n")
+          (unless (and (looking-at "[a-zA-Z0-9_]+;\n")
+                       (php-in-string-p))
             (setq doit t)))
         (goto-char here)
         (when doit
@@ -868,6 +870,15 @@ This is was done due to the problem reported here:
   "See `php-c-at-vsemi-p'."
   )
 
+(defsubst php-in-string-p ()
+  (nth 3 (syntax-ppss)))
+
+(defsubst php-in-comment-p ()
+  (nth 4 (syntax-ppss)))
+
+(defsubst php-in-string-or-comment-p ()
+  (nth 8 (syntax-ppss)))
+
 (defun php-lineup-string-cont (langelem)
   "Line up string toward equal sign or dot
 e.g.
@@ -876,9 +887,12 @@ $str = 'some'
 this ^ lineup"
   (save-excursion
     (goto-char (cdr langelem))
-    (when (or (search-forward "=" (line-end-position) t)
-              (search-forward "." (line-end-position) t))
-      (vector (1- (current-column))))))
+    (let (ret finish)
+      (while (and (not finish) (re-search-forward "[=.]" (line-end-position) t))
+        (unless (php-in-string-or-comment-p)
+          (setq finish t
+                ret (vector (1- (current-column))))))
+      ret)))
 
 (defun php-lineup-arglist-intro (langelem)
   (save-excursion
@@ -910,12 +924,6 @@ the string HEREDOC-START."
   ;; Extract just the identifier without <<< and quotes.
   (string-match "\\w+" heredoc-start)
   (concat "^\\(" (match-string 0 heredoc-start) "\\)\\W"))
-
-(defsubst php-in-string-p ()
-  (nth 3 (syntax-ppss)))
-
-(defsubst php-in-comment-p ()
-  (nth 4 (syntax-ppss)))
 
 (defun php-syntax-propertize-function (start end)
   "Apply propertize rules from START to END."
@@ -1277,27 +1285,24 @@ exists, and nil otherwise.
 
 With a prefix argument, prompt (with completion) for a word to search for."
   (interactive (php--search-documentation-read-arg))
-  (cl-flet ((php-file-for (type name)
-                          (expand-file-name
-                           (format "%s.%s.html" type
-                                   (replace-regexp-in-string
-                                    "_" "-" (downcase name)))
-                           php-manual-path))
-            (php-file-url (file)
-                          ;; Some browsers require the file:// prefix.
-                          ;; Others do not seem to care.  But it should
-                          ;; never be incorrect to use the prefix.
-                          (if (string-prefix-p "file://" file)
-                              file
-                            (concat "file://" file))))
-    (let ((file (catch 'found
-                  (loop for type in php-search-local-documentation-types do
-                        (let ((file (php-file-for type word)))
-                          (when (file-exists-p file)
-                            (throw 'found file)))))))
-      (when file
-        (php-browse-documentation-url (php-file-url file))
-        t))))
+  (let ((file (catch 'found
+                (loop for type in php-search-local-documentation-types do
+                      (let* ((doc-html (format "%s.%s.html"
+                                               type
+                                               (replace-regexp-in-string
+                                                "_" "-" (downcase word))))
+                             (file (expand-file-name doc-html  php-manual-path)))
+                        (when (file-exists-p file)
+                          (throw 'found file)))))))
+    (when file
+      (let ((file-url (if (string-prefix-p "file://" file)
+                          file
+                        (concat "file://" file))))
+        (php-browse-documentation-url file-url))
+      t)))
+
+(defsubst php-search-web-documentation (word)
+  (php-browse-documentation-url (concat php-search-url word)))
 
 ;; Define function documentation function
 (defun php-search-documentation (word)
@@ -1312,14 +1317,11 @@ With a prefix argument, prompt for a documentation word to search
 for.  If the local documentation is available, it is used to build
 a completion list."
   (interactive (php--search-documentation-read-arg))
-  (cl-flet ((php-search-web-documentation (name)
-                                          (php-browse-documentation-url
-                                           (concat php-search-url name))))
-    (if (and (stringp php-manual-path)
-             (not (string= php-manual-path "")))
-        (or (php-search-local-documentation word)
-            (php-search-web-documentation word))
-      (php-search-web-documentation word))))
+  (if (and (stringp php-manual-path)
+           (not (string= php-manual-path "")))
+      (or (php-search-local-documentation word)
+          (php-search-web-documentation word))
+    (php-search-web-documentation word)))
 
 ;; Define function for browsing manual
 (defun php-browse-manual ()
@@ -1444,11 +1446,10 @@ The output will appear in the buffer *PHP*."
     ;; Calling 'php -r' will fail if we send it code that starts with
     ;; '<?php', which is likely.  So we run the code through this
     ;; function to check for that prefix and remove it.
-    (cl-flet ((clean-php-code (code)
-                           (if (string-prefix-p "<?php" code t)
-                               (substring code 5)
-                             code)))
-      (call-process "php" nil php-buffer nil "-r" (clean-php-code code)))))
+    (let ((cleaned-php-code (if (string-prefix-p "<?php" code t)
+                                (substring code 5)
+                              code)))
+      (call-process php-executable nil php-buffer nil "-r" cleaned-php-code))))
 
 
 (defface php-annotations-annotation-face '((t . (:inherit font-lock-constant-face)))
