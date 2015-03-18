@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "d-mode" "d-mode.el" (21709 20863 0 0))
+;;;### (autoloads nil "d-mode" "d-mode.el" (21769 22968 0 0))
 ;;; Generated autoloads from d-mode.el
  (add-to-list 'auto-mode-alist '("\\.d[i]?\\'" . d-mode))
 
@@ -15,7 +15,7 @@
 (autoload 'd-mode "d-mode" "\
 Major mode for editing code written in the D Programming Language.
 
-See http://www.digitalmars.com/d for more information about the D language.
+See http://dlang.org for more information about the D language.
 
 The hook `c-mode-common-hook' is run with no args at mode
 initialization, then `d-mode-hook'.
