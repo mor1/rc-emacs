@@ -3,11 +3,11 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "paradox" "paradox.el" (21763 4858 0 0))
+;;;### (autoloads nil "paradox" "paradox.el" (21789 23032 0 0))
 ;;; Generated autoloads from paradox.el
 
 (autoload 'paradox-list-packages "paradox" "\
-Improved version of `package-list-packages'. The heart of Paradox.
+Improved version of `package-list-packages'.  The heart of Paradox.
 Function is equivalent to `package-list-packages' (including the
 prefix NO-FETCH), but the resulting Package Menu is improved in
 several ways.
@@ -27,36 +27,34 @@ for packages.
 \(fn NO-FETCH)" t nil)
 
 (autoload 'paradox-upgrade-packages "paradox" "\
-Upgrade all packages. No questions asked.
+Upgrade all packages.  No questions asked.
 This function is equivalent to `list-packages', followed by a
-`package-menu-mark-upgrades' and a `package-menu-execute'. Except
+`package-menu-mark-upgrades' and a `package-menu-execute'.  Except
 the user isn't asked to confirm deletion of packages.
 
 If `paradox-execute-asynchronously' is non-nil, part of this
 operation may be performed in the background.
 
-The NO-FETCH prefix argument is passed to `list-packages'. It
-prevents re-download of information about new versions. It does
+The NO-FETCH prefix argument is passed to `list-packages'.  It
+prevents re-download of information about new versions.  It does
 not prevent downloading the actual packages (obviously).
 
 \(fn &optional NO-FETCH)" t nil)
 
 (autoload 'paradox-require "paradox" "\
-A replacement for `require' which also installs the feature if it is absent.
+Like `require', but also install FEATURE if it is absent.
+FILENAME is passed to `require'.
+If NOERROR is non-nil, don't complain if the feature couldn't be
+installed, just return nil.
+
 - If FEATURE is present, `require' it and return t.
 
 - If FEATURE is not present, install PACKAGE with `package-install'.
 If PACKAGE is nil, assume FEATURE is the package name.
 After installation, `require' FEATURE.
 
-FILENAME is passed to `require'.
-
-If NOERROR is non-nil, don't complain if the feature couldn't be
-installed, just return nil.
-
-By default, the current package database (stored in
-`package-archive-contents') is only updated if it is empty.
-Passing a non-nil REFRESH argument forces this update.
+By default, the current package database is only updated if it is
+empty.  Passing a non-nil REFRESH argument forces this update.
 
 \(fn FEATURE &optional FILENAME NOERROR PACKAGE REFRESH)" nil nil)
 
@@ -64,7 +62,7 @@ Passing a non-nil REFRESH argument forces this update.
 
 ;;;### (autoloads nil nil ("paradox-commit-list.el" "paradox-core.el"
 ;;;;;;  "paradox-execute.el" "paradox-github.el" "paradox-menu.el"
-;;;;;;  "paradox-pkg.el") (21763 4858 497416 0))
+;;;;;;  "paradox-pkg.el") (21789 23032 808295 0))
 
 ;;;***
 

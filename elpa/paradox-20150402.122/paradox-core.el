@@ -21,9 +21,8 @@
 ;; GNU General Public License for more details.
 ;;
 
-
 ;;; Code:
-
+(require 'subr-x)
 
 
 ;;; Configurations

@@ -21,9 +21,13 @@
 ;; GNU General Public License for more details.
 ;;
 
-
+;;; Change Log:
+;; 
 ;;; Code:
+(require 'cl-lib)
 (require 'package)
+(require 'subr-x)
+
 (require 'paradox-core)
 (require 'paradox-github)
 (require 'paradox-commit-list)
@@ -182,8 +186,8 @@ This button takes you to the package's homepage."
 (defvar paradox--column-index-star nil)
 (defvar paradox--column-index-download nil)
 
-(defvar desc-suffix nil)
-(defvar desc-prefix nil)
+(defvar paradox--desc-suffix nil)
+(defvar paradox--desc-prefix nil)
 
 (defvar paradox--commit-list-buffer "*Package Commit List*")
 
@@ -240,8 +244,10 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
                   (list (propertize (or (package-desc-archive pkg-desc) "")
                                     'font-lock-face 'paradox-archive-face)))
             ,@(paradox--count-print (package-desc-name pkg-desc))
-            ,(propertize ;; (package-desc-summary pkg-desc)
-              (concat desc-prefix (package-desc-summary pkg-desc) desc-suffix) ;└╰
+            ,(propertize
+              (concat (propertize " " 'display paradox--desc-prefix)
+                      (package-desc-summary pkg-desc)
+                      (propertize " " 'display paradox--desc-suffix)) ;└╰
               'font-lock-face
               (if (> paradox-lines-per-entry 1)
                   'paradox-description-face-multiline
@@ -275,6 +281,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
         (and (setq extras (cdr (assoc name paradox--package-repo-list)))
              (format "https://github.com/%s" extras)))))
 (defun paradox--get-or-return-package (pkg)
+  "Take a marker or package name PKG and return a package name."
   (if (or (markerp pkg) (null pkg))
       (if (derived-mode-p 'package-menu-mode)
           (package-desc-name (tabulated-list-get-id))
@@ -315,7 +322,7 @@ Also increments the count for \"total\"."
     (unless (and (listp paradox--star-count)
                  (listp paradox--package-repo-list)
                  (listp paradox--download-count))
-      (message "[Paradox] Error downloading the list of repositories. This might be a proxy"))
+      (message "[Paradox] Error downloading the list of repositories.  This might be a proxy"))
     (unless (listp paradox--download-count)
       (setq paradox--download-count nil))
     (unless (listp paradox--package-repo-list)
@@ -353,10 +360,7 @@ or a list of package names (symbols) to display.
 
 With KEYWORDS given, only packages with those keywords are
 shown."
-  (mapc (lambda (x) (setf (cdr x) 0)) paradox--package-count)
-  (let ((desc-prefix (if (> paradox-lines-per-entry 1) " \n      " ""))
-        (desc-suffix (make-string (max 0 (- paradox-lines-per-entry 2)) ?\n)))
-    (paradox-menu--refresh packages keywords))
+  (paradox-menu--refresh packages keywords)
   (setq paradox--current-filter
         (if keywords (mapconcat 'identity keywords ",")
           nil))
@@ -367,19 +371,29 @@ shown."
               "Package")))
   (tabulated-list-print remember-pos)
   (tabulated-list-init-header)
-  (paradox--update-mode-line)
-  (paradox-refresh-upgradeable-packages))
+  (paradox--update-mode-line))
 
 (defun paradox-menu--refresh (&optional packages keywords)
-  "Call `package-menu--refresh' retaining current filter."
-  (cond
-   ((or packages keywords (not paradox--current-filter))
-    (package-menu--refresh packages keywords))
-   ((string= paradox--current-filter "Upgrade")
-    (paradox-filter-upgrades))
-   (t
-    (paradox-menu--refresh
-     packages (split-string keywords ",")))))
+  "Call `package-menu--refresh' retaining current filter.
+PACKAGES and KEYWORDS are passed to `package-menu--refresh'.  If
+KEYWORDS is nil and `paradox--current-filter' is non-nil, it is
+used to define keywords."
+  (mapc (lambda (x) (setf (cdr x) 0)) paradox--package-count)
+  (let ((paradox--desc-prefix (if (> paradox-lines-per-entry 1) " \n      " ""))
+        (paradox--desc-suffix (make-string (max 0 (- paradox-lines-per-entry 2)) ?\n)))
+    (cond
+     ((or packages keywords (not paradox--current-filter))
+      (package-menu--refresh packages keywords)
+      (paradox-refresh-upgradeable-packages))
+     ((string= paradox--current-filter "Upgrade")
+      (paradox-refresh-upgradeable-packages)
+      (paradox-filter-upgrades))
+     ((string= paradox--current-filter "Starred")
+      (paradox-filter-stars)
+      (paradox-refresh-upgradeable-packages))
+     (t
+      (paradox-menu--refresh
+       packages (split-string paradox--current-filter ","))))))
 
 (defun paradox--column-index (regexp)
   "Find the index of the column that matches REGEXP."
@@ -432,17 +446,18 @@ Letters do not insert themselves; instead, they are commands.
   (add-hook 'tabulated-list-revert-hook #'paradox-menu--refresh nil t)
   (add-hook 'tabulated-list-revert-hook #'paradox-refresh-upgradeable-packages nil t)
   ;; (add-hook 'tabulated-list-revert-hook #'paradox--refresh-star-count nil t)
-  (add-hook 'tabulated-list-revert-hook #'paradox--update-mode-line nil t)
+  (add-hook 'tabulated-list-revert-hook #'paradox--update-mode-line 'append t)
   (tabulated-list-init-header)
   ;; We need package-menu-mode to be our parent, otherwise some
-  ;; commands throw errors. But we can't actually derive from it,
-  ;; otherwise its initialization will screw up the header-format. So
+  ;; commands throw errors.  But we can't actually derive from it,
+  ;; otherwise its initialization will screw up the header-format.  So
   ;; we "patch" it like this.
   (put 'paradox-menu-mode 'derived-mode-parent 'package-menu-mode)
   (run-hooks 'package-menu-mode-hook))
 
 (defun paradox--define-sort (name &optional key)
-  "Define sorting function paradox-sort-by-NAME and bind it to KEY."
+  "Define sorting by column NAME and bind it to KEY.
+Defines a function called paradox-sort-by-NAME."
   (let ((symb (intern (format "paradox-sort-by-%s" (downcase name))))
         (key (or key (substring name 0 1))))
     (eval
@@ -460,6 +475,7 @@ Letters do not insert themselves; instead, they are commands.
 (paradox--define-sort "Package")
 (paradox--define-sort "Status")
 (paradox--define-sort paradox--column-name-star "*")
+(declare-function paradox-sort-by-package "paradox-menu")
 
 (defalias 'paradox-filter-clear #'package-show-package-list
   "Clear current Package filter.
@@ -475,6 +491,19 @@ fetching the list.")
      (mapcar #'car paradox--upgradeable-packages))
     (setq paradox--current-filter "Upgrade")
     (paradox-sort-by-package nil)))
+
+(defun paradox-filter-stars ()
+  "Show only upgradable packages."
+  (interactive)
+  (let ((packages (cl-remove-if-not
+				   (lambda (pkg-repo) (assoc-string (cdr pkg-repo) paradox--user-starred-list))
+				   paradox--package-repo-list)))
+	(if (null packages)
+		(message "No packages are starred.")
+	  (package-show-package-list
+	   (mapcar #'car packages))
+	  (setq paradox--current-filter "Starred")
+	  (paradox-sort-by-package nil))))
 
 (set-keymap-parent paradox-menu-mode-map package-menu-mode-map)
 (defvar paradox--filter-map)
@@ -497,6 +526,7 @@ fetching the list.")
 (define-key paradox--filter-map "r" #'occur)
 (define-key paradox--filter-map "o" #'occur)
 (define-key paradox--filter-map "u" #'paradox-filter-upgrades)
+(define-key paradox--filter-map "s" #'paradox-filter-stars)
 (define-key paradox--filter-map "c" #'paradox-filter-clear)
 
 
@@ -544,7 +574,7 @@ With prefix N, move to the N-th previous package instead."
   '(("next," "previous," "install," "delete," ("execute," . 1) "refresh," "help")
     ("star," "visit homepage")
     ("list commits")
-    ("filter by" "+" "upgrades" "regexp" "keyword" "clear")
+    ("filter by" "+" "upgrades" "regexp" "keyword" "starred" "clear")
     ("Sort by" "+" "Package name" "Status" "*(star)")))
 
 (defun paradox-menu-quick-help ()
@@ -565,7 +595,7 @@ With prefix KILL, kill the buffer instead of burying."
 
 (defun paradox-menu-visit-homepage (pkg)
   "Visit the homepage of package named PKG.
-PKG is a symbol. Interactively it is the package under point."
+PKG is a symbol.  Interactively it is the package under point."
   (interactive '(nil))
   (let ((url (paradox--package-homepage
               (paradox--get-or-return-package pkg))))
@@ -600,7 +630,7 @@ PKG is a symbol. Interactively it is the package under point."
 
 (defun paradox-menu-view-commit-list (pkg)
   "Visit the commit list of package named PKG.
-PKG is a symbol. Interactively it is the package under point."
+PKG is a symbol.  Interactively it is the package under point."
   (interactive '(nil))
   (let* ((name (paradox--get-or-return-package pkg))
          (repo (cdr (assoc name paradox--package-repo-list))))
@@ -655,30 +685,32 @@ nil) on the Packages buffer."
     (paradox--update-mode-line-buffer-identification total-lines))
   (set-face-foreground
    'paradox-mode-line-face
-   (-when-let (fg (or (face-foreground 'mode-line-buffer-id nil t)
-                      (face-foreground 'default nil t)))
-     (if (> (color-distance "white" fg)
-            (color-distance "black" fg))
-         "black" "white"))))
+   (let ((fg (or (face-foreground 'mode-line-buffer-id nil t)
+                 (face-foreground 'default nil t))))
+     (when fg
+       (if (> (color-distance "white" fg)
+              (color-distance "black" fg))
+           "black" "white")))))
 
 (defun paradox--update-mode-line-buffer-identification (_total-lines)
   "Update `mode-line-buffer-identification'.
 TOTAL-LINES is currently unused."
+  (require 'spinner)
   (setq mode-line-buffer-identification
-        (list
-         (list 'paradox-display-buffer-name
-               (propertized-buffer-identification
-                (format "%%%sb" (length (buffer-name)))))
-         '(paradox--current-filter (:propertize ("[" paradox--current-filter "]") face paradox-mode-line-face))
-         '(paradox--upgradeable-packages-any?
+        `((paradox-display-buffer-name
+           ,(propertized-buffer-identification
+             (format "%%%sb" (length (buffer-name)))))
+          (paradox--current-filter (:propertize ("[" paradox--current-filter "]") face paradox-mode-line-face))
+          (paradox--upgradeable-packages-any?
            (:eval (paradox--build-buffer-id " Upgrade:" paradox--upgradeable-packages-number)))
-         '(package-menu--new-package-list
+          (package-menu--new-package-list
            (:eval (paradox--build-buffer-id " New:" (paradox--cas "new"))))
-         (paradox--build-buffer-id " Installed:" (+ (paradox--cas "installed")
-                                                    (paradox--cas "dependency")
-                                                    (paradox--cas "unsigned")))
-         `(paradox--current-filter
-           "" ,(paradox--build-buffer-id " Total:" (length package-archive-contents))))))
+          ,(paradox--build-buffer-id " Installed:" (+ (paradox--cas "installed")
+                                                      (paradox--cas "dependency")
+                                                      (paradox--cas "unsigned")))
+          (paradox--current-filter
+           "" ,(paradox--build-buffer-id " Total:" (length package-archive-contents)))
+          (spinner-current " Executing Transaction"))))
 
 (defvar sml/col-number)
 (defvar sml/numbers-separator)
@@ -727,7 +759,8 @@ TOTAL-LINES is the number of lines in the buffer."
     (paradox--prettify-key-descriptor (cons desc 0))))
 
 (defun paradox--full-name-reader ()
-  "Return all \"full_name\" properties in the buffer. Much faster than `json-read'."
+  "Return all \"full_name\" properties in the buffer.
+Much faster than `json-read'."
   (let (out)
     (while (search-forward-regexp
             "^ *\"full_name\" *: *\"\\(.*\\)\", *$" nil t)
@@ -736,4 +769,4 @@ TOTAL-LINES is the number of lines in the buffer."
     out))
 
 (provide 'paradox-menu)
-;;; paradox-menu.el ends here.
+;;; paradox-menu.el ends here
