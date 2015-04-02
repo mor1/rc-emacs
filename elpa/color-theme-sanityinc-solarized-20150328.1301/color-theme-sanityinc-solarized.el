@@ -39,8 +39,8 @@
 ;; Alternatively, or in older Emacs versions, use one of the provided
 ;; wrapper commands to activate a theme:
 
-;;     M-x color-theme-solarized-light
-;;     M-x color-theme-solarized-dark
+;;     M-x color-theme-sanityinc-solarized-light
+;;     M-x color-theme-sanityinc-solarized-dark
 ;;
 ;;; Credit:
 
@@ -294,6 +294,7 @@ names to which it refers are bound."
 
       ;; dired+
       (diredp-compressed-file-suffix (:foreground ,blue))
+      (diredp-date-time (:foreground ,blue))
       (diredp-deletion (:inherit error :inverse-video t))
       (diredp-deletion-file-name (:inherit error))
       (diredp-dir-heading (:foreground ,green :background nil :weight bold))
@@ -383,6 +384,7 @@ names to which it refers are bound."
       (helm-buffer-directory (:foreground ,blue))
       (helm-ff-directory (:foreground ,cyan))
       (helm-candidate-number (:foreground ,red))
+      (helm-match (:inherit match))
       (helm-selection (:inherit highlight))
       (helm-separator (:foreground ,magenta))
       (helm-source-header (:weight bold :foreground ,yellow :height 1.44))
