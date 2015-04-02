@@ -130,16 +130,20 @@ the failing feed. The second argument is the error message .")
       (cl-destructuring-bind (_ url cb) request
         (push request elfeed-connections)
         (condition-case error
-            (url-retrieve url cb nil :silent)
+            (url-retrieve url cb nil :silent :no-cookies)
           (error (with-temp-buffer (funcall cb (list :error error)))))))))
 
 (defun elfeed--wrap-callback (id cb)
   "Return a function that manages the elfeed queue."
-  (lambda (status)
-    (unwind-protect
-        (funcall cb status)
-      (setf elfeed-connections (cl-delete id elfeed-connections :key #'car))
-      (elfeed--check-queue))))
+  (let ((once nil))
+    (lambda (status)
+      (unless once
+        (setf once t) ;; url-retrieve bug#20159 workaround
+        (unwind-protect
+            (funcall cb status)
+          (setf elfeed-connections
+                (cl-delete id elfeed-connections :key #'car))
+          (elfeed--check-queue))))))
 
 (defun elfeed-fetch (url callback)
   "Basically wraps `url-retrieve' but uses the connection limiter."
@@ -312,13 +316,15 @@ Only a list of strings will be returned."
 
 (defun elfeed-handle-http-error (url status)
   "Handle an http error during retrieval of URL with STATUS code."
+  (cl-incf (elfeed-meta (elfeed-db-get-feed url) :failures 0))
   (run-hook-with-args 'elfeed-http-error-hooks url status)
-  (message "Elfeed update failed for %s: %S" url status))
+  (message "Elfeed fetch failed for %s: %S" url status))
 
 (defun elfeed-handle-parse-error (url error)
   "Handle parse error during parsing of URL with ERROR message."
+  (cl-incf (elfeed-meta (elfeed-db-get-feed url) :failures 0))
   (run-hook-with-args 'elfeed-parse-error-hooks url error)
-  (message "Elfeed update failed for %s: %s" url error))
+  (message "Elfeed parse failed for %s: %s" url error))
 
 (defun elfeed-update-feed (url)
   "Update a specific feed."
