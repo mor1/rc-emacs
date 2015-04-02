@@ -94,9 +94,16 @@ no argument and should return the configuration (see
   :group 'merlin :type '(choice (file :tag "Filename")
                                 (const :tag "Use current opam switch" opam)))
 
+(defcustom merlin-completion-dwim t
+  "If non-nil, fallback to fuzzier completion when normal completion gives no result."
+  :group 'merlin :type 'boolean)
 
 (defcustom merlin-completion-types t
   "If non-nil, print the types of the variables during completion with `auto-complete'."
+  :group 'merlin :type 'boolean)
+
+(defcustom merlin-completion-arg-type t
+  "If non-nil, print the type of the expected argument during completion on an application."
   :group 'merlin :type 'boolean)
 
 (defcustom merlin-debug nil
@@ -371,8 +378,10 @@ return (LOC1 . LOC2)."
   "Return the start and end points of an ocaml atom near point.
 An ocaml atom is any string containing [a-z_0-9A-Z`.]."
   (save-excursion
-    (skip-chars-backward "[a-z_0-9A-Z'`.]")
-    (if (looking-at "['a-z_0-9A-Z`.]*['a-z_A-Z0-9]")
+    (skip-chars-backward "[a-z_0-9A-Z'.]")
+    (skip-chars-backward "[~?`]" (1- (point)))
+    (if (or (looking-at "[~?`]?['a-z_0-9A-Z.]*['a-z_A-Z0-9]")
+            (looking-at "[~?`]"))
         (cons (point) (match-end 0)) ; returns the bounds
       nil))) ; no atom at point
 
@@ -625,8 +634,10 @@ See http://lists.gnu.org/archive/html/help-gnu-emacs/2013-09/msg00376.html"
   (cond
     ((stringp sexp) (substring-no-properties sexp))
     ((atom sexp) sexp)
-    (t (cons (merlin--sexp-remove-string-properties (car sexp))
-             (merlin--sexp-remove-string-properties (cdr sexp))))))
+    ((consp sexp)
+     (cons (merlin--sexp-remove-string-properties (car sexp))
+           (merlin--sexp-remove-string-properties (cdr sexp))))
+    (t sexp)))
 
 (defun merlin-send-command-async (command callback-if-success &optional callback-if-exn)
   "Send COMMAND (with arguments ARGS) to merlin asynchronously.
@@ -635,6 +646,7 @@ error and if CALLBACK-IF-EXN is non-nil, call the function with
 the error message otherwise print a generic error message."
   (assert (merlin--acquired-buffer))
   (unless (listp command) (setq command (list command)))
+  (setq command (merlin--sexp-remove-string-properties command))
   (let* ((string (concat (prin1-to-string command) "\n"))
          (promise (cons nil nil))
          (closure (list promise
@@ -666,11 +678,6 @@ the error message otherwise print a generic error message."
   (merlin--acquire-buffer)
   (merlin-send-command 'refresh)
   (merlin-after-save))
-
-(defun merlin-get-completion (ident)
-  "Return the completion for ident IDENT."
-  (merlin-send-command
-    `(complete prefix ,ident at ,(merlin-unmake-point (- (point) (length ident))))))
 
 (defun merlin-parse-position (result)
   "Returns a pair whose first member is a point set at merlin cursor position
@@ -1104,45 +1111,110 @@ errors in the fringe.  If VIEW-ERRORS-P is non-nil, display a count of them."
 ;; COMPLETION-AT-POINT SUPPORT ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun merlin-completion-format-entry (entry)
+(defun merlin--completion-format-entry (entry)
   "Format the completion entry ENTRY."
   (let* ((kind (cdr (assoc 'kind entry)))
-         (desc (cdr (assoc 'desc entry)))
+         (desc (or  (cdr (assoc 'desc entry)) (cdr (assoc 'type entry))))
          (type (cond ((member kind '("Module" "module")) " <module>")
                      ((string-equal kind "Type") (format " [%s]" desc))
                      (t desc))))
     (replace-regexp-in-string "[\n ]+" " " type)))
 
-(defun merlin-completion-prefix (ident)
+(defun merlin--completion-split-ident (ident)
+  "Split IDENT into a (cons prefix suffix). See merlin--completion-prefix."
+  (let* ((l (split-string ident "\\."))
+         (s (mapconcat 'identity (butlast l) "."))
+         (suffix (if l (car (last l)) ident))
+         (prefix (if (string-equal s "") s (concat s "."))))
+    (cons prefix suffix)))
+
+(defun merlin--completion-prefix (ident)
   "Compute the prefix of IDENT.  The prefix of `Foo.bar' is `Foo.' and the prefix of `bar' is `'."
-  (let* ((l (butlast (split-string ident "\\.")))
-         (s (mapconcat 'identity l ".")))
-    (if (string-equal s "") s (concat s "."))))
+  (car (merlin--completion-split-ident ident)))
 
-(defun merlin-completion-data (ident)
+(defvar-local dwimed nil
+  "Remember if we used dwim for the current completion or not")
+
+(defun merlin--completion-full-entry-name (compl-prefix entry)
+  (let ((entry-name (cdr (assoc 'name entry))))
+    (if dwimed entry-name (concat compl-prefix entry-name))))
+
+(defun merlin--completion-prepare-labels (labels suffix)
+  ; Remove non-matching entry, adjusting optional labels if needed
+  (setq labels (delete-if-not (lambda (x)
+                                (let ((name (cdr (assoc 'name x))))
+                                  (or (string-prefix-p suffix name)
+                                      (when (equal (aref name 0) ??)
+                                        (aset name 0 ?~)
+                                        (string-prefix-p suffix name)))))
+                              labels))
+  (mapcar (lambda (x) (append x '((kind . "Label") (info . nil)))) labels))
+
+(defun merlin--completion-data (ident)
   "Return the data for completion of IDENT, i.e. a list of pairs (NAME . TYPE)."
-  (let ((prefix (merlin-completion-prefix ident))
-        (data (append (merlin-get-completion ident) nil)))
-    (mapcar (lambda (entry)
-                (list (concat prefix (cdr (assoc 'name entry)))
-                      (merlin-completion-format-entry entry)
-                      (cdr (assoc 'kind entry))
-                      (cdr (assoc 'info entry))))
-            data)))
-(defun merlin-completion-info (ident)
-  "Return the info of IDENT."
-  (cadddr (assoc ident (merlin-completion-data ident))))
+  (setq-local dwimed nil)
+  (let* ((ident- (merlin--completion-split-ident ident))
+         (suffix (cdr ident-))
+         (prefix (car ident-))
+         (pos    (merlin-unmake-point (point)))
+         (data   (merlin-send-command `(complete prefix ,ident at ,pos)))
+         ;; all classic entries
+         (entries (cdr (assoc 'entries data)))
+         ;; context is 'null or ('application ...)
+         (context (cdr (assoc 'context data)))
+         (application (and (listp context)
+                           (equal (car context) "application")
+                           (cadr context)))
+         ;; Argument-type
+         (expected-ty (and application
+                           (not (string-equal "'_a"
+                                  (cdr (assoc 'argument_type application))))
+                           (cdr (assoc 'argument_type application))))
+         ;; labels
+         (labels (and application (cdr (assoc 'labels application)))))
+    (setq labels (merlin--completion-prepare-labels labels suffix))
+    ; DWIM completion
+    (when (and merlin-completion-dwim (not labels) (not entries))
+      (setq data (merlin-send-command `(expand prefix ,ident at ,pos)))
+      (setq entries (cdr (assoc 'entries data)))
+      (setq-local dwimed t)
+      (setq prefix ""))
+    ; Concat results
+    (let ((result (append labels entries)))
+      (if expected-ty
+        (mapcar (lambda (x) (append x `((argument_type . ,expected-ty))))
+                result)
+        result))))
 
-(defun merlin-completion-lookup (string state)
+; Here for backward compatibility: this function is called by external code, the
+; format of merlin--completion-data changed, this function translates it back to
+; the old format.
+(defun merlin-completion-data (ident)
+  "Backward compatible version of merlin--completion-data"
+  (let (entries (merlin--completion-data ident))
+    (mapcar (lambda (entry)
+              (list (concat prefix (cdr (assoc 'name entry)))
+                    (merlin--completion-format-entry entry)
+                    (cdr (assoc 'kind entry))
+                    (cdr (assoc 'info entry))))
+            entries)))
+
+(defun merlin--completion-lookup (string state)
   "Lookup the entry STRING inside the completion table."
   (let ((ret (assoc string merlin-completion-annotation-table)))
     (if ret (message "%s%s" (car ret) (cdr ret)))))
 
-(defun merlin--kill-overlapping-errors (start end)
-  "Kill any pending errors that overlap the region START..END."
-  ;; fixme: factor out common bits with kill-if-edited
-  (dolist (overlay (overlays-in start end))
-    (when (merlin--overlay overlay) (delete-overlay overlay))))
+(defun merlin--completion-annotate (candidate)
+  "Retrieve the annotation for candidate CANDIDATE in `merlin-completion-annotate-table'."
+  (cdr (assoc candidate merlin-completion-annotation-table)))
+
+(defun merlin--completion-table (string pred action)
+  "Implement completion for merlin using `completion-at-point' API."
+  (if (eq 'metadata action)
+      (when merlin-completion-types
+        '(metadata ((annotation-function . merlin--completion-annotate)
+                    (exit-function . merlin--completion-lookup))))
+    (complete-with-action action merlin-completion-annotation-table string pred)))
 
 (defun merlin--completion-bounds ()
   "Returns a pair (start . end) of the content to complete"
@@ -1153,34 +1225,24 @@ errors in the fringe.  If VIEW-ERRORS-P is non-nil, display a count of them."
 (defun merlin-completion-at-point ()
   "Perform completion at point with merlin."
   (lexical-let*
-      ((bounds (merlin--completion-bounds))
-       (start  (car bounds))
-       (end    (cdr bounds))
-       (prefix (merlin--buffer-substring start end)))
-    (merlin--kill-overlapping-errors start end)
+      ((bounds       (merlin--completion-bounds))
+       (start        (car bounds))
+       (end          (cdr bounds))
+       (prefix       (merlin--buffer-substring start end))
+       (compl-prefix (merlin--completion-prefix prefix)))
     (when (or (not merlin-completion-at-point-cache-query)
               (not (equal (cons prefix start)  merlin-completion-at-point-cache-query)))
       (setq merlin-completion-at-point-cache-query (cons prefix start))
       (merlin-sync-to-point (point-max) t)
       (setq merlin-completion-annotation-table
-            (mapcar (lambda (a) (cons (car a) (concat ": " (cadr a))))
-                    (merlin-completion-data prefix))))
-    (list start end #'merlin-completion-table
-          . (:exit-function #'merlin-completion-lookup
-             :annotation-function #'merlin-completion-annotate))))
-
-(defun merlin-completion-annotate (candidate)
-  "Retrieve the annotation for candidate CANDIDATE in `merlin-completion-annotate-table'."
-  (cdr (assoc candidate merlin-completion-annotation-table)))
-
-(defun merlin-completion-table (string pred action)
-  "Implement completion for merlin using `completion-at-point' API."
-  (if (eq 'metadata action)
-      (when merlin-completion-types
-        '(metadata ((annotation-function . merlin-completion-annotate)
-                    (exit-function . merlin-completion-lookup))))
-    (complete-with-action action merlin-completion-annotation-table string pred)))
-
+            (mapcar
+              (lambda (a)
+                (cons (merlin--completion-full-entry-name compl-prefix a)
+                      (concat ": " (merlin--completion-format-entry a))))
+              (merlin--completion-data prefix))))
+    (list start end #'merlin--completion-table
+          . (:exit-function #'merlin--completion-lookup
+             :annotation-function #'merlin--completion-annotate))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; COMPANY MODE SUPPORT ;;;
@@ -1219,14 +1281,26 @@ errors in the fringe.  If VIEW-ERRORS-P is non-nil, display a count of them."
                      (linum (cdr (assoc 'line (assoc 'pos data)))))
                  (cons filename linum)))))
           (candidates
-           (merlin-sync-to-point)
-           (mapcar #'(lambda (x) (propertize (car x) 'merlin-meta (cadr x)))
-                   (merlin-completion-data arg)))
+            (merlin-sync-to-point)
+            (let ((prefix (merlin--completion-prefix arg)))
+              (mapcar #'(lambda (x)
+                          (propertize
+                            (propertize
+                              (merlin--completion-full-entry-name prefix x)
+                              'merlin-meta
+                              (merlin--completion-format-entry x))
+                            'merlin-arg-type
+                            (cdr (assoc 'argument_type x))))
+                      (merlin--completion-data arg))))
           (post-completion
             (let ((minibuffer-message-timeout nil))
               (minibuffer-message "%s : %s" arg (get-text-property 0 'merlin-meta arg))))
           (meta
-           (get-text-property 0 'merlin-meta arg))
+            (let ((arg-type (get-text-property 0 'merlin-arg-type arg))
+                  (entry-ty (get-text-property 0 'merlin-meta arg)))
+              (if (and merlin-completion-arg-type arg-type)
+                (concat "Expected argument type: " arg-type)
+                entry-ty)))
           (annotation
            (concat " : " (get-text-property 0 'merlin-meta arg)))
           )))
@@ -1251,20 +1325,21 @@ errors in the fringe.  If VIEW-ERRORS-P is non-nil, display a count of them."
 
 (defun merlin-ac-make-popup-item (data)
   "Create a popup item from data DATA."
-  (popup-make-item
-   (car data)
-   :summary (if (and merlin-completion-types
-                     merlin-ac-use-summary) (cadr data))
-   :symbol (format "%c" (elt (caddr data) 0))
-   :document (if (and merlin-completion-types
-                      merlin-ac-use-document) (cadr data))))
+  (let ((typ (merlin--completion-format-entry data)))
+    (popup-make-item
+      ; Note: ac refuses to display an item if merlin-ac-ac-prefix is not a
+      ; prefix the item. So "dwim" completion won't work with ac.
+      (merlin--completion-full-entry-name merlin-ac-prefix data)
+      :summary (when (and merlin-completion-types merlin-ac-use-summary) typ)
+      :symbol (format "%c" (elt (cdr (assoc 'kind data)) 0))
+      :document (if (and merlin-completion-types merlin-ac-use-document) typ))))
 
 (defun merlin-ac-source-refresh-cache()
   "Refresh the cache of completion."
-  (setq merlin-ac-prefix (merlin-completion-prefix ac-prefix))
+  (setq merlin-ac-prefix (merlin--completion-prefix ac-prefix))
   (setq merlin-ac-ac-prefix ac-prefix)
   (setq merlin-ac-cache (mapcar #'merlin-ac-make-popup-item
-                                (merlin-completion-data ac-prefix))))
+                                (merlin--completion-data merlin-ac-prefix))))
 
 
 (defun merlin-ac-source-init ()
@@ -1282,7 +1357,13 @@ variable `merlin-ac-cache')."
 
 (defun merlin-ac-prefix ()
   "Retrieve the prefix for completion with merlin."
-  (car (merlin--completion-bounds)))
+  (let* ((bounds (merlin--completion-bounds))
+         (start  (car-safe bounds))
+         (end    (cdr-safe bounds)))
+    (if (and bounds merlin-ac-prefix-size
+             (< (- start end) merlin-ac-prefix-size))
+        nil
+      start)))
 
 (defun merlin-ac-fetch-type ()
   "Prints the type of the selected candidate"
@@ -1296,21 +1377,16 @@ variable `merlin-ac-cache')."
 (defun merlin-auto-complete-candidates ()
   "Return the candidates for auto-completion with
   auto-complete. If the cache is wrong then recompute it."
-  (if (not (and (equal (merlin-completion-prefix ac-prefix) merlin-ac-prefix)
+  (if (not (and (equal (merlin--completion-prefix ac-prefix) merlin-ac-prefix)
                 (string-prefix-p merlin-ac-ac-prefix ac-prefix)))
       (merlin-ac-source-refresh-cache))
   merlin-ac-cache)
 
 (defvar merlin-ac-source
-  (if merlin-ac-prefix-size
-  `((init . merlin-ac-source-init)
-    (candidates . merlin-auto-complete-candidates)
-    (action . merlin-ac-fetch-type)
-    (prefix . ,merlin-ac-prefix-size))
   '((init . merlin-ac-source-init)
     (candidates . merlin-auto-complete-candidates)
     (action . merlin-ac-fetch-type)
-    (prefix . merlin-ac-prefix))))
+    (prefix . merlin-ac-prefix)))
 
 (when (featurep 'auto-complete)
   (eval '(ac-define-source "merlin" merlin-ac-source)))
@@ -1636,6 +1712,14 @@ calls (lighter can be updated at a high frequency)"
       (merlin-goto-file-and-point answer)
       (error "Not found. (Check *Messages* for potential errors)"))))
 
+(defun merlin-locate-ident (ident)
+  "Locate the inputed identifier"
+  (interactive "s> ")
+  (merlin-sync-to-point (point-max) t)
+  (merlin--locate-pure ident)
+  (if merlin-type-after-locate
+      (merlin-type-enclosing)))
+
 (defun merlin-locate ()
   "Locate the identifier under point"
   (interactive)
@@ -1852,6 +1936,15 @@ Returns the position."
               (shell-command-to-string "opam config var bin"))
        "/ocamlmerlin")
     merlin-command))
+
+;;;;;;;;;;;;;;;
+;; DEBUGGING ;;
+;;;;;;;;;;;;;;;
+
+(defun merlin-dump (arg)
+  (interactive "sWhat to dump: ")
+  (let ((res (merlin-send-command (list 'dump arg))))
+    (print res)))
 
 ;;;;;;;;;;;;;;;;
 ;; MODE SETUP ;;
