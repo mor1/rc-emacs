@@ -3,8 +3,8 @@
 
 ;; Copyright 2011-2015 François-Xavier Bois
 
-;; Version: 11.0.27
-;; Package-Version: 20150317.1506
+;; Version: 11.0.30
+;; Package-Version: 20150401.252
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; Created: July 2011
@@ -27,7 +27,7 @@
 
 ;;---- CONSTS ------------------------------------------------------------------
 
-(defconst web-mode-version "11.0.27"
+(defconst web-mode-version "11.0.30"
   "Web Mode version.")
 
 ;;---- GROUPS ------------------------------------------------------------------
@@ -1413,7 +1413,7 @@ Must be used in conjunction with web-mode-enable-block-face."
 
 (defvar web-mode-django-types
   (eval-when-compile
-    (regexp-opt '("null" "empty" "false" "true"))))
+    (regexp-opt '("null" "false" "true"))))
 
 (defvar web-mode-directives
   (eval-when-compile
@@ -1507,6 +1507,7 @@ Must be used in conjunction with web-mode-enable-block-face."
    '("\\<\\(new\\|instanceof\\) \\([[:alnum:]_.]+\\)\\>" 2 'web-mode-type-face)
    '("\\<\\([[:alnum:]_]+\\):[ ]*function[ ]*(" 1 'web-mode-function-name-face)
    '("\\<function[ ]+\\([[:alnum:]_]+\\)" 1 'web-mode-function-name-face)
+   '("\\<\\([[:alnum:]_]+\\)([^)]*)[ ]*{" 1 'web-mode-function-name-face)
    '("\\<\\(var\\|let\\|const\\)[ ]+\\([[:alnum:]_]+\\)" 2 'web-mode-variable-name-face)
    '("\\<\\(function\\)[ ]*("
      (1 'web-mode-keyword-face)
@@ -1615,7 +1616,8 @@ Must be used in conjunction with web-mode-enable-block-face."
          '(1 'web-mode-type-face))
    '("|[ ]?\\([[:alpha:]_]+\\)\\>" 1 'web-mode-function-call-face)
    '("\\<\\([[:alpha:]_]+\\)[ ]?(" 1 'web-mode-function-call-face)
-   '("[[:alnum:]_]+" 0 'web-mode-variable-name-face)
+   '("[[:alnum:]_.]+" 0 'web-mode-variable-name-face)
+   '("[[:alnum:]_]+\\([.][[:alnum:]_]+\\)+" 0 'web-mode-variable-name-face t t)
    ))
 
 (defvar web-mode-ctemplate-font-lock-keywords
@@ -2098,6 +2100,15 @@ the environment as needed for ac-sources, right before they're used.")
     (if (fboundp 'buffer-narrowed-p)
         (buffer-narrowed-p)
       (/= (- (point-max) (point-min)) (buffer-size))))
+
+  ;; compatibility with emacs 22
+  (defun web-mode-string-match-p (regexp string &optional start)
+    "Same as `string-match' except it does not change the match data."
+    (let ((inhibit-changing-match-data t))
+      (string-match regexp string start)))
+
+  (unless (fboundp 'string-match-p)
+    (fset 'string-match-p (symbol-function 'web-mode-string-match-p)))
 
   ;; compatibility with emacs < 24.3
   (unless (fboundp 'setq-local)
@@ -8624,6 +8635,7 @@ Pos should be in a tag."
   (let (ctx n char)
 
     ;;(message "this-command=%S (%S)" this-command web-mode-expand-previous-state)
+    ;;(message "%S: %S %S" this-command web-mode-change-beg web-mode-change-end)
 
     (when (and web-mode-expand-previous-state
                (not (eq this-command 'web-mode-mark-and-expand)))
@@ -8634,8 +8646,10 @@ Pos should be in a tag."
     (when (member this-command '(yank))
       (setq web-mode-inhibit-fontification nil)
       ;;(web-mode-font-lock-highlight web-mode-change-end)
-      (save-excursion
-        (font-lock-fontify-region web-mode-change-beg web-mode-change-end))
+      (when (and web-mode-change-beg web-mode-change-end)
+        (save-excursion
+          (font-lock-fontify-region web-mode-change-beg web-mode-change-end)
+          ))
       )
 
     (when (< (point) 16)
@@ -9947,15 +9961,15 @@ Pos should be in a tag."
     ) ;block-side
    ((get-text-property (1- pos) 'block-side)
     (setq pos (web-mode-block-beginning-position (1- pos)))
-    (cond
-     ((or (null pos) (= pos (point-min)))
-      (setq pos nil)
-      )
-     ((and (setq pos (previous-single-property-change pos 'block-beg))
-           (> pos (point-min)))
-      (setq pos (1- pos))
-      )
-     )
+    ;; (cond
+    ;;  ((or (null pos) (= pos (point-min)))
+    ;;   (setq pos nil)
+    ;;   )
+    ;;  ((and (setq pos (previous-single-property-change pos 'block-beg))
+    ;;        (> pos (point-min)))
+    ;;   (setq pos (1- pos))
+    ;;   )
+    ;;  )
     ) ;block-side
    (t
     (setq pos (previous-single-property-change pos 'block-side))
