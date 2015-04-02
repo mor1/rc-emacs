@@ -7,7 +7,7 @@
 ;; Maintainer:  Russel Winder <russel@winder.org.uk>
 ;; Created:  March 2007
 ;; Version:  201410180537
-;; Package-Version: 20150317.117
+;; Package-Version: 20150323.507
 ;; Keywords:  D programming language emacs cc-mode
 
 ;;;; NB Version number is date and time yyyymmddhhMM in GMT (aka UTC).
@@ -57,6 +57,10 @@
 ;;; Code:
 
 (require 'cc-mode)
+
+;; Needed to prevent
+;;   "Symbol's value as variable is void: compilation-error-regexp-alist-alist" errors
+(require 'compile)
 
 ;; The set-difference function is used from the Common Lisp extensions.
 (require 'cl)
