@@ -97,7 +97,9 @@
  '(org-agenda-include-diary t)
  '(org-agenda-ndays 7)
  '(org-agenda-show-all-dates t)
- '(org-agenda-sorting-strategy (quote (time-up priority-down)))
+ '(org-agenda-sorting-strategy
+   (quote
+    (time-up todo-state-down category-keep priority-down alpha-down)))
  '(org-agenda-start-on-weekday nil)
  '(org-deadline-warning-days 14)
  '(org-default-notes-file "~/me/todo/notes.org")
@@ -112,7 +114,11 @@
  '(paradox-github-token t)
  '(remember-annotation-functions (quote (org-remember-annotation)))
  '(remember-handler-functions (quote (org-remember-handler)))
- '(safe-local-variable-values (quote ((TeX-master . "propB"))))
+ '(safe-local-variable-values
+   (quote
+    ((TeX-master . "naasbox-sosp15")
+     (TeX-master . t)
+     (TeX-master . "propB"))))
  '(scroll-conservatively 100)
  '(scroll-preserve-screen-position 1)
  '(scroll-step 1)
@@ -126,6 +132,7 @@
  '(term-default-fg-color "#657b83")
  '(tool-bar-mode nil)
  '(uniquify-buffer-name-style (quote post-forward-angle-brackets) nil (uniquify))
+ '(unkillable-scratch t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
    (quote

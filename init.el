@@ -215,7 +215,7 @@ started from a shell."
        (let (saved-visual-wrap-column visual-wrap-column)
          (set-visual-wrap-column 0)
          (split-window-right)
-         (other-window 1)
+         ;; (other-window 1)
          (visual-line-mode t)
          (set-visual-wrap-column saved-visual-wrap-column)
          (redraw-display)
