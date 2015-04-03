@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "elfeed" "elfeed.el" (21789 23064 0 0))
+;;;### (autoloads nil "elfeed" "elfeed.el" (21791 5298 0 0))
 ;;; Generated autoloads from elfeed.el
 
 (autoload 'elfeed-update "elfeed" "\
@@ -31,8 +31,8 @@ Export the current feed listing to OPML-formatted FILE.
 ;;;***
 
 ;;;### (autoloads nil nil ("elfeed-db.el" "elfeed-lib.el" "elfeed-pkg.el"
-;;;;;;  "elfeed-search.el" "elfeed-show.el" "xml-query.el") (21789
-;;;;;;  23065 87723 0))
+;;;;;;  "elfeed-search.el" "elfeed-show.el" "xml-query.el") (21791
+;;;;;;  5298 541472 0))
 
 ;;;***
 
