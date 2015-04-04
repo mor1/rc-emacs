@@ -231,6 +231,16 @@ The FEED-OR-ID may be a feed struct or a feed ID (url)."
   "Use this to exit early and return VALUE from `with-elfeed-db-visit'."
   `(throw 'elfeed-db-done ,value))
 
+(defun elfeed-db-get-all-tags ()
+  "Return a list of all tags currently in the database."
+  (let ((table (make-hash-table :test 'eq)))
+    (with-elfeed-db-visit (e _)
+      (dolist (tag (elfeed-entry-tags e))
+        (setf (gethash tag table) tag)))
+    (let ((tags ()))
+      (maphash (lambda (k _) (push k tags)) table)
+      (cl-sort tags #'string< :key #'symbol-name))))
+
 ;; Saving and Loading:
 
 (defun elfeed-db-save ()
