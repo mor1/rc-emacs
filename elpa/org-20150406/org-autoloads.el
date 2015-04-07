@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "org" "org.el" (21789 23037 0 0))
+;;;### (autoloads nil "org" "org.el" (21796 2821 0 0))
 ;;; Generated autoloads from org.el
 
 (autoload 'org-babel-do-load-languages "org" "\
@@ -224,7 +224,7 @@ Call the customize function with org as argument.
 
 ;;;***
 
-;;;### (autoloads nil "org-agenda" "org-agenda.el" (21789 23037 0
+;;;### (autoloads nil "org-agenda" "org-agenda.el" (21796 2819 0
 ;;;;;;  0))
 ;;; Generated autoloads from org-agenda.el
 
@@ -498,7 +498,7 @@ to override `appt-message-warning-time'.
 
 ;;;***
 
-;;;### (autoloads nil "org-capture" "org-capture.el" (21789 23037
+;;;### (autoloads nil "org-capture" "org-capture.el" (21796 2820
 ;;;;;;  0 0))
 ;;; Generated autoloads from org-capture.el
 
@@ -541,7 +541,7 @@ Set `org-capture-templates' to be similar to `org-remember-templates'.
 
 ;;;***
 
-;;;### (autoloads nil "org-colview" "org-colview.el" (21789 23037
+;;;### (autoloads nil "org-colview" "org-colview.el" (21796 2819
 ;;;;;;  0 0))
 ;;; Generated autoloads from org-colview.el
 
@@ -605,7 +605,7 @@ Turn on or update column view in the agenda.
 
 ;;;***
 
-;;;### (autoloads nil "org-compat" "org-compat.el" (21789 23037 0
+;;;### (autoloads nil "org-compat" "org-compat.el" (21796 2818 0
 ;;;;;;  0))
 ;;; Generated autoloads from org-compat.el
 
@@ -616,7 +616,7 @@ Try very hard to provide sensible version strings.
 
 ;;;***
 
-;;;### (autoloads nil "org-macs" "org-macs.el" (21789 23037 0 0))
+;;;### (autoloads nil "org-macs" "org-macs.el" (21796 2819 0 0))
 ;;; Generated autoloads from org-macs.el
 
 (autoload 'org-load-noerror-mustsuffix "org-macs" "\
@@ -626,7 +626,7 @@ Load FILE with optional arguments NOERROR and MUSTSUFFIX.  Drop the MUSTSUFFIX a
 
 ;;;***
 
-;;;### (autoloads nil "org-version" "org-version.el" (21789 23037
+;;;### (autoloads nil "org-version" "org-version.el" (21796 2820
 ;;;;;;  0 0))
 ;;; Generated autoloads from org-version.el
 
@@ -670,7 +670,7 @@ The location of ODT styles.")
 ;;;;;;  "org-table.el" "org-timer.el" "org-w3m.el" "ox-ascii.el"
 ;;;;;;  "ox-beamer.el" "ox-html.el" "ox-icalendar.el" "ox-latex.el"
 ;;;;;;  "ox-man.el" "ox-md.el" "ox-odt.el" "ox-org.el" "ox-publish.el"
-;;;;;;  "ox-texinfo.el" "ox.el") (21789 23037 880078 0))
+;;;;;;  "ox-texinfo.el" "ox.el") (21796 2822 120827 0))
 
 ;;;***
 
