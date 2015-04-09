@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "interleave" "interleave.el" (21796 2911 0
+;;;### (autoloads nil "interleave" "interleave.el" (21798 33734 0
 ;;;;;;  0))
 ;;; Generated autoloads from interleave.el
 
