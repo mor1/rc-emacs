@@ -1191,7 +1191,8 @@ errors in the fringe.  If VIEW-ERRORS-P is non-nil, display a count of them."
 ; the old format.
 (defun merlin-completion-data (ident)
   "Backward compatible version of merlin--completion-data"
-  (let (entries (merlin--completion-data ident))
+  (let ((entries (merlin--completion-data ident))
+        (prefix  (merlin--completion-prefix ident)))
     (mapcar (lambda (entry)
               (list (concat prefix (cdr (assoc 'name entry)))
                     (merlin--completion-format-entry entry)
@@ -1991,10 +1992,10 @@ Returns the position."
       '(menu-item "dot-merlin check" merlin-project-check
                   :help "Display status of '.merlin'."))
     (define-key merlin-menu-map [addflag]
-      '(menu-item "Add a flag" merlin-process-add-flag
+      '(menu-item "Add a flag" merlin-flags-add
                   :help "Add a flag to be passed to ocamlmerlin after restarting it."))
     (define-key merlin-menu-map [clearflag]
-      '(menu-item "Clear flags" merlin-process-clear-flags
+      '(menu-item "Clear flags" merlin-flags-clear
                   :help "Clear all flags set up to be passed to ocamlmerlin."))
     (define-key merlin-menu-map [restartmerlin]
       '(menu-item "Restart merlin" merlin-restart-process
