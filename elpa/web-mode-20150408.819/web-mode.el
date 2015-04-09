@@ -4,7 +4,7 @@
 ;; Copyright 2011-2015 François-Xavier Bois
 
 ;; Version: 11.0.31
-;; Package-Version: 20150406.2321
+;; Package-Version: 20150408.819
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; Created: July 2011
@@ -669,7 +669,7 @@ Must be used in conjunction with web-mode-enable-block-face."
     ("ctemplate"   . ("mustache" "handlebars" "hapax" "ngtemplate" "ember"
                       "kite" "meteor" "blaze"))
     ("django"      . ("dtl" "twig" "swig" "jinja" "jinja2" "erlydtl" "liquid"
-                      "clabango" "selmer"))
+                      "clabango" "selmer" "nunjucks"))
     ("dust"        . ("dustjs"))
     ("ejs"         . ())
     ("erb"         . ("eruby" "erubis"))
