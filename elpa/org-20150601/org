@@ -1,6 +1,6 @@
 This is org, produced by makeinfo version 4.13 from org.texi.
 
-This manual is for Org version 8.2.10 (release_8.2.10-35-g19a7d6).
+This manual is for Org version 8.2.10 (release_8.2.10-41-g42228a).
 
    Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
@@ -26,7 +26,7 @@ File: org,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 Org Mode Manual
 ***************
 
-This manual is for Org version 8.2.10 (release_8.2.10-35-g19a7d6).
+This manual is for Org version 8.2.10 (release_8.2.10-41-g42228a).
 
    Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
@@ -6675,7 +6675,7 @@ of content.  The templates are expanded in the order given here:
                  You may specify a default value and a completion table with
                  %^{prompt|default|completion2|completion3...}.
                  The arrow keys access a prompt-specific history.
-     %\n         Insert the text entered at the nth %^{PROMPT}, where `n' is
+     %\\n        Insert the text entered at the nth %^{PROMPT}, where `n' is
                  a number, starting from 1.
      %?          After completing the template, position cursor here.
 
