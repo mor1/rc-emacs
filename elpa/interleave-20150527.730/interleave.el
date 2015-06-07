@@ -2,8 +2,8 @@
 
 ;; Author: Sebastian Christ <rudolfo.christ@gmail.com>
 ;; URL: https://github.com/rudolfochrist/interleave
-;; Package-Version: 20150407.927
-;; Version: 0.4.0
+;; Package-Version: 20150527.730
+;; Version: 1.0.0
 
 ;; This file is not part of GNU Emacs
 
@@ -60,7 +60,7 @@
             (derived-mode-p 'pdf-view-mode))
     (kill-buffer (current-buffer))))
 
-(defcustom interleave--org-notes-dir-list '("~/org/interleave_notes"
+(defcustom interleave-org-notes-dir-list '("~/org/interleave_notes"
                                             ".")
   "List of directories to look into when opening interleave notes org from a
 pdf file. The notes file is assumed to have the exact same base name as the pdf
@@ -83,6 +83,14 @@ the pdf directory name. e.g. \".\" is interpreted as \"/pdf/file/dir/\",
 
 (defvar interleave--window-configuration nil
   "Variable to store the window configuration before interleave mode was enabled.")
+
+;;; supress "functions are not known to be defined" warnings
+(declare-function pdf-view-next-page "pdf-view.el")
+(declare-function pdf-view-previous-page "pdf-view.el")
+(declare-function pdf-view-goto-page "pdf-view.el")
+(declare-function pdf-view-scroll-up-or-next-page "pdf-view.el")
+(declare-function pdf-view-scroll-down-or-previous-page "pdf-view.el")
+(declare-function pdf-view-current-page "pdf-view.el")
 
 (if (featurep 'pdf-view) ; if `pdf-tools' is installed
     (progn
@@ -125,11 +133,14 @@ SPLIT-WINDOW is a function that actually splits the window, so it must be either
         (progn
           (delete-other-windows)
           (funcall split-window)
-          (find-file (expand-file-name (interleave--find-pdf-path buf)))
-          (interleave-pdf-mode 1))
+          (find-file (expand-file-name (interleave--find-pdf-path buf))))
       ('error
-       (message "Please specify PDF file with #+INTERLEAVE_PDF document property.")
-       (interleave--quit)))))
+       (let ((pdf-file-name
+              (read-file-name "No #+INTERLEAVE_PDF property found. Please specify path: " "~/")))
+         (find-file (expand-file-name pdf-file-name))
+         (with-current-buffer buf
+           (insert "#+INTERLEAVE_PDF: " pdf-file-name)))))
+    (interleave-pdf-mode 1)))
 
 (defun interleave--go-to-page-note (page)
   "Searches the notes buffer for an headline with the `interleave_page_note'
@@ -145,19 +156,19 @@ property set to PAGE. It narrows the subtree when found."
         (org-show-entry)
         t))))
 
-(defun interleave--go-to-next-page ()
+(defun interleave-go-to-next-page ()
   "Go to the next page in PDF. Look up for available notes."
   (interactive)
   (funcall interleave--pdf-next-page-fn)
   (interleave--go-to-page-note (funcall interleave--pdf-current-page-fn)))
 
-(defun interleave--go-to-previous-page ()
+(defun interleave-go-to-previous-page ()
   "Go to the previous page in PDF. Look up for available notes."
   (interactive)
   (funcall interleave--pdf-previous-page-fn)
   (interleave--go-to-page-note (funcall interleave--pdf-current-page-fn)))
 
-(defun interleave--scroll-up ()
+(defun interleave-scroll-up ()
   "Scroll up the PDF. Look up for available notes."
   (interactive)
   (setq *interleave--page-marker* (funcall interleave--pdf-current-page-fn))
@@ -165,7 +176,7 @@ property set to PAGE. It narrows the subtree when found."
   (unless (= *interleave--page-marker* (funcall interleave--pdf-current-page-fn))
     (interleave--go-to-page-note (funcall interleave--pdf-current-page-fn))))
 
-(defun interleave--scroll-down ()
+(defun interleave-scroll-down ()
   "Scroll down the PDF. Look up for available notes."
   (interactive)
   (setq *interleave--page-marker* (funcall interleave--pdf-current-page-fn))
@@ -202,7 +213,7 @@ property set to PAGE. It narrows the subtree when found."
       (org-narrow-to-subtree)))
   (interleave--switch-to-org-buffer t))
 
-(defun interleave--add-note ()
+(defun interleave-add-note ()
   "Add note for the current page. If there are already notes for this page,
 jump to the notes buffer."
   (interactive)
@@ -282,7 +293,7 @@ of .pdf)."
            (cnt 0)
            try-org-file-name
            (org-file-name (catch 'break
-                            (dolist (dir interleave--org-notes-dir-list)
+                            (dolist (dir interleave-org-notes-dir-list)
                               ;; If dir is "." or begins with "./", replace
                               ;; the "." or "./" with the pdf dir name
                               (setq dir (replace-regexp-in-string
@@ -293,7 +304,7 @@ of .pdf)."
                                 ;; In the event the org file is needed to be
                                 ;; created, it will be created in the directory
                                 ;; listed as the first element in
-                                ;; `interleave--org-notes-dir-list'
+                                ;; `interleave-org-notes-dir-list'
                                 (setq org-file-create-dir dir))
                               (setq cnt (1+ cnt))
                               (setq try-org-file-name (locate-file
@@ -304,7 +315,7 @@ of .pdf)."
                                 (throw 'break try-org-file-name))))))
       ;; Create the notes org file if it does not exist
       (when (null org-file-name)
-        (setq org-file-name (if (null interleave--org-notes-dir-list)
+        (setq org-file-name (if (null interleave-org-notes-dir-list)
                                 (read-file-name "Path: " "~/")
                               (progn
                                 (when (null (file-exists-p org-file-create-dir))
@@ -323,11 +334,17 @@ of .pdf)."
   (with-current-buffer *interleave--org-buffer*
     (widen)
     (goto-char (point-min))
-    (interleave--sort-notes interleave--sort-order)
+    (when (interleave--headlines-available-p)
+      (interleave--sort-notes interleave-sort-order)
+      (org-overview))
     (interleave 0))
   (interleave--pdf-kill-proc-and-buffer))
 
-(defcustom interleave--sort-order 'asc
+(defun interleave--headlines-available-p ()
+  (save-excursion
+    (re-search-forward "^\* .*" nil t)))
+
+(defcustom interleave-sort-order 'asc
   "Specifiy the notes' sort order in the notes buffer.
 
 The possible values are 'asc for ascending and 'desc for descending."
@@ -379,7 +396,15 @@ Usage:
 #+INTERLEAVE_PDF: /the/path/to/your/pdf.pdf
 - Start `interleave' with `M-x interleave'.
 - To insert a note for a page, type `i'.
-- Navigation is the same as in `doc-view-mode'/`pdf-view-mode'."
+- Navigation is the same as in `doc-view-mode'/`pdf-view-mode'.
+
+Keybindings (`doc-view-mode'/`pdf-view-mode'):
+
+\\{interleave-pdf-mode-map}
+
+Keybindings (org-mode buffer):
+
+\\{interleave-map}"
   :lighter " ≡"
   :keymap  interleave-map
   (if interleave
@@ -388,7 +413,8 @@ Usage:
         (setq interleave--window-configuration (current-window-configuration))
         (setq *interleave--org-buffer* (current-buffer))
         (interleave--open-file (or (and current-prefix-arg #'split-window-below)
-                                   #'split-window-right)))
+                                   #'split-window-right))
+        (interleave--go-to-page-note 1))
     (progn
       (message "Interleave disabled")
       (set-window-configuration interleave--window-configuration))))
@@ -414,12 +440,12 @@ Usage:
 (define-key interleave-map (kbd "M-p") #'interleave--sync-pdf-page-previous)
 (define-key interleave-map (kbd "M-n") #'interleave--sync-pdf-page-next)
 
-(define-key interleave-pdf-mode-map (kbd "n")     #'interleave--go-to-next-page)
-(define-key interleave-pdf-mode-map (kbd "p")     #'interleave--go-to-previous-page)
-(define-key interleave-pdf-mode-map (kbd "SPC")   #'interleave--scroll-up)
-(define-key interleave-pdf-mode-map (kbd "S-SPC") #'interleave--scroll-down)
-(define-key interleave-pdf-mode-map (kbd "DEL")   #'interleave--scroll-down)
-(define-key interleave-pdf-mode-map (kbd "i")     #'interleave--add-note)
+(define-key interleave-pdf-mode-map (kbd "n")     #'interleave-go-to-next-page)
+(define-key interleave-pdf-mode-map (kbd "p")     #'interleave-go-to-previous-page)
+(define-key interleave-pdf-mode-map (kbd "SPC")   #'interleave-scroll-up)
+(define-key interleave-pdf-mode-map (kbd "S-SPC") #'interleave-scroll-down)
+(define-key interleave-pdf-mode-map (kbd "DEL")   #'interleave-scroll-down)
+(define-key interleave-pdf-mode-map (kbd "i")     #'interleave-add-note)
 (define-key interleave-pdf-mode-map (kbd "q")     #'interleave--quit)
 (define-key interleave-pdf-mode-map (kbd "M-.")   #'interleave--sync-pdf-page-current)
 (define-key interleave-pdf-mode-map (kbd "M-p")   #'interleave--sync-pdf-page-previous)
