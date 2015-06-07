@@ -432,6 +432,7 @@ This command is convenient when reading novel, documentation."
              (hl-line-mode t)
              (force-my-keys-minor-mode)
              (auto-fill-mode t)
+             (git-ps1-mode t)
              ))
 
 (add-hook 'text-mode-hook
