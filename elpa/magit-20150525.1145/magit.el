@@ -65,12 +65,7 @@ Use the function by the same name instead of this variable.")
 (when (version< emacs-version "23.2")
   (error "Magit requires at least GNU Emacs 23.2"))
 
-;; Users may choose to use `magit-log-edit' instead of the preferred
-;; `git-commit-mode', by simply putting it on the `load-path'.  If
-;; it can be found there then it is loaded at the end of this file.
-(unless (locate-library "magit-log-edit")
-  (require 'git-commit-mode))
-
+(require 'git-commit-mode)
 (require 'git-rebase-mode)
 
 (require 'ansi-color)
@@ -479,7 +474,7 @@ in the same directory as numbered backup files and have to be
 applied manually.  Only individual hunks are backed up; when
 a complete file is reverted (which requires confirmation) no
 backup is created."
-  :package-version '(magit . "2.1.0")
+  :package-version '(magit . "1.4.0")
   :group 'magit
   :type 'boolean)
 
@@ -621,14 +616,14 @@ To select the face used for highlighting customize the option
 other face that does not use the background then you can set this
 option to nil.  Doing so could potentially improve performance
 when generating large diffs."
-  :package-version '(magit . "2.1.0")
+  :package-version '(magit . "1.4.0")
   :group 'magit
   :group 'magit-faces
   :set-after '(magit-item-highlight-face)
   :type 'boolean)
 
 (define-obsolete-variable-alias 'magit-diff-use-overlays
-  'magit-use-overlays "2.1.0")
+  'magit-use-overlays "1.4.0")
 
 ;;;;; Completion
 
@@ -989,7 +984,7 @@ The function is called with one argument, the propertized graph
 of a single line in as a string.  It has to return the formatted
 string.  This option can also be nil, in which case the graph is
 inserted as is."
-  :package-version '(magit . "2.1.0")
+  :package-version '(magit . "1.4.0")
   :group 'magit-log
   :type '(choice (const :tag "insert as is" nil)
                  (function-item magit-log-format-unicode-graph)
@@ -998,7 +993,7 @@ inserted as is."
 (defcustom magit-log-format-unicode-graph-alist
   '((?/ . ?╱) (?| . ?│) (?\\ . ?╲) (?* . ?◆) (?o . ?◇))
   "Alist used by `magit-log-format-unicode-graph' to translate chars."
-  :package-version '(magit . "2.1.0")
+  :package-version '(magit . "1.4.0")
   :group 'magit-log
   :type '(repeat (cons :format "%v\n"
                        (character :format "replace %v ")
@@ -3627,9 +3622,11 @@ tracked in the current repository are reverted if
       (process-send-string
        proc
        (downcase
-        (concat (match-string (if (yes-or-no-p (substring string 0 beg)) 1 2)
-                              string)
-                "\n"))))))
+        (concat
+         (match-string
+          (if (save-match-data (yes-or-no-p (substring string 0 beg))) 1 2)
+          string)
+         "\n"))))))
 
 (defun magit-process-password-prompt (proc string)
   "Forward password prompts to the user."
@@ -4070,8 +4067,16 @@ the current repository."
               (and file (string-prefix-p topdir file)
                    (not (string-prefix-p gitdir file))
                    (member (file-relative-name file topdir) tracked)
-                   (let ((auto-revert-mode t))
-                     (auto-revert-handler)
+                   (let ((remote-file-name-inhibit-cache t))
+                     (when (and buffer-file-name
+                                (file-readable-p buffer-file-name)
+                                (not (verify-visited-file-modtime (current-buffer))))
+                       (setq auto-revert-notify-modified-p nil)
+                       (when auto-revert-verbose
+                         (message "Reverting buffer `%s'." (buffer-name)))
+                       (let ((buffer-read-only buffer-read-only))
+                         (revert-buffer 'ignore-auto 'dont-ask 'preserve-modes)))
+                     (vc-find-file-hook)
                      (run-hooks 'magit-revert-buffer-hook))))))))))
 
 ;;; (misplaced)
@@ -4386,12 +4391,12 @@ can be used to override this."
     (when stashes
       (magit-with-section (section stashes 'stashes "Stashes:" t)
         (dolist (stash stashes)
-          (string-match "^\\(stash@{\\([0-9]+\\)}\\): \\(.+\\)$" stash)
-          (let ((stash (match-string 1 stash))
-                (number (match-string 2 stash))
-                (message (match-string 3 stash)))
-            (magit-with-section (section stash stash)
-              (insert number ": " message "\n"))))
+          (when (string-match "^\\(stash@{\\([0-9]+\\)}\\): \\(.+\\)$" stash)
+            (let ((stash (match-string 1 stash))
+                  (number (match-string 2 stash))
+                  (message (match-string 3 stash)))
+              (magit-with-section (section stash stash)
+                (insert number ": " message "\n")))))
         (insert "\n")))))
 
 (defun magit-insert-untracked-files ()
@@ -6284,7 +6289,7 @@ Type `\\[magit-log-show-more-entries]` to show more commits, \
 and `\\[magit-refresh]` to refresh the log.
 Type `\\[magit-diff-working-tree]` to see the diff between current commit and your working tree,
 Type `\\[magit-diff]` to see diff between any two version
-Type `\\[magit-apply-item]` to apply the change of the current commit to your wortree,
+Type `\\[magit-apply-item]` to apply the change of the current commit to your worktree,
 and `\\[magit-cherry-pick-item]` to apply and commit the result.
 Type `\\[magit-revert-item]` to revert a commit, and `\\[magit-reset-head]` reset your current head to a commit,
 
@@ -7787,58 +7792,53 @@ You have just updated to version 1.4.0 of Magit, and have to
 make a choice.
 
 Before running Git, Magit by default reverts all unmodified
-buffers which visit files tracked in the current repository.
-This can potentially lead to dataloss so you might want to
+buffers that visit files tracked in the current repository.
+This can potentially lead to data loss, so you might want to
 disable this by adding the following line to your init file:
 
   (setq magit-auto-revert-mode nil)
 
-The risk is not as high as it might seem.  If snapshots on Melpa
-and Melpa-Stable had this enabled for a long time, so if you did
-not experience any dataloss in the past, then you should probably
-keep this enabled.
+The risk is not as high as it might seem.  Snapshots on MELPA
+and MELPA-Stable have had this enabled for a long time, so if
+you have not experienced any data loss in the past, you should
+probably keep this enabled.
 
 Keeping this mode enabled is only problematic if you, for
-example, use `git reset --hard REV' or `magit-reset-head-hard',
+example, use `git reset --hard REV' or `magit-reset-head-hard'
 and expect Emacs to preserve the old state of some file in a
-buffer.  If you turn of this mode then file-visiting buffers and
-Magit buffer will no longer by in sync, which can be confusing
-and complicates many operations.  Also note that it is possible
-to undo a buffer revert using `C-x u' (`undo').
+buffer.  If you turn off this mode then file-visiting buffers and
+the Magit buffer will no longer be in sync, which can be confusing
+and would complicate many operations.  Note that it is possible
+to undo an automatic buffer reversion using `C-x u' (`undo').
 
-Then you also have to add the following line to your init file
-to prevent this message from being shown again when you restart
-Emacs:
+To prevent this message from being shown each time you start
+Emacs, you must add the following line to your init file:
 
   (setq magit-last-seen-setup-instructions \"1.4.0\")
 
 You might also want to read the release notes:
-https://raw.githubusercontent.com/magit/magit/next/Documentation/RelNotes/1.4.0.txt")))
+https://raw.githubusercontent.com/magit/magit/next/Documentation/RelNotes/1.4.0.txt"))
+  (when (featurep 'magit-log-edit)
+    (display-warning :error "magit-log-edit has to be removed
+
+Magit is no longer compatible with the library `magit-log-edit',
+which was used in earlier releases.  Please remove it, so that
+Magit can use the successor `git-commit-mode' without the
+obsolete library getting in the way.  Then restart Emacs.
+
+You might also want to read:
+https://github.com/magit/magit/wiki/Emacsclient")))
 
 (add-hook 'after-init-hook #'magit-maybe-show-setup-instructions)
 
-(cl-eval-when (load eval) (magit-version t))
-
-(define-obsolete-variable-alias 'magit-cherry-insert-sections-hook
-  'magit-cherry-sections-hook "1.4.0")
-(define-obsolete-variable-alias 'magit-status-insert-sections-hook
-  'magit-status-sections-hook "1.4.0")
-(define-obsolete-variable-alias 'magit-wazzup-insert-sections-hook
-  'magit-wazzup-sections-hook "1.4.0")
-
-(define-obsolete-variable-alias 'magit-quote-curly-braces
-  'magit-process-quote-curly-braces "1.4.0")
-
 (provide 'magit)
 
-;; rest of magit core
-(require 'magit-key-mode)
+(cl-eval-when (load eval)
+  (magit-version t)
+  (when after-init-time
+    (magit-maybe-show-setup-instructions)))
 
-;; If `magit-log-edit' is available and `git-commit-mode' is not
-;; loaded, then we have no choice but to assume the user actually
-;; wants to use the former.
-(unless (featurep 'git-commit-mode)
-  (require 'magit-log-edit nil t))
+(require 'magit-key-mode)
 
 ;; Local Variables:
 ;; coding: utf-8
