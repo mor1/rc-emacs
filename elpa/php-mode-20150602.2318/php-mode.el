@@ -6,13 +6,13 @@
 
 ;;; Author: Eric James Michael Ritz
 ;;; URL: https://github.com/ejmr/php-mode
-;; Package-Version: 20150308.1835
-;;; Version: 1.15.3
+;; Package-Version: 20150602.2318
+;;; Version: 1.16.0
 
-(defconst php-mode-version-number "1.15.3"
+(defconst php-mode-version-number "1.16.0"
   "PHP Mode version number.")
 
-(defconst php-mode-modified "2015-03-09"
+(defconst php-mode-modified "2015-05-28"
   "PHP Mode build date.")
 
 ;;; License
@@ -89,7 +89,7 @@
 ;; Work around emacs bug#18845, cc-mode expects cl to be loaded
 ;; while php-mode only uses cl-lib (without compatibility aliases)
 (eval-and-compile
-  (if (and (= emacs-major-version 24) (= emacs-minor-version 4))
+  (if (and (= emacs-major-version 24) (>= emacs-minor-version 4))
     (require 'cl)))
 
 ;; Use the recommended cl functions in php-mode but alias them to the
@@ -690,7 +690,8 @@ working with Symfony2."
 
 (c-add-style
   "psr2"
-  '("php"))
+  '("php"
+    (c-offsets-alist . ((statement-cont . +)))))
 
 (defun php-enable-psr2-coding-style ()
   "Makes php-mode comply to the PSR-2 coding style"
@@ -1479,9 +1480,10 @@ The output will appear in the buffer *PHP*."
 
 (defun php-string-intepolated-variable-font-lock-find (limit)
   (while (re-search-forward php-string-interpolated-variable-regexp limit t)
-    (when (php-in-string-p)
-      (put-text-property (match-beginning 0) (match-end 0)
-                         'face 'font-lock-variable-name-face)))
+    (let ((quoted-stuff (nth 3 (syntax-ppss))))
+      (when (and quoted-stuff (member quoted-stuff '(?\" ?`)))
+        (put-text-property (match-beginning 0) (match-end 0)
+                           'face 'font-lock-variable-name-face))))
   nil)
 
 (eval-after-load 'php-mode
@@ -1533,3 +1535,7 @@ The output will appear in the buffer *PHP*."
 (provide 'php-mode)
 
 ;;; php-mode.el ends here
+
+;; Local Variables:
+;; firestarter: ert-run-tests-interactively
+;; End:
