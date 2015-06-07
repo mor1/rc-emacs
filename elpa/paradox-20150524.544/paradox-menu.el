@@ -134,6 +134,7 @@ If `paradox-lines-per-entry' = 1, the face
     ("new"       . bold)
     ("held"      . font-lock-constant-face)
     ("disabled"  . font-lock-warning-face)
+    ("avail-obso" . font-lock-comment-face)
     ("installed" . font-lock-comment-face)
     ("dependency" . font-lock-comment-face)
     ("incompat"  . font-lock-comment-face)
@@ -206,8 +207,8 @@ This button takes you to the package's homepage."
   "Return a package entry suitable for `tabulated-list-entries'.
 PKG has the form (PKG-DESC . STATUS).
 Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
-  (let* ((pkg-desc (car pkg))
-         (status  (cdr pkg))
+  (let* ((pkg-desc (if (consp pkg) (car pkg) pkg))
+         (status   (if (consp pkg) (cdr pkg) (package-desc-status pkg)))
          (face (or (cdr (assoc-string status paradox-status-face-alist))
                    'font-lock-warning-face))
          (url (paradox--package-homepage pkg-desc))
@@ -218,7 +219,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
     (list pkg-desc
           `[,(concat
               (propertize name
-                          'face 'paradox-name-face
+                          'font-lock-face 'paradox-name-face
                           'button t
                           'follow-link t
                           'help-echo (format "Package: %s" name)
@@ -229,7 +230,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
                   (concat
                    (make-string (- paradox-column-width-package name-length button-length) ?\s)
                    (propertize paradox-homepage-button-string
-                               'face 'paradox-homepage-button-face
+                               'font-lock-face 'paradox-homepage-button-face
                                'mouse-face 'custom-button-mouse
                                'help-echo (format "Visit %s" url)
                                'button t
@@ -257,19 +258,19 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
 (defun paradox--count-print (pkg)
   "Return counts of PKG as a package-desc list."
   (append
-   (when (and paradox-display-star-count (listp paradox--star-count))
+   (when (and paradox-display-star-count (hash-table-p paradox--star-count))
      (list (paradox--package-star-count pkg)))
-   (when (and paradox-display-download-count (listp paradox--download-count))
+   (when (and paradox-display-download-count (hash-table-p paradox--download-count))
      (list (paradox--package-download-count pkg)))))
 
 (defun paradox--package-download-count (pkg)
   "Return propertized string with the download count of PKG."
-  (let ((c (cdr-safe (assoc pkg paradox--download-count))))
+  (let ((c (gethash pkg paradox--download-count nil)))
     (propertize
      (if (numberp c)
          (if (> c 999) (format "%sK" (truncate c 1000)) (format "%s" c))
        " ")
-     'face 'paradox-download-face
+     'font-lock-face 'paradox-download-face
      'value (or c 0))))
 
 (defun paradox--package-homepage (pkg)
@@ -279,7 +280,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
          (extras   (package-desc-extras object))
          (homepage (and (listp extras) (cdr-safe (assoc :url extras)))))
     (or homepage
-        (and (setq extras (cdr (assoc name paradox--package-repo-list)))
+        (and (setq extras (gethash name paradox--package-repo-list))
              (format "https://github.com/%s" extras)))))
 (defun paradox--get-or-return-package (pkg)
   "Take a marker or package name PKG and return a package name."
@@ -293,7 +294,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
   "Increment the count for STATUS on `paradox--package-count'.
 Also increments the count for \"total\"."
   (paradox--inc-count status)
-  (unless (string= status "obsolete")
+  (unless (member status '("obsolete" "avail-obso" "incompat"))
     (paradox--inc-count "total")))
 
 (defun paradox--inc-count (string)
@@ -309,65 +310,56 @@ Also increments the count for \"total\"."
        ;; So we also try interning the package name.
        (intern (car (elt (cadr entry) 0))))))
 
-(declare-function paradox--update-downloads-in-progress "paradox-menu")
-(if (fboundp 'package--update-downloads-in-progress)
-    (defun paradox--update-downloads-in-progress ()
-      (package--update-downloads-in-progress 'paradox--data))
-  (defalias 'paradox--update-downloads-in-progress #'ignore))
-(define-obsolete-function-alias
-  'paradox--pdate-downloads-in-progress
-  'paradox--update-downloads-in-progress
-  "2.1")
-
 (defun paradox--handle-failed-download (&rest _)
   "Handle the case when Emacs fails to download Github data."
-  (paradox--update-downloads-in-progress)
-  (unless (listp paradox--download-count)
-    (setq paradox--download-count nil))
-  (unless (listp paradox--package-repo-list)
-    (setq paradox--package-repo-list nil))
-  (unless (listp paradox--star-count)
-    (setq paradox--star-count nil))
+  (paradox--update-downloads-in-progress 'paradox--data)
+  (unless (hash-table-p paradox--download-count)
+    (setq paradox--download-count (make-hash-table)))
+  (unless (hash-table-p paradox--package-repo-list)
+    (setq paradox--package-repo-list (make-hash-table)))
+  (unless (hash-table-p paradox--star-count)
+    (setq paradox--star-count (make-hash-table)))
+  (unless (hash-table-p paradox--wiki-packages)
+    (setq paradox--wiki-packages (make-hash-table)))
   (message "[Paradox] Error downloading Github data"))
 
-(declare-function paradox--with-work-buffer "paradox-menu")
-(if (fboundp 'package--with-work-buffer-async)
-    (defmacro paradox--with-work-buffer (location file &rest body)
-      "Run BODY in a buffer containing the contents of FILE at LOCATION.
+(defmacro paradox--with-work-buffer (location file &rest body)
+  "Run BODY in a buffer containing the contents of FILE at LOCATION.
 This is the same as `package--with-work-buffer-async', except it
 automatically decides whether to download asynchronously based on
 `package-menu-async'."
-      (declare (indent 2) (debug t))
+  (declare (indent 2) (debug t))
+  (require 'package)
+  (if (fboundp 'package--with-work-buffer-async)
       `(package--with-work-buffer-async
            ,location ,file
            (when package-menu-async
              #'paradox--handle-failed-download)
          ,@body
-         (paradox--update-downloads-in-progress)))
-  (defalias 'paradox--with-work-buffer 'package--with-work-buffer))
+         (paradox--update-downloads-in-progress 'paradox--data))
+    `(package--with-work-buffer ,location ,file ,@body)))
 
 (defun paradox--refresh-star-count ()
   "Download the star-count file and populate the respective variable."
   (interactive)
   (when (boundp 'package--downloads-in-progress)
-    (push 'paradox--data package--downloads-in-progress))
+    (add-to-list 'package--downloads-in-progress 'paradox--data))
   (condition-case-unless-debug nil
-      (paradox--with-work-buffer paradox--data-url "data"
+      (paradox--with-work-buffer paradox--data-url "data-hashtables"
         (setq paradox--star-count (read (current-buffer)))
         (setq paradox--package-repo-list (read (current-buffer)))
-        (setq paradox--download-count (read (current-buffer))))
-    (error (paradox--handle-failed-download)))
-  (when (stringp paradox-github-token)
-    (paradox--refresh-user-starred-list)))
+        (setq paradox--download-count (read (current-buffer)))
+        (setq paradox--wiki-packages (read (current-buffer))))
+    (error (paradox--handle-failed-download))))
 
 (defun paradox--package-star-count (package)
   "Get the star count of PACKAGE."
-  (let ((count (cdr (assoc package paradox--star-count)))
-        (repo (cdr-safe (assoc package paradox--package-repo-list))))
+  (let ((count (gethash package paradox--star-count nil))
+        (repo  (gethash package paradox--package-repo-list nil)))
     (propertize
      (format "%s" (or count ""))
-     'face
-     (if (and repo (assoc-string repo paradox--user-starred-list))
+     'font-lock-face
+     (if (and repo (paradox--starred-repo-p repo))
          'paradox-starred-face
        'paradox-star-face))))
 
@@ -401,6 +393,24 @@ shown."
   (tabulated-list-init-header)
   (paradox--update-mode-line))
 
+(defcustom paradox-hide-wiki-packages nil
+  "If non-nil, don't display packages from the emacswiki."
+  :type 'boolean)
+
+(defun paradox--maybe-remove-wiki-packages (pkgs)
+  "Remove wiki packages from PKGS.
+If `paradox-hide-wiki-packages' is nil, just return PKGS."
+  (if (not paradox-hide-wiki-packages)
+      pkgs
+    (remq nil
+          (mapcar
+           (lambda (entry)
+             (unless (gethash (car entry) paradox--wiki-packages)
+               (car entry)))
+           (if (or (not pkgs) (eq t pkgs))
+               package-archive-contents
+             pkgs)))))
+
 (defun paradox-menu--refresh (&optional packages keywords)
   "Call `package-menu--refresh' retaining current filter.
 PACKAGES and KEYWORDS are passed to `package-menu--refresh'.  If
@@ -411,7 +421,9 @@ used to define keywords."
         (paradox--desc-suffix (make-string (max 0 (- paradox-lines-per-entry 2)) ?\n)))
     (cond
      ((or packages keywords (not paradox--current-filter))
-      (package-menu--refresh packages keywords)
+      (package-menu--refresh
+       (paradox--maybe-remove-wiki-packages packages)
+       keywords)
       (paradox-refresh-upgradeable-packages))
      ((string= paradox--current-filter "Upgradable")
       (paradox-refresh-upgradeable-packages)
@@ -460,6 +472,21 @@ Letters do not insert themselves; instead, they are commands.
 \\<paradox-menu-mode-map>
 \\{paradox-menu-mode-map}"
   (hl-line-mode 1)
+  (when (boundp 'package--post-download-archives-hook)
+    (add-hook 'package--post-download-archives-hook
+              #'paradox--stop-spinner))
+  (if (boundp 'package--downloads-in-progress)
+      (setq mode-line-process
+            '("" (package--downloads-in-progress
+                  (":Loading "
+                   (paradox--spinner
+                    (:eval (spinner-print paradox--spinner))
+                    (:eval (paradox--start-spinner))))
+                  (paradox--spinner
+                   (":Executing " (:eval (spinner-print paradox--spinner)))))))
+    (setq mode-line-process
+          '(paradox--spinner
+            (":Executing " (:eval (spinner-print paradox--spinner))))))
   (paradox--update-mode-line)
   (setq tabulated-list-format
         `[("Package" ,paradox-column-width-package package-menu--name-predicate)
@@ -541,10 +568,12 @@ defaults to: \"No %s packages\"."
 (defun paradox-filter-stars ()
   "Show only starred packages."
   (interactive)
-  (paradox--apply-filter Starred
-    (cl-remove-if-not
-     (lambda (pkg-repo) (assoc-string (cdr pkg-repo) paradox--user-starred-list))
-     paradox--package-repo-list)))
+  (let ((list))
+    (maphash (lambda (pkg repo)
+               (when (paradox--starred-repo-p repo)
+                 (push pkg list)))
+             paradox--package-repo-list)
+    (paradox--apply-filter Starred list)))
 
 (defun paradox-filter-regexp (regexp)
   "Show only packages matching REGEXP.
@@ -662,20 +691,19 @@ PKG is a symbol.  Interactively it is the package under point."
   "Star or unstar a package and move to the next line."
   (interactive)
   (paradox--enforce-github-token
-   (unless paradox--user-starred-list
+   (unless paradox--user-starred-repos
      (paradox--refresh-user-starred-list))
    ;; Get package name
-   (let ((pkg (paradox--get-or-return-package nil))
-         will-delete repo)
+   (let* ((pkg (paradox--get-or-return-package nil))
+          (repo (gethash pkg paradox--package-repo-list))
+          will-delete)
      (unless pkg (error "Couldn't find package-name for this entry"))
-     ;; get repo for this package
-     (setq repo (cdr-safe (assoc pkg paradox--package-repo-list)))
      ;; (Un)Star repo
      (if (not repo)
          (message "This package is not a GitHub repo.")
-       (setq will-delete (member repo paradox--user-starred-list))
+       (setq will-delete (paradox--starred-repo-p repo))
        (paradox--star-repo repo will-delete)
-       (cl-incf (cdr (assoc pkg paradox--star-count))
+       (cl-incf (gethash pkg paradox--star-count 0)
                 (if will-delete -1 1))
        (tabulated-list-set-col paradox--column-name-star
                                (paradox--package-star-count pkg)))))
@@ -686,7 +714,7 @@ PKG is a symbol.  Interactively it is the package under point."
 PKG is a symbol.  Interactively it is the package under point."
   (interactive '(nil))
   (let* ((name (paradox--get-or-return-package pkg))
-         (repo (cdr (assoc name paradox--package-repo-list))))
+         (repo (gethash name paradox--package-repo-list)))
     (if repo
         (with-selected-window
             (display-buffer (get-buffer-create paradox--commit-list-buffer))
@@ -733,7 +761,7 @@ nil) on the Packages buffer."
 (defun paradox--update-mode-line ()
   "Update `mode-line-format'."
   (mapc #'paradox--set-local-value paradox-local-variables)
-  (let ((total-lines (int-to-string (line-number-at-pos (point-max)))))
+  (let ((total-lines (int-to-string (length tabulated-list-entries))))
     (paradox--update-mode-line-front-space total-lines)
     (paradox--update-mode-line-buffer-identification total-lines))
   (set-face-foreground
@@ -810,16 +838,6 @@ TOTAL-LINES is the number of lines in the buffer."
           (add-text-properties place (1+ place) '(face paradox-highlight-face) out)
           out))
     (paradox--prettify-key-descriptor (cons desc 0))))
-
-(defun paradox--full-name-reader ()
-  "Return all \"full_name\" properties in the buffer.
-Much faster than `json-read'."
-  (let (out)
-    (while (search-forward-regexp
-            "^ *\"full_name\" *: *\"\\(.*\\)\", *$" nil t)
-      (push (match-string-no-properties 1) out))
-    (goto-char (point-max))
-    out))
 
 (provide 'paradox-menu)
 ;;; paradox-menu.el ends here
