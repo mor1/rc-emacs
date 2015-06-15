@@ -3,8 +3,8 @@
 
 ;; Copyright 2011-2015 François-Xavier Bois
 
-;; Version: 11.2.4
-;; Package-Version: 20150606.1025
+;; Version: 11.2.8
+;; Package-Version: 20150612.1118
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; Created: July 2011
@@ -27,7 +27,7 @@
 
 ;;---- CONSTS ------------------------------------------------------------------
 
-(defconst web-mode-version "11.2.4"
+(defconst web-mode-version "11.2.8"
   "Web Mode version.")
 
 ;;---- GROUPS ------------------------------------------------------------------
@@ -1298,7 +1298,7 @@ Must be used in conjunction with web-mode-enable-block-face."
       "safe_join" "search_field" "search_field_tag"
       "session" "t" "telephone_field" "telephone_field_tag"
       "time_tag" "translate" "url_field" "url_field_tag"
-      "url_options" "video_path" "video_tag"
+      "url_options" "video_path" "video_tag" "simple_form_for"
 
       ))))
 
@@ -3414,7 +3414,10 @@ the environment as needed for ac-sources, right before they're used.")
           (setq controls (append controls (list (cons 'inside "ctrl")))))
          ((web-mode-block-starts-with "end" reg-beg)
           (setq controls (append controls (list (cons 'close "ctrl")))))
-         ((and (web-mode-block-starts-with "\\(.* do\\|for\\|if\\|unless\\|case\\)\\>" reg-beg)
+         ((web-mode-block-ends-with " do\\( |.*|\\)?" reg-beg)
+          (setq controls (append controls (list (cons 'open "ctrl")))))
+         ((and (web-mode-block-starts-with "\\(for\\|if\\|unless\\|case\\)\\>" reg-beg)
+               ;;((and (web-mode-block-starts-with "\\(.* do\\|for\\|if\\|unless\\|case\\)\\>" reg-beg)
                (not (web-mode-block-ends-with "end" reg-end)))
           (setq controls (append controls (list (cons 'open "ctrl")))))
          )
@@ -4102,9 +4105,9 @@ the environment as needed for ac-sources, right before they're used.")
       (when (null go-back)
         (forward-char))
 
-      (when (> (setq counter (1+ counter)) 3200)
-        (message "attr-skip ** too much attr ** pos-ori(%S) limit(%S)" pos-ori limit)
-        (setq continue nil))
+      ;;(when (> (setq counter (1+ counter)) 10000000000) ;;3200)
+      ;;  (message "attr-skip ** too much attr ** pos-ori(%S) limit(%S)" pos-ori limit)
+      ;;  (setq continue nil))
 
       ) ;while
 
@@ -4399,11 +4402,12 @@ the environment as needed for ac-sources, right before they're used.")
   (let ((continue t) (pos nil) (i 0))
     (save-excursion
       (while continue
+        ;;(message "pt=%S" (point))
         (cond
          ((> (setq i (1+ i)) 100)
           (message "jsx-skip-forward ** warning **")
           (setq continue nil))
-         ((not (web-mode-dom-rsf ">\\([ \t\n]*[;,)']\\)\\|{" reg-end))
+         ((not (web-mode-dom-rsf ">\\([ \t\n]*[\];,)']\\)\\|{" reg-end))
           (setq continue nil)
           (when (string= web-mode-content-type "jsx")
             (setq pos (point-max)))
