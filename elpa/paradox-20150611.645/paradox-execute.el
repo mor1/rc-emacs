@@ -29,6 +29,7 @@
 
 ;;; Code:
 (require 'cl-lib)
+(require 'seq)
 
 (require 'package)
 (require 'paradox-core)
@@ -271,9 +272,9 @@ user."
             (if (eq c ?\s)
                 (forward-line 1)
               (push (tabulated-list-get-id)
-                    (cl-case c
-                      (?D delete-list)
-                      (?I install-list)))
+                    (pcase c
+                      (`?D delete-list)
+                      (`?I install-list)))
               (delete-region p (point))
               (forward-line 1)
               (setq p (point)))))
@@ -292,12 +293,12 @@ user."
             (package--update-selected-packages .install .delete)))
         ;; Background or foreground?
         (if (or (not install-list)
-                (not (cl-case paradox-execute-asynchronously
-                       ((nil) nil)
-                       ((ask)
+                (not (pcase paradox-execute-asynchronously
+                       (`nil nil)
+                       (`ask
                         (if noquery nil
                           (y-or-n-p "Execute in the background (see `paradox-execute-asynchronously')? ")))
-                       (t t))))
+                       (_ t))))
             ;; Synchronous execution
             (progn
               (let ((alist (paradox--perform-package-transaction install-list delete-list)))
