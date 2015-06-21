@@ -4,7 +4,7 @@
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
 ;; URL: http://github.com/Malabarba/aggressive-indent-mode
-;; Package-Version: 20150516.238
+;; Package-Version: 20150618.545
 ;; Version: 1.1
 ;; Package-Requires: ((emacs "24.1") (names "20150125.9") (cl-lib "0.5"))
 ;; Keywords: indent lisp maint tools
@@ -19,7 +19,7 @@
 ;; to go wrong.
 ;;
 ;; `aggressive-indent-mode' is a minor mode that keeps your code always
-;; indented.  It reindents after every command, making it more reliable
+;; indented.  It reindents after every change, making it more reliable
 ;; than `electric-indent-mode'.
 ;;
 ;; ### Instructions ###
