@@ -97,6 +97,7 @@
       (delete-minibuffer-contents)
       (ivy-set-action (lambda (_)
                         (with-selected-window swiper--window
+                          (move-beginning-of-line 1)
                           (perform-replace from to
                                            t t nil))))
       (swiper--cleanup)
@@ -196,7 +197,6 @@ When non-nil, INITIAL-INPUT is the initial search pattern."
 
 (defun swiper--init ()
   "Perform initialization common to both completion methods."
-  (deactivate-mark)
   (setq swiper--opoint (point))
   (setq swiper--len 0)
   (setq swiper--anchor (line-number-at-pos))
