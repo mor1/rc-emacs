@@ -4,8 +4,8 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20150608.404
-;; Version: 0.2.1
+;; Package-Version: 20150621.804
+;; Version: 0.3.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
 
@@ -76,7 +76,7 @@
                      (const avy-move-line))
           :value-type (repeat :tag "Keys" character)))
 
-(defcustom avy-style 'pre
+(defcustom avy-style 'at-full
   "The default method of displaying the overlays.
 Use `avy-styles-alist' to customize this per-command."
   :type '(choice
@@ -597,12 +597,16 @@ LEAF is normally ((BEG . END) . WND)."
     (with-selected-window wnd
       (save-excursion
         (goto-char beg)
-        (when (setq oov (cl-find-if (lambda (o)
-                                      (and (eq (overlay-get o 'category) 'avy)
-                                           (eq (overlay-get o 'window) wnd)))
-                                    (overlays-in (point) (min (+ (point) len)
-                                                              (line-end-position)))))
-          (setq len (- (overlay-start oov) beg))
+        (when (setq oov
+                    (delq nil
+                          (mapcar
+                           (lambda (o)
+                             (and (eq (overlay-get o 'category) 'avy)
+                                  (eq (overlay-get o 'window) wnd)
+                                  (overlay-start o)))
+                           (overlays-in (point) (min (+ (point) len)
+                                                     (line-end-position))))))
+          (setq len (- (apply #'min oov) beg))
           (setq str (substring str 0 len)))
         (let ((other-ov (cl-find-if
                          (lambda (o)
@@ -766,7 +770,7 @@ The window scope is determined by `avy-all-windows' (ARG negates it)."
                          "\\.")
                         ((and avy-word-punc-regexp
                               (string-match avy-word-punc-regexp str))
-                         str)
+                         (regexp-quote str))
                         (t
                          (concat
                           "\\b"
@@ -931,13 +935,14 @@ The window scope is determined by `avy-all-windows' (ARG negates it)."
   (interactive "P")
   (let ((c1 (read-char "char 1: "))
         (c2 (read-char "char 2: " nil avy-timeout-seconds)))
-    (avy--generic-jump
-     (regexp-quote
-      (if c2
-          (string c1 c2)
-        (string c1)))
-     arg
-     avy-style)))
+    (avy--with-avy-keys avy-goto-char-timer
+      (avy--generic-jump
+       (regexp-quote
+        (if c2
+            (string c1 c2)
+          (string c1)))
+       arg
+       avy-style))))
 
 (define-obsolete-variable-alias
     'avy-goto-char-style 'avy-style "0.1.0"
