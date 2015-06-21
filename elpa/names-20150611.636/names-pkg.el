@@ -1,2 +1,0 @@
-;;; -*- no-byte-compile: t -*-
-(define-package "names" "20150611.636" "Namespaces for emacs-lisp. Avoid name clobbering without hiding symbols." '((emacs "24.1") (cl-lib "0.5")) :url "http://github.com/Bruce-Connor/names" :keywords '("extensions" "lisp"))
