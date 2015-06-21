@@ -7,7 +7,7 @@
 ;; Maintainer:  Russel Winder <russel@winder.org.uk>
 ;; Created:  March 2007
 ;; Version:  201410180537
-;; Package-Version: 20150605.740
+;; Package-Version: 20150621.614
 ;; Keywords:  D programming language emacs cc-mode
 
 ;;;; NB Version number is date and time yyyymmddhhMM in GMT (aka UTC).
@@ -489,16 +489,8 @@ operators."
         (remove-function (symbol-function 'looking-at)
                          #'d-special-case-looking-at)))))
 
-(if (> emacs-major-version 24)
-    (advice-add 'c-add-stmt-syntax :around #'d-around--c-add-stmt-syntax)
-  (defadvice c-add-stmt-syntax (around d-around--c-add-stmt-syntax activate)
-    (if (not (string= major-mode "d-mode"))
-        ad-do-it
-      (progn
-        (add-function :around (symbol-function 'looking-at) #'d-special-case-looking-at)
-        (unwind-protect
-            ad-do-it
-          (remove-function (symbol-function 'looking-at) #'d-special-case-looking-at))))))
+(when (version<= "24.4" emacs-version)
+  (advice-add 'c-add-stmt-syntax :around #'d-around--c-add-stmt-syntax))
 
 ;;----------------------------------------------------------------------------
 ;;;###autoload (add-to-list 'auto-mode-alist '("\\.d[i]?\\'" . d-mode))
