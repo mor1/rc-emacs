@@ -88,6 +88,9 @@
  '(msb-max-menu-items 35)
  '(msb-mode t)
  '(nobreak-char-display t t)
+ '(notmuch-hello-sections
+   (quote
+    (notmuch-hello-insert-header notmuch-hello-insert-saved-searches notmuch-hello-insert-inbox notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)))
  '(ns-alternate-modifier (quote super))
  '(ns-command-modifier (quote meta))
  '(ns-function-modifier (quote hyper))
