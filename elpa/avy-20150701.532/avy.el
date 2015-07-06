@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20150621.804
+;; Package-Version: 20150701.532
 ;; Version: 0.3.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
@@ -106,7 +106,8 @@ If the commands isn't on the list, `avy-style' is used."
                        (const :tag "Pre" pre)
                        (const :tag "At" at)
                        (const :tag "At Full" at-full)
-                       (const :tag "Post" post))))
+                       (const :tag "Post" post)
+                       (const :tag "De Bruijn" de-bruijn))))
 
 (defcustom avy-background nil
   "When non-nil, a gray background will be added during the selection."
@@ -863,6 +864,7 @@ The window scope is determined by `avy-all-windows' (ARG negates it)."
                (let ((line (read-from-minibuffer
                             "Goto line: " (string char))))
                  (when line
+                   (push-mark)
                    (goto-char (point-min))
                    (forward-line (1- (string-to-number line)))
                    (throw 'done 'exit)))))))
