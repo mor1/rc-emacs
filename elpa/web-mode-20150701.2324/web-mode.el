@@ -3,8 +3,8 @@
 
 ;; Copyright 2011-2015 François-Xavier Bois
 
-;; Version: 11.2.9
-;; Package-Version: 20150618.1109
+;; Version: 11.2.15
+;; Package-Version: 20150701.2324
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; Created: July 2011
@@ -27,7 +27,7 @@
 
 ;;---- CONSTS ------------------------------------------------------------------
 
-(defconst web-mode-version "11.2.9"
+(defconst web-mode-version "11.2.15"
   "Web Mode version.")
 
 ;;---- GROUPS ------------------------------------------------------------------
@@ -664,6 +664,7 @@ Must be used in conjunction with web-mode-enable-block-face."
   '(("lineup-args"    . t)
     ("lineup-calls"   . t)
     ("lineup-concats" . t)
+    ("lineup-quotes"  . t)
     ))
 
 (defvar web-mode-engines
@@ -1092,7 +1093,7 @@ Must be used in conjunction with web-mode-enable-block-face."
 
 (defvar web-mode-sql-queries
   (regexp-opt
-   '("SELECT" "INSERT" "UPDATE" "DELETE")))
+   '("SELECT" "INSERT" "UPDATE" "DELETE" "select" "insert" "update" "delete")))
 
 (defvar web-mode-sql-keywords
   (regexp-opt
@@ -5129,10 +5130,15 @@ the environment as needed for ac-sources, right before they're used.")
             (when (and web-mode-enable-heredoc-fontification
                        (eq char ?\<)
                        (> (- end beg) 8)
+                       ;;(progn (message "%S" (buffer-substring-no-properties beg end)) t)
                        (string-match-p "JS\\|JAVASCRIPT\\|HTM\\|CSS" (buffer-substring-no-properties beg end)))
-              (setq keywords (if (eq ?H (char-after (+ beg 3)))
-                                 web-mode-html-font-lock-keywords
-                               web-mode-javascript-font-lock-keywords))
+              (setq keywords
+                    (cond
+                     ((string-match-p "H" (buffer-substring-no-properties beg (+ beg 8)))
+                      web-mode-html-font-lock-keywords)
+                     (t
+                      web-mode-javascript-font-lock-keywords)
+                     ))
               (web-mode-fontify-region beg end keywords)
             ))
 ;;          (message "%S %c %S beg=%S end=%S" web-mode-enable-string-interpolation char web-mode-engine beg end)
@@ -5149,7 +5155,10 @@ the environment as needed for ac-sources, right before they're used.")
             ) ;when
           (when (and (eq token-type 'string)
                      (> (- end beg) 6)
-                     (web-mode-looking-at-p (concat "[ \n]*" web-mode-sql-queries) (1+ beg)))
+                     ;;(eq char ?\<)
+                     ;;(web-mode-looking-at-p (concat "[ \n]*" web-mode-sql-queries) (1+ beg))
+                     (web-mode-looking-at-p (concat "\\(.\\|<<<[[:alnum:]]+\\)[ \n]*" web-mode-sql-queries) beg)
+                     )
             (web-mode-interpolate-sql-string beg end)
             ) ;when
           ) ;when beg end
@@ -5423,7 +5432,8 @@ the environment as needed for ac-sources, right before they're used.")
 
 (defun web-mode-interpolate-sql-string (beg end)
   (save-excursion
-    (let ((regexp (concat "\\<\\(" web-mode-sql-keywords "\\)\\>")))
+    (let ((case-fold-search t)
+          (regexp (concat "\\<\\(" web-mode-sql-keywords "\\)\\>")))
       (goto-char beg)
       (while (re-search-forward regexp end t)
         (font-lock-prepend-text-property (match-beginning 1) (match-end 1)
@@ -6368,10 +6378,10 @@ the environment as needed for ac-sources, right before they're used.")
             )
            ((not (web-mode-tag-beginning))
             )
-           (web-mode-attr-indent-offset
-            (setq offset (+ (current-column) web-mode-attr-indent-offset)))
            ((string-match-p "^/>" curr-line)
             (setq offset (current-column)))
+           (web-mode-attr-indent-offset
+            (setq offset (+ (current-column) web-mode-attr-indent-offset)))
            (t
             (let ((skip (next-single-property-change (point) 'tag-attr)))
               (when skip
@@ -6609,13 +6619,15 @@ the environment as needed for ac-sources, right before they're used.")
            ((null (cdr (assoc "lineup-concats" web-mode-indentation-params)))
             (setq offset (+ (current-indentation) web-mode-code-indent-offset)))
            ((not (eq curr-char ?\.))
+            ;;(message "%S" (point))
             (setq offset (current-column)))
            (t
             (setq offset (current-column))
             (goto-char pos)
-            (looking-at "\\.[ \t\n]*")
-            (setq offset (- offset (length (match-string-no-properties 0)))))
-           ))
+            (when (cdr (assoc "lineup-quotes" web-mode-indentation-params))
+              (looking-at "\\.[ \t\n]*")
+              (setq offset (- offset (length (match-string-no-properties 0)))))
+            )))
 
          ((and (string= language "jsx")
                (get-text-property pos 'part-element)
@@ -9665,7 +9677,7 @@ Pos should be in a tag."
 (defun web-mode-block-string-beginning-position (pos &optional block-beg)
   (unless pos (setq pos (point)))
   (unless block-beg (setq block-beg (web-mode-block-beginning-position pos)))
-  (let (char (continue (not (null pos))))
+  (let (char (ori pos) (continue (not (null pos))))
     (while continue
       (setq char (char-after pos))
       (cond
@@ -9681,7 +9693,7 @@ Pos should be in a tag."
         (setq pos (web-mode-block-opening-paren-position pos block-beg))
         (setq pos (1- pos))
         )
-       ((member char '(?\( ?\= ?\[ ?\? ?\: ?\; ?\, ?\`))
+       ((and (> ori pos) (member char '(?\( ?\= ?\[ ?\? ?\: ?\; ?\, ?\`)))
         (setq continue nil)
         (web-mode-looking-at ".[ \t\n]*" pos)
         (setq pos (+ pos (length (match-string-no-properties 0))))
@@ -9693,6 +9705,7 @@ Pos should be in a tag."
         (setq pos (1- pos)))
        ) ;cond
       ) ;while
+    ;;(message "pos=%S" pos)
     pos))
 
 (defun web-mode-block-statement-beginning-position (pos &optional block-beg)
@@ -10944,7 +10957,11 @@ Pos should be in a tag."
   (web-mode-buffer-highlight))
 
 (defun web-mode-set-content-type (content-type)
+  "Set the content-type for the current buffer"
+  (interactive (list (completing-read "Content-type: " web-mode-part-content-types)))
   (setq web-mode-content-type content-type)
+  (when (called-interactively-p 'any)
+    )
   (web-mode-buffer-highlight))
 
 (defun web-mode-on-engine-setted ()
