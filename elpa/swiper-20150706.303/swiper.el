@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/swiper
-;; Version: 0.4.1
+;; Version: 0.5.1
 ;; Package-Requires: ((emacs "24.1"))
 ;; Keywords: matching
 
@@ -223,6 +223,9 @@ there have line numbers. In the buffer, `ivy--regex' should be used."
     (t
      (ivy--regex-plus str))))
 
+(defvar swiper-history nil
+  "History for `swiper'.")
+
 (defun swiper--ivy (&optional initial-input)
   "`isearch' with an overview using `ivy'.
 When non-nil, INITIAL-INPUT is the initial search pattern."
@@ -241,8 +244,7 @@ Please remove it and update the \"swiper\" package."))
         res)
     (unwind-protect
          (setq res (ivy-read
-                    (replace-regexp-in-string
-                     "%s" "pattern: " swiper--format-spec)
+                    "Swiper: "
                     candidates
                     :initial-input initial-input
                     :keymap swiper-map
@@ -250,7 +252,8 @@ Please remove it and update the \"swiper\" package."))
                     :require-match t
                     :update-fn #'swiper--update-input-ivy
                     :unwind #'swiper--cleanup
-                    :re-builder #'swiper--re-builder))
+                    :re-builder #'swiper--re-builder
+                    :history 'swiper-history))
       (if (null ivy-exit)
           (goto-char swiper--opoint)
         (swiper--action res ivy-text)))))
