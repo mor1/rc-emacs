@@ -6,7 +6,7 @@
 ;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Maintainer: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; URL: https://www.flycheck.org
-;; Keywords: convenience languages tools
+;; Keywords: convenience, languages, tools
 ;; Version: 0.24-cvs
 ;; Package-Requires: ((dash "2.4.0") (pkg-info "0.4") (let-alist "1.0.1") (cl-lib "0.3") (emacs "24.1"))
 
@@ -3974,9 +3974,8 @@ of command checkers is `flycheck-sanitize-errors'.
 
 Note that you may not give `:start', `:interrupt', and
 `:print-doc' for a command checker.  You can give a custom
-`:verify' function, but you should take care to call
-`flycheck-verify-command-checker' in a custom `:verify'
-function."
+`:verify' function, though, whose results will be appended to the
+default `:verify' function of command checkers."
   (declare (indent 1)
            (doc-string 2))
   (dolist (prop '(:start :interrupt :print-doc))
@@ -3988,6 +3987,13 @@ function."
     ;; Default to `flycheck-sanitize-errors' as error filter
     (setq properties (plist-put properties :error-filter
                                 #'flycheck-sanitize-errors)))
+  (let ((verify-fn (plist-get properties :verify)))
+    (setq properties
+          (plist-put properties :verify
+                     (lambda (checker)
+                       (append (flycheck-verify-command-checker checker)
+                               (and verify-fn
+                                    (funcall verify-fn checker)))))))
 
   (let ((command (plist-get properties :command))
         (patterns (plist-get properties :error-patterns))
@@ -4019,7 +4025,6 @@ function."
            :start #'flycheck-start-command-checker
            :interrupt #'flycheck-interrupt-command-checker
            :print-doc #'flycheck-command-checker-print-doc
-           :verify #'flycheck-verify-command-checker
            properties)
 
     ;; Pre-compile all errors patterns into strings, so that we don't need to do
@@ -4394,7 +4399,7 @@ _EVENT is ignored."
                   (process-exit-status process)
                   files
                   (flycheck-get-output process) callback)))
-            (error
+            ((debug error)
              (funcall callback 'errored (error-message-string err)))))))))
 
 (defun flycheck-finish-checker-process
@@ -4672,7 +4677,8 @@ Return a list representing PATTERN, suitable as element in
          (level (cdr pattern))
          (level-no (pcase level
                      (`error 2)
-                     (`warning 1))))
+                     (`warning 1)
+                     (`info 0))))
     (list regexp 1 2 3 level-no)))
 
 (defun flycheck-checker-compilation-error-regexp-alist (checker)
@@ -4991,7 +4997,8 @@ SYMBOL with `flycheck-def-executable-var'."
   (let ((command (plist-get properties :command))
         (parser (plist-get properties :error-parser))
         (filter (plist-get properties :error-filter))
-        (predicate (plist-get properties :predicate)))
+        (predicate (plist-get properties :predicate))
+        (verify-fn (plist-get properties :verify)))
 
     `(progn
        (flycheck-def-executable-var ,symbol ,(car command))
@@ -5007,7 +5014,10 @@ SYMBOL with `flycheck-def-executable-var'."
          :modes ',(plist-get properties :modes)
          ,@(when predicate
              `(:predicate #',predicate))
-         :next-checkers ',(plist-get properties :next-checkers)))))
+         :next-checkers ',(plist-get properties :next-checkers)
+         ,@(when verify-fn
+             `(:verify #',verify-fn))
+         :verify ))))
 
 
 ;;; Built-in checkers
@@ -5845,6 +5855,10 @@ See Info Node `(elisp)Byte Compilation'."
     (let ((source (car command-line-args-left))
           ;; Remember the default directory of the process
           (process-default-directory default-directory))
+      ;; Note that we deliberately use our custom approach even despite of
+      ;; `checkdoc-file' which was added to Emacs 25.1.  While it's conceptually
+      ;; the better thing, it's implementation has too many flaws to be of use
+      ;; for us.
       (with-temp-buffer
         (insert-file-contents source 'visit)
         (setq buffer-file-name source)
@@ -5852,14 +5866,10 @@ See Info Node `(elisp)Byte Compilation'."
         ;; back-substutition work
         (setq default-directory process-default-directory)
         (with-demoted-errors "Error in checkdoc: %S"
-          ;; If we have `checkdoc-file' (in Emacs 25) use it, otherwise fall
-          ;; back to printing the result buffer of checkdoc.
-          (if (fboundp 'checkdoc-file)
-              (checkdoc-file source)
-            (checkdoc-current-buffer t)
-            (with-current-buffer checkdoc-diagnostic-buffer
-              (princ (buffer-substring-no-properties (point-min) (point-max)))
-              (kill-buffer))))))))
+          (checkdoc-current-buffer t)
+          (with-current-buffer checkdoc-diagnostic-buffer
+            (princ (buffer-substring-no-properties (point-min) (point-max)))
+            (kill-buffer)))))))
 
 (flycheck-define-checker emacs-lisp-checkdoc
   "An Emacs Lisp style checker using CheckDoc.
@@ -5886,11 +5896,25 @@ The checker runs `checkdoc-current-buffer'."
   (setcar (get 'emacs-lisp-checkdoc 'flycheck-command)
           flycheck-this-emacs-executable))
 
+(flycheck-def-option-var flycheck-erlang-include-path nil erlang
+  "A list of include directories for Erlang.
+
+The value of this variable is a list of strings, where each
+string is a directory to add to the include path of erlc.
+Relative paths are relative to the file being checked."
+  :type '(repeat (directory :tag "Include directory"))
+  :safe #'flycheck-string-list-p
+  :package-version '(flycheck . "0.24"))
+
 (flycheck-define-checker erlang
   "An Erlang syntax checker using the Erlang interpreter.
 
 See URL `http://www.erlang.org/'."
-  :command ("erlc" "-o" temporary-directory "-Wall" source)
+  :command ("erlc"
+            "-o" temporary-directory
+            (option-list "-I" flycheck-erlang-include-path)
+            "-Wall"
+            source)
   :error-patterns
   ((warning line-start (file-name) ":" line ": Warning:" (message) line-end)
    (error line-start (file-name) ":" line ": " (message) line-end))
@@ -6059,7 +6083,15 @@ See URL `http://golang.org/cmd/go/' and URL
   :next-checkers (go-build
                   go-test
                   ;; Fall back if `go build' or `go test' can be used
-                  go-errcheck))
+                  go-errcheck)
+  :verify-fn (lambda (_)
+               (let ((have-vet (member "vet" (ignore-errors
+                                               (process-lines go "tool")))))
+                 (list
+                  (flycheck-verification-result-new
+                   :label "go tool vet"
+                   :message (if have-vet "present" "missing")
+                   :face (if have-vet 'success '(bold error)))))))
 
 (flycheck-define-checker go-build
   "A Go syntax and type checker using the `go build' command.
@@ -7228,7 +7260,38 @@ See URL `http://www.scalastyle.org'."
   (lambda () (and flycheck-scalastyle-jar flycheck-scalastylerc
                   (file-exists-p flycheck-scalastyle-jar)
                   (file-exists-p (flycheck-locate-config-file
-                                  flycheck-scalastylerc 'scala-scalastyle)))))
+                                  flycheck-scalastylerc 'scala-scalastyle))))
+  :verify (lambda (checker)
+            (list
+             (flycheck-verification-result-new
+              :label "JAR file"
+              :message (cond
+                        ((not flycheck-scalastyle-jar)
+                         "`flycheck-scalastyle-jar' not set")
+                        ((not (file-exists-p flycheck-scalastyle-jar))
+                         (format "file %s does not exist"
+                                 flycheck-scalastyle-jar))
+                        (t "present"))
+              :face (cond
+                     ((not flycheck-scalastyle-jar) '(bold warning))
+                     ((not (file-exists-p flycheck-scalastyle-jar))
+                      '(bold error))
+                     (t 'success)))
+             (flycheck-verification-result-new
+              :label "Configuration file"
+              :message (cond
+                        ((not flycheck-scalastylerc)
+                         "`flycheck-scalastyletrc' not set")
+                        ((not (flycheck-locate-config-file flycheck-scalastylerc
+                                                           checker))
+                         (format "file %s not found" flycheck-scalastylerc))
+                        (t "found"))
+              :face (cond
+                     ((not flycheck-scalastylerc) '(bold warning))
+                     ((not (flycheck-locate-config-file flycheck-scalastylerc
+                                                        checker))
+                      '(bold error))
+                     (t 'success))))))
 
 (defconst flycheck-scss-lint-checkstyle-re
   (rx "cannot load such file" (1+ not-newline) "scss_lint_reporter_checkstyle")
@@ -7267,7 +7330,24 @@ See URL `https://github.com/brigade/scss-lint'."
   ;; check whether the addon is missing and turn that into a special kind of
   ;; Flycheck error.
   :error-parser flycheck-parse-scss-lint
-  :modes scss-mode)
+  :modes scss-mode
+  :verify (lambda (_)
+            (with-temp-buffer
+              (call-process "scss-lint" nil t nil
+                            "--require=scss_lint_reporter_checkstyle")
+              (goto-char (point-min))
+              (let ((reporter-missing (re-search-forward
+                                               flycheck-scss-lint-checkstyle-re
+                                               nil 'no-error)))
+                (list
+                 (flycheck-verification-result-new
+                  :label "Checkstyle reporter"
+                  :message (if reporter-missing
+                               "scss_lint_reporter_checkstyle missing"
+                             "present")
+                  :face (if reporter-missing
+                            '(bold error)
+                          'success)))))))
 
 (flycheck-def-option-var flycheck-scss-compass nil scss
   "Whether to enable the Compass CSS framework.
@@ -7375,7 +7455,15 @@ See URL `https://github.com/koalaman/shellcheck/'."
   :error-parser flycheck-parse-checkstyle
   :error-filter flycheck-dequalify-error-ids
   :modes sh-mode
-  :predicate (lambda () (memq sh-shell flycheck-shellcheck-supported-shells)))
+  :predicate (lambda () (memq sh-shell flycheck-shellcheck-supported-shells))
+  :verify (lambda (_)
+            (let ((supports-shell (memq sh-shell
+                                        flycheck-shellcheck-supported-shells)))
+              (list
+               (flycheck-verification-result-new
+                :label (format "Shell %s supported" sh-shell)
+                :message (if supports-shell "yes" "no")
+                :face (if supports-shell 'success '(bold warning)))))))
 
 (flycheck-define-checker slim
   "A Slim syntax checker using the Slim compiler.
