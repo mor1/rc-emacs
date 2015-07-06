@@ -4,9 +4,9 @@
 
 ;; Author: Feng Shu <tumashu@163.com>
 ;; URL: https://github.com/tumashu/bbdb-android
-;; Package-Version: 20150613.1516
+;; Package-Version: 20150705.2224
 ;; Version: 0.0.1
-;; Package-Requires: ((bbdb-vcard "0.4.1"))
+;; Package-Requires: ((bbdb-vcard "20150705.341"))
 
 ;;; License:
 
@@ -243,25 +243,31 @@ then import vcard file to android phone by adb."
 
 (defun bbdb-android-import-contacts-db (db-file)
   "Import contacts in `db-file' to BBDB database."
-  (let ((command
-         (when (executable-find bbdb-android-sqlite3-program)
-           (format "%s %s \"%s\""
-                   bbdb-android-sqlite3-program
-                   db-file
-                   (concat "SELECT raw_contacts._id, raw_contacts.display_name, "
-                           "raw_contacts.display_name_alt, mimetypes.mimetype, "
-                           "REPLACE(REPLACE(data.data1, '\r\n', '\n'), '\n', '\n'), "
-                           "data.data2, "
-                           "REPLACE(REPLACE(data.data4, '\r\n', '\n'), '\n', '\n'), "
-                           "data.data5, data.data6, data.data7, "
-                           "data.data8, data.data9, data.data10, "
-                           "quote(data.data15)||'::::' " ;; concat "::::" as split-string separator
-                           "FROM raw_contacts, data, mimetypes "
-                           "WHERE raw_contacts.deleted = 0 "
-                           "AND raw_contacts._id = data.raw_contact_id "
-                           "AND data.mimetype_id = mimetypes._id "
-                           "ORDER BY raw_contacts._id, mimetypes._id, data.data2"))))
-        sqlite3-output contacts-list contacts-list2 scards-list)
+  (let* ((db-file
+          (if (file-exists-p db-file)
+              db-file
+            (progn (message "Can't find file: %S " db-file)
+                   nil)))
+         (command
+          (when (and db-file
+                     (executable-find bbdb-android-sqlite3-program))
+            (format "%s %s \"%s\""
+                    bbdb-android-sqlite3-program
+                    db-file
+                    (concat "SELECT raw_contacts._id, raw_contacts.display_name, "
+                            "raw_contacts.display_name_alt, mimetypes.mimetype, "
+                            "REPLACE(REPLACE(data.data1, '\r\n', '\n'), '\n', '\n'), "
+                            "data.data2, "
+                            "REPLACE(REPLACE(data.data4, '\r\n', '\n'), '\n', '\n'), "
+                            "data.data5, data.data6, data.data7, "
+                            "data.data8, data.data9, data.data10, "
+                            "quote(data.data15)||'::::' " ;; concat "::::" as split-string separator
+                            "FROM raw_contacts, data, mimetypes "
+                            "WHERE raw_contacts.deleted = 0 "
+                            "AND raw_contacts._id = data.raw_contact_id "
+                            "AND data.mimetype_id = mimetypes._id "
+                            "ORDER BY raw_contacts._id, mimetypes._id, data.data2"))))
+         sqlite3-output contacts-list contacts-list2 scards-list)
     (when command
       ;; Extract contacts info by run sqlite3 command.
       (setq sqlite3-output (shell-command-to-string command))

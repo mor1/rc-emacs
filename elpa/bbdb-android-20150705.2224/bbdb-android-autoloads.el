@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil nil ("bbdb-android.el") (21886 54433 982546
+;;;### (autoloads nil nil ("bbdb-android.el") (21914 29878 612133
 ;;;;;;  0))
 
 ;;;***
