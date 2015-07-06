@@ -6,7 +6,7 @@
 ;; Maintainer: John Wiegley <jwiegley@gmail.com>
 ;; Created: 17 Jun 2012
 ;; Version: 2.0
-;; Package-Version: 20150611.1903
+;; Package-Version: 20150622.1044
 ;; Package-Requires: ((bind-key "1.0") (diminish "0.44"))
 ;; Keywords: dotemacs startup speed config package
 ;; URL: https://github.com/jwiegley/use-package
@@ -435,9 +435,14 @@ manually updated package."
            (concat ":ensure wants an optional package name "
                    "(an unquoted symbol name)")))))))
 
-(defun use-package-ensure-elpa (package)
-  (when (not (package-installed-p package))
-    (package-install package)))
+(defun use-package-ensure-elpa (package &optional no-refresh)
+  (if (package-installed-p package)
+      t
+    (if (or (assoc package package-archive-contents) no-refresh)
+        (package-install package)
+      (progn
+        (package-refresh-contents)
+        (use-package-ensure-elpa package t)))))
 
 (defun use-package-handler/:ensure (name-symbol keyword ensure rest state)
   (let ((body (use-package-process-keywords name-symbol rest state)))
