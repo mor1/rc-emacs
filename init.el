@@ -408,11 +408,10 @@ This command is convenient when reading novel, documentation."
 ;; change magit diff colors
 (eval-after-load 'magit
   '(progn
-     (set-face-foreground 'magit-diff-add "green3")
-     (set-face-foreground 'magit-diff-del "red3")
      (when (not window-system)
        (set-face-background 'magit-item-highlight "black")
-       )))
+       )
+     ))
 
 ;; magit whitespace in diffs <http://whattheemacsd.com/>
 (defun magit-toggle-whitespace ()
@@ -893,7 +892,8 @@ This command is convenient when reading novel, documentation."
 (define-key my-keys-minor-mode-map (kbd "C-<return>") 'split-line)
 (define-key my-keys-minor-mode-map (kbd "M-n")        'next-buffer)
 (define-key my-keys-minor-mode-map (kbd "M-p")        'previous-buffer)
-(define-key my-keys-minor-mode-map (kbd "C-c s")      'magit-status)
+(define-key my-keys-minor-mode-map (kbd "C-x g")      'magit-status)
+(define-key my-keys-minor-mode-map (kbd "C-x M-g")    'magit-dispatch-popup)
 (define-key my-keys-minor-mode-map (kbd "C-c C-SPC")  'whitespace-cleanup)
 (define-key my-keys-minor-mode-map (kbd "C-x 3")      'my-split-window-right)
 
