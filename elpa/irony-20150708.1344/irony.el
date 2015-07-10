@@ -633,9 +633,6 @@ list (and undo information is not kept).")
     (process-put p 'irony-callback-stack (cdr callbacks))
     (car callbacks)))
 
-(defun irony--server-process-callback-count (p)
-  (length (process-get p 'irony-callback-stack)))
-
 
 ;;
 ;; Server commands
@@ -660,6 +657,25 @@ If no such file exists on the filesystem the special file '-' is
         (process-send-string process
                              (format "%s\n"
                                      (combine-and-quote-strings argv)))))))
+
+(defvar irony--sync-id 0 "ID of next sync request.")
+(defvar irony--sync-result '(-1 . nil)
+  "The car stores the id of the result and the cdr stores the return value.")
+
+(defun irony--sync-request-callback (response id)
+  (setq irony--sync-result (cons id response)))
+
+(defun irony--send-request-sync (request &rest args)
+  "Send a request to irony-server and wait for the result."
+  (let* ((id irony--sync-id)
+         (callback (list #'irony--sync-request-callback id)))
+    (setq irony--sync-id (1+ irony--sync-id))
+    (with-local-quit
+      (let ((process (irony--get-server-process-create)))
+        (apply 'irony--send-request request callback args)
+        (while (not (= id (car irony--sync-result)))
+          (accept-process-output process))
+        (cdr irony--sync-result)))))
 
 (defun irony--send-parse-request (request callback &rest args)
   "Send a request that acts on the current buffer to irony-server.
@@ -751,7 +767,7 @@ symbol:
 - success: parsing the file was a sucess, irony-server has
   up-to-date information about the buffer
 
-- failed:- parsing the file resulted in a failure (file access
+- failed: parsing the file resulted in a failure (file access
   rights wrong, whatever)
 
 - cancelled: if the request for this callback was superseded by
