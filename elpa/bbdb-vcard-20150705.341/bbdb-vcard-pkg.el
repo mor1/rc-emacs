@@ -1,2 +1,0 @@
-;;; -*- no-byte-compile: t -*-
-(define-package "bbdb-vcard" "20150705.341" "vCard import/export for BBDB" '((bbdb "3.0")) :url "http://github.com/vgeddes/bbdb-vcard" :keywords '("data" "calendar" "mail" "news"))
