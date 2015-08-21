@@ -6,7 +6,7 @@
 ;; Maintainer: John Wiegley <jwiegley@gmail.com>
 ;; Created: 17 Jun 2012
 ;; Version: 2.0
-;; Package-Version: 20150622.1044
+;; Package-Version: 20150731.2330
 ;; Package-Requires: ((bind-key "1.0") (diminish "0.44"))
 ;; Keywords: dotemacs startup speed config package
 ;; URL: https://github.com/jwiegley/use-package
@@ -630,11 +630,13 @@ manually updated package."
    ((use-package-is-sympair arg allow-vector)
     (list arg))
    ((and (not recursed) (listp arg) (listp (cdr arg)))
-    (mapcar #'(lambda (x) (car (use-package-normalize-pairs
-                                name-symbol label x t allow-vector))) arg))
-   (t
-    (use-package-error
-     (concat label " wants a string, (string . symbol) or list of these")))))
+    (mapcar #'(lambda (x)
+                (let ((ret (use-package-normalize-pairs
+                            name-symbol label x t allow-vector)))
+                  (if (listp ret)
+                      (car ret)
+                    ret))) arg))
+   (t arg)))
 
 (defun use-package-normalize-binder (name-symbol keyword args)
   (use-package-as-one (symbol-name keyword) args
@@ -646,7 +648,10 @@ manually updated package."
 
 (defun use-package-handler/:bind
     (name-symbol keyword arg rest state &optional override)
-  (let ((commands (mapcar #'cdr arg)))
+  (let ((commands (remq nil (mapcar #'(lambda (arg)
+                                        (if (listp arg)
+                                            (cdr arg)
+                                          nil)) arg))))
     (use-package-concat
      (use-package-process-keywords name-symbol
        (use-package-sort-keywords
