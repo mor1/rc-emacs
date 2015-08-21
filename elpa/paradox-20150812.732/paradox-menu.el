@@ -84,7 +84,8 @@
   :package-version '(paradox . "1.2.3"))
 
 (defface paradox-mode-line-face
-  '((t :inherit mode-line-buffer-id :weight normal :foreground "Black"))
+  '((t :inherit (mode-line-buffer-id font-lock-keyword-face)
+       :weight normal))
   "Face used on the package's name."
   :group 'paradox)
 (defface paradox-name-face
@@ -214,8 +215,13 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
          (url (paradox--package-homepage pkg-desc))
          (name (symbol-name (package-desc-name pkg-desc)))
          (name-length (length name))
+         (counts (paradox--count-print (package-desc-name pkg-desc)))
          (button-length (length paradox-homepage-button-string)))
     (paradox--incf status)
+    (let ((cell (assq :stars (package-desc-extras pkg-desc))))
+      (if cell
+          (setcdr cell counts)
+        (push (cons :stars counts) (package-desc-extras pkg-desc))))
     (list pkg-desc
           `[,(concat
               (propertize name
@@ -245,7 +251,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
             ,@(if (cdr package-archives)
                   (list (propertize (or (package-desc-archive pkg-desc) "")
                                     'font-lock-face 'paradox-archive-face)))
-            ,@(paradox--count-print (package-desc-name pkg-desc))
+            ,@counts
             ,(propertize
               (concat (propertize " " 'display paradox--desc-prefix)
                       (package-desc-summary pkg-desc)
@@ -611,6 +617,58 @@ Test match against name and summary."
 (define-key paradox--filter-map "s" #'paradox-filter-stars)
 (define-key paradox--filter-map "c" #'paradox-filter-clear)
 
+(easy-menu-define paradox-menu-mode-menu paradox-menu-mode-map
+  "Menu for `paradox-menu-mode'."
+  `("Paradox"
+    ["Describe Package" package-menu-describe-package :help "Display information about this package"]
+    ["Help" paradox-menu-quick-help :help "Show short key binding help for package-menu-mode"]
+
+    "--"
+    ["Refresh Package List" package-menu-refresh
+     :help "Redownload the ELPA archive"
+     :active (not package--downloads-in-progress)]
+    ["Execute Marked Actions" paradox-menu-execute :help "Perform all the marked actions"]
+    ["Mark All Available Upgrades" package-menu-mark-upgrades
+     :help "Mark packages that have a newer version for upgrading"
+     :active (not package--downloads-in-progress)]
+
+    ("Other Mark Actions"
+     ["Mark All Obsolete for Deletion" package-menu-mark-obsolete-for-deletion :help "Mark all obsolete packages for deletion"]
+     ["Mark for Install" package-menu-mark-install :help "Mark a package for installation and move to the next line"]
+     ["Mark for Deletion" package-menu-mark-delete :help "Mark a package for deletion and move to the next line"]
+     ["Unmark" package-menu-mark-unmark :help "Clear any marks on a package and move to the next line"])
+
+    "--"
+    ("Github" :visible (stringp paradox-github-token)
+     ["Star or unstar this package" paradox-menu-mark-star-unstar]
+     ["Star all installed packages" paradox-star-all-installed-packages]
+     ["Star packages when installing" (customize-save-variable 'paradox-automatically-star (not paradox-automatically-star))
+      :help "Automatically star packages that you install (and unstar packages you delete)"
+      :style toggle :selected paradox-automatically-star])
+    ["Configure Github Inegration" (paradox--check-github-token) :visible (not paradox-github-token)]
+    ["View Changelog" paradox-menu-view-commit-list :help "Show a package's commit list on Github"]
+    ["Visit Homepage" paradox-menu-visit-homepage :help "Visit a package's Homepage on a browser"]
+
+    "--"
+    ("Filter Package List"
+     ["Clear filer" paradox-filter-clear :help "Go back to unfiltered list"]
+     ["By Keyword" package-menu-filter :help "Filter by package keyword"]
+     ["By Upgrades" paradox-filter-upgrades :help "List only upgradeable packages"]
+     ["By Regexp" paradox-filter-regexp :help "Filter packages matching a regexp"]
+     ["By Starred" paradox-filter-stars :help "List only packages starred by the user"])
+    ("Sort Package List"
+     ["By Package Name" paradox-sort-by-package]
+     ["By Status (default)" paradox-sort-by-status]
+     ["By Number of Stars" paradox-sort-by-★])
+    ["Hide by Regexp" package-menu-hide-package :help "Permanently hide all packages matching a regexp"]
+    ["Display Older Versions" package-menu-toggle-hiding
+     :style toggle :selected (not package-menu--hide-packages)
+     :help "Display package even if a newer version is already installed"]
+
+    "--"
+    ["Quit" quit-window :help "Quit package selection"]
+    ["Customize" (customize-group 'package)]))
+
 
 ;;; Menu Mode Commands
 (defun paradox-previous-entry (&optional n)
@@ -763,15 +821,7 @@ nil) on the Packages buffer."
   (mapc #'paradox--set-local-value paradox-local-variables)
   (let ((total-lines (int-to-string (length tabulated-list-entries))))
     (paradox--update-mode-line-front-space total-lines)
-    (paradox--update-mode-line-buffer-identification total-lines))
-  (set-face-foreground
-   'paradox-mode-line-face
-   (let ((fg (or (face-foreground 'mode-line-buffer-id nil t)
-                 (face-foreground 'default nil t))))
-     (when fg
-       (if (> (color-distance "white" fg)
-              (color-distance "black" fg))
-           "black" "white")))))
+    (paradox--update-mode-line-buffer-identification total-lines)))
 
 (defun paradox--update-mode-line-buffer-identification (_total-lines)
   "Update `mode-line-buffer-identification'.
@@ -790,8 +840,7 @@ TOTAL-LINES is currently unused."
                                                       (paradox--cas "dependency")
                                                       (paradox--cas "unsigned")))
           (paradox--current-filter
-           "" ,(paradox--build-buffer-id " Total:" (length package-archive-contents)))
-          (spinner-current " Executing Transaction"))))
+           "" ,(paradox--build-buffer-id " Total:" (length package-archive-contents))))))
 
 (defvar sml/col-number)
 (defvar sml/numbers-separator)
