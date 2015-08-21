@@ -9,6 +9,7 @@
 #include "Irony.h"
 #include "Command.h"
 
+#include "support/CIndex.h"
 #include "support/CommandLineParser.h"
 
 #include <cassert>
@@ -42,6 +43,10 @@ static void printVersion() {
   // do not change the format for the first line, external programs should be
   // able to rely on it
   std::cout << "irony-server version " IRONY_PACKAGE_VERSION "\n";
+
+  CXString cxVersionString = clang_getClangVersion();
+  std::cout << clang_getCString(cxVersionString) << "\n";
+  clang_disposeString(cxVersionString);
 }
 
 static void dumpUnsavedFiles(Command &command) {
@@ -93,14 +98,27 @@ struct InteractiveCommandProvider : CommandProviderInterface {
   }
 };
 
+struct RestoreClogOnExit {
+  RestoreClogOnExit() : rdbuf_(std::clog.rdbuf()) {
+  }
+
+  ~RestoreClogOnExit() {
+    std::clog.rdbuf(rdbuf_);
+  }
+
+private:
+  RestoreClogOnExit(const RestoreClogOnExit &);
+  RestoreClogOnExit &operator=(const RestoreClogOnExit &);
+
+private:
+  std::streambuf *rdbuf_;
+};
+
 int main(int ac, const char *av[]) {
   std::vector<std::string> argv(&av[1], &av[ac]);
 
   // stick to STL streams, no mix of C and C++ for IO operations
-  std::cin.sync_with_stdio(false);
-  std::cout.sync_with_stdio(false);
-  std::cerr.sync_with_stdio(false);
-  std::clog.sync_with_stdio(false);
+  std::ios_base::sync_with_stdio(false);
 
   bool interactiveMode = false;
 
@@ -112,6 +130,13 @@ int main(int ac, const char *av[]) {
   }
 
   std::ofstream logFile;
+
+  // When logging to a specific file, std::clog.rdbuf() is replaced by the log
+  // file's one. When we return from the main, this buffer is deleted (at the
+  // same time as logFile) but std::clog is still active, and will try to
+  // release the rdbuf() which has already been released in logFile's
+  // destructor. To avoid this we restore std::clog()'s original rdbuf on exit.
+  RestoreClogOnExit clogBufferRestorer;
 
   unsigned optCount = 0;
   while (optCount < argv.size()) {

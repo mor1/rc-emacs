@@ -116,7 +116,7 @@ The slash is expected at the end."
 
 ;;;###autoload
 (defcustom irony-additional-clang-options nil
-  "Additionnal command line options to pass down to libclang.
+  "Additional command line options to pass down to libclang.
 
 Please, do NOT use this variable to add header search paths, only
 additional warnings or compiler options.
@@ -493,19 +493,20 @@ The installation requires CMake and the libclang developpement package."
                  (shell-quote-argument irony-cmake-executable))))
            (irony--install-server-read-command command))))
   (let ((build-dir (or irony-server-build-dir
-                       (format "%s/build-irony-server-%s"
-                               temporary-file-directory
-                               (irony-version)))))
-  (make-directory build-dir t)
-  (let ((default-directory build-dir))
-    ;; we need to kill the process to be able to install a new one,
-    ;; at least on Windows
-    (irony-server-kill)
-    (with-current-buffer (compilation-start command nil
-                                            #'(lambda (maj-mode)
-                                                "*irony-server build*"))
-      (setq-local compilation-finish-functions
-                  '(irony--server-install-finish-function))))))
+                       (concat 
+                        (file-name-as-directory temporary-file-directory)
+                        (file-name-as-directory (format "build-irony-server-%s"
+                                                        (irony-version)))))))
+    (make-directory build-dir t)
+    (let ((default-directory build-dir))
+      ;; we need to kill the process to be able to install a new one,
+      ;; at least on Windows
+      (irony-server-kill)
+      (with-current-buffer (compilation-start command nil
+                                              #'(lambda (maj-mode)
+                                                  "*irony-server build*"))
+        (setq-local compilation-finish-functions
+                    '(irony--server-install-finish-function))))))
 
 (defun irony--server-install-finish-function (buffer msg)
   (if (string= "finished\n" msg)
@@ -561,13 +562,14 @@ list (and undo information is not kept).")
           (process-adaptive-read-buffering nil)
           process)
       (setq process
-            (start-process "Irony" irony--server-buffer
-                           irony--server-executable
-                           "-i"
-                           "--log-file"
-                           (expand-file-name
-                            (format-time-string "irony.%Y-%m-%d_%Hh-%Mm-%Ss.log")
-                            temporary-file-directory)))
+            (start-process-shell-command
+             "Irony"                    ;process name
+             irony--server-buffer       ;buffer
+             (format "%s -i 2> %s"      ;command
+                     (shell-quote-argument irony--server-executable)
+                     (expand-file-name
+                      (format-time-string "irony.%Y-%m-%d_%Hh-%Mm-%Ss.log")
+                      temporary-file-directory))))
       (buffer-disable-undo irony--server-buffer)
       (set-process-query-on-exit-flag process nil)
       (set-process-sentinel process 'irony--server-process-sentinel)
