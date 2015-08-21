@@ -1,0 +1,1 @@
+(define-package "memolist" "20150804.1021" "memolist.el is Emacs port of memolist.vim." '((markdown-mode "22.0") (ag "0.45")) :stars '(#("0" 0 1 (font-lock-face paradox-star-face))) :url "http://github.com/mikanfactory/emacs-memolist" :keywords '("markdown" "memo"))
