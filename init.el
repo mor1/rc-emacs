@@ -94,6 +94,7 @@ started from a shell."
   (color-theme-sanityinc-solarized-dark)
   )
 (set-default-font "-apple-Consolas-medium-normal-normal-*-11-*-*-*-m-0-fontset-auto3")
+;; (set-default-font "-apple-Consolas-medium-normal-normal-*-16-*-*-*-m-0-fontset-auto3")
 
 ;; frame size
 (if window-system
