@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "yaml-mode" "yaml-mode.el" (21671 46356 0 0))
+;;;### (autoloads nil "yaml-mode" "yaml-mode.el" (21979 8817 0 0))
 ;;; Generated autoloads from yaml-mode.el
 
 (let ((loads (get 'yaml 'custom-loads))) (if (member '"yaml-mode" loads) nil (put 'yaml 'custom-loads (cons '"yaml-mode" loads))))
@@ -15,12 +15,7 @@ Simple mode to edit YAML.
 
 \(fn)" t nil)
 
-(add-to-list 'auto-mode-alist '("\\.ya?ml$" . yaml-mode))
-
-;;;***
-
-;;;### (autoloads nil nil ("yaml-mode-pkg.el") (21671 46356 503790
-;;;;;;  0))
+(add-to-list 'auto-mode-alist '("\\.e?ya?ml$" . yaml-mode))
 
 ;;;***
 
