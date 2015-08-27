@@ -140,7 +140,8 @@
                (if (floatp spacing)
                    (truncate (* (frame-char-height) spacing))
                  spacing)))
-         (w (frame-parameter nil (intern (format "%s-fringe" diff-hl-side))))
+         (w (min (frame-parameter nil (intern (format "%s-fringe" diff-hl-side)))
+                 16))
          (middle (make-vector h (expt 2 (1- w))))
          (ones (1- (expt 2 w)))
          (top (copy-sequence middle))
@@ -212,7 +213,8 @@
          (vc-hg-diff-switches nil)
          (vc-svn-diff-switches nil)
          (vc-diff-switches '("-U0"))
-         (vc-disable-async-diff t))
+         ,@(when (boundp 'vc-disable-async-diff)
+             '((vc-disable-async-diff t))))
      ,body))
 
 (defun diff-hl-changes ()
@@ -435,13 +437,13 @@ in the source file, or the last line of the hunk above it."
   (interactive)
   (diff-hl-next-hunk t))
 
-(define-prefix-command 'diff-hl-command-map)
-
-(let ((map diff-hl-command-map))
-  (define-key map "n" 'diff-hl-revert-hunk)
-  (define-key map "[" 'diff-hl-previous-hunk)
-  (define-key map "]" 'diff-hl-next-hunk)
-  map)
+(defvar diff-hl-command-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "n" 'diff-hl-revert-hunk)
+    (define-key map "[" 'diff-hl-previous-hunk)
+    (define-key map "]" 'diff-hl-next-hunk)
+    map))
+(fset 'diff-hl-command-map diff-hl-command-map)
 
 ;;;###autoload
 (define-minor-mode diff-hl-mode
