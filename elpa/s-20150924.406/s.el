@@ -1,10 +1,10 @@
 ;;; s.el --- The long lost Emacs string manipulation library.
 
-;; Copyright (C) 2012 Magnar Sveen
+;; Copyright (C) 2012-2015 Magnar Sveen
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
-;; Version: 1.9.0
-;; Package-Version: 20150825.50
+;; Version: 1.10.0
+;; Package-Version: 20150924.406
 ;; Keywords: strings
 
 ;; This program is free software; you can redistribute it and/or modify
