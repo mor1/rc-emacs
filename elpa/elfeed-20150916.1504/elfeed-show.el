@@ -172,7 +172,10 @@
   (let ((link (elfeed-entry-link elfeed-show-entry)))
     (when link
       (kill-new link)
-      (x-set-selection 'PRIMARY link)
+      (if (fboundp 'gui-set-selection)
+          (gui-set-selection 'PRIMARY link)
+        (with-no-warnings
+          (x-set-selection 'PRIMARY link)))
       (message "Yanked: %s" link))))
 
 (defun elfeed-show-tag (&rest tags)
@@ -215,13 +218,13 @@ directory and saves all attachments in the chosen directory."
 
 (defun elfeed--download-enclosure (url path)
   "Download asynchronously the enclosure from URL to PATH."
-  (if (fboundp 'async-start)
-      ;; If async is available, don't hang emacs !
-      (async-start
-       (lambda ()
-         (url-copy-file url path t))
-       (lambda (_)
-         (message (format "%s downloaded" url))))
+  (if (require 'async nil :noerror)
+      (with-no-warnings
+        (async-start
+         (lambda ()
+           (url-copy-file url path t))
+         (lambda (_)
+           (message (format "%s downloaded" url)))))
     (url-copy-file url path t)))
 
 (defun elfeed--get-enclosure-num (prompt entry &optional multi)
