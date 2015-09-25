@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20150824.211
+;; Package-Version: 20150922.251
 ;; Version: 0.3.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
@@ -171,11 +171,11 @@ For example, to make SPC do the same as ?a, use
   "Face used for first non-terminating leading chars.")
 
 (defface avy-lead-face-1
-    '((t (:foreground "white" :background "gray")))
+  '((t (:foreground "white" :background "gray")))
   "Face used for matched leading chars.")
 
 (defface avy-lead-face-2
-    '((t (:foreground "white" :background "#f86bf3")))
+  '((t (:foreground "white" :background "#f86bf3")))
   "Face used for leading chars.")
 
 (defface avy-lead-face
@@ -185,6 +185,10 @@ For example, to make SPC do the same as ?a, use
 (defface avy-background-face
   '((t (:foreground "gray40")))
   "Face for whole window background during selection.")
+
+(defface avy-goto-char-timer-face
+  '((t (:inherit highlight)))
+  "Face for matches during reading chars using `avy-goto-char-timer'.")
 
 (defconst avy-lead-faces '(avy-lead-face
                            avy-lead-face-0
@@ -650,7 +654,10 @@ LEAF is normally ((BEG . END) . WND)."
     (overlay-put ol 'window wnd)
     (overlay-put ol 'display (if (string= old-str "\n")
                                  (concat str "\n")
-                               str))
+                               ;; add padding for wide-width character
+                               (if (eq (string-width old-str) 2)
+                                   (concat str " ")
+                                 str)))
     (push ol avy--overlays-lead)))
 
 (defun avy--overlay-at-full (path leaf)
@@ -726,9 +733,12 @@ LEAF is normally ((BEG . END) . WND)."
                        (cond ((string= old-str "\n")
                               (concat str "\n"))
                              ((string= old-str "\t")
-                              (concat str (make-string (- tab-width len) ?\ )))
+                              (concat str (make-string (max (- tab-width len) 0) ?\ )))
                              (t
-                              str)))
+                              ;; add padding for wide-width character
+                              (if (eq (string-width old-str) 2)
+                                  (concat str " ")
+                                str))))
           (push ol avy--overlays-lead))))))
 
 (defun avy--overlay-post (path leaf)
@@ -953,7 +963,7 @@ Otherwise, forward to `goto-line' with ARG."
   (if (not (memq arg '(1 4)))
       (progn
         (goto-char (point-min))
-        (forward-line arg))
+        (forward-line (1- arg)))
     (avy-with avy-goto-line
       (let* ((avy-handler-function
               (lambda (char)
@@ -1031,19 +1041,63 @@ ARG lines can be used."
 (defcustom avy-timeout-seconds 0.5
   "How many seconds to wait for the second char.")
 
+(defun avy--read-string-timer ()
+  "Read as many chars as possible and return them as string.
+At least one char must be read, and then repeatedly one next char
+may be read if it is entered before `avy-timeout-seconds'.  `DEL'
+deletes the last char entered, and `RET' exits with the currently
+read string immediately instead of waiting for another char for
+`avy-timeout-seconds'."
+  (let ((str "") char break overlays regex)
+    (unwind-protect
+        (progn
+          (while (and (not break)
+                      (setq char (read-char (format "char%s: "
+                                                    (if (string= str "")
+                                                        str
+                                                      (format " (%s)" str)))
+                                            t
+                                            (and (not (string= str ""))
+                                                 avy-timeout-seconds))))
+            ;; Unhighlight
+            (dolist (ov overlays)
+              (delete-overlay ov))
+            (setq overlays nil)
+            (cond
+             ;; Handle RET
+             ((= char 13)
+              (setq break t))
+             ;; Handle DEL
+             ((= char 127)
+              (let ((l (length str)))
+                (when (>= l 1)
+                  (setq str (substring str 0 (1- l))))))
+             (t
+              (setq str (concat str (list char)))))
+            ;; Highlight
+            (when (>= (length str) 1)
+              (save-excursion
+                (goto-char (window-start))
+                (setq regex (regexp-quote str))
+                (while (re-search-forward regex (window-end) t)
+                  (unless (get-char-property (point) 'invisible)
+                    (let ((ov (make-overlay (match-beginning 0) (match-end 0))))
+                      (push ov overlays)
+                      (overlay-put ov 'window (selected-window))
+                      (overlay-put ov 'face 'avy-goto-char-timer-face)))))))
+          str)
+      (dolist (ov overlays)
+        (delete-overlay ov)))))
+
 ;;;###autoload
 (defun avy-goto-char-timer (&optional arg)
-  "Read one or two consecutive chars and jump to the first one.
+  "Read one or many consecutive chars and jump to the first one.
 The window scope is determined by `avy-all-windows' (ARG negates it)."
   (interactive "P")
-  (let ((c1 (read-char "char 1: " t))
-        (c2 (read-char "char 2: " t avy-timeout-seconds)))
+  (let ((str (avy--read-string-timer)))
     (avy-with avy-goto-char-timer
       (avy--generic-jump
-       (regexp-quote
-        (if c2
-            (string c1 c2)
-          (string c1)))
+       (regexp-quote str)
        arg
        avy-style))))
 
