@@ -1,0 +1,1 @@
+(define-package "aggressive-indent" "20150919.1840" "Minor mode to aggressively keep your code always indented" '((emacs "24.1") (cl-lib "0.5")) :stars '(#("174" 0 3 (font-lock-face paradox-star-face))) :url "http://github.com/Malabarba/aggressive-indent-mode" :keywords '("indent" "lisp" "maint" "tools"))
