@@ -75,7 +75,7 @@ started from a shell."
 ;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
 ;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
 
-;; colours and fonts
+;; colours
 (autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
 (add-hook 'eshell-preoutput-filter-functions 'ansi-color-filter-apply)
@@ -86,15 +86,19 @@ started from a shell."
 (package-initialize)
 
 (defun light () "light colour scheme"
-  (interactive)
-  (color-theme-sanityinc-solarized-light)
-  )
+       (interactive)
+       (color-theme-sanityinc-solarized-light)
+       )
 (defun dark () "dark colour scheme"
-  (interactive)
-  (color-theme-sanityinc-solarized-dark)
-  )
-(set-default-font "-apple-Consolas-medium-normal-normal-*-11-*-*-*-m-0-fontset-auto3")
-;; (set-default-font "-apple-Consolas-medium-normal-normal-*-16-*-*-*-m-0-fontset-auto3")
+       (interactive)
+       (color-theme-sanityinc-solarized-dark)
+       )
+
+;; fonts
+;; for display purposes
+;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-fontset-auto2")
+;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-fontset-auto2")
+(set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
 
 ;; frame size
 (if window-system
@@ -116,6 +120,9 @@ started from a shell."
 ;; remember cursor position in file after close
 (setq-default save-place t)
 (require 'saveplace)
+
+;; remember point position when scrolling
+(setq scroll-preserve-screen-position t)
 
 ;; tweak auto-fill
 (setq paragraph-start "\f\\|[ \t]*$\\| *[-*+] +.+$"
