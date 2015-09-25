@@ -2465,7 +2465,6 @@ See py-no-outdent-re-raw for better readable content ")
    "finally"
    "for"
    "if"
-   "import"
    "try"
    "while"
    "with"
@@ -3968,12 +3967,17 @@ C-q TAB inserts a literal TAB-character."
     (setq outmost (py-compute-indentation nil nil nil nil nil nil this-indent-offset))
     ;; now choose the indent
     (setq need
-	  (cond ((bolp)
-		 outmost)
-		((eq cui outmost)
-		 (when (and (eq this-command last-command) (not outmost-only))
+	  (cond ((eq this-command last-command)
+		 (if (eq cui outmost)
+		     (when (not outmost-only)
+		       (py--calculate-indent-backwards cui this-indent-offset)))
+		 (if (bolp)
+		     (py-compute-indentation orig)
 		   (py--calculate-indent-backwards cui this-indent-offset)))
-		(t (py--calculate-indent-backwards cui this-indent-offset))))
+		(t
+		 outmost
+		 ;; (py-compute-indentation orig)
+		 )))
     (when (and (called-interactively-p 'any) py-verbose-p) (message "py-indent-line, need: %s" need))
     ;; if at outmost
     ;; and not (eq this-command last-command), need remains nil
@@ -4564,16 +4568,6 @@ Returns beginning of block-or-clause if successful, nil otherwise
   (interactive)
   (py--backward-prepare indent 'py-extended-block-or-clause-re 'py-extended-block-or-clause-re (called-interactively-p 'any)))
 
-(defun py-backward-class (&optional indent)
- "Go to beginning of class.
-
-If already at beginning, go one class backward.
-Returns beginning of class if successful, nil otherwise
-
-When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (py--backward-prepare indent 'py-class-re 'py-extended-block-or-clause-re (called-interactively-p 'any)))
-
 (defun py-backward-clause (&optional indent)
  "Go to beginning of clause.
 
@@ -4583,26 +4577,6 @@ Returns beginning of clause if successful, nil otherwise
 "
   (interactive)
   (py--backward-prepare indent 'py-extended-block-or-clause-re 'py-extended-block-or-clause-re (called-interactively-p 'any)))
-
-(defun py-backward-def (&optional indent)
- "Go to beginning of def.
-
-If already at beginning, go one def backward.
-Returns beginning of def if successful, nil otherwise
-
-When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (py--backward-prepare indent 'py-def-re 'py-extended-block-or-clause-re (called-interactively-p 'any)))
-
-(defun py-backward-def-or-class (&optional indent)
- "Go to beginning of def-or-class.
-
-If already at beginning, go one def-or-class backward.
-Returns beginning of def-or-class if successful, nil otherwise
-
-When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (py--backward-prepare indent 'py-def-or-class-re 'py-extended-block-or-clause-re (called-interactively-p 'any)))
 
 (defun py-backward-if-block (&optional indent)
  "Go to beginning of if-block.
@@ -4694,16 +4668,6 @@ Returns beginning of block-or-clause if successful, nil otherwise
   (interactive)
   (py--backward-prepare indent 'py-extended-block-or-clause-re 'py-extended-block-or-clause-re (called-interactively-p 'any) t))
 
-(defun py-backward-class-bol (&optional indent)
- "Go to beginning of class, go to BOL.
-
-If already at beginning, go one class backward.
-Returns beginning of class if successful, nil otherwise
-
-When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (py--backward-prepare indent 'py-class-re 'py-extended-block-or-clause-re (called-interactively-p 'any) t))
-
 (defun py-backward-clause-bol (&optional indent)
  "Go to beginning of clause, go to BOL.
 
@@ -4713,26 +4677,6 @@ Returns beginning of clause if successful, nil otherwise
 "
   (interactive)
   (py--backward-prepare indent 'py-extended-block-or-clause-re 'py-extended-block-or-clause-re (called-interactively-p 'any) t))
-
-(defun py-backward-def-bol (&optional indent)
- "Go to beginning of def, go to BOL.
-
-If already at beginning, go one def backward.
-Returns beginning of def if successful, nil otherwise
-
-When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (py--backward-prepare indent 'py-def-re 'py-extended-block-or-clause-re (called-interactively-p 'any) t))
-
-(defun py-backward-def-or-class-bol (&optional indent)
- "Go to beginning of def-or-class, go to BOL.
-
-If already at beginning, go one def-or-class backward.
-Returns beginning of def-or-class if successful, nil otherwise
-
-When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (py--backward-prepare indent 'py-def-or-class-re 'py-extended-block-or-clause-re (called-interactively-p 'any) t))
 
 (defun py-backward-elif-block-bol (&optional indent)
  "Go to beginning of elif-block, go to BOL.
@@ -5277,7 +5221,7 @@ computing indents"
 	  (py-backward-statement orig done limit ignore-in-string-p))
 	 ((nth 4 pps)
 	  (goto-char (nth 8 pps))
-	  (skip-chars-backward " \t\r\n\f") 
+	  (skip-chars-backward " \t\r\n\f")
 	  (py-backward-statement orig done limit ignore-in-string-p))
          ((nth 1 pps)
           (goto-char (1- (nth 1 pps)))
@@ -5763,6 +5707,107 @@ Return position if successful"
     (and last (goto-char last))
     (when (and (looking-back py-section-end)(< orig (point)))
       (point))))
+
+(defun py--backward-def-or-class-decorator-maybe (&optional bol)
+  "Return position of the decorator.
+
+With BOL, return line-beginning-position"
+  (let ((orig (point))
+	erg)
+    (while (and (not (bobp)) (progn (forward-line -1)(beginning-of-line) (eq (char-after) ?@)))
+      (setq erg (point)))
+    ;; for bol-forms, set erg to bol
+    (when (and erg bol
+	       (setq erg (line-beginning-position))))
+    (or erg (goto-char orig))))
+
+(defun py--backward-def-or-class-intern (regexp &optional indent bol)
+  (while (and (re-search-backward regexp nil 'move 1)
+	      (nth 8 (parse-partial-sexp (point-min) (point)))))
+  (let ((erg (when (looking-at regexp)
+	       (if bol (line-beginning-position) (point)))))
+    ;; bol-forms at not at bol yet
+    (and bol erg (goto-char erg))
+    (and erg py-mark-decorators (setq erg (py--backward-def-or-class-decorator-maybe bol)))
+    erg))
+
+(defun py-backward-class (&optional indent)
+  "Go to beginning of class.
+
+If already at beginning, go one class backward.
+Returns beginning of class if successful, nil otherwise
+
+When `py-mark-decorators' is non-nil, decorators are considered too. "
+  (interactive)
+  (let ((erg (py--backward-def-or-class-intern py-class-re indent)))
+    (when (and py-verbose-p (called-interactively-p 'any))
+      (message "%s" erg))
+    erg))
+
+(defun py-backward-def (&optional indent)
+  "Go to beginning of def.
+
+If already at beginning, go one def backward.
+Returns beginning of def if successful, nil otherwise
+
+When `py-mark-decorators' is non-nil, decorators are considered too. "
+  (interactive)
+  (let ((erg (py--backward-def-or-class-intern py-def-re indent)))
+    (when (and py-verbose-p (called-interactively-p 'any))
+      (message "%s" erg))
+    erg))
+
+(defun py-backward-def-or-class (&optional indent)
+  "Go to beginning of def-or-class.
+
+If already at beginning, go one def-or-class backward.
+Returns beginning of def-or-class if successful, nil otherwise
+
+When `py-mark-decorators' is non-nil, decorators are considered too. "
+  (interactive)
+  (let ((erg (py--backward-def-or-class-intern py-def-or-class-re indent)))
+    (when (and py-verbose-p (called-interactively-p 'any))
+      (message "%s" erg))
+    erg))
+
+(defun py-backward-class-bol (&optional indent)
+  "Go to beginning of class, go to BOL.
+
+If already at beginning, go one class backward.
+Returns beginning of class if successful, nil otherwise
+
+When `py-mark-decorators' is non-nil, decorators are considered too. "
+  (interactive)
+  (let ((erg (py--backward-def-or-class-intern py-class-re indent t)))
+    (when (and py-verbose-p (called-interactively-p 'any))
+      (message "%s" erg))
+    erg))
+
+(defun py-backward-def-bol (&optional indent)
+  "Go to beginning of def, go to BOL.
+
+If already at beginning, go one def backward.
+Returns beginning of def if successful, nil otherwise
+
+When `py-mark-decorators' is non-nil, decorators are considered too. "
+  (interactive)
+  (let ((erg (py--backward-def-or-class-intern py-def-re indent t)))
+    (when (and py-verbose-p (called-interactively-p 'any))
+      (message "%s" erg))
+    erg))
+
+(defun py-backward-def-or-class-bol (&optional indent)
+  "Go to beginning of def-or-class, go to BOL.
+
+If already at beginning, go one def-or-class backward.
+Returns beginning of def-or-class if successful, nil otherwise
+
+When `py-mark-decorators' is non-nil, decorators are considered too. "
+  (interactive)
+  (let ((erg (py--backward-def-or-class-intern py-def-or-class-re indent t)))
+    (when (and py-verbose-p (called-interactively-p 'any))
+      (message "%s" erg))
+    erg))
 
 ;; python-components-kill-forms
 
@@ -7961,6 +8006,16 @@ See `py-if-name-main-permission-p'"
 		 "if __name__ == '__main__ ':" string))))
     strg))
 
+;; `py-execute-line' calls void function, lp:1492054
+(or (functionp 'indent-rigidly-left)
+    (defun indent-rigidly-left (beg end)
+      "Indent all lines between BEG and END leftward by one space."
+      (interactive "r")
+      (indent-rigidly--pop-undo)
+      (indent-rigidly
+       beg end
+       (if (eq (current-bidi-paragraph-direction) 'right-to-left) 1 -1))))
+
 (defun py--fix-start (string)
   "Internal use by py-execute... functions.
 
@@ -8089,16 +8144,6 @@ Optional OUTPUT-BUFFER and ERROR-BUFFER might be given. "
     (shell-command (concat pcmd " " filename) output-buffer error-buffer)
     (when (called-interactively-p 'any) (switch-to-buffer output-buffer))))
 
-;; ;
-;; (defun py-execute-line ()
-;;   "Send current line from beginning of indent to Python interpreter. "
-;;   (interactive)
-;;   (save-excursion
-;;     (let ((beg (progn (back-to-indentation)
-;;                       (point))))
-;;       (py-execute-region beg (line-end-position)))))
-
-;;  Subprocess utilities and filters
 (defvar py-last-exeption-buffer nil
   "Internal use only - when `py-up-exception' is called in
   source-buffer, this will deliver the exception-buffer again. ")
@@ -9360,8 +9405,30 @@ local bindings to py-newline-and-indent."))
                ("(python-lib)Function-Method-Variable Index")
                ("(python-lib)Miscellaneous Index"))))
 
+(defun py--find-definition-in-source (sourcefile)
+  (called-interactively-p 'any) (message "sourcefile: %s" sourcefile)
+  (when (find-file sourcefile)
+    ;; (if (stringp py-separator-char)
+    ;; py-separator-char
+    ;; (char-to-string py-separator-char))
+
+    (goto-char (point-min))
+    (when
+	(or (re-search-forward (concat py-def-or-class-re symbol) nil t 1)
+	    (progn
+	      ;; maybe a variable definition?
+	      (goto-char (point-min))
+	      (re-search-forward (concat "^.+ " symbol) nil t 1)))
+      (push-mark)
+      (goto-char (match-beginning 0))
+      (exchange-point-and-mark))))
+
 ;;  Find function stuff, lifted from python.el
 (defalias 'py-find-function 'py-find-definition)
+(defun py--find-definition-question-type ()
+  (cond ((setq erg (py--send-string-return-output (concat "import inspect;inspect.isbuiltin(\"" symbol "\")"))))
+	(t (setq erg (py--send-string-return-output (concat imports "import inspect;inspect.getmodule(\"" symbol "\")"))))))
+
 (defun py-find-definition (&optional symbol)
   "Find source of definition of SYMBOL.
 
@@ -9386,7 +9453,7 @@ Interactively, prompt for SYMBOL."
          (local (or
                  (py--until-found (concat "class " symbol) imenu--index-alist)
                  (py--until-found symbol imenu--index-alist)))
-         source sourcefile path)
+         erg sourcefile path)
     ;; ismethod(), isclass(), isfunction() or isbuiltin()
     ;; ismethod isclass isfunction isbuiltin)
     (if local
@@ -9395,31 +9462,26 @@ Interactively, prompt for SYMBOL."
               (goto-char local)
               (search-forward symbol (line-end-position) nil 1)
               (push-mark)
+	      (setq erg (buffer-substring-no-properties (line-beginning-position) (match-end 0)))
               (goto-char (match-beginning 0))
               (exchange-point-and-mark))
           (error "%s" "local not a number"))
-      (setq source (py--send-string-return-output (concat imports "import inspect;inspect.getmodule(" symbol ")")))
-      (cond ((string-match "SyntaxError" source)
-             (setq source (substring-no-properties source (match-beginning 0)))
+      (py--find-definition-question-type)
+      (cond ((string-match "SyntaxError" erg)
+             (setq erg (substring-no-properties erg (match-beginning 0)))
              (set-window-configuration last-window-configuration)
              ;; (jump-to-register 98888888)
-             (message "Can't get source: %s" source))
-            ((and source (string-match "builtin" source))
+             (message "Can't get source: %s" erg))
+            ((and erg (string-match "builtin" erg))
              (progn
                (set-window-configuration last-window-configuration)
                ;; (jump-to-register 98888888)
-                    (message "%s" source)))
-            ((and source (setq path (replace-regexp-in-string "'" "" (py--send-string-return-output "import os;os.getcwd()")))
-                  (setq sourcefile (replace-regexp-in-string "'" "" (py--send-string-return-output (concat "inspect.getsourcefile(" symbol ")"))))
-                  (called-interactively-p 'any) (message "sourcefile: %s" sourcefile)
-                  (find-file (concat path (char-to-string py-separator-char) sourcefile))
-                  (goto-char (point-min))
-                  (re-search-forward (concat py-def-or-class-re symbol) nil nil 1))
-             (push-mark)
-             (goto-char (match-beginning 0))
-             (exchange-point-and-mark)
-             (display-buffer py-exception-buffer)))
-      sourcefile)))
+	       (message "%s" erg)))
+            ((and erg (setq path (replace-regexp-in-string "'" "" (py--send-string-return-output "import os;os.getcwd()")))
+                  (setq sourcefile (replace-regexp-in-string "'" "" (py--send-string-return-output (concat "inspect.getsourcefile(" symbol ")")))))
+	     (py--find-definition-in-source sourcefile)
+             (display-buffer py-exception-buffer))))
+    erg))
 
 (defun py-find-imports ()
   "Find top-level imports.
@@ -19149,28 +19211,28 @@ Don't save anything for STR matching `py-input-filter-re' "
 (add-to-list 'auto-mode-alist (cons (purecopy "\\.py\\'")  'python-mode))
 
 ;; Python Macro File
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pym\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pym\'")  'python-mode))
 
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pyc\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pyc\'")  'python-mode))
 
 
 ;; Pyrex Source
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pyx\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pyx\'")  'python-mode))
 
 ;; Python Optimized Code
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pyo\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pyo\'")  'python-mode))
 
 ;; Pyrex Definition File
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pxd\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pxd\'")  'python-mode))
 
 ;; Python Repository
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pyr\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pyr\'")  'python-mode))
 
 ;; Python Path Configuration
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.pth\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.pth\'")  'python-mode))
 
 ;; Python Wheels
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.whl\\'")  'python-mode))
+(add-to-list 'auto-mode-alist (cons (purecopy "\.whl\'")  'python-mode))
 
 ;;  (add-to-list 'interpreter-mode-alist
 ;;  (cons (purecopy "[bi]*python[0-9.]*") 'python-mode))
@@ -19608,7 +19670,6 @@ LIEP stores line-end-position at point-of-interest
 			 (cond ((and (not line)
 				     (eq liep (line-end-position)))
 				(when (py--line-backward-maybe) (setq line t))
-				(setq line t)
 				(py-compute-indentation orig origline closing line nesting repeat indent-offset liep))
 			       (t (+
 				   (cond (indent-offset)
@@ -20295,25 +20356,25 @@ the output."
 
 When MSG is non-nil messages the first line of STRING.  Return
 the output."
-  (with-current-buffer (process-buffer process)
-    (let* (erg
-	   (process (or process (get-buffer-process (py-shell))))
-	   (comint-preoutput-filter-functions
-	    (append comint-preoutput-filter-functions
-		    '(ansi-color-filter-apply
-		      (lambda (string)
-			(setq erg (concat erg string))
-			"")))))
-      (py-send-string string process)
-      (accept-process-output process 5)
-      (sit-for 0.1 t)
-      (when (and erg (not (string= "" erg)))
-	(setq erg
-	      (replace-regexp-in-string
-	       (format "[ \n]*%s[ \n]*" py-fast-filter-re)
-	       "" erg)))
-      ;; (sit-for 0.1 t)
-      erg)))
+  (let ((process (or process (get-buffer-process (py-shell))))
+	erg)
+    (with-current-buffer (process-buffer process)
+      (let ((comint-preoutput-filter-functions
+	     (append comint-preoutput-filter-functions
+		     '(ansi-color-filter-apply
+		       (lambda (string)
+			 (setq erg (concat erg string))
+			 "")))))
+	(py-send-string string process)
+	(accept-process-output process 5)
+	(sit-for 0.1 t)
+	(when (and erg (not (string= "" erg)))
+	  (setq erg
+		(replace-regexp-in-string
+		 (format "[ \n]*%s[ \n]*" py-fast-filter-re)
+		 "" erg)))
+	;; (sit-for 0.1 t)
+	erg))))
 
 (defun py-which-def-or-class ()
   "Returns concatenated `def' and `class' names in hierarchical order, if cursor is inside.
