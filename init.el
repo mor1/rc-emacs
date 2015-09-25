@@ -143,51 +143,60 @@ started from a shell."
     (linum-mode -1)))
 (global-set-key [remap goto-line] 'goto-line-with-feedback)
 
-(defun insert-euro () "Insert euro character"
+(defun insert-euro ()
+  "Insert euro character"
   (interactive)
   (self-insert-command "€")
   )
 
-(defun line-to-top-of-window () "Move line point is on to top of window"
+(defun line-to-top-of-window ()
+  "Move line point is on to top of window"
   (interactive)
   (recenter 0)
   )
 
-(defun line-to-bottom-of-window () "Move line point is on to bottom of window"
+(defun line-to-bottom-of-window ()
+  "Move line point is on to bottom of window"
   (interactive)
-  (recenter (frame-height))
+  (recenter -1)
   )
 
-(defun warp-to-top-of-window () "Move the point to line 0"
+(defun warp-to-top-of-window ()
+  "Move the point to top of window"
   (interactive)
   (move-to-window-line 0)
   )
 
-(defun warp-to-bottom-of-window () "Move the point to line (frame-height)"
+(defun warp-to-bottom-of-window ()
+  "Move the point to bottom of window"
   (interactive)
   (move-to-window-line -1)
   )
 
-(defun reread-dot-emacs () "Re-read initialisation"
+(defun reread-dot-emacs ()
+  "Re-read initialisation"
   (interactive)
   (load-file "~/.emacs.d/init.el")
   )
 
-(defun dos2unix () "Turn DOS file to Unix"
+(defun dos2unix ()
+  "Turn DOS file to Unix"
   (interactive)
   (save-excursion
     (beginning-of-buffer)
     (replace-string "\015" "")
     ))
 
-(defun unix2dos () "Turn Unix file to DOS"
+(defun unix2dos ()
+  "Turn Unix file to DOS"
   (interactive)
   (save-excursion
     (beginning-of-buffer)
     (replace-string "\012" "\015\012")
     ))
 
-(defun mime2unix () "Get rid of MIME =RET junk"
+(defun mime2unix ()
+  "Get rid of MIME =RET junk"
   (interactive)
   (save-excursion
     (beginning-of-buffer)
@@ -203,14 +212,16 @@ started from a shell."
         (t (self-insert-command (or arg 1))))
   )
 
-(defun my-kill-emacs () "Confirm before save-buffers-kill-emacs"
+(defun my-kill-emacs ()
+  "Confirm before save-buffers-kill-emacs"
   (interactive)
   (if (y-or-n-p "Really kill emacs? ")
       (save-buffers-kill-emacs)
     (message "Aborted"))
   )
 
-(defun my-suspend-frame () "Confirm before suspend emacs"
+(defun my-suspend-frame ()
+  "Confirm before suspend emacs"
   (interactive)
   (if (y-or-n-p "Really minimise? ")
       (suspend-frame)
@@ -218,24 +229,26 @@ started from a shell."
   )
 
 ;; visual wrap mode breaks split-window-right
-(defun my-split-window-right () "split window while toggling visual wrap"
-       (interactive)
-       (let (saved-visual-wrap-column visual-wrap-column)
-         (set-visual-wrap-column 0)
-         (split-window-right)
-         ;; (other-window 1)
-         (visual-line-mode t)
-         (set-visual-wrap-column saved-visual-wrap-column)
-         (redraw-display)
-         )
-)
+(defun my-split-window-right ()
+  "split window while toggling visual wrap"
+  (interactive)
+  (let (saved-visual-wrap-column visual-wrap-column)
+    (set-visual-wrap-column 0)
+    (split-window-right)
+    ;; (other-window 1)
+    (visual-line-mode t)
+    (set-visual-wrap-column saved-visual-wrap-column)
+    (redraw-display)
+    )
+  )
 
 ;;; Stefan Monnier <foo at acm.org>. It is the opposite of fill-paragraph
 ;;; Takes a multi-line paragraph and makes it into a single line of text.
 (defun unfill-paragraph ()
   (interactive)
   (let ((fill-column (point-max)))
-    (fill-paragraph nil))
+    (fill-paragraph nil)
+    )
   )
 
 ;;; Code Cleanup for Emacs V1.0
@@ -257,7 +270,8 @@ started from a shell."
   )
 
 ;; prb ispell functions
-(defun ispell-check-paragraph () "Spell check each word in a paragraph"
+(defun ispell-check-paragraph ()
+  "Spell check each word in a paragraph"
   (interactive "*")
   (let ((ispell-check-only nil)
         (ispell-quietly t)
@@ -407,9 +421,7 @@ This command is convenient when reading novel, documentation."
 ;; notmuch email
 (autoload 'notmuch "notmuch" "notmuch mail" t)
 
-
 ;; magit mode
-
 (autoload 'magit-status "magit" nil t)
 ;; (add-hook 'magit-status-mode-hook 'magit-filenotify-mode)
 
@@ -474,7 +486,6 @@ This command is convenient when reading novel, documentation."
              (flyspell-mode t)
              (turn-on-visual-line-mode)
              (set-visual-wrap-column (+ fill-column 2))
-
              (local-set-key (kbd "M-q") 'fill-and-check)
              (local-set-key (kbd "S-<tab>")
                             'flyspell-auto-correct-previous-word)
@@ -522,19 +533,20 @@ This command is convenient when reading novel, documentation."
              (auto-fill-mode 0)
              (local-set-key (kbd "M-q") 'unfill-and-check)
              (local-set-key (kbd "{") 'tex-insert-braces)
-             (local-set-key (kbd "M-[")
-                            '(lambda () (interactive) (insert "{")))
-             (local-set-key (kbd "M-]")
-                            '(lambda () (interactive) (insert "}")))
-             (local-set-key (kbd "C-c m")
-                            '(lambda () (interactive "*")
-                               (tex-enclose-word "\\emph{" "}")))
-             (local-set-key (kbd "C-c C-m")
-                            '(lambda () (interactive "*")
-                               (tex-enclose-word "\\emph{" "}")))
-             (local-set-key (kbd "C-c b")
-                            '(lambda () (interactive "*")
-                               (tex-enclose-word "{\\bf " "}")))
+             (local-set-key
+              (kbd "M-[") '(lambda () (interactive) (insert "{")))
+             (local-set-key
+              (kbd "M-]") '(lambda () (interactive) (insert "}")))
+             (local-set-key
+              (kbd "C-c m")
+              '(lambda () (interactive "*") (tex-enclose-word "\\emph{" "}")))
+             (local-set-key
+              (kbd "C-c C-m")
+              '(lambda () (interactive "*") (tex-enclose-word "\\emph{" "}")))
+             (local-set-key
+              (kbd "C-c b")
+              '(lambda () (interactive "*") (tex-enclose-word "{\\bf " "}")))
+             (local-set-key (kbd "%") 'match-paren)
              ))
 (push '("\\.tex$" . latex-mode) auto-mode-alist)
 (push '("\\.latex$" . latex-mode) auto-mode-alist)
@@ -668,12 +680,11 @@ This command is convenient when reading novel, documentation."
 ;;         (holiday-fixed 11 11 "Veteran's Day")
 ;;         (holiday-float 11 4 4 "Thanksgiving")))
 
-;;N.B. It is assumed that 1 January is defined with holiday-fixed -
-;;this function only returns any extra bank holiday that is allocated
-;;(if any) to compensate for New Year's Day falling on a weekend.
-;;
-;;Where 1 January falls on a weekend, the following Monday is a bank
-;;holiday.
+;; N.B. It is assumed that 1 January is defined with holiday-fixed - this
+;; function only returns any extra bank holiday that is allocated (if any) to
+;; compensate for New Year's Day falling on a weekend.
+
+;; Where 1 January falls on a weekend, the following Monday is a bank holiday.
 (defun holiday-new-year-bank-holiday ()
   (let ((m displayed-month)
         (y displayed-year))
@@ -687,46 +698,43 @@ This command is convenient when reading novel, documentation."
                (list (list (list 1 2 y)
                            "New Year's Day Bank Holiday"))))))))
 
-;;N.B. It is assumed that 25th and 26th are defined with holiday-fixed -
-;;this function only returns any extra bank holiday(s) that are
-;;allocated (if any) to compensate for Christmas Day and/or Boxing Day
-;;falling on a weekend.
-;;
-;;Christmas day is always 25 December; beyond that there is no
-;;entirely consistent practice.  We proceed as follows:
-;;
-;;Traditionally, Boxing day was the first day after Christmas, not
-;;including Sundays (i.e. if Christmas fell on a Saturday, Boxing Day
-;;was Monday 27th) however we follow modern practice here and always
-;;regard Boxing Day as 26 December (which, as noted above, is never
-;;returned by this function).
-;;
-;;Generally the extra bank holiday is allocated on the first available
-;;day that would otherwise have been a working day.  However in the
-;;case where we need to allocate two additional bank holidays -
-;;i.e. where Christmas Day falls on the Saturday, there is some
-;;confusion as to how to proceed.  We allocate the Boxing Day Bank Holiday
-;;to the Monday, since this is the historic date of Boxing Day in this
-;;case, and allocate the Christmas Day Bank Holiday to the following day.
-;;
-;;This is consistent with the way that the 'substitute days' were
-;;allocated in the list of bank holidays on the Department of Trade
-;;and Industry in the recent past, although they don't use the any
-;;specific names for these holidays.
-;;
-;;The latest list on the direct.gov.uk web site is not consistent with
-;;this practice, however, allocating the substitute days for Christmas
-;;Day and Boxing Day in the other order in 2010.  However this list
-;;also manages to allocate them in order in 2011 (where Christmas Day
-;;falls on a Sunday), therefore placing the substitute holiday for
-;;Christmas Day _on_ Boxing Day, and then the substitute holiday for
-;;Boxing Day on the following day.  I'm not at all sure this isn't a
-;;mistake.
-;;
-;;In any case, this is largely academic as there is no dispute over
-;;which days are public holidays, only what to call them - so unless
-;;you care deeply just ignore the issue and use the function as
-;;supplied.
+;; N.B. It is assumed that 25th and 26th are defined with holiday-fixed - this
+;; function only returns any extra bank holiday(s) that are allocated (if any)
+;; to compensate for Christmas Day and/or Boxing Day falling on a weekend.
+
+;; Christmas day is always 25 December; beyond that there is no entirely
+;; consistent practice. We proceed as follows:
+
+;; Traditionally, Boxing day was the first day after Christmas, not including
+;; Sundays (i.e. if Christmas fell on a Saturday, Boxing Day was Monday 27th)
+;; however we follow modern practice here and always regard Boxing Day as 26
+;; December (which, as noted above, is never returned by this function).
+
+;; Generally the extra bank holiday is allocated on the first available day that
+;; would otherwise have been a working day. However in the case where we need to
+;; allocate two additional bank holidays - i.e. where Christmas Day falls on the
+;; Saturday, there is some confusion as to how to proceed. We allocate the
+;; Boxing Day Bank Holiday to the Monday, since this is the historic date of
+;; Boxing Day in this case, and allocate the Christmas Day Bank Holiday to the
+;; following day.
+
+;; This is consistent with the way that the 'substitute days' were allocated in
+;; the list of bank holidays on the Department of Trade and Industry in the
+;; recent past, although they don't use the any specific names for these
+;; holidays.
+
+;; The latest list on the direct.gov.uk web site is not consistent with this
+;; practice, however, allocating the substitute days for Christmas Day and
+;; Boxing Day in the other order in 2010. However this list also manages to
+;; allocate them in order in 2011 (where Christmas Day falls on a Sunday),
+;; therefore placing the substitute holiday for Christmas Day _on_ Boxing Day,
+;; and then the substitute holiday for Boxing Day on the following day. I'm not
+;; at all sure this isn't a mistake.
+
+;; In any case, this is largely academic as there is no dispute over
+;; which days are public holidays, only what to call them - so unless
+;; you care deeply just ignore the issue and use the function as
+;; supplied.
 (defun holiday-christmas-bank-holidays ()
   (let ((m displayed-month)
         (y displayed-year))
@@ -931,22 +939,34 @@ This command is convenient when reading novel, documentation."
 
 ;;
 ;; for poxy macbook keyboard with only the arrow keys
-(define-key my-keys-minor-mode-map (kbd "C-<up>") 'backward-paragraph)
-(define-key my-keys-minor-mode-map (kbd "C-<down>") 'forward-paragraph)
-(define-key my-keys-minor-mode-map (kbd "M-<up>") 'warp-to-top-of-window)
-(define-key my-keys-minor-mode-map (kbd "M-<down>") 'warp-to-bottom-of-window)
+(define-key my-keys-minor-mode-map (kbd "C-<up>")     'backward-paragraph)
+(define-key my-keys-minor-mode-map (kbd "C-<down>")   'forward-paragraph)
+(define-key my-keys-minor-mode-map (kbd "M-<up>")     'warp-to-top-of-window)
+(define-key my-keys-minor-mode-map (kbd "M-<down>")   'warp-to-bottom-of-window)
 (define-key my-keys-minor-mode-map (kbd "C-M-<down>") 'line-to-top-of-window)
-(define-key my-keys-minor-mode-map (kbd "C-M-<up>") 'line-to-bottom-of-window)
+(define-key my-keys-minor-mode-map (kbd "C-M-<up>")   'line-to-bottom-of-window)
 
 ;;
 ;; for a sensible pc keyboard with pgup|pgdn|home|end
 ;;
 (define-key my-keys-minor-mode-map (kbd "C-<prior>") 'warp-to-top-of-window)
-(define-key my-keys-minor-mode-map (kbd "C-<next>") 'warp-to-bottom-of-window)
-(define-key my-keys-minor-mode-map (kbd "C-<home>") 'line-to-top-of-window)
-(define-key my-keys-minor-mode-map (kbd "C-<end>") 'line-to-bottom-of-window)
-(define-key my-keys-minor-mode-map (kbd "<home>") 'beginning-of-buffer) ; also M-<
-(define-key my-keys-minor-mode-map (kbd "<end>") 'end-of-buffer) ; also M->
+(define-key my-keys-minor-mode-map (kbd "C-<next>")  'warp-to-bottom-of-window)
+(define-key my-keys-minor-mode-map (kbd "C-<home>")  'line-to-top-of-window)
+(define-key my-keys-minor-mode-map (kbd "C-<end>")   'line-to-bottom-of-window)
+(define-key my-keys-minor-mode-map (kbd "<home>")    'beginning-of-buffer) ; M-<
+(define-key my-keys-minor-mode-map (kbd "<end>")     'end-of-buffer)       ; M->
+
+;; (require 'point-stack)
+;; (load "~/.emacs.d/pointhistory.el")
+;; (setq pointhistory-save-at-jump-width 10)
+;; (define-key my-keys-minor-mode-map (kbd "<prior>")
+;;   '(lambda ()
+;;      (interactive)
+;;   )
+;; (define-key my-keys-minor-mode-map (kbd "<next>")
+;;   '(lambda ()
+;;      (interactive)
+;;   )
 
 (define-minor-mode my-keys-minor-mode
   "A minor mode so that my key settings override annoying major modes."
@@ -963,7 +983,8 @@ This command is convenient when reading novel, documentation."
   (if (not (eq (car (car minor-mode-map-alist)) 'my-keys-minor-mode))
       (let ((mykeys (assq 'my-keys-minor-mode minor-mode-map-alist)))
         (assq-delete-all 'my-keys-minor-mode minor-mode-map-alist)
-        (add-to-list 'minor-mode-map-alist mykeys))))
+        (add-to-list 'minor-mode-map-alist mykeys)))
+  )
 ;; (ad-activate 'load)
 
 (load custom-file)
