@@ -3,9 +3,9 @@
 ;; Copyright (C) 2014 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
-;; URL: http://github.com/Malabarba/aggressive-indent-mode
-;; Package-Version: 20150919.1840
-;; Version: 1.3
+;; URL: https://github.com/Malabarba/aggressive-indent-mode
+;; Package-Version: 20151014.435
+;; Version: 1.4.1
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: indent lisp maint tools
 ;; Prefix: aggressive-indent
@@ -235,6 +235,10 @@ This is for internal use only.  For user customization, use
   '(when (boundp 'iedit-mode)
      (add-to-list 'aggressive-indent--internal-dont-indent-if
                   'iedit-mode)))
+(eval-after-load 'evil
+  '(when (boundp 'iedit-mode)
+     (add-to-list 'aggressive-indent--internal-dont-indent-if
+                  'iedit-mode)))
 (eval-after-load 'coq
   '(add-to-list 'aggressive-indent--internal-dont-indent-if
                 '(and (derived-mode-p 'coq-mode)
@@ -349,6 +353,7 @@ or messages."
 ;;; Tracking changes
 (defvar aggressive-indent--changed-list nil
   "List of (left right) limit of regions changed in the last command loop.")
+(make-variable-buffer-local 'aggressive-indent--changed-list)
 
 (defun aggressive-indent--indent-if-changed ()
   "Indent any region that changed in the last command loop."
