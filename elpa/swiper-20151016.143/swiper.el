@@ -109,6 +109,7 @@
     (define-key map (kbd "M-q") 'swiper-query-replace)
     (define-key map (kbd "C-l") 'swiper-recenter-top-bottom)
     (define-key map (kbd "C-'") 'swiper-avy)
+    (define-key map (kbd "C-7") 'swiper-mc)
     map)
   "Keymap for swiper.")
 
@@ -131,26 +132,85 @@
 
 (defvar avy-background)
 (defvar avy-all-windows)
+(defvar avy-style)
+(defvar avy-keys)
 (declare-function avy--regex-candidates "ext:avy")
 (declare-function avy--process "ext:avy")
 (declare-function avy--overlay-post "ext:avy")
 (declare-function avy-action-goto "ext:avy")
+(declare-function avy--done "ext:avy")
+(declare-function avy--make-backgrounds "ext:avy")
+(declare-function avy-window-list "ext:avy")
+(declare-function avy-read "ext:avy")
+(declare-function avy-read-de-bruijn "ext:avy")
+(declare-function avy-tree "ext:avy")
+(declare-function avy-push-mark "ext:avy")
+(declare-function avy--remove-leading-chars "ext:avy")
 
 ;;;###autoload
 (defun swiper-avy ()
   "Jump to one of the current swiper candidates."
   (interactive)
   (unless (string= ivy-text "")
-    (with-ivy-window
-      (let* ((avy-all-windows nil)
-             (candidates
-              (avy--regex-candidates
-               (ivy--regex ivy-text)))
-             (avy-background nil)
-             (candidate
-              (avy--process candidates #'avy--overlay-post)))
+    (let* ((avy-all-windows nil)
+           (candidates (append
+                        (with-ivy-window
+                          (avy--regex-candidates
+                           (ivy--regex ivy-text)))
+                        (save-excursion
+                          (save-restriction
+                            (narrow-to-region (window-start) (window-end))
+                            (goto-char (point-min))
+                            (forward-line)
+                            (let ((cands))
+                              (while (< (point) (point-max))
+                                (push (cons (1+ (point))
+                                            (selected-window))
+                                      cands)
+                                (forward-line))
+                              cands)))))
+           (candidate (unwind-protect
+                          (prog2
+                              (avy--make-backgrounds
+                               (append (avy-window-list)
+                                       (list  (ivy-state-window ivy-last))))
+                              (if (eq avy-style 'de-bruijn)
+                                  (avy-read-de-bruijn
+                                   candidates avy-keys)
+                                (avy-read (avy-tree candidates avy-keys)
+                                          #'avy--overlay-post
+                                          #'avy--remove-leading-chars))
+                            (avy-push-mark))
+                        (avy--done))))
+      (if (window-minibuffer-p (cdr candidate))
+          (progn
+            (ivy-set-index (- (line-number-at-pos (car candidate)) 2))
+            (ivy--exhibit)
+            (ivy-done)
+            (ivy-call))
         (ivy-quit-and-run
-         (avy-action-goto candidate))))))
+         (avy-action-goto (caar candidate)))))))
+
+(declare-function mc/create-fake-cursor-at-point "ext:multiple-cursors-core")
+(declare-function mc/maybe-multiple-cursors-mode "ext:multiple-cursors-core")
+
+;;;###autoload
+(defun swiper-mc ()
+  (interactive)
+  (unless (require 'multiple-cursors nil t)
+    (error "multiple-cursors isn't installed"))
+  (let ((cands (nreverse ivy--old-cands)))
+    (unless (string= ivy-text "")
+      (ivy-set-action
+       (lambda (_)
+         (let (cand)
+           (while (setq cand (pop cands))
+             (swiper--action cand)
+             (when cands
+               (mc/create-fake-cursor-at-point))))
+         (mc/maybe-multiple-cursors-mode)))
+      (setq ivy-exit 'done)
+      (exit-minibuffer))))
 
 (defun swiper-recenter-top-bottom (&optional arg)
   "Call (`recenter-top-bottom' ARG)."
@@ -173,7 +233,10 @@
                                  elfeed-search-mode
                                  fundamental-mode
                                  Man-mode
-                                 woman-mode)))
+                                 woman-mode
+                                 mu4e-view-mode
+                                 mu4e-headers-mode
+                                 help-mode)))
     (unless (> (buffer-size) 100000)
       (if (fboundp 'font-lock-ensure)
           (font-lock-ensure)
@@ -185,28 +248,42 @@
 (defvar swiper--width nil
   "Store the amount of digits needed for the longest line nubmer.")
 
+(defvar swiper-use-visual-line nil
+  "When non-nil, use `line-move' instead of `forward-line'.")
+
 (defun swiper--candidates ()
   "Return a list of this buffer lines."
+  (setq swiper-use-visual-line
+        (and (not (eq major-mode 'org-mode))
+             visual-line-mode
+             (< (buffer-size) 20000)))
   (let ((n-lines (count-lines (point-min) (point-max))))
     (unless (zerop n-lines)
       (setq swiper--width (1+ (floor (log n-lines 10))))
       (setq swiper--format-spec
             (format "%%-%dd " swiper--width))
       (let ((line-number 0)
+            (advancer (if swiper-use-visual-line
+                          (lambda (arg) (line-move arg t))
+                        #'forward-line))
             candidates)
         (save-excursion
           (goto-char (point-min))
           (swiper-font-lock-ensure)
           (while (< (point) (point-max))
             (let ((str (concat " " (buffer-substring
-                                    (line-beginning-position)
-                                    (line-end-position)))))
+                                    (point)
+                                    (if swiper-use-visual-line
+                                        (save-excursion
+                                          (end-of-visual-line)
+                                          (point))
+                                      (line-end-position))))))
               (put-text-property 0 1 'display
                                  (format swiper--format-spec
                                          (cl-incf line-number))
                                  str)
               (push str candidates))
-            (forward-line 1))
+            (funcall advancer 1))
           (nreverse candidates))))))
 
 (defvar swiper--opoint 1
@@ -239,16 +316,15 @@ there have line numbers. In the buffer, `ivy--regex' should be used."
     ((equal str "")
      "")
     ((equal str "^")
+     (setq ivy--subexps 0)
      ".")
     ((string-match "^\\^" str)
      (setq ivy--old-re "")
      (let ((re (ivy--regex-plus (substring str 1))))
-       (format "^[0-9][0-9 ]\\{%d\\}%s"
-               swiper--width
-               (if (zerop ivy--subexps)
-                   (prog1 (format "\\(%s\\)" re)
-                     (setq ivy--subexps 1))
-                 re))))
+       (if (zerop ivy--subexps)
+           (prog1 (format "^ ?\\(%s\\)" re)
+             (setq ivy--subexps 1))
+         (format "^ %s" re))))
     (t
      (ivy--regex-plus str))))
 
@@ -259,31 +335,28 @@ there have line numbers. In the buffer, `ivy--regex' should be used."
   "`isearch' with an overview using `ivy'.
 When non-nil, INITIAL-INPUT is the initial search pattern."
   (interactive)
-  (unless (eq (length (help-function-arglist 'ivy-read)) 4)
-    (warn "You seem to be using the outdated stand-alone \"ivy\" package.
-Please remove it and update the \"swiper\" package."))
   (swiper--init)
   (let ((candidates (swiper--candidates))
         (preselect (buffer-substring-no-properties
                     (line-beginning-position)
                     (line-end-position)))
-        (minibuffer-allow-text-properties t)
-        res)
+        (minibuffer-allow-text-properties t))
     (unwind-protect
-         (setq res (ivy-read
-                    "Swiper: "
-                    candidates
-                    :initial-input initial-input
-                    :keymap swiper-map
-                    :preselect preselect
-                    :require-match t
-                    :update-fn #'swiper--update-input-ivy
-                    :unwind #'swiper--cleanup
-                    :re-builder #'swiper--re-builder
-                    :history 'swiper-history))
-      (if (null ivy-exit)
-          (goto-char swiper--opoint)
-        (swiper--action res ivy-text)))))
+        (ivy-read
+         "Swiper: "
+         candidates
+         :initial-input initial-input
+         :keymap swiper-map
+         :preselect preselect
+         :require-match t
+         :update-fn #'swiper--update-input-ivy
+         :unwind #'swiper--cleanup
+         :action #'swiper--action
+         :re-builder #'swiper--re-builder
+         :history 'swiper-history
+         :caller 'swiper)
+      (when (null ivy-exit)
+        (goto-char swiper--opoint)))))
 
 (defun swiper--ensure-visible ()
   "Remove overlays hiding point."
@@ -319,7 +392,9 @@ Please remove it and update the \"swiper\" package."))
         (goto-char (point-min))
         (when (cl-plusp num)
           (goto-char (point-min))
-          (forward-line (1- num))
+          (if swiper-use-visual-line
+              (line-move (1- num))
+            (forward-line (1- num)))
           (if (and (equal ivy-text "")
                    (>= swiper--opoint (line-beginning-position))
                    (<= swiper--opoint (line-end-position)))
@@ -335,9 +410,17 @@ Please remove it and update the \"swiper\" package."))
 (defun swiper--add-overlays (re &optional beg end)
   "Add overlays for RE regexp in visible part of the current buffer.
 BEG and END, when specified, are the point bounds."
-  (let ((ov (make-overlay
-             (line-beginning-position)
-             (1+ (line-end-position)))))
+  (let ((ov (if visual-line-mode
+                (make-overlay
+                 (save-excursion
+                   (beginning-of-visual-line)
+                   (point))
+                 (save-excursion
+                   (end-of-visual-line)
+                   (point)))
+              (make-overlay
+               (line-beginning-position)
+               (1+ (line-end-position))))))
     (overlay-put ov 'face 'swiper-line-face)
     (overlay-put ov 'window (ivy-state-window ivy-last))
     (push ov swiper--overlays)
@@ -373,14 +456,17 @@ BEG and END, when specified, are the point bounds."
                     (overlay-put overlay 'priority i)))
                 (cl-incf i)))))))))
 
-(defun swiper--action (x input)
-  "Goto line X and search for INPUT."
+(defun swiper--action (x)
+  "Goto line X."
   (if (null x)
       (user-error "No candidates")
     (goto-char (point-min))
-    (forward-line (1- (read (get-text-property 0 'display x))))
+    (funcall (if swiper-use-visual-line
+                 #'line-move
+               #'forward-line)
+             (1- (read (get-text-property 0 'display x))))
     (re-search-forward
-     (ivy--regex input) (line-end-position) t)
+     (ivy--regex ivy-text) (line-end-position) t)
     (swiper--ensure-visible)
     (when (/= (point) swiper--opoint)
       (unless (and transient-mark-mode mark-active)
@@ -418,7 +504,8 @@ Run `swiper' for those buffers."
             :action 'swiper-multi-action-1)
   (ivy-read "Swiper: " swiper-multi-candidates
             :action 'swiper-multi-action-2
-            :unwind #'swiper--cleanup))
+            :unwind #'swiper--cleanup
+            :caller 'swiper-multi))
 
 (defun swiper-multi-action-1 (x)
   (if (member x swiper-multi-buffers)

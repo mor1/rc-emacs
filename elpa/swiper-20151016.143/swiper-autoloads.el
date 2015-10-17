@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "ivy" "ivy.el" (22021 3219 0 0))
+;;;### (autoloads nil "ivy" "ivy.el" (22050 22371 0 0))
 ;;; Generated autoloads from ivy.el
 
 (autoload 'ivy-resume "ivy" "\
@@ -65,11 +65,16 @@ Find a file on `recentf-list'.
 
 ;;;***
 
-;;;### (autoloads nil "swiper" "swiper.el" (22021 3219 0 0))
+;;;### (autoloads nil "swiper" "swiper.el" (22050 22371 0 0))
 ;;; Generated autoloads from swiper.el
 
 (autoload 'swiper-avy "swiper" "\
 Jump to one of the current swiper candidates.
+
+\(fn)" t nil)
+
+(autoload 'swiper-mc "swiper" "\
+
 
 \(fn)" t nil)
 
@@ -82,7 +87,7 @@ When non-nil, INITIAL-INPUT is the initial search pattern.
 ;;;***
 
 ;;;### (autoloads nil nil ("colir.el" "ivy-hydra.el" "swiper-pkg.el")
-;;;;;;  (22021 3219 628101 0))
+;;;;;;  (22050 22371 674838 0))
 
 ;;;***
 
