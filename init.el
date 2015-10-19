@@ -626,7 +626,24 @@ This command is convenient when reading novel, documentation."
 (setq merlin-use-auto-complete-mode 'easy)
 (setq merlin-command 'opam)
 
+;; utop
+;; Setup environment variables using opam
+(dolist (var (car (read-from-string (shell-command-to-string "opam config env --sexp"))))
+  (setenv (car var) (cadr var)))
+
+;; Update the emacs path
+(setq exec-path
+      (append (parse-colon-path (getenv "PATH")) (list exec-directory)))
+
+;; Update the emacs load path
+(add-to-list 'load-path (expand-file-name "../../share/emacs/site-lisp"
+                                          (getenv "OCAML_TOPLEVEL_PATH")))
+
+(autoload 'utop "utop" "Toplevel for OCaml" t)
+(autoload 'utop-minor-mode "utop" "Minor mode for utop" t)
+
 (add-hook 'caml-mode-hook 'merlin-mode t)
+(add-hook 'tuareg-mode-hook 'utop-minor-mode)
 (add-hook 'tuareg-mode-hook
           '(lambda ()
              (merlin-mode)
