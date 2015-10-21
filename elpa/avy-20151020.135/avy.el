@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20151019.711
+;; Package-Version: 20151020.135
 ;; Version: 0.3.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
@@ -486,6 +486,11 @@ Set `avy-style' according to COMMMAND as well."
 (defun avy--process (candidates overlay-fn)
   "Select one of CANDIDATES using `avy-read'.
 Use OVERLAY-FN to visualize the decision overlay."
+  (unless (and (consp (car candidates))
+               (windowp (cdar candidates)))
+    (setq candidates
+          (mapcar (lambda (x) (cons x (selected-window)))
+                  candidates)))
   (let ((len (length candidates))
         (cands (copy-sequence candidates))
         res)
