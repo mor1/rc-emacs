@@ -973,18 +973,6 @@ This command is convenient when reading novel, documentation."
 (define-key my-keys-minor-mode-map (kbd "<home>")    'beginning-of-buffer) ; M-<
 (define-key my-keys-minor-mode-map (kbd "<end>")     'end-of-buffer)       ; M->
 
-;; (require 'point-stack)
-;; (load "~/.emacs.d/pointhistory.el")
-;; (setq pointhistory-save-at-jump-width 10)
-;; (define-key my-keys-minor-mode-map (kbd "<prior>")
-;;   '(lambda ()
-;;      (interactive)
-;;   )
-;; (define-key my-keys-minor-mode-map (kbd "<next>")
-;;   '(lambda ()
-;;      (interactive)
-;;   )
-
 (define-minor-mode my-keys-minor-mode
   "A minor mode so that my key settings override annoying major modes."
   t " my-keys" 'my-keys-minor-mode-map)
