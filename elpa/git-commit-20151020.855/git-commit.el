@@ -13,7 +13,7 @@
 
 ;; Package-Requires: ((emacs "24.4") (dash "2.11.0") (with-editor "20150903"))
 ;; Keywords: git tools vc
-;; Package-Version: 20151019.443
+;; Package-Version: 20151020.855
 ;; Homepage: https://github.com/magit/magit
 
 ;; This file is not part of GNU Emacs.
@@ -124,6 +124,8 @@
 ;;;; Declarations
 
 (defvar flyspell-generic-check-word-predicate)
+
+(declare-function magit-expand-git-file-name 'magit-git)
 
 ;;; Options
 ;;;; Variables
