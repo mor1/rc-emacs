@@ -908,6 +908,9 @@ This command is convenient when reading novel, documentation."
 ;; <http://stackoverflow.com/questions/683425/globally-override-key-binding-in-emacs>
 
 (defvar my-keys-minor-mode-map (make-keymap) "my-keys-minor-mode keymap.")
+
+(define-key my-keys-minor-mode-map (kbd "s-2") "€")
+
 (define-key my-keys-minor-mode-map (kbd "C-x C-c") 'my-kill-emacs)
 
 (define-key my-keys-minor-mode-map (kbd "C-x z")   'my-suspend-frame)
