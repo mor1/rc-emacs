@@ -163,7 +163,7 @@
      (360 . "#bd3612"))))
  '(vc-annotate-very-old-color nil)
  '(vc-follow-symlinks t)
- '(visible-bell t)
+ '(visible-bell nill)
  '(visual-line-fringe-indicators (quote (right-triangle right-curly-arrow)))
  '(web-mode-attr-indent-offset 2)
  '(web-mode-code-indent-offset 2)
