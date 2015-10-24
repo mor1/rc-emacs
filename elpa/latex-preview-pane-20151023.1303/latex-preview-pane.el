@@ -4,7 +4,7 @@
 
 ;; Author: John L. Singleton <jsinglet@gmail.com>
 ;; Keywords: latex, preview
-;; Version: 20150519
+;; Version: 20151021
 ;; URL: http://www.emacswiki.org/emacs/LaTeXPreviewPane
 
 ;;; Commentary:
@@ -45,7 +45,7 @@
 
 (require 'doc-view)
 
-(defvar latex-preview-pane-current-version "20150519")
+(defvar latex-preview-pane-current-version "20151021")
 ;;
 ;; Get rid of free variables warnings
 ;;
@@ -276,7 +276,10 @@
 
 (defun lpp/invoke-pdf-latex-command ()
   (let ((buff (expand-file-name (lpp/buffer-file-name))) (default-directory (file-name-directory (expand-file-name (lpp/buffer-file-name)))))
-    (call-process pdf-latex-command nil "*pdflatex-buffer*" nil buff)
+    (if shell-escape-mode
+	(call-process pdf-latex-command nil "*pdflatex-buffer*" nil shell-escape-mode buff)
+      (call-process pdf-latex-command nil "*pdflatex-buffer*" nil buff)
+      )
     )
   )
 
@@ -385,6 +388,13 @@
 (defcustom pdf-latex-command "pdflatex"
   "The command to produce a PDF file from a latex document."
   :type 'string
+  :group 'latex-preview-pane)
+
+(defcustom shell-escape-mode nil
+  "Should the pdflatex command use shell escaping?"
+  :type '(choice (const :tag "Use shell escaping (-shell-escape)" "-shell-escape")
+                 (const :tag "Do not use shell escaping" nil)
+                 )
   :group 'latex-preview-pane)
 
 
