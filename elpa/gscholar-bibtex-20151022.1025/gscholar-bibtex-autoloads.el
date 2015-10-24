@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "gscholar-bibtex" "gscholar-bibtex.el" (21876
-;;;;;;  20677 0 0))
+;;;### (autoloads nil "gscholar-bibtex" "gscholar-bibtex.el" (22059
+;;;;;;  16126 0 0))
 ;;; Generated autoloads from gscholar-bibtex.el
 
 (autoload 'gscholar-bibtex-turn-on-sources "gscholar-bibtex" "\
