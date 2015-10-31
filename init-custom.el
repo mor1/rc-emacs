@@ -3,10 +3,6 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(ansi-color-faces-vector
-   [default bold shadow italic underline bold bold-italic bold])
- '(ansi-color-names-vector
-   (vector "#708183" "#c60007" "#728a05" "#a57705" "#2075c7" "#c61b6e" "#259185" "#042028"))
  '(auto-hscroll-mode nil)
  '(bibtex-autokey-titleword-separator ".")
  '(bibtex-autokey-year-title-separator ":")
@@ -35,7 +31,6 @@
     ("d677ef584c6dfc0697901a44b885cc18e206f05114c8a3b7fde674fce6180879" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
  '(default-major-mode (quote text-mode) t)
  '(fci-handle-truncate-lines nil)
- '(fci-rule-color "#0a2832")
  '(fci-rule-width 2)
  '(fill-column 80)
  '(frame-title-format "%b  %f" t)
@@ -88,6 +83,15 @@
  '(msb-max-file-menu-items 1)
  '(msb-max-menu-items 35)
  '(msb-mode t)
+ '(mu4e-confirm-quit nil)
+ '(mu4e-date-format-long "%FT%T%z")
+ '(mu4e-headers-long-date-format "%F%FT%z")
+ '(mu4e-headers-time-format "%F%FT%z")
+ '(mu4e-maildir "/Users/mort/me/footprint/mail")
+ '(mu4e-use-fancy-chars t)
+ '(mu4e-user-mail-address-list
+   (quote
+    ("richard.mortier@hotmail.com" "mort@live.co.uk" "richard.mortier@gmail.com" "mort@cantab.net" "mort@vipadia.com" "mort@sprintlabs.com" "mort@microsoft.com" "richard.mortier@nottingham.ac.uk" "rmm@cs.nott.ac.uk" "rmm1002@cam.ac.uk" "rmm1002@hermes.cam.ac.uk" "richard.mortier@cl.cam.ac.uk" "richard.mortier@unikernel.com")))
  '(next-screen-context-lines 0)
  '(nobreak-char-display t t)
  '(notmuch-hello-sections
@@ -121,7 +125,8 @@
  '(remember-handler-functions (quote (org-remember-handler)))
  '(safe-local-variable-values
    (quote
-    ((TeX-master . "naasbox-sosp15")
+    ((TeX-master . "flick-eurosys16")
+     (TeX-master . "naasbox-sosp15")
      (TeX-master . t)
      (TeX-master . "propB"))))
  '(scroll-bar-mode nil)
@@ -140,28 +145,6 @@
  '(tool-bar-mode nil)
  '(uniquify-buffer-name-style (quote post-forward-angle-brackets) nil (uniquify))
  '(unkillable-scratch t)
- '(vc-annotate-background nil)
- '(vc-annotate-color-map
-   (quote
-    ((20 . "#c60007")
-     (40 . "#bd3612")
-     (60 . "#a57705")
-     (80 . "#728a05")
-     (100 . "#259185")
-     (120 . "#2075c7")
-     (140 . "#c61b6e")
-     (160 . "#5859b7")
-     (180 . "#c60007")
-     (200 . "#bd3612")
-     (220 . "#a57705")
-     (240 . "#728a05")
-     (260 . "#259185")
-     (280 . "#2075c7")
-     (300 . "#c61b6e")
-     (320 . "#5859b7")
-     (340 . "#c60007")
-     (360 . "#bd3612"))))
- '(vc-annotate-very-old-color nil)
  '(vc-follow-symlinks t)
  '(visible-bell nill)
  '(visual-line-fringe-indicators (quote (right-triangle right-curly-arrow)))

@@ -574,6 +574,28 @@ This command is convenient when reading novel, documentation."
              (setq coffee-command "/usr/local/bin/coffee")
              ))
 
+;; mu4e email
+(require 'mu4e)
+
+(setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
+      mu4e-sent-folder   "/sent"               ;; folder for sent messages
+      mu4e-drafts-folder "/drafts"             ;; unfinished messages
+      mu4e-trash-folder  "/trash"              ;; trashed messages
+      mu4e-refile-folder "/archive"            ;; saved messages
+      )
+
+;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
+;;       mu4e-update-interval 300              ;; update every 5 minutes
+;; )
+
+;; ;; tell message-mode how to send mail
+;; (setq message-send-mail-function 'smtpmail-send-it)
+;; ;; if our mail server lives at smtp.example.org; if you have a
+;; ;; local mail-server, simply use 'localhost' here.
+;; (setq smtpmail-smtp-server "smtp.example.org")
+;; ;; don't save messages to Sent Messages, Gmail/IMAP takes care of this
+;; (setq mu4e-sent-messages-behavior 'delete)
+
 ;; php-mode
 (push '("\\.php$" . php-mode) auto-mode-alist)
 
@@ -910,6 +932,7 @@ This command is convenient when reading novel, documentation."
 (defvar my-keys-minor-mode-map (make-keymap) "my-keys-minor-mode keymap.")
 
 (define-key my-keys-minor-mode-map (kbd "s-2") "€")
+(define-key my-keys-minor-mode-map (kbd "s-3") "#")
 
 (define-key my-keys-minor-mode-map (kbd "C-x C-c") 'my-kill-emacs)
 
