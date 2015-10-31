@@ -91,7 +91,7 @@
  '(mu4e-use-fancy-chars t)
  '(mu4e-user-mail-address-list
    (quote
-    ("richard.mortier@hotmail.com" "mort@live.co.uk" "richard.mortier@gmail.com" "mort@cantab.net" "mort@vipadia.com" "mort@sprintlabs.com" "mort@microsoft.com" "richard.mortier@nottingham.ac.uk" "rmm@cs.nott.ac.uk" "rmm1002@cam.ac.uk" "rmm1002@hermes.cam.ac.uk" "richard.mortier@cl.cam.ac.uk" "richard.mortier@unikernel.com")))
+    ("mort@cantab.net" "mort@live.co.uk" "mort@microsoft.com" "mort@sprintlabs.com" "mort@vipadia.com" "richard.mortier@cl.cam.ac.uk" "richard.mortier@gmail.com" "richard.mortier@hotmail.com" "richard.mortier@nottingham.ac.uk" "richard.mortier@unikernel.com" "rmm1002@cam.ac.uk" "rmm1002@hermes.cam.ac.uk" "rmm@cs.nott.ac.uk")))
  '(next-screen-context-lines 0)
  '(nobreak-char-display t t)
  '(notmuch-hello-sections
