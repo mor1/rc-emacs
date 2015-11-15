@@ -931,8 +931,9 @@ This command is convenient when reading novel, documentation."
 
 (defvar my-keys-minor-mode-map (make-keymap) "my-keys-minor-mode keymap.")
 
-(define-key my-keys-minor-mode-map (kbd "s-2") "€")
-(define-key my-keys-minor-mode-map (kbd "s-3") "#")
+(define-key my-keys-minor-mode-map (kbd "s-@") "€")
+(define-key my-keys-minor-mode-map (kbd "s-3")
+  '(lambda () (interactive) (insert-char #x00A3))) ; £
 
 (define-key my-keys-minor-mode-map (kbd "C-x C-c") 'my-kill-emacs)
 
