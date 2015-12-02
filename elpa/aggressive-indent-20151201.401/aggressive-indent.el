@@ -4,8 +4,8 @@
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
 ;; URL: https://github.com/Malabarba/aggressive-indent-mode
-;; Package-Version: 20151014.435
-;; Version: 1.4.1
+;; Package-Version: 20151201.401
+;; Version: 1.4.2
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: indent lisp maint tools
 ;; Prefix: aggressive-indent
@@ -93,6 +93,7 @@
 (defgroup aggressive-indent nil
   "Customization group for aggressive-indent."
   :prefix "aggressive-indent-"
+  :group 'electricity
   :group 'indent)
 
 (defun aggressive-indent-bug-report ()
@@ -106,7 +107,7 @@ Please include this in your report!"
                (require 'lisp-mnt)
                (lm-version)))
            emacs-version)
-  (browse-url "https://github.com/Bruce-Connor/aggressive-indent-mode/issues/new"))
+  (browse-url "https://github.com/Malabarba/aggressive-indent-mode/issues/new"))
 
 (defvar aggressive-indent-mode)
 
@@ -361,6 +362,7 @@ or messages."
     (unless (or (run-hook-wrapped 'aggressive-indent--internal-dont-indent-if #'eval)
                 (aggressive-indent--run-user-hooks))
       (while-no-input
+        (redisplay)
         (let ((inhibit-modification-hooks t)
               (inhibit-point-motion-hooks t)
               (indent-function
