@@ -824,7 +824,7 @@ Regexp match data 0 points to the chars."
           'words))
       . tuareg-font-lock-operator-face)
      ;;; (lid: t) and (lid :> t)
-     (,(concat "( *" lid " *:>?\\([ \n'_A-Za-z]"
+     (,(concat "( *" balanced-braces " *:>?\\([ \n'_A-Za-z]"
                balanced-braces-no-string "\\))")
       1 font-lock-type-face keep)
      (,(concat "\\<external +\\(" lid "\\)")  1 font-lock-function-name-face)
@@ -1274,7 +1274,8 @@ by |, insert one |."
                         ;; Since OCaml 4.02, `match' expressions allow
                         ;; `exception' branches.
                         ("exception-case" pattern))
-              (pattern (id) (pattern "as" id) (pattern "," pattern))
+              (pattern (id) (pattern "as" id) (pattern "|-or" pattern)
+                       (pattern "," pattern))
               (class-body (class-body "inherit" class-body)
                           (class-body "method" class-body)
                           (class-body "initializer" class-body)
@@ -1301,10 +1302,7 @@ by |, insert one |."
             '((nonassoc "as") (assoc "t->") (assoc "*…"))
             ;; Pattern precedence rules.
             ;; http://caml.inria.fr/pub/docs/manual-ocaml/patterns.html
-            ;; Note that we don't include "|" because its precedence collides
-            ;; with the one of the | used between branches and resolving the
-            ;; conflict in the lexer is not worth the trouble.
-            '((nonassoc "as") (assoc ",") (assoc "::"))
+            '((nonassoc "as") (assoc "|-or") (assoc ",") (assoc "::"))
             ;; Resolve "{a=(1;b=2)}" vs "{(a=1);(b=2)}".
             '((nonassoc ";") (nonassoc "f="))
             ;; Resolve "(function a -> b) | c -> d".
@@ -1537,6 +1535,31 @@ Return values can be
              (member (tuareg-smie--backward-token) '("with" "and"))) "c=")
        (t "d=")))))
 
+(defun tuareg-smie--|-or-p ()
+  "Return non-nil if we're just in front of an or pattern \"|\"."
+  (save-excursion
+    (let ((tok (tuareg-smie--search-backward
+                ;; Stop at the first | or any token which should
+                ;; never appear between a "|" and a "|-or".
+                '("|" "[" "->" "with" "function" "=" "of" "in" "then"))))
+      (cond
+       ((equal tok "(") t)
+       ((equal tok "|")
+        ;; Maybe we have a "|-or".  Then again maybe not.  We should make sure
+        ;; that `tok' is really either a "|-or" or the | of a match (and not
+        ;; the | of a datatype definition).
+        (while
+            (equal "|"
+                   (setq tok
+                         (tuareg-smie--search-backward
+                          '("|" "->" "with" "function" "=" "of" "in" "then")))))
+        (cond
+         ((equal tok "=")
+          (not (equal (tuareg-smie--=-disambiguate) "d=")))
+         ((equal tok "of") nil)
+         ((member tok '("[" "{" "(")) nil)
+         (t t)))))))
+
 (defun tuareg-smie-backward-token ()
   "Move point to the beginning of the next token and return its SMIE name."
   (let ((tok (tuareg-smie--backward-token)))
@@ -1597,6 +1620,10 @@ Return values can be
         (match-string 0)))
      ((and (equal tok "|") (eq (char-before) ?\[)) (forward-char -1) "[|")
      ((and (equal tok "<") (eq (char-before) ?\{)) (forward-char -1) "{<")
+     ((equal tok "|")
+      ;; Check if it's the | of an or-pattern, since it has a slightly
+      ;; different precedence (see Issue #71 for an example).
+      (if (tuareg-smie--|-or-p) "|-or" "|"))
      ;; Some infix operators get a precedence based on their prefix, so we
      ;; collapse them into a canonical representative.
      ;; See http://caml.inria.fr/pub/docs/manual-ocaml/expr.html.
@@ -1638,27 +1665,47 @@ Return values can be
            (tuareg-smie--if-then-hack token)))
      ;; FIXME: smie-rule-separator doesn't behave correctly when the separator
      ;; is right after the parent (on another line).
-     ((smie-rule-prev-p "d=" "with" "[" "function")
+     ((and (smie-rule-bolp) (smie-rule-prev-p "d=" "with" "[" "function"))
       (if (and (eq kind :before) (smie-rule-bolp)
                (smie-rule-prev-p "[" "d=" "function"))
           0 tuareg-with-indent))
+     ((and (equal token "|") (smie-rule-bolp) (not (smie-rule-prev-p "d="))
+           (smie-rule-parent-p "d="))
+      (goto-char (cadr smie--parent))
+      (smie-indent-forward-token)
+      (forward-comment (point-max))
+      `(column . ,(- (current-column) 2)))
      (t (smie-rule-separator kind))))
    (t
     (case kind
-      (:elem (if (eq token 'basic) tuareg-default-indent))
+      (:elem (cond
+              ((eq token 'basic) tuareg-default-indent)
+              ;; The default tends to indent much too deep.
+              ((eq token 'empty-line-token) ";")))
       (:list-intro (member token '("fun")))
+      (:close-all t)
       (:before
        (cond
         ((equal token "d=") (smie-rule-parent 2))
         ((member token '("fun" "match"))
-         (if (and (not (smie-rule-bolp)) (smie-rule-prev-p "d="))
-             (smie-rule-parent tuareg-default-indent)))
+         (and (not (smie-rule-bolp))
+              (cond ((smie-rule-prev-p "d=")
+                     (smie-rule-parent tuareg-default-indent))
+                    ((smie-rule-prev-p "begin") (smie-rule-parent)))))
         ((equal token "then") (smie-rule-parent))
         ((equal token "if") (if (and (not (smie-rule-bolp))
                                      (smie-rule-prev-p "else"))
                                 (smie-rule-parent)))
         ((and (equal token "with") (smie-rule-parent-p "{"))
          (smie-rule-parent))
+        ((and (equal token "with") (smie-rule-parent-p "d="))
+         (let ((td (smie-backward-sexp "with")))
+           (assert (equal (nth 2 td) "d="))
+           (goto-char (nth 1 td))
+           (setq td (smie-backward-sexp "d="))
+           ;; Presumably (equal (nth 1 td) "type").
+           (goto-char (nth 1 td))
+           `(column . ,(smie-indent-virtual))))
         ;; Align the "with" of "module type A = B \n with ..." w.r.t "module".
         ((and (equal token "m-with") (smie-rule-parent-p "d="))
          (save-excursion
@@ -1739,6 +1786,18 @@ Return values can be
         ((or (member token '("." "t->" "]"))
              (consp (nth 2 (assoc token tuareg-smie-grammar)))) ;; Closer.
          nil)
+        ((member token '("{" "("))
+         ;; The virtual indent after ( can be higher than the actual one
+         ;; because it might be "column + tuareg-default-indent", whereas
+         ;; the token only occupies a single column.  So make sure we don't
+         ;; get caught in this trap.
+         (let ((vi (smie-indent-virtual)))
+           (forward-char 1)             ;Skip paren.
+           (skip-chars-forward " \t")
+           (unless (eolp)
+             `(column
+               . ,(min (current-column)
+                       (+ tuareg-default-indent vi))))))
         (t tuareg-default-indent)))))))
 
 (defun tuareg-smie--with-module-fields-rule ()
@@ -1821,6 +1880,10 @@ Return values can be
        ((equal (nth 2 pd) token)
         (goto-char (nth 1 pd))
         (cons 'column (smie-indent-virtual)))
+       ((and (equal token "|") (equal (nth 2 pd) "with")
+             (not (smie-rule-bolp)))
+        (goto-char (nth 1 pd))
+        (cons 'column (+ 3 (current-column))))
        (t (cons 'column (current-column)))))))
 
 (defun tuareg-smie--inside-string ()
@@ -1832,12 +1895,12 @@ Return values can be
   "Non-nil if indentation should try to align arguments on the first one.
 With a non-nil value you get
 
-    let x = List.map (fun x => 5)
+    let x = List.map (fun x -> 5)
                      my list
 
 whereas with a non value you get
 
-    let x = List.map (fun x => 5)
+    let x = List.map (fun x -> 5)
               my list"
   :type 'boolean)
 
@@ -1871,7 +1934,9 @@ whereas with a non value you get
           ;; There's a previous element, and it's not special (it's not
           ;; the function), so let's just align with that one.
           (goto-char (car positions))
-          (smie-indent--current-column))
+          (if (fboundp 'smie-indent--current-column)
+              (smie-indent--current-column)
+            (current-column)))
          (t
           ;; There's no previous arg at BOL.  Align with the function.
           (goto-char (car positions))
@@ -1879,7 +1944,9 @@ whereas with a non value you get
              ;; We used to use (smie-indent-virtual), but that
              ;; doesn't seem right since it might then indent args less than
              ;; the function itself.
-             (smie-indent--current-column))))))))
+             (if (fboundp 'smie-indent--current-column)
+                 (smie-indent--current-column)
+               (current-column)))))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
