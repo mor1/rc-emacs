@@ -178,7 +178,7 @@ field logfile (see `merlin-start-process')"
   :group 'merlin :type 'filename)
 
 (defcustom merlin-arrow-keys-type-enclosing t
-  "If non-nil, after a type enclosing, up and down arrow are used to go up and down the AST."
+  "If non-nil, after a type enclosing, C+up and C+down arrow are used to go up and down the AST. As well, C+w copy the type to the kill ring and C+d destructure the expression."
   :group 'merlin :type 'boolean)
 
 (defcustom merlin-type-after-locate nil
@@ -277,7 +277,7 @@ containing fields file, line and col."
          (open-window (cond ((equal merlin-locate-in-new-window 'never) nil)
                             ((equal merlin-locate-in-new-window 'always))
                             (file)))
-         (filename (if file (cdr file) buffer-file-name))
+         (filename (if file (cdr file) (buffer-file-name (buffer-base-buffer))))
          (focus-window (or (not open-window) merlin-locate-focus-new-window))
          (do-open (lambda ()
                     (if open-window
@@ -505,8 +505,8 @@ Try to find a satisfying default directory."
     ((equal merlin-error-after-save t) t)
     ((equal merlin-error-after-save nil) nil)
     ((and (listp merlin-error-after-save)
-          buffer-file-name)
-     (member (file-name-extension buffer-file-name)
+          (buffer-file-name (buffer-base-buffer)))
+     (member (file-name-extension (buffer-file-name (buffer-base-buffer)))
              merlin-error-after-save))))
 
 (defun merlin-toggle-view-errors ()
@@ -1105,16 +1105,18 @@ prefix of `bar' is `'."
     (cons (if bounds (car bounds) (point))
           (point))))
 
-;;;;;;;;;;;;;;;;;;;;;;;
-;; EXPRESSION TYPING ;;
-;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;
+;; TYPE BUFFER ;;
+;;;;;;;;;;;;;;;;;
 
-(defun merlin--type-expression (exp callback-if-success &optional callback-if-exn)
-  "Get the type of EXP inside the local context."
-  (when exp (merlin/send-command-async
-             (list 'type 'expression (substring-no-properties exp)
-                   'at (merlin/unmake-point (point)))
-             callback-if-success callback-if-exn)))
+(defun merlin--count-lines (text)
+  (let ((count 0)
+        (pos   0))
+    (while (and (<= count 8)
+                (string-match "\n" text pos))
+           (setq pos (match-end 0))
+           (setq count (1+ count)))
+    count))
 
 (defun merlin/display-in-type-buffer (text)
   "Change content of type-buffer."
@@ -1130,18 +1132,25 @@ prefix of `bar' is `'."
     (insert text)
     (goto-char (point-min))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;; EXPRESSION TYPING ;;
+;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun merlin--type-expression (exp callback-if-success &optional callback-if-exn)
+  "Get the type of EXP inside the local context."
+  (when exp (merlin/send-command-async
+             (list 'type 'expression (substring-no-properties exp)
+                   'at (merlin/unmake-point (point)))
+             callback-if-success callback-if-exn)))
+
 (defun merlin--type-display (bounds type &optional quiet)
   "Display the type TYPE of the expression occuring at BOUNDS.
 If QUIET is non nil, then an overlay and the merlin types can be used."
   (if (not type)
       (unless quiet (message "<no information>"))
-    (let ((count 0)
-          (pos   0))
+    (let ((count (merlin--count-lines type)))
       (merlin/display-in-type-buffer type)
-      (while (and (<= count 8)
-                  (string-match "\n" type pos))
-        (setq pos (match-end 0))
-        (setq count (1+ count)))
       (if (> count 8)
           (display-buffer merlin-type-buffer-name)
         (message "%s"
@@ -1384,32 +1393,12 @@ loading"
         (find-file-other-window file)
       (message "No project file for the current buffer."))))
 
-(defun merlin-flags-clear ()
-  "Clear flags for the current project"
-  (interactive)
-  (let* ((r (merlin/send-command '(flags clear)))
-         (failed (assoc 'failures r)))
-    (when failed (message "%s" (cdr failed))))
-  (merlin-error-reset))
-
-(defun merlin-flags-add (flag-string)
-  "Set FLAG for the current project"
-  (interactive "sFlag to add: ")
-  (let* ((flag-list (split-string flag-string))
-         (r (merlin/send-command (list 'flags 'add flag-list)))
-         (failed (assoc 'failures r)))
-    (when failed (message "%s" (cdr failed))))
-  (merlin-error-reset))
-
 (defun merlin-flags-set (flag-string)
   "Set user flags for current project."
-  (interactive (let ((flags (merlin/send-command '(flags get)))
-                     (flatten (lambda (l) (mapconcat 'identity l " "))))
-                 (list (read-string "Flags: " (mapconcat flatten flags " ")))))
+  (interactive (let ((flags (merlin/send-command '(flags get))))
+                 (list (read-string "Flags: " (mapconcat 'identity flags " ")))))
   (let* ((flag-list (split-string flag-string))
-         (r (progn
-              (merlin/send-command '(flags clear))
-              (merlin/send-command (list 'flags 'add flag-list))))
+         (r (merlin/send-command (list 'flags 'set flag-list)))
          (failed (assoc 'failures r)))
     (when failed (message "%s" (cdr failed))))
   (merlin-error-reset))
@@ -1465,7 +1454,7 @@ loading"
 (defun merlin/jump (&optional target)
   "Jump to the TARGET"
   (let ((result (merlin/send-command
-                  (list 'jump (if (equal target "") "fun,let,module,match" target)
+                  (list 'jump (if (equal target "") "fun let module match" target)
                         'at (merlin/unmake-point (point))))))
     (unless result
       (error "Not found. (Check *Messages* for potential errors)"))
@@ -1497,8 +1486,16 @@ Empty string defaults to jumping to all these."
 
 (defun merlin--document-pure (&optional ident)
   "Document the identifier IDENT at point."
-  (let ((r (merlin--document-pos ident)))
-    (message "%s" r)))
+  (let* ((raw-doc  (merlin--document-pos ident))
+         (doc      (concat "(*" raw-doc "*)"))
+         (nb-lines (merlin--count-lines doc)))
+    (merlin/display-in-type-buffer doc)
+    (if (> nb-lines 8)
+        (display-buffer merlin-type-buffer-name)
+      (message "%s"
+        (with-current-buffer merlin-type-buffer-name
+          (font-lock-fontify-region (point-min) (point-max))
+          (buffer-string))))))
 
 (defun merlin-document ()
   "Document the identifier under point"
@@ -1756,7 +1753,7 @@ Returns the position."
 (defun merlin-dir-group ()
   "Group buffers by directory" ()
   (list
-    (cons 'name (file-name-directory (expand-file-name buffer-file-name)))))
+    (cons 'name (file-name-directory (expand-file-name (buffer-file-name (buffer-base-buffer)))))))
 
 (defun merlin-setup ()
   "Set up a buffer for use with merlin."

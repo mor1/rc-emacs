@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "merlin" "merlin.el" (22059 16114 0 0))
+;;;### (autoloads nil "merlin" "merlin.el" (22111 13661 0 0))
 ;;; Generated autoloads from merlin.el
 
 (autoload 'merlin-mode "merlin" "\
@@ -18,8 +18,8 @@ Short cuts:
 ;;;***
 
 ;;;### (autoloads nil nil ("merlin-ac.el" "merlin-cap.el" "merlin-company.el"
-;;;;;;  "merlin-compat.el" "merlin-iedit.el" "merlin-pkg.el") (22059
-;;;;;;  16114 524400 0))
+;;;;;;  "merlin-compat.el" "merlin-iedit.el" "merlin-pkg.el") (22111
+;;;;;;  13661 316800 0))
 
 ;;;***
 
