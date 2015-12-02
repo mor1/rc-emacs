@@ -1,0 +1,1 @@
+(define-package "on-screen" "20151108.2108" "guide your eyes while scrolling" '((cl-lib "0")) :stars '(#("9" 0 1 (font-lock-face paradox-star-face))) :url "https://github.com/michael-heerdegen/on-screen.el" :keywords '("convenience"))

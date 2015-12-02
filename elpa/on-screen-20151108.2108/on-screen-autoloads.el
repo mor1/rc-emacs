@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "on-screen" "on-screen.el" (22050 23022 0 0))
+;;;### (autoloads nil "on-screen" "on-screen.el" (22111 13659 0 0))
 ;;; Generated autoloads from on-screen.el
 
 (autoload 'on-screen-mode "on-screen" "\
