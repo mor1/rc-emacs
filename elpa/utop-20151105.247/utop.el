@@ -3,7 +3,7 @@
 ;; Copyright: (c) 2011, Jeremie Dimino <jeremie@dimino.org>
 ;; Author: Jeremie Dimino <jeremie@dimino.org>
 ;; URL: https://github.com/diml/utop
-;; Package-Version: 20150806.258
+;; Package-Version: 20151105.247
 ;; Licence: BSD3
 ;; Version: 1.11
 ;; Package-Requires: ((emacs "24"))
@@ -410,8 +410,8 @@ it is started."
     (save-excursion
       (goto-char utop-prompt-min)
       (forward-line -1)
-      (let ((line (replace-in-string (thing-at-point 'line) "\n" "")))
-        (set-text-properties 0 (length line) nil line)
+      (let ((line (buffer-substring-no-properties
+                   (line-beginning-position) (line-end-position))))
         (message line)))))
 
 ;; Poor man's identifier at point
