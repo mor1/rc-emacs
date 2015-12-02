@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil nil ("latex-pretty-symbols.el") (21798 33722
-;;;;;;  240663 0))
+;;;### (autoloads nil nil ("latex-pretty-symbols.el") (22111 13667
+;;;;;;  518999 0))
 
 ;;;***
 
