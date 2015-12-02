@@ -2,8 +2,8 @@
 
 ;; Author: Sebastian Christ <rudolfo.christ@gmail.com>
 ;; URL: https://github.com/rudolfochrist/interleave
-;; Package-Version: 20150527.730
-;; Version: 1.0.0
+;; Package-Version: 20151120.635
+;; Version: 1.0.20151120-589
 
 ;; This file is not part of GNU Emacs
 
@@ -113,6 +113,10 @@ the pdf directory name. e.g. \".\" is interpreted as \"/pdf/file/dir/\",
  (defvar *interleave--page-marker* 0
    "Caches the current page while scrolling"))
 
+(make-variable-buffer-local
+ (defvar *interleave--multi-pdf-notes-file* nil
+   "Indicates if the current Org notes file is a multi-pdf notes file."))
+
 (defun interleave--find-pdf-path (buffer)
   "Searches for the `interleave_pdf' property in BUFFER and extracts it when found."
   (with-current-buffer buffer
@@ -121,6 +125,16 @@ the pdf directory name. e.g. \".\" is interpreted as \"/pdf/file/dir/\",
       (re-search-forward "^#\\+interleave_pdf: \\(.*\\)")
       (when (match-string 0)
         (match-string 1)))))
+
+(defun interleave--headline-pdf-path (buffer)
+  (with-current-buffer buffer
+    (save-excursion
+      (let ((headline (org-element-at-point)))
+        (when (and (equal (org-element-type headline) 'headline)
+                   (equal (org-element-property :level headline) 1)
+                   (org-entry-get nil "interleave_pdf"))
+          (setq *interleave--multi-pdf-notes-file* t)
+          (org-entry-get nil "interleave_pdf"))))))
 
 (defun interleave--open-file (split-window)
   "Opens the interleave pdf file in `doc-view-mode'/`pdf-view-mode'  besides the
@@ -133,7 +147,8 @@ SPLIT-WINDOW is a function that actually splits the window, so it must be either
         (progn
           (delete-other-windows)
           (funcall split-window)
-          (find-file (expand-file-name (interleave--find-pdf-path buf))))
+          (find-file (expand-file-name (or (interleave--headline-pdf-path buf)
+                                           (interleave--find-pdf-path buf)))))
       ('error
        (let ((pdf-file-name
               (read-file-name "No #+INTERLEAVE_PDF property found. Please specify path: " "~/")))
@@ -142,13 +157,31 @@ SPLIT-WINDOW is a function that actually splits the window, so it must be either
            (insert "#+INTERLEAVE_PDF: " pdf-file-name)))))
     (interleave-pdf-mode 1)))
 
+(defun interleave--goto-parent-headline ()
+  "Search the tree for the outermost parent headline."
+  (let ((headline (org-element-at-point)))
+    (unless (equal (org-element-type headline) 'headline)
+      (outline-up-heading 1)
+      (setq headline (org-element-at-point)))
+    (ignore-errors
+      (outline-up-heading (1- (org-element-property :level headline))))))
+
+(defun interleave--goto-search-position ()
+  "Move point to the search start position.
+
+For multi-pdf notes this is the outermost parent headline. For everything else
+this is the beginning of the buffer."
+  (if *interleave--multi-pdf-notes-file*
+      (interleave--goto-parent-headline)
+    (goto-char (point-min))))
+
 (defun interleave--go-to-page-note (page)
   "Searches the notes buffer for an headline with the `interleave_page_note'
 property set to PAGE. It narrows the subtree when found."
   (with-current-buffer *interleave--org-buffer*
     (save-excursion
       (widen)
-      (goto-char (point-min))
+      (interleave--goto-search-position)
       (when (re-search-forward (format "^\[ \t\r\]*\:interleave_page_note\: %s$"
                                        page)
                                nil t)
@@ -201,13 +234,30 @@ property set to PAGE. It narrows the subtree when found."
       (switch-to-buffer-other-window *interleave--pdf-buffer*)
     (switch-to-buffer *interleave--pdf-buffer*)))
 
+(defun interleave--goto-insert-position ()
+  "Move the point to the right insert postion.
+
+For multi-pdf notes this is the end of the subtree. For everything else
+this is the end of the buffer"
+  (if (not *interleave--multi-pdf-notes-file*)
+      (goto-char (point-max))
+    (interleave--goto-parent-headline)
+    (org-end-of-subtree)))
+
+(defun interleave--insert-heading-respect-content ()
+  (org-insert-heading-respect-content)
+  (let ((new-heading (org-element-at-point)))
+    (when (and *interleave--multi-pdf-notes-file*
+               (< (org-element-property :level new-heading) 2))
+      (org-demote))))
+
 (defun interleave--create-new-note (page)
   "Creates a new headline for the page PAGE."
   (with-current-buffer *interleave--org-buffer*
     (save-excursion
       (widen)
-      (goto-char (point-max))
-      (org-insert-heading-respect-content)
+      (interleave--goto-insert-position)
+      (interleave--insert-heading-respect-content)
       (insert (format "Notes for page %d" page))
       (org-set-property "interleave_page_note" (number-to-string page))
       (org-narrow-to-subtree)))
@@ -333,7 +383,7 @@ of .pdf)."
   (interactive)
   (with-current-buffer *interleave--org-buffer*
     (widen)
-    (goto-char (point-min))
+    (interleave--goto-search-position)
     (when (interleave--headlines-available-p)
       (interleave--sort-notes interleave-sort-order)
       (org-overview))
