@@ -3,7 +3,7 @@
 ;; Author: Alexandre Vassalotti <alexandre@peadrop.com>
 ;; Created: 23-Apr-2009
 ;; Version: 0.3
-;; Package-Version: 20091217.1755
+;; Package-Version: 20150521.2011
 ;; Keywords: google protobuf languages
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -107,7 +107,7 @@
 ;; cc-mode.  So, we approximate as best we can.
 
 (c-lang-defconst c-type-list-kwds
-  protobuf '("extensions" "to"))
+  protobuf '("extensions" "to" "reserved"))
 
 (c-lang-defconst c-typeless-decl-kwds
   protobuf '("extend" "rpc" "option" "returns"))

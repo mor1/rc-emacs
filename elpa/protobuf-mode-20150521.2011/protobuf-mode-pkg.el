@@ -1,0 +1,1 @@
+(define-package "protobuf-mode" "20150521.2011" "major mode for editing protocol buffers." 'nil :stars '(#("6290" 0 4 (font-lock-face paradox-star-face))) :keywords '("google" "protobuf" "languages"))
