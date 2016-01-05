@@ -14,6 +14,16 @@
 
 ;;; History:
 
+;; Version 1.4.0: features and fixes
+;;   * New header built on Emacs' built-in buffer headers
+;;   * New hook: `elfeed-new-entry-parse-hook'
+;;   * Emacs' bookmark support (`bookmark-set', `bookmark-jump')
+;;   * Emacs' desktop support (save/restore windows)
+;;   * Custom faces in search listing via `elfeed-search-face-alist'
+;;   * Dedicated log buffer, *elfeed-log*
+;;   * Scoped updates with prefix argument to `elfeed-search-fetch'
+;;   * Various bug fixes
+;;   * Fixes to feed Unicode decoding
 ;; Version 1.3.0: features and fixes
 ;;   * `elfeed-search-face-alist' for custom entry faces
 ;;   * `display-local-help' (C-h .) support in search
@@ -76,7 +86,7 @@
   "An Emacs web feed reader."
   :group 'comm)
 
-(defconst elfeed-version "1.3.0")
+(defconst elfeed-version "1.4.0")
 
 (defcustom elfeed-feeds ()
   "List of all feeds that Elfeed should follow. You must add your
@@ -148,7 +158,8 @@ This is a workaround for issues in `url-queue-retrieve'."
   (interactive)
   (let ((fails (mapcar #'url-queue-url elfeed-connections)))
     (when fails
-      (elfeed-log 'warn "Elfeed aborted feeds: %s" (mapconcat #'identity fails " ")))
+      (elfeed-log 'warn "Elfeed aborted feeds: %s"
+                  (mapconcat #'identity fails " ")))
     (setf url-queue nil))
   (elfeed-search-update :force))
 
@@ -183,6 +194,13 @@ NIL for unknown."
         (when all-content
           (apply #'concat all-content))))))
 
+(defvar elfeed-new-entry-parse-hook '()
+  "Hook to be called after parsing a new entry.
+
+Take three arguments: the feed TYPE, the XML structure for the
+entry, and the Elfeed ENTRY object. Return value is ignored, and
+is called for side-effects on the ENTRY object.")
+
 (defun elfeed-entries-from-atom (url xml)
   "Turn parsed Atom content into a list of elfeed-entry structs."
   (let* ((feed-id url)
@@ -205,6 +223,8 @@ NIL for unknown."
                     (type (or (xml-query '(content :type) entry)
                               (xml-query '(summary :type) entry)
                               ""))
+                    (tags (elfeed-normalize-tags autotags elfeed-initial-tags))
+                    (content-type (if (string-match-p "html" type) 'html nil))
                     (etags (xml-query-all '(link [rel "enclosure"]) entry))
                     (enclosures
                      (cl-loop for enclosure in etags
@@ -212,17 +232,20 @@ NIL for unknown."
                               for href = (xml-query '(:href) wrap)
                               for type = (xml-query '(:type) wrap)
                               for length = (xml-query '(:length) wrap)
-                              collect (list href type length))))
-               (elfeed-entry--create
-                :title (elfeed-cleanup title)
-                :feed-id feed-id
-                :id (cons feed-id (elfeed-cleanup id))
-                :link (elfeed-cleanup link)
-                :tags (elfeed-normalize-tags autotags elfeed-initial-tags)
-                :date (elfeed-float-time date)
-                :content content
-                :enclosures enclosures
-                :content-type (if (string-match-p "html" type) 'html nil))))))
+                              collect (list href type length)))
+                    (db-entry (elfeed-entry--create
+                               :title (elfeed-cleanup title)
+                               :feed-id feed-id
+                               :id (cons feed-id (elfeed-cleanup id))
+                               :link (elfeed-cleanup link)
+                               :tags tags
+                               :date (elfeed-float-time date)
+                               :content content
+                               :enclosures enclosures
+                               :content-type content-type)))
+               (dolist (hook elfeed-new-entry-parse-hook)
+                 (funcall hook :atom entry db-entry))
+               db-entry))))
 
 (defun elfeed-entries-from-rss (url xml)
   "Turn parsed RSS content into a list of elfeed-entry structs."
@@ -244,6 +267,8 @@ NIL for unknown."
                     (id (or guid link (elfeed-generate-id description)))
                     (full-id (cons feed-id (elfeed-cleanup id)))
                     (original (elfeed-db-get-entry full-id))
+                    (original-date (and original (elfeed-entry-date original)))
+                    (tags (elfeed-normalize-tags autotags elfeed-initial-tags))
                     (etags (xml-query-all '(enclosure) item))
                     (enclosures
                      (cl-loop for enclosure in etags
@@ -251,19 +276,21 @@ NIL for unknown."
                               for url = (xml-query '(:url) wrap)
                               for type = (xml-query '(:type) wrap)
                               for length = (xml-query '(:length) wrap)
-                              collect (list url type length))))
-               (elfeed-entry--create
-                :title (elfeed-cleanup title)
-                :id full-id
-                :feed-id feed-id
-                :link (elfeed-cleanup link)
-                :tags (elfeed-normalize-tags autotags elfeed-initial-tags)
-                :date (if (and original (null date))
-                          (elfeed-entry-date original)
-                        (elfeed-float-time date))
-                :enclosures enclosures
-                :content description
-                :content-type 'html)))))
+                              collect (list url type length)))
+                    (db-entry (elfeed-entry--create
+                               :title (elfeed-cleanup title)
+                               :id full-id
+                               :feed-id feed-id
+                               :link (elfeed-cleanup link)
+                               :tags tags
+                               :date (elfeed-new-date-for-entry
+                                      original-date date)
+                               :enclosures enclosures
+                               :content description
+                               :content-type 'html)))
+               (dolist (hook elfeed-new-entry-parse-hook)
+                 (funcall hook :rss item db-entry))
+               db-entry))))
 
 (defun elfeed-entries-from-rss1.0 (url xml)
   "Turn parsed RSS 1.0 content into a list of elfeed-entry structs."
@@ -282,18 +309,22 @@ NIL for unknown."
                      (apply #'concat (xml-query-all '(description *) item)))
                     (id (or link (elfeed-generate-id description)))
                     (full-id (cons feed-id (elfeed-cleanup id)))
-                    (original (elfeed-db-get-entry full-id)))
-               (elfeed-entry--create
-                :title (elfeed-cleanup title)
-                :id full-id
-                :feed-id feed-id
-                :link (elfeed-cleanup link)
-                :tags (elfeed-normalize-tags autotags elfeed-initial-tags)
-                :date (if (and original (null date))
-                          (elfeed-entry-date original)
-                        (elfeed-float-time date))
-                :content description
-                :content-type 'html)))))
+                    (original (elfeed-db-get-entry full-id))
+                    (original-date (and original (elfeed-entry-date original)))
+                    (tags (elfeed-normalize-tags autotags elfeed-initial-tags))
+                    (db-entry (elfeed-entry--create
+                               :title (elfeed-cleanup title)
+                               :id full-id
+                               :feed-id feed-id
+                               :link (elfeed-cleanup link)
+                               :tags tags
+                               :date (elfeed-new-date-for-entry
+                                      original-date date)
+                               :content description
+                               :content-type 'html)))
+               (dolist (hook elfeed-new-entry-parse-hook)
+                 (funcall hook :rss1.0 item db-entry))
+               db-entry))))
 
 (defun elfeed-feed-list ()
   "Return a flat list version of `elfeed-feeds'.
@@ -359,20 +390,48 @@ Only a list of strings will be returned."
   (elfeed-update-feed url)
   (elfeed-search-update :force))
 
+(defface elfeed-log-date-face
+  '((t :inherit font-lock-type-face))
+  "Face for showing the date in the elfeed log buffer."
+  :group 'elfeed)
+
+(defface elfeed-log-error-level-face
+  '((t :foreground "red"))
+  "Face for showing the `error' log level in the elfeed log buffer."
+  :group 'elfeed)
+
+(defface elfeed-log-warn-level-face
+  '((t :foreground "goldenrod"))
+  "Face for showing the `warn' log level in the elfeed log buffer."
+  :group 'elfeed)
+
+(defface elfeed-log-info-level-face
+  '((t :foreground "deep sky blue"))
+  "Face for showing the `info' log level in the elfeed log buffer."
+  :group 'elfeed)
+
 (defun elfeed-log (level fmt &rest objects)
-  (let ((log-buffer (get-buffer-create "*elfeed-log*")))
+  (let ((log-buffer (get-buffer-create "*elfeed-log*"))
+        (log-level-face (cond
+                         ((eq level 'info) 'elfeed-log-info-level-face)
+                         ((eq level 'warn) 'elfeed-log-warn-level-face)
+                         ((eq level 'error) 'elfeed-log-error-level-face))))
     (with-current-buffer log-buffer
       (goto-char (point-max))
-      (insert (format "[%s] [%s]: %s\n"
-                      (format-time-string "%Y-%m-%d %H:%M:%S")
-                      level
-                      (apply #'format fmt objects))))))
+      (insert
+       (format
+        (concat "[" (propertize "%s" 'face 'elfeed-log-date-face) "] "
+                "[" (propertize "%s" 'face log-level-face) "]: %s\n")
+        (format-time-string "%Y-%m-%d %H:%M:%S")
+        level
+        (apply #'format fmt objects))))))
 
 ;;;###autoload
 (defun elfeed-update ()
   "Update all the feeds in `elfeed-feeds'."
   (interactive)
-  (elfeed-log 'info "Elfeed update: %s" (format-time-string "%B %e %Y %H:%M:%S %Z"))
+  (elfeed-log 'info "Elfeed update: %s"
+              (format-time-string "%B %e %Y %H:%M:%S %Z"))
   (mapc #'elfeed-update-feed (elfeed--shuffle (elfeed-feed-list)))
   (elfeed-search-update :force)
   (elfeed-db-save))

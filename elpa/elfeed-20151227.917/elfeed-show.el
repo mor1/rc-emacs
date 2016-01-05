@@ -16,7 +16,7 @@
 (defcustom elfeed-show-truncate-long-urls t
   "When non-nil, use an ellipsis to shorten very long displayed URLs."
   :group 'elfeed
-  :type 'bool)
+  :type 'boolean)
 
 (defvar elfeed-show-entry nil
   "The entry being displayed in this buffer.")
@@ -30,6 +30,9 @@ Defaults to `switch-to-buffer'.")
 buffer. Does not take any arguments.
 
 Defaults to `elfeed-kill-buffer'.")
+
+(defvar elfeed-show-refresh-function #'elfeed-show-refresh--mail-style
+  "Function called to refresh the `*elfeed-entry*' buffer.")
 
 (defvar elfeed-show-mode-map
   (let ((map (make-sparse-keymap)))
@@ -97,8 +100,8 @@ Defaults to `elfeed-kill-buffer'.")
     (setf (url-target obj) nil)
     (url-recreate-url obj)))
 
-(defun elfeed-show-refresh ()
-  "Update the buffer to match the selected entry."
+(defun elfeed-show-refresh--mail-style ()
+  "Update the buffer to match the selected entry, using a mail-style."
   (interactive)
   (let* ((inhibit-read-only t)
          (title (elfeed-entry-title elfeed-show-entry))
@@ -136,6 +139,11 @@ Defaults to `elfeed-kill-buffer'.")
           (insert content))
       (insert (propertize "(empty)\n" 'face 'italic)))
     (goto-char (point-min))))
+
+(defun elfeed-show-refresh ()
+  "Update the buffer to match the selected entry."
+  (interactive)
+  (call-interactively elfeed-show-refresh-function))
 
 (defun elfeed-show-entry (entry)
   "Display ENTRY in the current buffer."

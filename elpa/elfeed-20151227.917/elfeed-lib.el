@@ -86,10 +86,19 @@ Examples: 2015-02-22, 2015-02, 20150222"
           (when (and (>= year 1900) (< year 2200))
             (float-time (encode-time 0 0 0 day month year t))))))))
 
-(defun elfeed-float-time (&optional date)
-  "Like `float-time' but accept anything reasonable for DATE,
-defaulting to the current time if DATE could not be parsed. Date
-is allowed to be relative to now (`elfeed-time-duration')."
+(defun elfeed-new-date-for-entry (old-date new-date)
+  "Decide entry date, given an existing date (nil for new) and a new date.
+Existing entries' dates are unchanged if the new date is not
+parseable. New entries with unparseable dates default to the
+current time."
+  (or (elfeed-float-time new-date)
+      old-date
+      (float-time)))
+
+(defun elfeed-float-time (date)
+  "Like `float-time' but accept anything reasonable for DATE.
+Defaults to nil if DATE could not be parsed. Date is allowed to
+be relative to now (`elfeed-time-duration')."
   (cl-typecase date
     (string
      (let ((iso-8601 (elfeed-parse-simple-iso-8601 date)))
@@ -100,29 +109,30 @@ is allowed to be relative to now (`elfeed-time-duration')."
                (- (float-time) duration)
              (let ((time (ignore-errors (date-to-time date))))
                (if (equal time '(14445 17280)) ; date-to-time silently failed
-                   (float-time)
+                   nil
                  (float-time time))))))))
     (integer date)
-    (list (float-time date))
-    (otherwise (float-time))))
+    (otherwise nil)))
 
 (defun elfeed-xml-parse-region (&optional beg end buffer parse-dtd parse-ns)
   "Decode (if needed) and parse XML file. Uses coding system from
 XML encoding declaration."
-  (let ((coding-system nil))
-    (progn
-      (unless beg (setq beg (point-min)))
-      (unless end (setq end (point-max)))
-      (goto-char beg)
-      (if (re-search-forward
-           "<\\?xml.*?encoding=[\"']\\([^\"']+\\)[\"'].*?\\?>" nil t)
-          (setq coding-system
-                (ignore-errors (check-coding-system
-                                (intern (downcase (match-string 1)))))))
-      (when coding-system
-        (setq end (+ beg
-                     (decode-coding-region beg end coding-system))))
-      (goto-char beg)))
+  (unless beg (setq beg (point-min)))
+  (unless end (setq end (point-max)))
+  (setf (point) beg)
+  (when (re-search-forward
+         "<\\?xml.*?encoding=[\"']\\([^\"']+\\)[\"'].*?\\?>" nil t)
+    (let ((coding-system (intern-soft (downcase (match-string 1)))))
+      (when (ignore-errors (check-coding-system coding-system))
+        (let ((mark-beg (make-marker))
+              (mark-end (make-marker)))
+          ;; Region changes with encoding, so use markers to track it.
+          (set-marker mark-beg beg)
+          (set-marker mark-end end)
+          (set-buffer-multibyte t)
+          (recode-region mark-beg mark-end coding-system 'raw-text)
+          (setf beg (marker-position mark-beg)
+                end (marker-position mark-end))))))
   (xml-parse-region beg end buffer parse-dtd parse-ns))
 
 (defun elfeed-xml-unparse (element)

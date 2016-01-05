@@ -158,13 +158,12 @@ When live editing the filter, it is bound to :live.")
       (format "Updated %s, %s%s"
               (propertize update 'face 'elfeed-search-last-update-face)
               (propertize unread 'face 'elfeed-search-unread-count-face)
-              (propertize (cond
-                           (elfeed-search-filter-active
-                            "")
-                           (elfeed-search-filter
-                            (concat ", " elfeed-search-filter))
-                           (""))
-                          'face 'elfeed-search-filter-face))))))
+              (cond
+               (elfeed-search-filter-active "")
+               ((string-match-p "[^ ]" elfeed-search-filter)
+                (concat ", " (propertize elfeed-search-filter
+                                         'face 'elfeed-search-filter-face)))
+               ("")))))))
 
 (defun elfeed-search-mode ()
   "Major mode for listing elfeed feed entries.
@@ -176,8 +175,10 @@ When live editing the filter, it is bound to :live.")
         mode-name "elfeed-search"
         truncate-lines t
         buffer-read-only t
-        bookmark-make-record-function #'elfeed-search-bookmark-make-record
+        desktop-save-buffer #'elfeed-search-desktop-save
         header-line-format '(:eval (funcall elfeed-search-header-function)))
+  (set (make-local-variable 'bookmark-make-record-function)
+       #'elfeed-search-bookmark-make-record)
   (buffer-disable-undo)
   (hl-line-mode)
   (make-local-variable 'elfeed-search-entries)
@@ -276,8 +277,9 @@ The customization `elfeed-search-date-format' sets the formatting."
 
 (defun elfeed-search--faces (tags)
   "Return all the faces that apply to an entry with TAGS."
-  (nconc (cl-loop for tag in tags
-                  append (cdr (assoc tag elfeed-search-face-alist)))
+  (nconc (cl-loop for (tag . faces) in elfeed-search-face-alist
+                  when (member tag tags)
+                  append faces)
          (list 'elfeed-search-title-face)))
 
 (defun elfeed-search-print-entry--default (entry)
@@ -620,6 +622,7 @@ browser defined by `browse-url-generic-program'."
 
 ;; Bookmarks
 
+;;;###autoload
 (defun elfeed-search-bookmark-handler (record)
   "Jump to an elfeed-search bookmarked location."
   (elfeed)
@@ -632,5 +635,25 @@ browser defined by `browse-url-generic-program'."
       (location . ,elfeed-search-filter)
       (tags ,@(mapcar #'symbol-name tags))
       (handler . elfeed-search-bookmark-handler))))
+
+;; Desktop Save
+
+(defun elfeed-search-desktop-save (_desktop-dirname)
+  "Save the state of the current elfeed-search buffer so that it
+  may be restored as part of a saved desktop. Also save the state
+  of the db for when `desktop-auto-save-timeout' is enabled."
+  (elfeed-db-save)
+  elfeed-search-filter)
+
+;;;###autoload
+(defun elfeed-search-desktop-restore (_file-name _buffer-name search-filter)
+  "Restore the state of an elfeed-search buffer on desktop restore."
+  (elfeed)
+  (elfeed-search-set-filter search-filter)
+  (current-buffer))
+
+;;;###autoload
+(add-to-list 'desktop-buffer-mode-handlers
+             '(elfeed-search-mode . elfeed-search-desktop-restore))
 
 ;;; elfeed-search.el ends here
