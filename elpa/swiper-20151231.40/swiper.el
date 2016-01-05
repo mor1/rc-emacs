@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/swiper
-;; Version: 0.6.0
+;; Version: 0.7.0
 ;; Package-Requires: ((emacs "24.1"))
 ;; Keywords: matching
 
@@ -225,8 +225,11 @@
                                  occur-mode
                                  occur-edit-mode
                                  bongo-mode
+                                 bongo-library-mode
+                                 bongo-playlist-mode
                                  eww-mode
                                  twittering-mode
+                                 vc-dir-mode
                                  w3m-mode)))
     (unless (> (buffer-size) 100000)
       (if (fboundp 'font-lock-ensure)
@@ -258,7 +261,8 @@ count."
           (require 'outline)
           (if (fboundp 'outline-show-all)
               (outline-show-all)
-            (show-all)))
+            (with-no-warnings
+              (show-all))))
         (setq swiper-use-visual-line t))
     (setq swiper-use-visual-line nil))
   (let ((n-lines (count-lines (point-min) (point-max))))
@@ -313,8 +317,13 @@ When non-nil, INITIAL-INPUT is the initial search pattern."
 
 (declare-function evil-jumper--set-jump "ext:evil-jumper")
 
+(defvar swiper--current-line nil)
+(defvar swiper--current-match-start nil)
+
 (defun swiper--init ()
   "Perform initialization common to both completion methods."
+  (setq swiper--current-line nil)
+  (setq swiper--current-match-start nil)
   (setq swiper--opoint (point))
   (when (bound-and-true-p evil-jumper-mode)
     (evil-jumper--set-jump)))
@@ -437,22 +446,30 @@ Matched candidates should have `swiper-invocation-face'."
              (num (if (string-match "^[0-9]+" str)
                       (string-to-number (match-string 0 str))
                     0)))
-        (goto-char (point-min))
-        (when (cl-plusp num)
-          (goto-char (point-min))
-          (if swiper-use-visual-line
-              (line-move (1- num))
-            (forward-line (1- num)))
-          (if (and (equal ivy-text "")
-                   (>= swiper--opoint (line-beginning-position))
-                   (<= swiper--opoint (line-end-position)))
-              (goto-char swiper--opoint)
-            (re-search-forward re (line-end-position) t))
-          (isearch-range-invisible (line-beginning-position)
-                                   (line-end-position))
-          (unless (and (>= (point) (window-start))
-                       (<= (point) (window-end (ivy-state-window ivy-last) t)))
-            (recenter)))
+        (unless (eq this-command 'ivy-yank-word)
+          (when (cl-plusp num)
+            (unless (if swiper--current-line
+                        (eq swiper--current-line num)
+                      (eq (line-number-at-pos) num))
+              (goto-char (point-min))
+              (if swiper-use-visual-line
+                  (line-move (1- num))
+                (forward-line (1- num))))
+            (if (and (equal ivy-text "")
+                     (>= swiper--opoint (line-beginning-position))
+                     (<= swiper--opoint (line-end-position)))
+                (goto-char swiper--opoint)
+              (if (eq swiper--current-line num)
+                  (when swiper--current-match-start
+                    (goto-char swiper--current-match-start))
+                (setq swiper--current-line num))
+              (re-search-forward re (line-end-position) t)
+              (setq swiper--current-match-start (match-beginning 0)))
+            (isearch-range-invisible (line-beginning-position)
+                                     (line-end-position))
+            (unless (and (>= (point) (window-start))
+                         (<= (point) (window-end (ivy-state-window ivy-last) t)))
+              (recenter))))
         (swiper--add-overlays re)))))
 
 (defun swiper--add-overlays (re &optional beg end wnd)
