@@ -216,6 +216,7 @@ attention to case differences."
     php
     php-phpmd
     php-phpcs
+    processing
     puppet-parser
     puppet-lint
     python-flake8
@@ -1986,7 +1987,7 @@ is applicable from Emacs Lisp code.  Use
 `flycheck-may-use-checker' instead."
   (interactive (list (read-flycheck-checker "Checker to verify: ")))
   (unless (flycheck-valid-checker-p checker)
-    (user-error "%s is not a syntax checker"))
+    (user-error "%s is not a syntax checker" checker))
 
   ;; Save the buffer to make sure that all predicates are good
   (when (and (buffer-file-name) (buffer-modified-p))
@@ -4134,7 +4135,8 @@ In the latter case, show messages in
   (when (and errors (flycheck-may-use-echo-area-p))
     (let ((messages (seq-map #'flycheck-error-format-message-and-id errors)))
       (display-message-or-buffer (string-join messages "\n\n")
-                                 flycheck-error-message-buffer))))
+                                 flycheck-error-message-buffer
+                                 'not-this-window))))
 
 (defun flycheck-display-error-messages-unless-error-list (errors)
   "Show messages of ERRORS unless the error list is visible.
@@ -4152,7 +4154,10 @@ Hide the error buffer if there is no error under point."
   (-when-let* ((buffer (flycheck-error-message-buffer))
                (window (get-buffer-window buffer)))
     (unless (flycheck-overlays-at (point))
-      (quit-window nil window))))
+      ;; save-selected-window prevents `quit-window' from changing the current
+      ;; buffer (see https://github.com/flycheck/flycheck/issues/648).
+      (save-selected-window
+        (quit-window nil window)))))
 
 
 ;;; Working with errors
@@ -7249,6 +7254,23 @@ See URL `http://pear.php.net/package/PHP_CodeSniffer/'."
      (flycheck-remove-error-file-names "STDIN" errors)))
   :modes (php-mode php+-mode))
 
+(flycheck-define-checker processing
+  "Processing command line tool.
+
+See https://github.com/processing/processing/wiki/Command-Line"
+  :command ("processing-java" "--force"
+            ;; Don't change the order of these arguments, processing is pretty
+            ;; picky
+            (eval (concat "--sketch=" (file-name-directory (buffer-file-name))))
+            (eval (concat "--output=" (flycheck-temp-dir-system)))
+            "--build")
+  :error-patterns
+  ((error line-start (file-name) ":" line ":" column
+          (zero-or-more (or digit ":")) (message) line-end))
+  :modes processing-mode
+  ;; This syntax checker needs a file name
+  :predicate (lambda () (buffer-file-name)))
+
 (flycheck-define-checker puppet-parser
   "A Puppet DSL syntax checker using puppet's own parser.
 
@@ -7792,7 +7814,7 @@ See URL `http://www.rust-lang.org'."
          (message) line-end))
   :modes rust-mode
   :predicate (lambda ()
-               (or (not flycheck-rust-crate-root) (flycheck-buffer-saved-p))))
+               (and (not flycheck-rust-crate-root) (flycheck-buffer-saved-p))))
 
 (defvar flycheck-sass-scss-cache-directory nil
   "The cache directory for `sass' and `scss'.")
@@ -7927,12 +7949,15 @@ Please run gem install scss_lint_reporter_checkstyle"
 (flycheck-define-checker scss-lint
   "A SCSS syntax checker using SCSS-Lint.
 
+Needs SCSS-Lint 0.43.2 or newer.
+
 See URL `https://github.com/brigade/scss-lint'."
   :command ("scss-lint"
             "--require=scss_lint_reporter_checkstyle"
             "--format=Checkstyle"
             (config-file "--config" flycheck-scss-lintrc)
-            source)
+            "--stdin-file-path" source-original "-")
+  :standard-input t
   ;; We cannot directly parse Checkstyle XML, since for some mysterious reason
   ;; SCSS-Lint doesn't have a built-in Checkstyle reporter, and instead ships it
   ;; as an addon which might not be installed.  We use a custom error parser to
