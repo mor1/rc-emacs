@@ -1,4 +1,4 @@
-(define-package "company-web" "20151023.1346" "Company version of ac-html, complete for web,html,emmet,jade,slim modes"
+(define-package "company-web" "20151219.317" "Company version of ac-html, complete for web,html,emmet,jade,slim modes"
   '((company "0.8.0")
     (dash "2.8.0")
     (cl-lib "0.5.0")
