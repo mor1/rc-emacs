@@ -4,7 +4,7 @@
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
 ;; URL: https://github.com/Malabarba/aggressive-indent-mode
-;; Package-Version: 20151201.401
+;; Package-Version: 20151212.1248
 ;; Version: 1.4.2
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: indent lisp maint tools
@@ -382,7 +382,7 @@ or messages."
 ;;;###autoload
 (define-minor-mode aggressive-indent-mode
   nil nil " =>"
-  '(("" . aggressive-indent-indent-defun)
+  `((,(kbd "C-c C-q") . aggressive-indent-indent-defun)
     ([backspace]
      menu-item "maybe-delete-indentation" ignore :filter
      (lambda (&optional _)
