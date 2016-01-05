@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20151202.38
+;; Package-Version: 20151222.245
 ;; Version: 0.3.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
@@ -433,12 +433,18 @@ multiple DISPLAY-FN invokations."
         (t
          (error "Unrecognized option: %S" avy-all-windows))))
 
+(defcustom avy-all-windows-alt t
+  "The alternative `avy-all-windows' for use with \\[universal-argument]."
+  :type '(choice
+          (const :tag "All windows on the current frame" t)
+          (const :tag "All windows on all frames" all-frames)))
+
 (defmacro avy-dowindows (flip &rest body)
   "Depending on FLIP and `avy-all-windows' run BODY in each or selected window."
   (declare (indent 1)
            (debug (form body)))
   `(let ((avy-all-windows (if ,flip
-                              (not avy-all-windows)
+                              avy-all-windows-alt
                             avy-all-windows)))
      (dolist (wnd (avy-window-list))
        (with-selected-window wnd
@@ -592,7 +598,7 @@ When GROUP is non-nil, (BEG . END) should delimit that regex group."
   (let ((case-fold-search (or avy-case-fold-search
                               (not (string= regex (upcase regex)))))
         candidates)
-    (avy-dowindows nil
+    (avy-dowindows current-prefix-arg
       (dolist (pair (avy--find-visible-regions
                      (or beg (window-start))
                      (or end (window-end (selected-window) t))))
@@ -629,22 +635,26 @@ When GROUP is non-nil, (BEG . END) should delimit that regex group."
 (defun avy--overlay (str beg end wnd &optional compose-fn)
   "Create an overlay with STR from BEG to END in WND.
 COMPOSE-FN is a lambda that concatenates the old string at BEG with STR."
-  (when (<= (1+ beg) (with-selected-window wnd (point-max)))
-    (let* ((beg (+ beg avy--overlay-offset))
-           (ol (make-overlay beg (or end (1+ beg)) (window-buffer wnd)))
-           (old-str (avy--old-str beg wnd))
-           (os-line-prefix (get-text-property 0 'line-prefix old-str))
-           (os-wrap-prefix (get-text-property 0 'wrap-prefix old-str)))
-      (when os-line-prefix
-        (add-text-properties 0 1 `(line-prefix ,os-line-prefix) str))
-      (when os-wrap-prefix
-        (add-text-properties 0 1 `(wrap-prefix ,os-wrap-prefix) str))
-      (overlay-put ol 'window wnd)
-      (overlay-put ol 'category 'avy)
-      (overlay-put ol 'display (funcall
-                                (or compose-fn #'concat)
-                                str old-str))
-      (push ol avy--overlays-lead))))
+  (let ((eob (with-selected-window wnd (point-max))))
+    (when (<= beg eob)
+      (let* ((beg (+ beg avy--overlay-offset))
+             (ol (make-overlay beg (or end (1+ beg)) (window-buffer wnd)))
+             (old-str (if (eq beg eob) "" (avy--old-str beg wnd)))
+             (os-line-prefix (get-text-property 0 'line-prefix old-str))
+             (os-wrap-prefix (get-text-property 0 'wrap-prefix old-str)))
+        (when os-line-prefix
+          (add-text-properties 0 1 `(line-prefix ,os-line-prefix) str))
+        (when os-wrap-prefix
+          (add-text-properties 0 1 `(wrap-prefix ,os-wrap-prefix) str))
+        (overlay-put ol 'window wnd)
+        (overlay-put ol 'category 'avy)
+        (overlay-put ol (if (eq beg eob)
+                            'after-string
+                          'display)
+                     (funcall
+                      (or compose-fn #'concat)
+                      str old-str))
+        (push ol avy--overlays-lead)))))
 
 (defcustom avy-highlight-first nil
   "When non-nil highlight the first decision char with `avy-lead-face-0'.
@@ -950,6 +960,11 @@ The window scope is determined by `avy-all-windows' (ARG negates it)."
 (declare-function subword-backward "subword")
 (defvar subword-backward-regexp)
 
+(defcustom avy-subword-extra-word-chars '(?{ ?= ?} ?* ?: ?> ?<)
+  "A list of characters that should temporarily match \"\\w\".
+This variable is used by `avy-goto-subword-0' and `avy-goto-subword-1'."
+  :type '(repeat character))
+
 ;;;###autoload
 (defun avy-goto-subword-0 (&optional arg predicate)
   "Jump to a word or subword start.
@@ -966,18 +981,22 @@ should return true."
            "\\(\\(\\W\\|[[:lower:][:digit:]]\\)\\([!-/:@`~[:upper:]]+\\W*\\)\\|\\W\\w+\\)")
           candidates)
       (avy-dowindows arg
-        (let ((ws (window-start))
-              window-cands)
-          (save-excursion
-            (goto-char (window-end (selected-window) t))
-            (subword-backward)
-            (while (> (point) ws)
-              (when (or (null predicate)
-                        (and predicate (funcall predicate)))
-                (unless (get-char-property (point) 'invisible)
-                  (push (cons (point) (selected-window)) window-cands)))
-              (subword-backward)))
-          (setq candidates (nconc candidates window-cands))))
+        (let ((syn-tbl (copy-syntax-table)))
+          (dolist (char avy-subword-extra-word-chars)
+            (modify-syntax-entry char "w" syn-tbl))
+          (with-syntax-table syn-tbl
+            (let ((ws (window-start))
+                  window-cands)
+              (save-excursion
+                (goto-char (window-end (selected-window) t))
+                (subword-backward)
+                (while (> (point) ws)
+                  (when (or (null predicate)
+                            (and predicate (funcall predicate)))
+                    (unless (get-char-property (point) 'invisible)
+                      (push (cons (point) (selected-window)) window-cands)))
+                  (subword-backward)))
+              (setq candidates (nconc candidates window-cands))))))
       (avy--process candidates (avy--style-fn avy-style)))))
 
 ;;;###autoload
@@ -1027,8 +1046,8 @@ Narrow the scope to BEG END."
                     (setq temporary-goal-column 0)
                     (line-move-visual 1 t))
                 (forward-line 1)))))))
-    (setq avy-action #'identity)
-    (avy--process (nreverse candidates) (avy--style-fn avy-style))))
+    (let ((avy-action #'identity))
+      (avy--process (nreverse candidates) (avy--style-fn avy-style)))))
 
 ;;;###autoload
 (defun avy-goto-line (&optional arg)
@@ -1042,6 +1061,7 @@ When ARG is 4, negate the window scope determined by
 
 Otherwise, forward to `goto-line' with ARG."
   (interactive "p")
+  (setq arg (or arg 1))
   (if (not (memq arg '(1 4)))
       (progn
         (goto-char (point-min))
@@ -1056,8 +1076,10 @@ Otherwise, forward to `goto-line' with ARG."
                                "Goto line: " (string char))))
                     (when line
                       (avy-push-mark)
-                      (goto-char (point-min))
-                      (forward-line (1- (string-to-number line)))
+                      (save-restriction
+                        (widen)
+                        (goto-char (point-min))
+                        (forward-line (1- (string-to-number line))))
                       (throw 'done 'exit))))))
              (r (avy--line (eq arg 4))))
         (unless (eq r t)
@@ -1067,7 +1089,9 @@ Otherwise, forward to `goto-line' with ARG."
 (defun avy-goto-line-above ()
   "Goto visible line above the cursor."
   (interactive)
-  (let ((r (avy--line nil (window-start) (point))))
+  (let* ((avy-all-windows nil)
+         (r (avy--line nil (window-start)
+                       (line-beginning-position))))
     (unless (eq r t)
       (avy-action-goto r))))
 
@@ -1075,9 +1099,10 @@ Otherwise, forward to `goto-line' with ARG."
 (defun avy-goto-line-below ()
   "Goto visible line below the cursor."
   (interactive)
-  (let ((r (avy--line
-            nil (point)
-            (window-end (selected-window) t))))
+  (let* ((avy-all-windows nil)
+         (r (avy--line
+             nil (line-beginning-position 2)
+             (window-end (selected-window) t))))
     (unless (eq r t)
       (avy-action-goto r))))
 
@@ -1135,28 +1160,33 @@ ARG lines can be used."
              (user-error "Unexpected `avy-line-insert-style'"))))))
 
 ;;;###autoload
-(defun avy-copy-region ()
-  "Select two lines and copy the text between them here."
-  (interactive)
-  (avy-with avy-copy-region
-    (let* ((beg (avy--line))
-           (end (avy--line))
-           (str (buffer-substring-no-properties
-                 beg
-                 (save-excursion
-                   (goto-char end)
-                   (line-end-position)))))
-      (cond ((eq avy-line-insert-style 'above)
-             (beginning-of-line)
-             (save-excursion
-               (insert str "\n")))
-            ((eq avy-line-insert-style 'below)
-             (end-of-line)
-             (newline)
-             (save-excursion
-               (insert str)))
-            (t
-             (user-error "Unexpected `avy-line-insert-style'"))))))
+(defun avy-copy-region (arg)
+  "Select two lines and copy the text between them to point.
+
+The window scope is determined by `avy-all-windows' or
+`avy-all-windows-alt' when ARG is non-nil."
+  (interactive "P")
+  (let ((initial-window (selected-window)))
+    (avy-with avy-copy-region
+      (let* ((beg (avy--line arg))
+             (end (avy--line arg))
+             (str (buffer-substring-no-properties
+                   beg
+                   (save-excursion
+                     (goto-char end)
+                     (line-end-position)))))
+        (select-window initial-window)
+        (cond ((eq avy-line-insert-style 'above)
+               (beginning-of-line)
+               (save-excursion
+                 (insert str "\n")))
+              ((eq avy-line-insert-style 'below)
+               (end-of-line)
+               (newline)
+               (save-excursion
+                 (insert str)))
+              (t
+               (user-error "Unexpected `avy-line-insert-style'")))))))
 
 ;;;###autoload
 (defun avy-setup-default ()
@@ -1206,7 +1236,7 @@ This function obeys `avy-all-windows' setting."
              ;; Highlight
              (when (>= (length str) 1)
                (let (found)
-                 (avy-dowindows nil
+                 (avy-dowindows current-prefix-arg
                    (dolist (pair (avy--find-visible-regions
                                   (window-start)
                                   (window-end (selected-window) t)))
