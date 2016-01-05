@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (21829 32087
+;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (22150 30200
 ;;;;;;  0 0))
 ;;; Generated autoloads from git-ps1-mode.el
 
@@ -20,6 +20,15 @@ or call the function `git-ps1-mode'.")
 Minor-mode to print __git_ps1.
 
 \(fn &optional ARG)" t nil)
+
+(autoload 'git-ps1-mode-get-current "git-ps1-mode" "\
+Return current __git_ps1 execution output as string.
+
+Give FORMAT if you want to specify other than \"%s\".
+If optional argument DIR is given, run __git_ps1 in that directory.
+This function returns nil if the output is not available for some reasons.
+
+\(fn &optional FORMAT DIR)" nil nil)
 
 ;;;***
 
