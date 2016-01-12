@@ -1,6 +1,6 @@
 ;;; company-capf.el --- company-mode completion-at-point-functions backend -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013-2015  Free Software Foundation, Inc.
+;; Copyright (C) 2013-2016  Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@iro.umontreal.ca>
 
@@ -54,9 +54,12 @@
                                      #'completion--capf-wrapper 'optimist)))
     (when (and (consp (cdr data)) (integer-or-marker-p (nth 1 data))) data)))
 
+(declare-function python-shell-get-process "python")
+
 (defun company--capf-workaround ()
   ;; For http://debbugs.gnu.org/cgi/bugreport.cgi?bug=18067
-  (if (or (not (memq 'python-completion-complete-at-point completion-at-point-functions))
+  (if (or (not (listp completion-at-point-functions))
+          (not (memq 'python-completion-complete-at-point completion-at-point-functions))
           (python-shell-get-process))
       completion-at-point-functions
     (remq 'python-completion-complete-at-point completion-at-point-functions)))
