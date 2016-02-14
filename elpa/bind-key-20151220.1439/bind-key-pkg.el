@@ -1,1 +1,0 @@
-(define-package "bind-key" "20151220.1439" "A simple way to manage personal keybindings" 'nil :stars '(#("817" 0 3 (font-lock-face paradox-star-face))) :url "https://github.com/jwiegley/use-package" :keywords '("keys" "keybinding" "config" "dotemacs"))
