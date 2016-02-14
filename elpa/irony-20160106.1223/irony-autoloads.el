@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "irony" "irony.el" (22150 30188 0 0))
+;;;### (autoloads nil "irony" "irony.el" (22167 36271 0 0))
 ;;; Generated autoloads from irony.el
 
 (defvar irony-additional-clang-options nil "\
@@ -37,7 +37,7 @@ Kill the running irony-server process, if any.
 
 ;;;***
 
-;;;### (autoloads nil "irony-cdb" "irony-cdb.el" (22150 30185 0 0))
+;;;### (autoloads nil "irony-cdb" "irony-cdb.el" (22167 36271 0 0))
 ;;; Generated autoloads from irony-cdb.el
 
 (autoload 'irony-cdb-autosetup-compile-options "irony-cdb" "\
@@ -53,7 +53,7 @@ Kill the running irony-server process, if any.
 ;;;***
 
 ;;;### (autoloads nil "irony-cdb-clang-complete" "irony-cdb-clang-complete.el"
-;;;;;;  (22150 30188 0 0))
+;;;;;;  (22167 36271 0 0))
 ;;; Generated autoloads from irony-cdb-clang-complete.el
 
 (autoload 'irony-cdb-clang-complete "irony-cdb-clang-complete" "\
@@ -63,8 +63,8 @@ Kill the running irony-server process, if any.
 
 ;;;***
 
-;;;### (autoloads nil "irony-cdb-json" "irony-cdb-json.el" (22150
-;;;;;;  30188 0 0))
+;;;### (autoloads nil "irony-cdb-json" "irony-cdb-json.el" (22167
+;;;;;;  36271 0 0))
 ;;; Generated autoloads from irony-cdb-json.el
 
 (autoload 'irony-cdb-json "irony-cdb-json" "\
@@ -87,7 +87,7 @@ directories to project directory.
 ;;;***
 
 ;;;### (autoloads nil "irony-cdb-libclang" "irony-cdb-libclang.el"
-;;;;;;  (22150 30188 0 0))
+;;;;;;  (22167 36271 0 0))
 ;;; Generated autoloads from irony-cdb-libclang.el
 
 (autoload 'irony-cdb-libclang "irony-cdb-libclang" "\
@@ -97,8 +97,8 @@ directories to project directory.
 
 ;;;***
 
-;;;### (autoloads nil "irony-completion" "irony-completion.el" (22150
-;;;;;;  30185 0 0))
+;;;### (autoloads nil "irony-completion" "irony-completion.el" (22167
+;;;;;;  36271 0 0))
 ;;; Generated autoloads from irony-completion.el
 
 (autoload 'irony-completion-at-point "irony-completion" "\
@@ -114,7 +114,7 @@ directories to project directory.
 ;;;***
 
 ;;;### (autoloads nil nil ("irony-diagnostics.el" "irony-pkg.el"
-;;;;;;  "irony-snippet.el") (22150 30188 877807 0))
+;;;;;;  "irony-snippet.el") (22167 36271 846432 0))
 
 ;;;***
 
