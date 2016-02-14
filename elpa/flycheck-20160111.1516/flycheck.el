@@ -1,6 +1,6 @@
 ;;; flycheck.el --- On-the-fly syntax checking -*- lexical-binding: t; -*-
 
-;; Copyright (c) 2012-2015 Sebastian Wiesner and Flycheck contributors
+;; Copyright (c) 2012-2016 Sebastian Wiesner and Flycheck contributors
 ;; Copyright (C) 2013, 2014 Free Software Foundation, Inc.
 ;;
 ;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
@@ -98,7 +98,7 @@
 ;;; Compatibility
 (eval-and-compile
   (unless (fboundp 'string-suffix-p)
-    ;; `string-suffix-p' for Emacs 24.3 and below
+    ;; TODO: Remove when dropping support for Emacs 24.3 and earlier
     (defun string-suffix-p (suffix string  &optional ignore-case)
       "Return non-nil if SUFFIX is a suffix of STRING.
 If IGNORE-CASE is non-nil, the comparison is done without paying
@@ -108,6 +108,7 @@ attention to case differences."
              (eq t (compare-strings suffix nil nil
                                     string start-pos nil ignore-case))))))
 
+  ;; TODO: Remove when dropping support for Emacs 24.3 and earlier
   (unless (featurep 'subr-x)
     ;; `subr-x' function for Emacs 24.3 and below
     (defsubst string-join (strings &optional separator)
@@ -2881,16 +2882,19 @@ non-whitespace character of the error line, if ERR has no error column."
         (message (flycheck-error-message err)))
     (if id (format "%s [%s]" message id) message)))
 
-(defun flycheck-error-format (err)
-  "Format ERR as human-readable string.
+(defun flycheck-error-format (err &optional with-file-name)
+  "Format ERR as human-readable string, optionally WITH-FILE-NAME.
 
-Return a string that represents the given ERR.  This string does
-_not_ include the file name."
+Return a string that represents the given ERR.  If WITH-FILE-NAME
+is given and non-nil, include the file-name as well, otherwise
+omit it."
   (let* ((line (flycheck-error-line err))
          (column (flycheck-error-column err))
          (level (symbol-name (flycheck-error-level err)))
          (checker (symbol-name (flycheck-error-checker err)))
-         (format `(,(number-to-string line) ":"
+         (format `(,@(when with-file-name
+                       (list (flycheck-error-filename err) ":"))
+                   ,(number-to-string line) ":"
                    ,@(when column (list (number-to-string column) ":"))
                    ,level ": "
                    ,(flycheck-error-format-message-and-id err)
@@ -3687,8 +3691,7 @@ the beginning of the buffer."
    ("Col" 3 nil :right-align t)
    ("Level" 8 flycheck-error-list-entry-level-<)
    ("ID" 6 t)
-   ("Message" 0 t)
-   (" (Checker)" 8 t)]
+   ("Message (Checker)" 0 t)]
   "Table format for the error list.")
 
 (define-derived-mode flycheck-error-list-mode tabulated-list-mode "Flycheck errors"
@@ -3744,9 +3747,15 @@ the beginning of the buffer."
   (flycheck-error-list-goto-error (button-start button)))
 
 (defsubst flycheck-error-list-make-cell (text &optional face)
-  "Make an error list cell with TEXT and FACE."
-  (let ((face (or face 'default)))
-    (list text 'type 'flycheck-error-list 'face face)))
+  "Make an error list cell with TEXT and FACE.
+
+If FACE is nil don't set a FACE on TEXT.  If TEXT already has
+face properties, do not specify a FACE.  Note though, that if
+TEXT gets truncated it will not inherit any previous face
+properties.  If you expect TEXT to be truncated in the error
+list, do specify a FACE explicitly!"
+  (append (list text 'type 'flycheck-error-list)
+          (and face (list 'face face))))
 
 (defsubst flycheck-error-list-make-number-cell (number face)
   "Make a table cell for a NUMBER with FACE.
@@ -3756,6 +3765,17 @@ string with attached text properties."
   (flycheck-error-list-make-cell
    (if (numberp number) (number-to-string number) "")
    face))
+
+(defun flycheck-error-list-make-last-column (message checker)
+  "Compute contents of the last error list cell.
+
+MESSAGE and CHECKER are displayed in a single column to allow the
+message to stretch arbitrarily far."
+  (let ((checker-name (propertize (symbol-name checker)
+                                  'face 'flycheck-error-list-checker-name)))
+    (format (propertize "%s (%s)" 'face 'default)
+            (flycheck-flush-multiline-message message)
+            checker-name)))
 
 (defun flycheck-error-list-make-entry (error)
   "Make a table cell for the given ERROR.
@@ -3780,10 +3800,7 @@ Return a list with the contents of the table cell."
                    (if id (format "%s" id) "")
                    'flycheck-error-list-id)
                   (flycheck-error-list-make-cell
-                   (flycheck-flush-multiline-message message))
-                  (flycheck-error-list-make-cell
-                   (format "(%s)" checker)
-                   'flycheck-error-list-checker-name)))))
+                   (flycheck-error-list-make-last-column message checker))))))
 
 (defun flycheck-compute-message-column-offset ()
   "Compute the amount of space to use in `flycheck-flush-multiline-message'."
@@ -4184,9 +4201,6 @@ universal prefix arg, and only the id with normal prefix arg."
     (when messages
       (seq-do #'kill-new (reverse messages))
       (message (string-join messages "\n")))))
-
-(define-obsolete-function-alias 'flycheck-copy-messages-as-kill
-  'flycheck-copy-errors-as-kill "0.22")
 
 
 ;;; Syntax checkers using external commands
@@ -6223,6 +6237,9 @@ See Info Node `(elisp)Byte Compilation'."
 
 (defconst flycheck-emacs-lisp-checkdoc-form
   (flycheck-prepare-emacs-lisp-form
+    (unless (require 'elisp-mode nil 'no-error)
+      ;; TODO: Fallback for Emacs 24, remove when dropping support for 24
+      (require 'lisp-mode))
     (require 'checkdoc)
 
     (let ((source (car command-line-args-left))
@@ -6239,7 +6256,10 @@ See Info Node `(elisp)Byte Compilation'."
         ;; back-substutition work
         (setq default-directory process-default-directory)
         (with-demoted-errors "Error in checkdoc: %S"
-          (checkdoc-current-buffer t)
+          ;; Checkdoc needs the Emacs Lisp syntax table to parse sexps
+          ;; correctly, see https://github.com/flycheck/flycheck/issues/833
+          (with-syntax-table emacs-lisp-mode-syntax-table
+            (checkdoc-current-buffer t))
           (with-current-buffer checkdoc-diagnostic-buffer
             (princ (buffer-substring-no-properties (point-min) (point-max)))
             (kill-buffer)))))))
@@ -6649,7 +6669,7 @@ See URL `http://handlebarsjs.com/'."
 (defconst flycheck-haskell-module-re
   (rx line-start (zero-or-more (or "\n" (any space)))
       "module" (one-or-more (or "\n" (any space)))
-      (group (one-or-more (not (any space "\n")))))
+      (group (one-or-more (not (any space "(" "\n")))))
   "Regular expression for a Haskell module name.")
 
 (flycheck-def-args-var flycheck-ghc-args (haskell-stack-ghc haskell-ghc)
@@ -6676,7 +6696,7 @@ database is given to GHC via `-package-db'."
 
 (flycheck-def-option-var flycheck-ghc-search-path nil
                          (haskell-stack-ghc haskell-ghc)
-  "Module search path for GHC.
+  "Module search path for (Stack) GHC.
 
 The value of this variable is a list of strings, where each
 string is a directory containing Haskell modules.  Each directory
@@ -6687,7 +6707,7 @@ is added to the GHC search path via `-i'."
 
 (flycheck-def-option-var flycheck-ghc-language-extensions nil
                          (haskell-stack-ghc haskell-ghc)
-  "Language extensions for GHC and Stack.
+  "Language extensions for (Stack) GHC.
 
 The value of this variable is a list of strings, where each
 string is a Haskell language extension, as in the LANGUAGE
@@ -6808,10 +6828,8 @@ See URL `http://www.haskell.org/ghc/'."
   "Extensions list to enable for hlint.
 
 The value of this variable is a list of strings, where each
-string is a name of extension to enable in hlint. (i.e. \"QuasiQuotes\")
-
-Refer to http://community.haskell.org/~ndm/darcs/hlint/hlint.htm for
-more information."
+string is a name of extension to enable in
+hlint (e.g. \"QuasiQuotes\")."
   :type '(repeat :tag "Extensions" (string :tag "Extension"))
   :safe #'flycheck-string-list-p
   :package-version '(flycheck . "0.24"))
@@ -6821,10 +6839,7 @@ more information."
   "Ignore rules list for hlint checks.
 
 The value of this variable is a list of strings, where each
-string is an ignore rule. (i.e. \"Use fmap\")
-
-Refer to http://community.haskell.org/~ndm/darcs/hlint/hlint.htm for
-more information."
+string is an ignore rule (e.g. \"Use fmap\")."
   :type '(repeat :tag "Ignore rules" (string :tag "Ignore rule"))
   :safe #'flycheck-string-list-p
   :package-version '(flycheck . "0.24"))
@@ -6834,10 +6849,8 @@ more information."
   "Hint packages to include for hlint checks.
 
 The value of this variable is a list of strings, where each
-string is a default hint package. (i.e. (\"Generalise\" \"Default\" \"Dollar\"))
-
-Refer to http://community.haskell.org/~ndm/darcs/hlint/hlint.htm for
-more information."
+string is a default hint package (e.g. (\"Generalise\"
+\"Default\" \"Dollar\"))."
   :type '(repeat :tag "Hint packages" (string :tag "Hint package"))
   :safe #'flycheck-string-list-p
   :package-version '(flycheck . "0.24"))
@@ -7168,14 +7181,17 @@ the `--severity' option to Perl Critic."
   :safe #'integerp
   :package-version '(flycheck . "0.18"))
 
-(define-obsolete-variable-alias 'flycheck-perlcritic-verbosity
-  'flycheck-perlcritic-severity "0.22")
+(flycheck-def-config-file-var flycheck-perlcriticrc perl-perlcritic
+                              ".perlcriticrc"
+  :safe #'stringp
+  :package-version '(flycheck . "0.26"))
 
 (flycheck-define-checker perl-perlcritic
   "A Perl syntax checker using Perl::Critic.
 
 See URL `https://metacpan.org/pod/Perl::Critic'."
   :command ("perlcritic" "--no-color" "--verbose" "%f/%l/%c/%s/%p/%m (%e)\n"
+            (config-file "--profile" flycheck-perlcriticrc)
             (option "--severity" flycheck-perlcritic-severity nil
                     flycheck-option-int))
   :standard-input t
@@ -7296,6 +7312,27 @@ See URL `http://puppetlabs.com/'."
   :modes puppet-mode
   :next-checkers ((warning . puppet-lint)))
 
+(flycheck-def-config-file-var flycheck-puppet-lint-rc puppet-lint
+                              ".puppet-lint.rc"
+  :safe #'stringp
+  :package-version '(flycheck . "0.26"))
+
+(flycheck-def-option-var flycheck-puppet-lint-disabled-checks nil puppet-lint
+  "Disabled checkers for `puppet-lint'.
+
+The value of this variable is a list of strings, where each
+string is the name of a check to disable (e.g. \"80chars\" or
+\"double_quoted_strings\").
+
+See URL `http://puppet-lint.com/checks/' for a list of all checks
+and their names."
+  :type '(repeat (string :tag "Check Name"))
+  :package-version '(flycheck . "0.26"))
+
+(defun flycheck-puppet-lint-disabled-arg-name (check)
+  "Create an argument to disable a puppetlint CHECK."
+  (concat "--no-" check "-check"))
+
 (flycheck-define-checker puppet-lint
   "A Puppet DSL style checker using puppet-lint.
 
@@ -7306,7 +7343,11 @@ See URL `http://puppet-lint.com/'."
   ;; required to be in a file foo/bar.pp.  Any other place, such as a Flycheck
   ;; temporary file will cause an error.
   :command ("puppet-lint"
-            "--log-format" "%{path}:%{linenumber}:%{kind}: %{message} (%{check})"
+            (config-file "--config" flycheck-puppet-lint-rc)
+            "--log-format"
+            "%{path}:%{linenumber}:%{kind}: %{message} (%{check})"
+            (option-list "" flycheck-puppet-lint-disabled-checks concat
+                         flycheck-puppet-lint-disabled-arg-name)
             source-original)
   :error-patterns
   ((warning line-start (file-name) ":" line ":warning: " (message) line-end)
