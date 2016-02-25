@@ -45,8 +45,7 @@
 ;;
 ;; (defun company-my-backend (command &optional arg &rest ignored)
 ;;   (pcase command
-;;     (`prefix (when (looking-back "foo\\>")
-;;               (match-string 0)))
+;;     (`prefix (company-grab-symbol))
 ;;     (`candidates (list "foobar" "foobaz" "foobarbaz"))
 ;;     (`meta (format "This value is named %s" arg))))
 ;;
@@ -313,9 +312,10 @@ This doesn't include the margins and the scroll bar."
                               company-eclim company-semantic company-clang
                               company-xcode company-cmake
                               company-capf
+                              company-files
                               (company-dabbrev-code company-gtags company-etags
                                company-keywords)
-                              company-oddmuse company-files company-dabbrev)
+                              company-oddmuse company-dabbrev)
   "The list of active backends (completion engines).
 
 Only one backend is used at a time.  The choice depends on the order of
@@ -334,10 +334,10 @@ of the following:
 text immediately before point.  Returning nil from this command passes
 control to the next backend.  The function should return `stop' if it
 should complete but cannot (e.g. if it is in the middle of a string).
-Instead of a string, the backend may return a cons where car is the prefix
-and cdr is used instead of the actual prefix length in the comparison
-against `company-minimum-prefix-length'.  It must be either number or t,
-and in the latter case the test automatically succeeds.
+Instead of a string, the backend may return a cons (PREFIX . LENGTH)
+where LENGTH is a number used in place of PREFIX's length when
+comparing against `company-minimum-prefix-length'.  LENGTH can also
+be just t, and in the latter case the test automatically succeeds.
 
 `candidates': The second argument is the prefix to be completed.  The
 return value should be a list of candidates that match the prefix.
@@ -1186,7 +1186,11 @@ can retrieve meta-data for them."
                    company-candidates-cache
                    (list (cons prefix
                                (company--preprocess-candidates candidates))))
-             (company-idle-begin buf win tick pt)))))
+             (unwind-protect
+                 (company-idle-begin buf win tick pt)
+               (unless company-candidates
+                 (setq company-backend nil
+                       company-candidates-cache nil)))))))
       ;; FIXME: Relying on the fact that the callers
       ;; will interpret nil as "do nothing" is shaky.
       ;; A throw-catch would be one possible improvement.
@@ -1525,21 +1529,8 @@ from the rest of the backends in the group, if any, will be left at the end."
     (company-call-frontends 'update)))
 
 (defun company-cancel (&optional result)
-  (unwind-protect
-      (progn
-        (when company-timer
-          (cancel-timer company-timer))
-        (company-echo-cancel t)
-        (company-search-mode 0)
-        (company-call-frontends 'hide)
-        (company-enable-overriding-keymap nil)
-        (when company-prefix
-          (if (stringp result)
-              (progn
-                (company-call-backend 'pre-completion result)
-                (run-hook-with-args 'company-completion-finished-hook result)
-                (company-call-backend 'post-completion result))
-            (run-hook-with-args 'company-completion-cancelled-hook result))))
+  (let ((prefix company-prefix)
+        (backend company-backend))
     (setq company-backend nil
           company-prefix nil
           company-candidates nil
@@ -1552,7 +1543,22 @@ from the rest of the backends in the group, if any, will be left at the end."
           company--manual-action nil
           company--manual-prefix nil
           company--point-max nil
-          company-point nil))
+          company-point nil)
+    (when company-timer
+      (cancel-timer company-timer))
+    (company-echo-cancel t)
+    (company-search-mode 0)
+    (company-call-frontends 'hide)
+    (company-enable-overriding-keymap nil)
+    (when prefix
+      ;; FIXME: RESULT can also be e.g. `unique'.  We should call
+      ;; `company-completion-finished-hook' in that case, with right argument.
+      (if (stringp result)
+          (let ((company-backend backend))
+            (company-call-backend 'pre-completion result)
+            (run-hook-with-args 'company-completion-finished-hook result)
+            (company-call-backend 'post-completion result))
+        (run-hook-with-args 'company-completion-cancelled-hook result))))
   ;; Make return value explicit.
   nil)
 
@@ -1568,6 +1574,7 @@ from the rest of the backends in the group, if any, will be left at the end."
   (and (symbolp command) (get command 'company-keep)))
 
 (defun company-pre-command ()
+  (company--electric-restore-window-configuration)
   (unless (company-keep this-command)
     (condition-case-unless-debug err
         (when company-candidates
@@ -1639,7 +1646,9 @@ each one wraps a part of the input string."
           (const :tag "Exact match" regexp-quote)
           (const :tag "Words separated with spaces" company-search-words-regexp)
           (const :tag "Words separated with spaces, in any order"
-                 company-search-words-in-any-order-regexp)))
+                 company-search-words-in-any-order-regexp)
+          (const :tag "All characters in given order, with anything in between"
+                 company-search-flex-regexp)))
 
 (defvar-local company-search-string "")
 
@@ -1668,6 +1677,15 @@ each one wraps a part of the input string."
                  (mapconcat #'identity words ".*"))
                permutations
                "\\|")))
+
+(defun company-search-flex-regexp (input)
+  (if (zerop (length input))
+      ""
+    (concat (regexp-quote (string (aref input 0)))
+            (mapconcat (lambda (c)
+                         (concat "[^" (string c) "]*"
+                                 (regexp-quote (string c))))
+                       (substring input 1) ""))))
 
 (defun company--permutations (lst)
   (if (not lst)
@@ -2118,28 +2136,30 @@ character, stripping the modifiers.  That character must be a digit."
         (insert string)))
     (current-buffer)))
 
+(defvar company--electric-saved-window-configuration nil)
+
 (defvar company--electric-commands
   '(scroll-other-window scroll-other-window-down mwheel-scroll)
   "List of Commands that won't break out of electric commands.")
 
+(defun company--electric-restore-window-configuration ()
+  "Restore window configuration (after electric commands)."
+  (when (and company--electric-saved-window-configuration
+             (not (memq this-command company--electric-commands)))
+    (set-window-configuration company--electric-saved-window-configuration)
+    (setq company--electric-saved-window-configuration nil)))
+
 (defmacro company--electric-do (&rest body)
   (declare (indent 0) (debug t))
   `(when (company-manual-begin)
-     (save-window-excursion
-       (let ((height (window-height))
-             (row (company--row))
-             cmd)
-         ,@body
-         (and (< (window-height) height)
-              (< (- (window-height) row 2) company-tooltip-limit)
-              (recenter (- (window-height) row 2)))
-         (while (memq (setq cmd (key-binding (read-key-sequence-vector nil)))
-                      company--electric-commands)
-           (condition-case err
-               (call-interactively cmd)
-             ((beginning-of-buffer end-of-buffer)
-              (message (error-message-string err)))))
-         (company--unread-last-input)))))
+     (cl-assert (null company--electric-saved-window-configuration))
+     (setq company--electric-saved-window-configuration (current-window-configuration))
+     (let ((height (window-height))
+           (row (company--row)))
+       ,@body
+       (and (< (window-height) height)
+            (< (- (window-height) row 2) company-tooltip-limit)
+            (recenter (- (window-height) row 2))))))
 
 (defun company--unread-last-input ()
   (when last-input-event
@@ -2961,8 +2981,8 @@ Returns a negative number if the tooltip should be displayed above point."
             "}")))
 
 (defun company-echo-hide ()
-  (unless (null company-echo-last-msg)
-    (setq company-echo-last-msg nil)
+  (unless (equal company-echo-last-msg "")
+    (setq company-echo-last-msg "")
     (company-echo-show)))
 
 (defun company-echo-frontend (command)
