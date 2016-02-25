@@ -1,5 +1,5 @@
 ;;; dockerfile-mode.el --- Major mode for editing Docker's Dockerfiles
-;; Package-Version: 20151123.857
+;; Package-Version: 20160128.951
 
 ;; Copyright (c) 2013 Spotify AB
 ;;
@@ -40,7 +40,7 @@
   `(,(cons (rx (or line-start "onbuild ")
                (group (or "from" "maintainer" "run" "cmd" "expose" "env" "arg"
                           "add" "copy" "entrypoint" "volume" "user" "workdir" "onbuild"
-                          "label"))
+                          "label" "stopsignal"))
                word-boundary)
            font-lock-keyword-face)
     ,@(sh-font-lock-keywords)
@@ -91,7 +91,7 @@
   (save-buffer)
   (if (stringp image-name)
       (async-shell-command
-       (format "%s docker build -t %s -f %s %s" (if dockerfile-use-sudo "sudo" "") image-name (buffer-file-name) (file-name-directory (buffer-file-name)))
+       (format "%sdocker build -t %s -f \"%s\" \"%s\"" (if dockerfile-use-sudo "sudo " "") image-name (buffer-file-name) (file-name-directory (buffer-file-name)))
        "*docker-build-output*")
     (print "docker-image-name must be a string, consider surrounding it with double quotes")))
 
@@ -105,7 +105,7 @@
   (save-buffer)
   (if (stringp image-name)
       (async-shell-command
-       (format "%s docker build --no-cache -t %s -f %s %s" (if dockerfile-use-sudo "sudo" "") image-name (buffer-file-name) (file-name-directory (buffer-file-name)))
+       (format "%s docker build --no-cache -t %s -f \"%s\" \"%s\"" (if dockerfile-use-sudo "sudo" "") image-name (buffer-file-name) (file-name-directory (buffer-file-name)))
        "*docker-build-output*")
     (print "docker-image-name must be a string, consider surrounding it with double quotes")))
 
