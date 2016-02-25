@@ -3,8 +3,8 @@
 
 ;; Copyright 2011-2016 François-Xavier Bois
 
-;; Version: 13.1.2
-;; Package-Version: 20160113.2334
+;; Version: 13.1.4
+;; Package-Version: 20160212.538
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; Created: July 2011
@@ -22,7 +22,7 @@
 
 ;;---- CONSTS ------------------------------------------------------------------
 
-(defconst web-mode-version "13.1.2"
+(defconst web-mode-version "13.1.4"
   "Web Mode version.")
 
 ;;---- GROUPS ------------------------------------------------------------------
@@ -64,29 +64,34 @@
 (defcustom web-mode-attr-indent-offset nil
   "Html attribute indentation level."
   :type 'integer
+  :safe #'integerp
   :group 'web-mode)
 
 (defcustom web-mode-markup-indent-offset
   (if (and (boundp 'standard-indent) standard-indent) standard-indent 2)
   "Html indentation level."
   :type 'integer
+  :safe #'integerp
   :group 'web-mode)
 
 (defcustom web-mode-css-indent-offset
   (if (and (boundp 'standard-indent) standard-indent) standard-indent 2)
   "CSS indentation level."
   :type 'integer
+  :safe #'integerp
   :group 'web-mode)
 
 (defcustom web-mode-code-indent-offset
   (if (and (boundp 'standard-indent) standard-indent) standard-indent 2)
   "Code (javascript, php, etc.) indentation level."
   :type 'integer
+  :safe #'integerp
   :group 'web-mode)
 
 (defcustom web-mode-sql-indent-offset 4
   "Sql (inside strings) indentation level."
   :type 'integer
+  :safe #'integerp
   :group 'web-mode)
 
 (defcustom web-mode-enable-css-colorization (display-graphic-p)
@@ -1556,7 +1561,7 @@ Must be used in conjunction with web-mode-enable-block-face."
 (defvar web-mode-javascript-font-lock-keywords
   (list
    '("@\\([[:alnum:]_]+\\)\\_>" 0 'web-mode-keyword-face)
-   (cons (concat "\\_<\\(" web-mode-javascript-keywords "\\)[ ]") '(1 'web-mode-keyword-face))
+   (cons (concat "\\_<\\(" web-mode-javascript-keywords "\\)\\_>") '(0 'web-mode-keyword-face))
    (cons (concat "\\_<\\(" web-mode-javascript-constants "\\)\\_>") '(0 'web-mode-constant-face))
    '("\\_<\\(new\\|instanceof\\|class\\|extends\\) \\([[:alnum:]_.]+\\)\\_>" 2 'web-mode-type-face)
    '("\\_<\\([[:alnum:]_]+\\):[ ]*function[ ]*(" 1 'web-mode-function-name-face)
@@ -1570,6 +1575,7 @@ Must be used in conjunction with web-mode-enable-block-face."
    '("\\(function\\|[,=]\\|^\\)[ ]*("
      ("\\([[:alnum:]_]+\\)\\([ ]*=[^,)]*\\)?[,)]" nil nil (1 'web-mode-variable-name-face)))
    '("\\([[:alnum:]_]+\\):" 1 'web-mode-variable-name-face)
+   '("\\_<\\([[:alnum:]_-]+\\)[ ]?(" 1 'web-mode-function-call-face)
    ))
 
 (defvar web-mode-html-tag-font-lock-keywords
@@ -8291,6 +8297,10 @@ Prompt user if TAG-NAME isn't provided."
 
       (cond
 
+       ((and block-side (string= web-mode-engine "erb"))
+        (web-mode-comment-erb-block pos)
+        )
+
        ((and single-line-block block-side
              (intern-soft (concat "web-mode-comment-" web-mode-engine "-block")))
         (funcall (intern (concat "web-mode-comment-" web-mode-engine "-block")) pos)
@@ -8337,6 +8347,8 @@ Prompt user if TAG-NAME isn't provided."
             (setq content (concat "{* " sel " *}")))
            ((and (= web-mode-comment-style 2) (string= web-mode-engine "blade"))
             (setq content (concat "{{-- " sel " --}}")))
+           ((and (= web-mode-comment-style 2) (string= web-mode-engine "ctemplate"))
+            (setq content (concat "{{!-- " sel " --}}")))
            ((and (= web-mode-comment-style 2) (string= web-mode-engine "razor"))
             (setq content (concat "@* " sel " *@")))
            (t
@@ -8542,6 +8554,13 @@ Prompt user if TAG-NAME isn't provided."
           end (web-mode-block-end-position pos))
     (web-mode-remove-text-at-pos 2 (1- end))
     (web-mode-remove-text-at-pos 2 beg)))
+
+(defun web-mode-uncomment-ctemplate-block (pos)
+  (let (beg end)
+    (setq beg (web-mode-block-beginning-position pos)
+          end (web-mode-block-end-position pos))
+    (web-mode-remove-text-at-pos 5 (- end 4))
+    (web-mode-remove-text-at-pos 5 beg)))
 
 (defun web-mode-uncomment-dust-block (pos)
   (let (beg end)
