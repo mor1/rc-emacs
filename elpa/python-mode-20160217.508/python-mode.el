@@ -76,7 +76,7 @@
   :group 'languages
   :prefix "py-")
 
-(defconst py-version "6.2.1+")
+(defconst py-version "6.2.2")
 
 (defcustom py-install-directory ""
   "Directory where python-mode.el and it's subdirectories should be installed. Needed for completion and other environment stuff only. "
@@ -2028,8 +2028,12 @@ See also command `toggle-py-underscore-word-syntax-p' ")
 (defvar py-autofill-timer nil)
 (defvar py-fill-column-orig fill-column)
 
-(defvar python-mode-message-string "python-components-mode.el"
-  "Internally used. Reports the python-mode branch in use.")
+(defvar python-mode-message-string
+  (if (or (string= "python-mode.el" (buffer-name))
+	  (ignore-errors (string-match "python-mode.el" (buffer-file-name))))
+      "python-mode.el"
+    "python-components-mode.el")
+  "Internally used. Reports the python-mode branch")
 
 (unless (fboundp 'string-to-syntax)
   ;; Skip's XE workaround
@@ -5915,12 +5919,20 @@ With BOL, return line-beginning-position"
 	       (setq erg (line-beginning-position))))
     (or erg (goto-char orig))))
 
+(defun py--backward-def-or-class-matcher (regexp indent)
+  (while (and (re-search-backward regexp nil 'move 1)
+	      (setq erg (match-beginning 0))
+	      (or
+	       (< indent (current-indentation))
+	       (nth 8 (parse-partial-sexp (point-min) (point)))))
+    (setq erg nil)))
+
 (defun py--backward-def-or-class-intern (regexp &optional bol)
-  (let (erg)
-    (while (and (re-search-backward regexp nil 'move 1)
-		(setq erg (match-beginning 0))
-		(nth 8 (parse-partial-sexp (point-min) (point))))
-      (setq erg nil))
+  (let ((indent (progn (when (py-in-string-or-comment-p)
+			    (py-backward-statement))
+		       (current-indentation)))
+	erg)
+    (py--backward-def-or-class-matcher regexp indent)
     (and erg (looking-back "async ")
 	 (goto-char (match-beginning 0))
 	 (setq erg (point)))
@@ -5929,41 +5941,54 @@ With BOL, return line-beginning-position"
     (and erg py-mark-decorators (setq erg (py--backward-def-or-class-decorator-maybe bol)))
     erg))
 
-(defun py-backward-class ()
+(defun py-backward-class (&optional nested)
   "Go to beginning of class.
 
 If already at beginning, go one class backward.
 Returns beginning of class if successful, nil otherwise
 
+With optional NESTED, match next upwards, ignore indentation.
+
 When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (let ((erg (py--backward-def-or-class-intern py-class-re)))
+  (interactive "P")
+  (let ((erg
+	 (if (eq 4 (prefix-numeric-value nested))
+	     (py-up-class)
+	   (py--backward-def-or-class-intern py-class-re))))
     (when (and py-verbose-p (called-interactively-p 'any))
       (message "%s" erg))
     erg))
 
-(defun py-backward-def ()
+(defun py-backward-def (&optional nested)
   "Go to beginning of def.
 
 If already at beginning, go one def backward.
 Returns beginning of def if successful, nil otherwise
 
+With optional NESTED, match next upwards, ignore indentation.
+
 When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (let ((erg (py--backward-def-or-class-intern py-def-re)))
+  (interactive "P")
+  (let ((erg (if (eq 4 (prefix-numeric-value nested))
+		 (py-up-def)
+	       (py--backward-def-or-class-intern py-def-re))))
     (when (and py-verbose-p (called-interactively-p 'any))
       (message "%s" erg))
     erg))
 
-(defun py-backward-def-or-class ()
+(defun py-backward-def-or-class (&optional nested)
   "Go to beginning of def-or-class.
 
 If already at beginning, go one def-or-class backward.
 Returns beginning of def-or-class if successful, nil otherwise
 
+With optional NESTED, match next upwards, ignore indentation.
+
 When `py-mark-decorators' is non-nil, decorators are considered too. "
-  (interactive)
-  (let ((erg (py--backward-def-or-class-intern py-def-or-class-re)))
+  (interactive "P")
+  (let ((erg (if (eq 4 (prefix-numeric-value nested))
+		 (py-up-def-or-class)
+	       (py--backward-def-or-class-intern py-def-or-class-re))))
     (when (and py-verbose-p (called-interactively-p 'any))
       (message "%s" erg))
     erg))
@@ -8053,8 +8078,16 @@ See `py-if-name-main-permission-p'"
 		 "if __name__ == '__main__ ':" string))))
     strg))
 
-;; `py-execute-line' calls void function, lp:1492054
+;; `py-execute-line' calls void function, lp:1492054,  lp:1519859
 (or (functionp 'indent-rigidly-left)
+    (defun indent-rigidly--pop-undo ()
+      (and (memq last-command '(indent-rigidly-left indent-rigidly-right
+						    indent-rigidly-left-to-tab-stop
+						    indent-rigidly-right-to-tab-stop))
+	   (consp buffer-undo-list)
+	   (eq (car buffer-undo-list) nil)
+	   (pop buffer-undo-list)))
+
     (defun indent-rigidly-left (beg end)
       "Indent all lines between BEG and END leftward by one space."
       (interactive "r")
@@ -20866,28 +20899,29 @@ Put point inside the parentheses of a multiline import and hit
 \\[py-sort-imports] to sort the imports lexicographically"
   (interactive)
   (save-excursion
-    (let ((open-paren (save-excursion (progn (up-list -1) (point))))
-          (close-paren (save-excursion (progn (up-list 1) (point))))
+    (let ((open-paren (ignore-errors (save-excursion (progn (up-list -1) (point)))))
+          (close-paren (ignore-errors (save-excursion (progn (up-list 1) (point)))))
           sorted-imports)
-      (goto-char (1+ open-paren))
-      (skip-chars-forward " \n\t")
-      (setq sorted-imports
-            (sort
-             (delete-dups
-              (split-string (buffer-substring
-                             (point)
-                             (save-excursion (goto-char (1- close-paren))
-                                             (skip-chars-backward " \n\t")
-                                             (point)))
-                            ", *\\(\n *\\)?"))
-             ;; XXX Should this sort case insensitively?
-             'string-lessp))
-      ;; Remove empty strings.
-      (delete-region open-paren close-paren)
-      (goto-char open-paren)
-      (insert "(\n")
-      (insert (py--join-words-wrapping (remove "" sorted-imports) "," "    " 78))
-      (insert ")"))))
+      (when (and open-paren close-paren)
+	(goto-char (1+ open-paren))
+	(skip-chars-forward " \n\t")
+	(setq sorted-imports
+	      (sort
+	       (delete-dups
+		(split-string (buffer-substring
+			       (point)
+			       (save-excursion (goto-char (1- close-paren))
+					       (skip-chars-backward " \n\t")
+					       (point)))
+			      ", *\\(\n *\\)?"))
+	       ;; XXX Should this sort case insensitively?
+	       'string-lessp))
+	;; Remove empty strings.
+	(delete-region open-paren close-paren)
+	(goto-char open-paren)
+	(insert "(\n")
+	(insert (py--join-words-wrapping (remove "" sorted-imports) "," "    " 78))
+	(insert ")")))))
 
 (defun py--in-literal (&optional lim)
   "Return non-nil if point is in a Python literal (a comment or string).
