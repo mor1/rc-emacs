@@ -2,15 +2,15 @@
 
 ;; Copyright (C) 2014-2016  The Magit Project Contributors
 ;;
-;; You should have received a copy of the AUTHORS.md file which
-;; lists all contributors.  If not, see http://magit.vc/authors.
+;; You should have received a copy of the AUTHORS.md file.  If not,
+;; see https://github.com/magit/with-editor/blob/master/AUTHORS.md.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "24.4") (async "20150909.2257") (dash "20151021.113"))
+;; Package-Requires: ((emacs "24.4") (async "1.5") (dash "2.12.1"))
 ;; Keywords: tools
-;; Homepage: https://github.com/magit/magit
+;; Homepage: https://github.com/magit/with-editor
 
 ;; This file is not part of GNU Emacs.
 
@@ -25,17 +25,18 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this file.  If not, see <http://www.gnu.org/licenses/>.
+;; along with Magit.  If not, see http://www.gnu.org/licenses.
 
 ;;; Commentary:
 
-;; Use the Emacsclient as `$EDITOR' of child processes, making sure
-;; they know how to call home.  For remote processes a substitute is
-;; provided, which communicates with Emacs on stdout instead of using
-;; a socket as the Emacsclient does.
+;; This library makes it possible to reliably use the Emacsclient as
+;; the `$EDITOR' of child processes.  It makes sure that they know how
+;; to call home.  For remote processes a substitute is provided, which
+;; communicates with Emacs on standard output/input instead of using a
+;; socket as the Emacsclient does.
 
-;; The commands `with-editor-async-shell-command' and
-;; `with-editor-shell-command' are intended as drop in replacements
+;; It provides the commands `with-editor-async-shell-command' and
+;; `with-editor-shell-command', which are intended as replacements
 ;; for `async-shell-command' and `shell-command'.  They automatically
 ;; export `$EDITOR' making sure the executed command uses the current
 ;; Emacs instance as "the editor".  With a prefix argument these
@@ -128,7 +129,7 @@ please see https://github.com/magit/magit/wiki/Emacsclient."))
                               (setq v (mapconcat #'identity (reverse v) "."))
                               (list v (concat "-" v) (concat ".emacs" v)))
                             (reverse version-lst))
-                 (list "")))
+                 (list "" "-snapshot")))
          (lambda (exec)
            (ignore-errors
              (string-match-p version-reg
@@ -323,12 +324,15 @@ not a good idea to change such entries.")
 
 (defvar with-editor-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c"                   'with-editor-finish)
-    (define-key map [remap server-edit]          'with-editor-finish)
-    (define-key map "\C-c\C-k"                   'with-editor-cancel)
-    (define-key map [remap kill-buffer]          'with-editor-cancel)
-    (define-key map [remap ido-kill-buffer]      'with-editor-cancel)
-    (define-key map [remap iswitchb-kill-buffer] 'with-editor-cancel)
+    (define-key map "\C-c\C-c"                           'with-editor-finish)
+    (define-key map [remap server-edit]                  'with-editor-finish)
+    (define-key map [remap evil-save-and-close]          'with-editor-finish)
+    (define-key map [remap evil-save-modified-and-close] 'with-editor-finish)
+    (define-key map "\C-c\C-k"                           'with-editor-cancel)
+    (define-key map [remap kill-buffer]                  'with-editor-cancel)
+    (define-key map [remap ido-kill-buffer]              'with-editor-cancel)
+    (define-key map [remap iswitchb-kill-buffer]         'with-editor-cancel)
+    (define-key map [remap evil-quit]                    'with-editor-cancel)
     map))
 
 (define-minor-mode with-editor-mode
@@ -379,7 +383,8 @@ ENVVAR is provided then bind that environment variable instead.
          (process-environment process-environment))
      (if (or (not with-editor-emacsclient-executable)
              (file-remote-p default-directory))
-         (setenv with-editor--envvar with-editor-sleeping-editor)
+         (push (concat with-editor--envvar "=" with-editor-sleeping-editor)
+               process-environment)
        ;; Make sure server-use-tcp's value is valid.
        (unless (featurep 'make-network-process '(:family local))
          (setq server-use-tcp t))
@@ -391,19 +396,22 @@ ENVVAR is provided then bind that environment variable instead.
              (server-force-delete server-name)))
          (server-start))
        ;; Tell $EDITOR to use the Emacsclient.
-       (setenv with-editor--envvar
-               (concat (shell-quote-argument with-editor-emacsclient-executable)
+       (push (concat with-editor--envvar "="
+                     (shell-quote-argument with-editor-emacsclient-executable)
        ;; Tell the process where the server file is.
-                       (and (not server-use-tcp)
-                            (concat " --socket-name="
-                                    (shell-quote-argument
-                                     (expand-file-name server-name
-                                                       server-socket-dir))))))
+                     (and (not server-use-tcp)
+                          (concat " --socket-name="
+                                  (shell-quote-argument
+                                   (expand-file-name server-name
+                                                     server-socket-dir)))))
+             process-environment)
        (when server-use-tcp
-         (setenv "EMACS_SERVER_FILE"
-                 (expand-file-name server-name server-auth-dir)))
+         (push (concat "EMACS_SERVER_FILE="
+                       (expand-file-name server-name server-auth-dir))
+               process-environment))
        ;; As last resort fallback to the sleeping editor.
-       (setenv "ALTERNATE_EDITOR" with-editor-sleeping-editor))
+       (push (concat "ALTERNATE_EDITOR=" with-editor-sleeping-editor)
+             process-environment))
      ,@body))
 
 (defun with-editor-server-window ()
