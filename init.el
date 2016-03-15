@@ -528,7 +528,11 @@ This command is convenient when reading novel, documentation."
              (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
              ))
 
-(add-hook 'latex-mode-hook
+;; latex
+(setq TeX-auto-save t)
+(setq TeX-parse-self t)
+(setq-default TeX-master nil)
+(add-hook 'LaTeX-mode-hook
           '(lambda ()
              (auto-fill-mode 0)
              (local-set-key (kbd "M-q") 'unfill-and-check)
@@ -548,8 +552,17 @@ This command is convenient when reading novel, documentation."
               '(lambda () (interactive "*") (tex-enclose-word "{\\bf " "}")))
              (local-set-key (kbd "%") 'match-paren)
              ))
+(add-hook 'LaTeX-mode-hook 'visual-line-mode)
+(add-hook 'LaTeX-mode-hook 'flyspell-mode)
+(add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
+(add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+(setq reftex-plug-into-AUCTeX t)
+
 (push '("\\.tex$" . latex-mode) auto-mode-alist)
 (push '("\\.latex$" . latex-mode) auto-mode-alist)
+
+;; bibtex
+(push '("\\.bibtex$" . bibtex-mode) auto-mode-alist)
 
 (add-hook 'java-mode-hook
           '(lambda ()
@@ -598,9 +611,6 @@ This command is convenient when reading novel, documentation."
 
 ;; php-mode
 (push '("\\.php$" . php-mode) auto-mode-alist)
-
-;; bibtex-mode
-(push '("\\.bibtex$" . bibtex-mode) auto-mode-alist)
 
 ;; web-mode
 (push '("\\`<\\?xml" . web-mode) magic-mode-alist)
@@ -931,9 +941,14 @@ This command is convenient when reading novel, documentation."
 
 (defvar my-keys-minor-mode-map (make-keymap) "my-keys-minor-mode keymap.")
 
-(define-key my-keys-minor-mode-map (kbd "s-@") "€")
-(define-key my-keys-minor-mode-map (kbd "s-3")
-  '(lambda () (interactive) (insert-char #x00A3))) ; £
+;; uk macbook pro retina
+(define-key my-keys-minor-mode-map (kbd "s-2") "€")
+(define-key my-keys-minor-mode-map (kbd "s-3") "#")
+
+;; uk macbook pro, pre-retina
+;; (define-key my-keys-minor-mode-map (kbd "s-@") "€")
+;; (define-key my-keys-minor-mode-map (kbd "s-3")
+;;   '(lambda () (interactive) (insert-char #x00A3))) ; £
 
 (define-key my-keys-minor-mode-map (kbd "C-x C-c") 'my-kill-emacs)
 
