@@ -6,7 +6,7 @@
 ;; Maintainer: Michael Heerdegen <michael_heerdegen@web.de>
 ;; Created: 24 Jan 2013
 ;; Keywords: convenience
-;; Package-Version: 20151108.2108
+;; Package-Version: 20160302.150
 ;; URL: https://github.com/michael-heerdegen/on-screen.el
 ;; Version: 1.3.2
 ;; Package-Requires: ((cl-lib "0"))
@@ -637,7 +637,7 @@ highlightings and clear all associated data."
   "Return non-nil if on-screen is enabled in BUFFER."
   (with-current-buffer (or buffer (current-buffer))
     (and
-     (if on-screen-global-mode t on-screen-mode)
+     (or on-screen-global-mode on-screen-mode)
      (cond
       ((not on-screen-inhibit-highlighting) t)
       ((functionp on-screen-inhibit-highlighting)
