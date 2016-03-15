@@ -1934,17 +1934,36 @@ default the following functions are also members of that hook:
      ‘magit-insert-unpulled-or-recent-commits’ (provided there are no
      unpulled commits) show.
 
+ -- Function: magit-insert-modules-unpulled-from-upstream
+
+     Insert sections for modules that haven’t been pulled from the
+     upstream yet.  These sections can be expanded to show the
+     respective commits.
+
+ -- Function: magit-insert-modules-unpulled-from-pushremote
+
+     Insert sections for modules that haven’t been pulled from the
+     push-remote yet.  These sections can be expanded to show the
+     respective commits.
+
+ -- Function: magit-insert-modules-unpushed-to-upstream
+
+     Insert sections for modules that haven’t been pushed to the
+     upstream yet.  These sections can be expanded to show the
+     respective commits.
+
+ -- Function: magit-insert-modules-unpushed-to-pushremote
+
+     Insert sections for modules that haven’t been pushed to the
+     push-remote yet.  These sections can be expanded to show the
+     respective commits.
+
  -- Function: magit-insert-unpulled-cherries
 
      Insert section showing unpulled commits.  Like
      ‘magit-insert-unpulled-commits’ but prefix each commit that has not
      been applied yet (i.e.  a commit with a patch-id not shared with
      any local commit) with "+", and all others with "-".
-
- -- Function: magit-insert-unpulled-module-commits
-
-     Insert sections for all submodules with unpulled commits.  These
-     sections can be expanded to show the respective commits.
 
  -- Function: magit-insert-unpushed-cherries
 
@@ -1953,11 +1972,6 @@ default the following functions are also members of that hook:
      not been applied to upstream yet (i.e.  a commit with a patch-id
      not shared with any upstream commit) with "+" and all others with
      "-".
-
- -- Function: magit-insert-unpushed-module-commits
-
-     Insert sections for all submodules with unpushed commits.  These
-     sections can be expanded to show the respective commits.
 
    See *note References buffer: References buffer. for some more section
 inserters, which could be used here.
@@ -2671,6 +2685,10 @@ File: magit.info,  Node: Ediffing,  Next: References buffer,  Prev: Diffing,  Up
 
      Show changes to a file introduced by a commit using Ediff.
 
+‘E z’     (‘magit-ediff-show-stash’)
+
+     Show changes to a file introduced by a stash using Ediff.
+
  -- User Option: magit-ediff-dwim-show-on-hunks
 
      This option controls what command ‘magit-ediff-dwim’ calls when
@@ -2678,6 +2696,13 @@ File: magit.info,  Node: Ediffing,  Next: References buffer,  Prev: Diffing,  Up
      ‘magit-ediff-stage’.  Otherwise, use ‘magit-ediff-show-staged’ and
      ‘magit-ediff-show-unstaged’ to show staged and unstaged changes,
      respectively.
+
+ -- User Option: magit-ediff-show-stash-with-index
+
+     This option controls whether ‘magit-ediff-show-stash’ includes a
+     buffer containing the file’s state in the index at the time the
+     stash was created.  This makes it possible to tell which changes in
+     the stash were staged.
 
  -- User Option: magit-ediff-quit-hook
 
@@ -4616,6 +4641,16 @@ _push-remote_, see *note Branching: Branching.
 
      Fetch from another repository.
 
+‘f o’     (‘magit-fetch-branch’)
+
+     Fetch a branch from a remote, both of which are read from the
+     minibuffer.
+
+‘f r’     (‘magit-fetch-refspec’)
+
+     Fetch from a remote using an explicit refspec, both of which are
+     read from the minibuffer.
+
 ‘f a’     (‘magit-fetch-all’)
 
      Fetch from all remotes.
@@ -4704,6 +4739,15 @@ _push-remote_, see *note Branching: Branching.
 
      Push an arbitrary branch or commit somewhere.  Both the source and
      the target are read in the minibuffer.
+
+‘P r’     (‘magit-push-refspecs’)
+
+     Push one or multiple refspecs to a remote, both of which are read
+     in the minibuffer.
+
+     To use multiple refspecs, separate them with commas.  Completion is
+     only available for the part before the colon, or when no colon is
+     used.
 
 ‘P m’     (‘magit-push-matching’)
 
@@ -5220,6 +5264,20 @@ few key bindings, but this might be extended in the future.
      Unstage all changes to the file being visited in the current
      buffer.
 
+‘C-c M-g c’     (‘magit-commit-popup’)
+
+     This prefix command shows suffix commands along with the
+     appropriate infix arguments in a popup buffer.  See *note
+     Initiating a commit: Initiating a commit.
+
+‘C-c M-g d’     (‘magit-diff-buffer-file-popup’)
+
+     This prefix command shows the same suffix commands and infix
+     arguments in a popup buffer as ‘magit-diff-popup’.  But this
+     variant has to be called from a file-visiting buffer and the
+     visited file is automatically used in the popup to limit the diff
+     to that file.
+
 ‘C-c M-g l’     (‘magit-log-buffer-file’)
 
      This command shows the log for the file of blob that the current
@@ -5235,12 +5293,6 @@ few key bindings, but this might be extended in the future.
 ‘C-c M-g p’     (‘magit-blob-previous’)
 
      Visit the previous blob which modified the current file.
-
-‘C-c M-g c’     (‘magit-commit-popup’)
-
-     This prefix command shows suffix commands along with the
-     appropriate infix arguments in a popup buffer.  See *note
-     Initiating a commit: Initiating a commit.
 
 
 File: magit.info,  Node: Minor mode for buffers visiting blobs,  Prev: Minor mode for buffers visiting files,  Up: Miscellaneous
@@ -6826,13 +6878,15 @@ Appendix B Keystroke Index
 * C-c M-g:                               Minor mode for buffers visiting files.
                                                               (line  19)
 * C-c M-g b:                             Minor mode for buffers visiting files.
-                                                              (line  39)
+                                                              (line  53)
 * C-c M-g c:                             Minor mode for buffers visiting files.
-                                                              (line  49)
-* C-c M-g l:                             Minor mode for buffers visiting files.
                                                               (line  33)
+* C-c M-g d:                             Minor mode for buffers visiting files.
+                                                              (line  39)
+* C-c M-g l:                             Minor mode for buffers visiting files.
+                                                              (line  47)
 * C-c M-g p:                             Minor mode for buffers visiting files.
-                                                              (line  45)
+                                                              (line  59)
 * C-c M-g s:                             Minor mode for buffers visiting files.
                                                               (line  24)
 * C-c M-g u:                             Minor mode for buffers visiting files.
@@ -6875,16 +6929,19 @@ Appendix B Keystroke Index
 * E s:                                   Ediffing.            (line  45)
 * E u:                                   Ediffing.            (line  50)
 * E w:                                   Ediffing.            (line  58)
+* E z:                                   Ediffing.            (line  66)
 * f:                                     Editing rebase sequences.
                                                               (line  63)
 * f <1>:                                 Fetching.            (line  11)
 * F:                                     Pulling.             (line  11)
-* f a:                                   Fetching.            (line  28)
+* f a:                                   Fetching.            (line  38)
 * f e:                                   Fetching.            (line  24)
 * F e:                                   Pulling.             (line  24)
-* f m:                                   Fetching.            (line  32)
+* f m:                                   Fetching.            (line  42)
+* f o:                                   Fetching.            (line  28)
 * f p:                                   Fetching.            (line  16)
 * F p:                                   Pulling.             (line  16)
+* f r:                                   Fetching.            (line  33)
 * f u:                                   Fetching.            (line  20)
 * F u:                                   Pulling.             (line  20)
 * g:                                     Automatic Refreshing of Magit Buffers.
@@ -6992,11 +7049,12 @@ Appendix B Keystroke Index
 * p <3>:                                 Minor mode for buffers visiting blobs.
                                                               (line  12)
 * P e:                                   Pushing.             (line  35)
-* P m:                                   Pushing.             (line  44)
+* P m:                                   Pushing.             (line  53)
 * P o:                                   Pushing.             (line  39)
 * P p:                                   Pushing.             (line  16)
-* P t:                                   Pushing.             (line  50)
-* P T:                                   Pushing.             (line  56)
+* P r:                                   Pushing.             (line  44)
+* P t:                                   Pushing.             (line  59)
+* P T:                                   Pushing.             (line  65)
 * P u:                                   Pushing.             (line  26)
 * q:                                     Quitting Windows.    (line   6)
 * q <1>:                                 Log Buffer.          (line  12)
@@ -7179,7 +7237,7 @@ Appendix C Command Index
 * magit-blame-next-chunk-same-commit:    Blaming.             (line  58)
 * magit-blame-popup:                     Blaming.             (line  24)
 * magit-blame-popup <1>:                 Minor mode for buffers visiting files.
-                                                              (line  39)
+                                                              (line  53)
 * magit-blame-previous-chunk:            Blaming.             (line  62)
 * magit-blame-previous-chunk-same-commit: Blaming.            (line  66)
 * magit-blame-quit:                      Blaming.             (line  70)
@@ -7187,7 +7245,7 @@ Appendix C Command Index
 * magit-blob-next:                       Minor mode for buffers visiting blobs.
                                                               (line  16)
 * magit-blob-previous:                   Minor mode for buffers visiting files.
-                                                              (line  45)
+                                                              (line  59)
 * magit-blob-previous <1>:               Minor mode for buffers visiting blobs.
                                                               (line  12)
 * magit-branch:                          Branching.           (line 190)
@@ -7213,7 +7271,7 @@ Appendix C Command Index
 * magit-commit-instant-squash:           Initiating a commit. (line  62)
 * magit-commit-popup:                    Initiating a commit. (line   8)
 * magit-commit-popup <1>:                Minor mode for buffers visiting files.
-                                                              (line  49)
+                                                              (line  33)
 * magit-commit-reword:                   Initiating a commit. (line  32)
 * magit-commit-squash:                   Initiating a commit. (line  54)
 * magit-copy-buffer-revision:            Common commands.     (line  21)
@@ -7222,6 +7280,8 @@ Appendix C Command Index
                                                               (line  13)
 * magit-describe-section <1>:            Matching sections.   (line   6)
 * magit-diff:                            Diffing.             (line  29)
+* magit-diff-buffer-file-popup:          Minor mode for buffers visiting files.
+                                                              (line  39)
 * magit-diff-default-context:            Refreshing diffs.    (line  62)
 * magit-diff-dwim:                       Diffing.             (line  25)
 * magit-diff-flip-revs:                  Refreshing diffs.    (line  45)
@@ -7260,14 +7320,17 @@ Appendix C Command Index
 * magit-ediff-resolve:                   Ediffing.            (line  32)
 * magit-ediff-show-commit:               Ediffing.            (line  62)
 * magit-ediff-show-staged:               Ediffing.            (line  54)
+* magit-ediff-show-stash:                Ediffing.            (line  66)
 * magit-ediff-show-unstaged:             Ediffing.            (line  50)
 * magit-ediff-show-working-tree:         Ediffing.            (line  58)
 * magit-ediff-stage:                     Ediffing.            (line  45)
 * magit-fetch:                           Fetching.            (line  24)
-* magit-fetch-all:                       Fetching.            (line  28)
+* magit-fetch-all:                       Fetching.            (line  38)
+* magit-fetch-branch:                    Fetching.            (line  28)
 * magit-fetch-from-pushremote:           Fetching.            (line  16)
 * magit-fetch-from-upstream:             Fetching.            (line  20)
 * magit-fetch-popup:                     Fetching.            (line  11)
+* magit-fetch-refspec:                   Fetching.            (line  33)
 * magit-file-popup:                      Minor mode for buffers visiting files.
                                                               (line  19)
 * magit-find-file:                       Visiting blobs.      (line   6)
@@ -7292,7 +7355,7 @@ Appendix C Command Index
 * magit-log-branches:                    Logging.             (line  48)
 * magit-log-buffer-file:                 Logging.             (line  67)
 * magit-log-buffer-file <1>:             Minor mode for buffers visiting files.
-                                                              (line  33)
+                                                              (line  47)
 * magit-log-bury-buffer:                 Log Buffer.          (line  12)
 * magit-log-current:                     Logging.             (line  31)
 * magit-log-double-commit-limit:         Log Buffer.          (line  53)
@@ -7338,12 +7401,13 @@ Appendix C Command Index
 * magit-push-current:                    Pushing.             (line  35)
 * magit-push-current-to-pushremote:      Pushing.             (line  16)
 * magit-push-current-to-upstream:        Pushing.             (line  26)
-* magit-push-implicitly args:            Pushing.             (line  64)
-* magit-push-matching:                   Pushing.             (line  44)
+* magit-push-implicitly args:            Pushing.             (line  73)
+* magit-push-matching:                   Pushing.             (line  53)
 * magit-push-popup:                      Pushing.             (line  11)
-* magit-push-tag:                        Pushing.             (line  56)
-* magit-push-tags:                       Pushing.             (line  50)
-* magit-push-to-remote remote args:      Pushing.             (line  75)
+* magit-push-refspecs:                   Pushing.             (line  44)
+* magit-push-tag:                        Pushing.             (line  65)
+* magit-push-tags:                       Pushing.             (line  59)
+* magit-push-to-remote remote args:      Pushing.             (line  84)
 * magit-rebase:                          Rebasing.            (line  25)
 * magit-rebase-abort:                    Rebasing.            (line  84)
 * magit-rebase-autosquash:               Rebasing.            (line  57)
@@ -7460,7 +7524,7 @@ Appendix C Command Index
 * magit-stash-worktree:                  Stashing.            (line  25)
 * magit-status:                          Status buffer.       (line  22)
 * magit-submodule-add:                   Submodules.          (line  13)
-* magit-submodule-fetch:                 Fetching.            (line  32)
+* magit-submodule-fetch:                 Fetching.            (line  42)
 * magit-submodule-fetch <1>:             Submodules.          (line  37)
 * magit-submodule-init:                  Submodules.          (line  24)
 * magit-submodule-init <1>:              Submodules.          (line  41)

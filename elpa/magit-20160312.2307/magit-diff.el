@@ -556,6 +556,24 @@ and https://debbugs.gnu.org/cgi/bugreport.cgi?bug=7847."
            (default-value 'magit-diff-arguments))))
     (magit-invoke-popup 'magit-diff-popup nil arg)))
 
+(defun magit-diff-buffer-file-popup (arg)
+  "Popup console for diff commans.
+
+This is a variant of `magit-diff-popup' which shows the same popup
+but which limits the diff to the file being visited in the current
+buffer."
+  (interactive "P")
+  (-if-let (file (magit-file-relative-name))
+      (let ((magit-diff-arguments
+             (magit-popup-import-file-args
+              (-if-let (buffer (magit-mode-get-buffer 'magit-diff-mode))
+                  (with-current-buffer buffer
+                    (nth 2 magit-refresh-args))
+                (default-value 'magit-diff-arguments))
+              (list file))))
+        (magit-invoke-popup 'magit-diff-popup nil arg))
+    (user-error "Buffer isn't visiting a file")))
+
 (defun magit-diff-refresh-popup (arg)
   "Popup console for changing diff arguments in the current buffer."
   (interactive "P")
@@ -1237,13 +1255,6 @@ is set in `magit-mode-setup'."
           "\\(\\+*\\)"   ; add
           "\\(-*\\)$"))  ; del
 
-(defconst magit-diff-submodule-re
-  (concat "^Submodule \\([^ ]+\\) \\(?:"
-          "\\([^ ]+ (new submodule)\\)\\|"
-          "\\([^ ]+ (submodule deleted)\\)\\|"
-          "\\(contains \\(?:modified\\|untracked\\) content\\)\\|"
-          "\\([^ :]+\\)\\( (rewind)\\)?:\\)$"))
-
 (defun magit-diff-wash-diffs (args &optional limit)
   (when (member "--stat" args)
     (magit-diff-wash-diffstat))
@@ -1303,7 +1314,7 @@ section or a child thereof."
 
 (defun magit-diff-wash-diff (args)
   (cond
-   ((looking-at magit-diff-submodule-re)
+   ((looking-at "^Submodule")
     (magit-diff-wash-submodule))
    ((looking-at "^\\* Unmerged path \\(.*\\)")
     (let ((file (magit-decode-git-path (match-string 1))))
@@ -1406,42 +1417,61 @@ section or a child thereof."
     (magit-wash-sequence #'magit-diff-wash-hunk)))
 
 (defun magit-diff-wash-submodule ()
-  (magit-bind-match-strings (module new deleted dirty range rewind) nil
-    (magit-delete-line)
-    (when (and dirty
-               (looking-at magit-diff-submodule-re)
-               (string= (match-string 1) module))
-      (setq range (match-string 5))
-      (magit-delete-line))
-    (while (looking-at "^  \\([<>]\\) \\(.+\\)$")
-      (magit-delete-line))
-    (if range
-        (let ((default-directory
-                (file-name-as-directory
-                 (expand-file-name module (magit-toplevel)))))
-          (setf (magit-section-value
-                 (magit-insert-section (file module t)
-                   (magit-insert-heading
-                     (concat (propertize (concat "modified   " module)
-                                         'face 'magit-diff-file-heading)
-                             " ("
-                             (if rewind "rewind" "new commits")
-                             (and dirty ", modified content")
-                             ")"))
-                   (unless rewind
-                     (magit-git-wash
-                         (apply-partially 'magit-log-wash-log 'module)
-                       "log" "--oneline" "--left-right" range)
-                     (delete-char -1))))
-                module))
-      (magit-insert-section (file module)
-        (insert (propertize (if new
-                                (concat "new module " module)
-                              (concat "modified   " module))
-                            'face 'magit-diff-file-heading))
-        (cond (dirty   (insert " (modified content)"))
-              (deleted (insert " (deleted submodule)")))
-        (insert ?\n)))))
+  ;; See `show_submodule_summary' in submodule.c and "this" commit.
+  (when (looking-at "^Submodule \\([^ ]+\\)")
+    (let ((module (match-string 1))
+          untracked modified)
+      (when (looking-at "^Submodule [^ ]+ contains untracked content$")
+        (magit-delete-line)
+        (setq untracked t))
+      (when (looking-at "^Submodule [^ ]+ contains modified content$")
+        (magit-delete-line)
+        (setq modified t))
+      (cond
+       ((looking-at "^Submodule [^ ]+ \\([^ :]+\\)\\( (rewind)\\)?:$")
+        (magit-bind-match-strings (range rewind) nil
+          (magit-delete-line)
+          (while (looking-at "^  \\([<>]\\) \\(.+\\)$")
+            (magit-delete-line))
+          (magit-insert-section (file module t)
+            (magit-insert-heading
+              (concat (propertize (concat "modified   " module)
+                                  'face 'magit-diff-file-heading)
+                      " ("
+                      (cond (rewind "rewind")
+                            ((string-match-p "\\.\\.\\." range) "non-ff")
+                            (t "new commits"))
+                      (and (or modified untracked)
+                           (concat ", "
+                                   (and modified "modified")
+                                   (and modified untracked " and ")
+                                   (and untracked "untracked")
+                                   " content"))
+                      ")"))
+            (let ((default-directory
+                    (file-name-as-directory
+                     (expand-file-name module (magit-toplevel)))))
+              (magit-git-wash (apply-partially 'magit-log-wash-log 'module)
+                "log" "--oneline" "--left-right" range)
+              (delete-char -1)))))
+       ((looking-at "^Submodule [^ ]+ \\([^ ]+\\) (\\([^)]+\\))$")
+        (magit-bind-match-strings (_range msg) nil
+          (magit-delete-line)
+          (magit-insert-section (file module)
+            (magit-insert-heading
+              (concat (propertize (concat "submodule  " module)
+                                  'face 'magit-diff-file-heading)
+                      " (" msg ")")))))
+       (t
+        (magit-insert-section (file module)
+          (magit-insert-heading
+            (concat (propertize (concat "modified   " module)
+                                'face 'magit-diff-file-heading)
+                    " ("
+                    (and modified "modified")
+                    (and modified untracked " and ")
+                    (and untracked "untracked")
+                    " content)"))))))))
 
 (defun magit-diff-wash-hunk ()
   (when (looking-at "^@\\{2,\\} \\(.+?\\) @\\{2,\\}\\(?: \\(.*\\)\\)?")
@@ -1490,9 +1520,15 @@ Staging and applying changes is documented in info node
   :group 'magit-revision
   (hack-dir-local-variables-non-file-buffer))
 
-(defun magit-revision-refresh-buffer (rev __const _args _files)
+(defun magit-revision-refresh-buffer (rev __const _args files)
   (setq header-line-format
-        (propertize (format " %s %s" (capitalize (magit-object-type rev)) rev)
+        (propertize (concat " " (capitalize (magit-object-type rev))
+                            " " rev
+                            (pcase (length files)
+                              (0)
+                              (1 (concat " in file " (car files)))
+                              (_ (concat " in files "
+                                         (mapconcat #'identity files ", ")))))
                     'face 'magit-header-line))
   (magit-insert-section (commitbuf)
     (run-hook-with-args 'magit-revision-sections-hook rev)))
