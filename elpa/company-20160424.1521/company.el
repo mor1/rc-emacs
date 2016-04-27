@@ -1096,7 +1096,8 @@ can retrieve meta-data for them."
 
 (defun company--group-lighter (candidate base)
   (let ((backend (or (get-text-property 0 'company-backend candidate)
-                     (car company-backend))))
+                     (cl-some (lambda (x) (and (not (keywordp x)) x))
+                              company-backend))))
     (when (and backend (symbolp backend))
       (let ((name (replace-regexp-in-string "company-\\|-company" ""
                                             (symbol-name backend))))
@@ -1166,10 +1167,11 @@ can retrieve meta-data for them."
         t))))
 
 (defun company--fetch-candidates (prefix)
-  (let ((c (if company--manual-action
-               (company-call-backend 'candidates prefix)
-             (company-call-backend-raw 'candidates prefix)))
-        res)
+  (let* ((non-essential (not (company-explicit-action-p)))
+         (c (if company--manual-action
+                (company-call-backend 'candidates prefix)
+              (company-call-backend-raw 'candidates prefix)))
+         res)
     (if (not (eq (car c) :async))
         c
       (let ((buf (current-buffer))
@@ -1362,6 +1364,7 @@ from the rest of the backends in the group, if any, will be left at the end."
                   (company-cancel))
            (quit (company-cancel))))))
 
+;;;###autoload
 (defun company-manual-begin ()
   (interactive)
   (company-assert-enabled)
@@ -1593,7 +1596,8 @@ from the rest of the backends in the group, if any, will be left at the end."
   (company-uninstall-map))
 
 (defun company-post-command ()
-  (when (null this-command)
+  (when (and company-candidates
+             (null this-command))
     ;; Happens when the user presses `C-g' while inside
     ;; `flyspell-post-command-hook', for example.
     ;; Or any other `post-command-hook' function that can call `sit-for',
@@ -2053,6 +2057,7 @@ With ARG, move by that many elements."
                  (eq old-tick (buffer-chars-modified-tick)))
         (company-complete-common))))))
 
+;;;###autoload
 (defun company-complete ()
   "Insert the common part of all candidates or the current selection.
 The first time this is called, the common part is inserted, the second
