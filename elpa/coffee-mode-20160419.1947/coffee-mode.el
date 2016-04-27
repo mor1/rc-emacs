@@ -1,9 +1,9 @@
-;;; coffee-mode.el --- Major mode to edit CoffeeScript files in Emacs -*- lexical-binding: t; -*-
+;;; coffee-mode.el --- Major mode for CoffeeScript code -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2010 Chris Wanstrath
 
-;; Version: 0.6.2
-;; Package-Version: 20160208.1902
+;; Version: 0.6.3
+;; Package-Version: 20160419.1947
 ;; Keywords: CoffeeScript major mode
 ;; Author: Chris Wanstrath <chris@ozmm.org>
 ;; URL: http://github.com/defunkt/coffee-mode
@@ -25,7 +25,7 @@
 ;; along with this program; if not, write to the Free Software
 ;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-;;; Commentary
+;;; Commentary:
 
 ;; Provides syntax highlighting, indentation support, imenu support,
 ;; compiling to JavaScript, REPL, a menu bar, and a few cute commands.
@@ -39,11 +39,14 @@
 
 (require 'cl-lib)
 
+(declare-function tramp-file-name-localname "tramp")
+(declare-function tramp-dissect-file-name "tramp")
+
 ;;
 ;; Customizable Variables
 ;;
 
-(defconst coffee-mode-version "0.6.2"
+(defconst coffee-mode-version "0.6.3"
   "The version of `coffee-mode'.")
 
 (defgroup coffee nil
@@ -53,59 +56,49 @@
 (defcustom coffee-tab-width tab-width
   "The tab width to use when indenting."
   :type 'integer
-  :group 'coffee
   :safe 'integerp)
 
 (defcustom coffee-command "coffee"
   "The CoffeeScript command used for evaluating code."
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (defcustom coffee-js-directory ""
   "The directory for compiled JavaScript files output. This can
 be an absolute path starting with a `/`, or it can be path
 relative to the directory containing the coffeescript sources to
 be compiled."
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (defcustom js2coffee-command "js2coffee"
   "The js2coffee command used for evaluating code."
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (defcustom coffee-args-repl '("-i")
   "The arguments to pass to `coffee-command' to start a REPL."
-  :type 'list
-  :group 'coffee)
+  :type '(repeat string))
 
 (defcustom coffee-args-compile '("-c" "--no-header")
   "The arguments to pass to `coffee-command' to compile a file."
-  :type 'list
-  :group 'coffee)
+  :type '(repeat string))
 
 (defcustom coffee-compiled-buffer-name "*coffee-compiled*"
   "The name of the scratch buffer used for compiled CoffeeScript."
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (defcustom coffee-repl-buffer "*CoffeeREPL*"
   "The name of the CoffeeREPL buffer."
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (defcustom coffee-compile-jump-to-error t
   "Whether to jump to the first error if compilation fails.
 Since the coffee compiler does not always include a line number in
 its error messages, this is not always possible."
-  :type 'boolean
-  :group 'coffee)
+  :type 'boolean)
 
 (defcustom coffee-watch-buffer-name "*coffee-watch*"
   "The name of the scratch buffer used when using the --watch flag
 with CoffeeScript."
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (defcustom coffee-mode-hook nil
   "Hook called by `coffee-mode'.  Examples:
@@ -114,29 +107,24 @@ with CoffeeScript."
       (and (file-exists-p (buffer-file-name))
            (file-exists-p (coffee-compiled-file-name))
            (coffee-cos-mode t)))"
-  :type 'hook
-  :group 'coffee)
+  :type 'hook)
 
 (defcustom coffee-indent-tabs-mode nil
   "Indentation can insert tabs if this is t."
-  :group 'coffee
   :type 'boolean)
 
 (defcustom coffee-after-compile-hook nil
   "Hook called after compile to Javascript"
-  :type 'hook
-  :group 'coffee)
+  :type 'hook)
 
 (defcustom coffee-indent-like-python-mode nil
   "Indent like python-mode."
-  :type 'boolean
-  :group 'coffee)
+  :type 'boolean)
 
 (defcustom coffee-switch-to-compile-buffer nil
   "Switch to compilation buffer `coffee-compiled-buffer-name' after compiling
 a buffer or region."
-  :type 'boolean
-  :group 'coffee)
+  :type 'boolean)
 
 (defvar coffee-mode-map
   (let ((map (make-sparse-keymap)))
@@ -162,6 +150,8 @@ a buffer or region."
     (define-key map (kbd "C-M-h") 'coffee-mark-defun)
     map)
   "Keymap for CoffeeScript major mode.")
+
+(defvar coffee--process nil)
 
 ;;
 ;; Commands
@@ -238,8 +228,11 @@ See `coffee-compile-jump-to-error'."
          (basename (file-name-sans-extension input))
          (output (when (string-match-p "\\.js\\'" basename) ;; for Rails '.js.coffee' file
                    basename))
-         (compile-cmd (coffee-command-compile input output))
-         (compiler-output (shell-command-to-string compile-cmd)))
+         (compile-args (coffee-command-compile input output))
+         (compiler-output (with-temp-buffer
+                            (unless (zerop (apply #'process-file coffee-command nil t nil compile-args))
+                              (error "Failed: %s %s" coffee-command compile-args))
+                            (buffer-substring-no-properties (point-min) (point-max)))))
     (if (string= compiler-output "")
         (let ((file-name (coffee-compiled-file-name (buffer-file-name))))
           (message "Compiled and saved %s" (or output (concat basename ".js")))
@@ -277,6 +270,7 @@ called `coffee-compiled-buffer-name'."
 (defun coffee-compile-sentinel (buffer file line column)
   (lambda (proc _event)
     (when (eq (process-status proc) 'exit)
+      (setq coffee--process nil)
       (coffee-save-window-if (not coffee-switch-to-compile-buffer)
         (pop-to-buffer (get-buffer coffee-compiled-buffer-name))
         (ansi-color-apply-on-region (point-min) (point-max))
@@ -303,7 +297,9 @@ called `coffee-compiled-buffer-name'."
        proc (coffee-compile-sentinel curbuf curfile line column))
       (with-current-buffer curbuf
         (process-send-region proc start end))
-      (process-send-eof proc))))
+      (process-send-string proc "\n")
+      (process-send-eof proc)
+      (setq coffee--process proc))))
 
 (defun coffee-start-generate-sourcemap-process (start end)
   ;; so that sourcemap generation reads from the current buffer
@@ -315,11 +311,13 @@ called `coffee-compiled-buffer-name'."
          (curbuf (current-buffer))
          (line (line-number-at-pos))
          (column (current-column)))
+    (setq coffee--process proc)
     (set-process-query-on-exit-flag proc nil)
     (set-process-sentinel
      proc
      (lambda (proc _event)
        (when (eq (process-status proc) 'exit)
+         (setq coffee--process nil)
          (if (not (= (process-exit-status proc) 0))
              (let ((sourcemap-output
                     (with-current-buffer sourcemap-buf (buffer-string))))
@@ -523,25 +521,24 @@ For details, see `comment-dwim'."
     (comment-dwim arg)
     (deactivate-mark t)))
 
-(defsubst coffee-command-compile-arg-as-string (output)
-  (mapconcat 'identity
-             (or (and output (append coffee-args-compile (list "-j" output)))
-                 coffee-args-compile)
-             " "))
+(defsubst coffee-command-compile-options (output)
+  (if output
+      (append coffee-args-compile (list "-j" output))
+    coffee-args-compile))
 
-(defun coffee-command-compile (input &optional output)
+(defun coffee-command-compile (input output)
   "Run `coffee-command' to compile FILE-NAME to file with default
 .js output file, or optionally to OUTPUT-FILE-NAME."
-  (let* ((full-file-name (expand-file-name input))
-         (output-file (coffee-compiled-file-name full-file-name))
+  (let* ((expanded (expand-file-name input))
+         (filename (if (file-remote-p expanded)
+                       (tramp-file-name-localname (tramp-dissect-file-name expanded))
+                     (file-truename expanded)))
+         (output-file (coffee-compiled-file-name filename))
          (output-dir (file-name-directory output-file)))
     (unless (file-directory-p output-dir)
       (make-directory output-dir t))
-    (format "%s %s -o %s %s"
-            (shell-quote-argument coffee-command)
-            (coffee-command-compile-arg-as-string output)
-            (shell-quote-argument output-dir)
-            (shell-quote-argument full-file-name))))
+    (append (coffee-command-compile-options output)
+            (list "-o" output-dir filename))))
 
 (defun coffee-run-cmd (args)
   "Run `coffee-command' with the given arguments, and display the
@@ -1249,7 +1246,7 @@ comments such as the following:
   ;; fix comment filling function
   (set (make-local-variable 'comment-line-break-function)
         #'coffee-comment-line-break-fn)
-  (set (make-local-variable 'auto-fill-function) #'coffee-auto-fill-fn)
+  (set (make-local-variable 'normal-auto-fill-function) #'coffee-auto-fill-fn)
   ;; perl style comment: "# ..."
   (modify-syntax-entry ?# "< b" coffee-mode-syntax-table)
   (modify-syntax-entry ?\n "> b" coffee-mode-syntax-table)
@@ -1298,18 +1295,37 @@ comments such as the following:
 
 (defcustom coffee-cos-mode-line " CoS"
   "Lighter of `coffee-cos-mode'"
-  :type 'string
-  :group 'coffee)
+  :type 'string)
 
 (define-minor-mode coffee-cos-mode
   "Toggle compile-on-save for coffee-mode.
 
 Add `'(lambda () (coffee-cos-mode t))' to `coffee-mode-hook' to turn
 it on by default."
-  :group 'coffee :lighter coffee-cos-mode-line
+  :lighter coffee-cos-mode-line
   (if coffee-cos-mode
       (add-hook 'after-save-hook 'coffee-compile-file nil t)
     (remove-hook 'after-save-hook 'coffee-compile-file t)))
+
+;;
+;; Live compile minor mode
+;;
+
+(defun coffee--live-compile (&rest _unused)
+  (when (or (not coffee--process)
+            (not (eq (process-status coffee--process) 'run)))
+    (coffee-compile-buffer)))
+
+(defcustom coffee-live-compile-mode-line " LiveCS"
+  "Lighter of `coffee-live-compile-mode'"
+  :type 'string)
+
+(define-minor-mode coffee-live-compile-mode
+  "Compile current buffer in real time"
+  :lighter coffee-live-comp-mode-line
+  (if coffee-live-compile-mode
+      (add-hook 'after-change-functions 'coffee--live-compile nil t)
+    (remove-hook 'after-change-functions 'coffee--live-compile t)))
 
 (provide 'coffee-mode)
 
