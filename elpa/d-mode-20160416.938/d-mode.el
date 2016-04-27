@@ -7,7 +7,7 @@
 ;; Maintainer:  Russel Winder <russel@winder.org.uk>
 ;; Created:  March 2007
 ;; Version:  201512060745
-;; Package-Version: 20151205.2354
+;; Package-Version: 20160416.938
 ;; Keywords:  D programming language emacs cc-mode
 
 ;;;; NB Version number is date and time yyyymmddhhMM in GMT (aka UTC).
@@ -128,7 +128,7 @@
   d t)
 
 (c-lang-defconst c-opt-cpp-prefix
-  ;; Preprocssor directive recognizer.  D doesn't have cpp, but it has #line
+  ;; Preprocessor directive recognizer.  D doesn't have cpp, but it has #line
   d "\\s *#\\s *")
 
 (c-lang-defconst c-cpp-message-directives d nil)
@@ -193,7 +193,7 @@ operators."
 ;; compilation-error-regexp-alist.
 (add-to-list 'compilation-error-regexp-alist-alist
              '(ldc
-               "^\\([^: \n]+\\)(\\([0-9]+\\)): \\(?: *\\(?3:\\(?:W\\(?::\\|arning\\)\\|warning\\)\\)\\| *\\(?4:[Ii]nfo\\(?:\\>\\|rmationa?l?\\)\\|I:\\|\\[ skipping \\.+ ]\\|instantiated from\\|required from\\|[Nn]ote\\)\\| *\\(?:[Ee]rror\\)\\)"
+               "^\\([^: \n]+\\)(\\([0-9]+\\)): \\(?: *\\(?3:\\(?:W\\(?::\\|arning\\)\\|warning\\)\\)\\| *\\(?4:[Ii]nfo\\(?:\\>\\|rmationa?l?\\)\\|I:\\|\\[ skipping \\.+ ]\\|instantiated from\\|required from\\|[Nn]ote\\)\\| *\\(?:[Ee]rror\\)\\| *Deprecation\\)"
                1 2 nil (3 . 4)))
 (add-to-list 'compilation-error-regexp-alist 'ldc)
 
@@ -444,7 +444,7 @@ operators."
    "\\([_a-zA-Z0-9]+\\)\\s-*"           ; function name
    "\\(?:([^)]*)\\s-*\\)?"              ; type arguments
    "([^)]*)\\s-*"                       ; arguments
-   "\\(?:[a-z]+\\s-*\\)?"               ; pure/const etc.
+   "\\(?:[a-z@]+\\s-*\\)?"              ; pure/const etc.
    "\\(?:;\\|[ \t\n]*\\(?:if\\|{\\)\\)")) ; ';' or 'if' or '{'
 
 (defun d-imenu-method-index-function ()
@@ -471,10 +471,10 @@ operators."
            (not invis))))))
 
 (defvar d-imenu-generic-expression
-  `(("*Classes*" "^\\s-*\\<class\\s-+\\([a-zA-Z0-9_]+\\)" 1)
-	("*Interfaces*" "^\\s-*\\<interface\\s-+\\([a-zA-Z0-9_]+\\)" 1)
-	("*Structs*" "^\\s-*\\<struct\\s-+\\([a-zA-Z0-9_]+\\)" 1)
-	("*Templates*" "^\\s-*\\(?:mixin\\s-+\\)?\\<template\\s-+\\([a-zA-Z0-9_]+\\)" 1)
+  `(("*Classes*" "^\\s-*\\(?:\\(?:final\\|abstract\\)\\s-+\\)?\\<class\\s-+\\([a-zA-Z0-9_]+\\)" 1)
+    ("*Interfaces*" "^\\s-*\\<interface\\s-+\\([a-zA-Z0-9_]+\\)" 1)
+    ("*Structs*" "^\\s-*\\<struct\\s-+\\([a-zA-Z0-9_]+\\)" 1)
+    ("*Templates*" "^\\s-*\\(?:mixin\\s-+\\)?\\<template\\s-+\\([a-zA-Z0-9_]+\\)" 1)
     (nil d-imenu-method-index-function 2)))
 
 ;;----------------------------------------------------------------------------
@@ -543,7 +543,7 @@ Key bindings:
   ;; syntax-propertize-rules function for more information.
   (when (version<= "24.3" emacs-version)
     (setq-local syntax-propertize-function
-                (syntax-propertize-rules ("`\\([^`]*\\(\\\\\\)[^`]*\\)+`" (2 "."))))))
+                (syntax-propertize-rules ("`[^\\\\`]*?\\(\\(\\\\\\)[^\\\\`]*?\\)+?`" (2 "."))))))
 
 ;;----------------------------------------------------------------------------
 ;; "Hideous hacks" to support appropriate font-lock behaviour.
