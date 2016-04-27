@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20160316.548
+;; Package-Version: 20160421.124
 ;; Version: 0.4.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
@@ -64,7 +64,8 @@ non-printing key like an arrow key (left, right, up, down).  For
 non-printing keys, a corresponding entry in
 `avy-key-to-char-alist' must exist in order to visualize the key
 in the avy overlays."
-  :type '(repeat :tag "Keys" (choice (character :tag "char")
+  :type '(repeat :tag "Keys" (choice
+                              (character :tag "char")
                               (symbol :tag "non-printing key"))))
 
 (defcustom avy-keys-alist nil
@@ -81,7 +82,8 @@ in the avy overlays."
                      (const avy-goto-word-1)
                      (const avy-copy-line)
                      (const avy-copy-region)
-                     (const avy-move-line))
+                     (const avy-move-line)
+                     (function :tag "Other command"))
           :value-type (repeat :tag "Keys" character)))
 
 (defcustom avy-style 'at-full
@@ -109,7 +111,8 @@ If the commands isn't on the list, `avy-style' is used."
                      (const avy-goto-word-1)
                      (const avy-copy-line)
                      (const avy-copy-region)
-                     (const avy-move-line))
+                     (const avy-move-line)
+                     (function :tag "Other command"))
           :value-type (choice
                        (const :tag "Pre" pre)
                        (const :tag "At" at)
@@ -118,9 +121,11 @@ If the commands isn't on the list, `avy-style' is used."
                        (const :tag "De Bruijn" de-bruijn))))
 
 (defcustom avy-dispatch-alist
-  '((?x . avy-action-kill)
+  '((?x . avy-action-kill-move)
+    (?X . avy-action-kill-stay)
     (?m . avy-action-mark)
-    (?n . avy-action-copy))
+    (?n . avy-action-copy)
+    (?i . avy-action-ispell))
   "List of actions for `avy-handler-default'.
 
 Each item is (KEY . ACTION).  When KEY not on `avy-keys' is
@@ -132,7 +137,8 @@ pressed during the dispatch, ACTION is set to replace the default
     :value-type (choice
                  (const :tag "Mark" avy-action-mark)
                  (const :tag "Copy" avy-action-copy)
-                 (const :tag "Kill" avy-action-kill))))
+                 (const :tag "Kill and move point" avy-action-kill-move)
+                 (const :tag "Kill" avy-action-kill-stay))))
 
 (defcustom avy-background nil
   "When non-nil, a gray background will be added during the selection."
@@ -448,9 +454,10 @@ multiple DISPLAY-FN invokations."
         (t
          (error "Unrecognized option: %S" avy-all-windows))))
 
-(defcustom avy-all-windows-alt t
+(defcustom avy-all-windows-alt nil
   "The alternative `avy-all-windows' for use with \\[universal-argument]."
   :type '(choice
+          (const :tag "Current window" nil)
           (const :tag "All windows on the current frame" t)
           (const :tag "All windows on all frames" all-frames)))
 
@@ -503,12 +510,32 @@ Set `avy-style' according to COMMMAND as well."
     (select-window (cdr dat))
     (goto-char (car dat))))
 
-(defun avy-action-kill (pt)
-  "Kill sexp at PT."
+(defun avy-action-kill-move (pt)
+  "Kill sexp at PT and move there."
   (goto-char pt)
   (forward-sexp)
   (kill-region pt (point))
   (message "Killed: %s" (current-kill 0)))
+
+(defun avy-action-kill-stay (pt)
+  "Kill sexp at PT."
+  (save-excursion
+   (goto-char pt)
+   (forward-sexp)
+   (kill-region pt (point))
+   (just-one-space))
+  (message "Killed: %s" (current-kill 0)))
+
+(defun avy-action-ispell (pt)
+  "Auto correct word at PT."
+  (save-excursion
+    (goto-char pt)
+    (if (looking-at-p "\\b")
+        (ispell-word)
+      (progn
+        (backward-word)
+        (when (looking-at-p "\\b")
+          (ispell-word))))))
 
 (defun avy--process (candidates overlay-fn)
   "Select one of CANDIDATES using `avy-read'.
