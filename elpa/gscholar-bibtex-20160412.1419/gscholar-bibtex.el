@@ -4,8 +4,8 @@
 
 ;; Author: Junpeng Qiu <qjpchmail@gmail.com>
 ;; Keywords: extensions
-;; Package-Version: 20151022.1025
-;; Version: 0.2
+;; Package-Version: 20160412.1419
+;; Version: 0.3.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -47,7 +47,8 @@
 ;;   - TAB: show BibTeX entry for current search result
 ;;   - A/W: append/write to `gscholar-bibtex-database-file' (see later)
 ;;   - a/w: append/write to a file
-;;   - c: close BibTeX entry window
+;;   - c: copy the current BibTeX entry
+;;   - x: close BibTeX entry window
 ;;   - q: quit
 
 ;; ** Sources
@@ -138,7 +139,7 @@
   "Retrieve BibTeX from Google Scholar and other online sources(ACM, IEEE, DBLP)."
   :group 'bibtex)
 
-(defconst gscholar-bibtex-version "0.2"
+(defconst gscholar-bibtex-version "0.3.1"
   "`gscholar-bibtex' version number.")
 
 (defvar gscholar-bibtex-caller-buffer nil
@@ -186,7 +187,7 @@
 
 (defconst gscholar-bibtex-help
   (let ((help-message "[<n>/<p>] next/previous; [<TAB>] show BibTeX entry; [<A>/<W>] append/write to database;\
- [<a>/<w>] append/write to file; [<c>] close BibTeX entry window; [<q>] quit;"))
+ [<a>/<w>] append/write to file; [<c>] copy entry; [<x>] close BibTeX entry window; [<q>] quit;"))
     (while (string-match "<\\([a-zA-Z]+\\)>" help-message)
       (setq help-message
             (replace-match
@@ -240,7 +241,8 @@
     (define-key map "W" 'gscholar-bibtex-write-bibtex-to-database)
     (define-key map "a" 'gscholar-bibtex-append-bibtex-to-file)
     (define-key map "w" 'gscholar-bibtex-write-bibtex-to-file)
-    (define-key map "c" 'gscholar-bibtex-quit-entry-window)
+    (define-key map "c" 'gscholar-bibtex-copy-bibtex-entry)
+    (define-key map "x" 'gscholar-bibtex-quit-entry-window)
     (define-key map "q" 'gscholar-bibtex-quit-gscholar-window)
     map))
 
@@ -370,7 +372,8 @@
     (unless entry-window
       (select-window (split-window-below))
       (switch-to-buffer entry-buffer)
-      (select-window gscholar-window))))
+      (select-window gscholar-window)))
+  (gscholar-bibtex-show-help))
 
 (defun gscholar-bibtex--write-bibtex-to-database-impl (&optional append)
   (gscholar-bibtex-guard)
@@ -409,6 +412,15 @@
 (defun gscholar-bibtex-write-bibtex-to-file ()
   (interactive)
   (gscholar-bibtex--write-bibtex-to-file-impl "Write BibTeX entry to file: "))
+
+(defun gscholar-bibtex-copy-bibtex-entry ()
+  (interactive)
+  (gscholar-bibtex-retrieve-and-show-bibtex)
+  (with-current-buffer (get-buffer gscholar-bibtex-entry-buffer-name)
+    (kill-new (buffer-string))
+    (message "The current BiBTeX entry copied.")
+    (sit-for 2)
+    (gscholar-bibtex-show-help)))
 
 (defun gscholar-bibtex-quit-entry-window ()
   (interactive)
