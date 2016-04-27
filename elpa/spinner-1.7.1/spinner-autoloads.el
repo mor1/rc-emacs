@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "spinner" "spinner.el" (22211 26045 0 0))
+;;;### (autoloads nil "spinner" "spinner.el" (22305 3459 0 0))
 ;;; Generated autoloads from spinner.el
 
 (autoload 'spinner-create "spinner" "\
