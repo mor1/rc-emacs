@@ -3,8 +3,8 @@
 
 ;; Copyright 2011-2016 François-Xavier Bois
 
-;; Version: 13.1.25
-;; Package-Version: 20160426.1459
+;; Version: 14.0.2
+;; Package-Version: 20160528.910
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; URL: http://web-mode.org
@@ -22,7 +22,7 @@
 
 ;;---- CONSTS ------------------------------------------------------------------
 
-(defconst web-mode-version "13.1.25"
+(defconst web-mode-version "14.0.2"
   "Web Mode version.")
 
 ;;---- GROUPS ------------------------------------------------------------------
@@ -1631,10 +1631,10 @@ Must be used in conjunction with web-mode-enable-block-face."
      (2 'web-mode-html-attr-value-face))
    ))
 
+;; voir https://www.gnu.org/software/emacs/manual/html_node/elisp/Search_002dbased-Fontification.html
 (defvar web-mode-javascript-font-lock-keywords
   (list
    '("@\\([[:alnum:]_]+\\)\\_>" 0 'web-mode-keyword-face)
-   ;;(cons (concat "\\_<\\(" web-mode-javascript-keywords "\\)\\_>") '(0 'web-mode-keyword-face))
    (cons (concat "\\([ \t}{(]\\|^\\)\\(" web-mode-javascript-keywords "\\)\\_>") '(0 'web-mode-keyword-face))
    (cons (concat "\\_<\\(" web-mode-javascript-constants "\\)\\_>") '(0 'web-mode-constant-face))
    '("\\_<\\(new\\|instanceof\\|class\\|extends\\) \\([[:alnum:]_.]+\\)\\_>" 2 'web-mode-type-face)
@@ -1645,6 +1645,7 @@ Must be used in conjunction with web-mode-enable-block-face."
    '("([ ]*\\([[:alnum:]_]+\\)[ ]*=>" 1 'web-mode-function-name-face)
    '("[ ]*\\([[:alnum:]_]+\\)[ ]*=[ ]*([^)]*)[ ]*=>[ ]*{" 1 'web-mode-function-name-face)
    '("\\_<\\(var\\|let\\|const\\)[ ]+\\([[:alnum:]_]+\\)" 2 'web-mode-variable-name-face)
+   '("({" "\\([[:alnum:]_]+\\)[, }]+" nil nil (1 'web-mode-variable-name-face)) ;#738
    '("\\([[:alnum:]_]+\\)[ ]*=> [{(]" 1 'web-mode-variable-name-face)
    '("\\(function\\|[,=]\\|^\\)[ ]*("
      ("\\([[:alnum:]_]+\\)\\([ ]*=[^,)]*\\)?[,)]" nil nil (1 'web-mode-variable-name-face)))
@@ -2049,7 +2050,7 @@ another auto-completion with different ac-sources (e.g. ac-php)")
 (defvar web-mode-syntax-table
   (let ((table (make-syntax-table)))
     (modify-syntax-entry ?- "_" table)
-    (modify-syntax-entry ?_ "_" table) ;; #563
+    (modify-syntax-entry ?_ "_" table) ;#563
     (modify-syntax-entry ?< "." table)
     (modify-syntax-entry ?> "." table)
     (modify-syntax-entry ?& "." table)
@@ -2263,6 +2264,7 @@ another auto-completion with different ac-sources (e.g. ac-php)")
   (make-local-variable 'web-mode-change-end)
   (make-local-variable 'web-mode-code-indent-offset)
   (make-local-variable 'web-mode-column-overlays)
+  (make-local-variable 'web-mode-comment-formats)
   (make-local-variable 'web-mode-comment-style)
   (make-local-variable 'web-mode-content-type)
   (make-local-variable 'web-mode-css-indent-offset)
@@ -2615,10 +2617,6 @@ another auto-completion with different ac-sources (e.g. ac-php)")
             (setq closing-string "}"
                   delim-open "${"
                   delim-close "}"))
-           ;;(t
-           ;; (setq closing-string ">"
-           ;;       delim-open "</?"
-           ;;       delim-close "/?>"))
            )
           ) ;jsp
 
@@ -7166,6 +7164,7 @@ another auto-completion with different ac-sources (e.g. ac-php)")
          ((member ?\, chars)
           (cond
            ((not (web-mode-block-args-beginning pos reg-beg))
+            ;;(message "ici")
             )
            ((cdr (assoc "lineup-args" web-mode-indentation-params))
             (setq offset (current-column))
@@ -8636,11 +8635,11 @@ Prompt user if TAG-NAME isn't provided."
   (let (ctx)
     (setq ctx (web-mode-comment-context))
     (if (null ctx) nil
-      (message "ctx=%S" ctx)
+      ;; (message "ctx=%S" ctx)
       (newline 1)
       (indent-line-to (plist-get ctx :col))
       (insert (concat (plist-get ctx :prefix) ""))
-      )
+      ) ;if
     ))
 
 (defun web-mode-comment-context (&optional pos)
@@ -8764,11 +8763,13 @@ Prompt user if TAG-NAME isn't provided."
             (setq content (concat "{/* " sel " */}")))
            ((and (setq alt (cdr (assoc language web-mode-comment-formats)))
                  (string= alt "//"))
-            (setq content (replace-regexp-in-string "^[ ]*" alt sel)))
+            (setq content (replace-regexp-in-string (concat "\n[ ]\\{" (number-to-string col) "\\}") "\n// " sel))
+            (setq content (concat "// " content))
+            ;;(setq content (replace-regexp-in-string "^[ ]*" alt sel))
+            )
            (web-mode-comment-prefixing
-            ;;(message "col=%S" col)
-            (setq content (replace-regexp-in-string (concat "\n[ ]\\{" (number-to-string col) "\\}") "\n*" sel))
-            (setq content (concat "/*" content "*/")))
+            (setq content (replace-regexp-in-string (concat "\n[ ]\\{" (number-to-string col) "\\}") "\n* " sel))
+            (setq content (concat "/* " content "*/")))
            (t
             (setq content (concat "/* " sel " */")))
            ) ;cond
@@ -10408,44 +10409,6 @@ Prompt user if TAG-NAME isn't provided."
        ) ;cond
       ) ;while
     pos))
-
-;; (defun web-mode-block-opening-paren-position2 (pos limit)
-;;   (save-excursion
-;;     (when (> limit pos)
-;;       (message "block-opening-paren-position: limit(%S) > pos(%S)" limit pos))
-;;     (goto-char pos)
-;;     (let (c
-;;           n
-;;           pt
-;;           (continue (> pos limit))
-;;           (pairs '((")" . "(")
-;;                    ("]" . "[")
-;;                    ("}" . "{")))
-;;           (h (make-hash-table :test 'equal))
-;;           (regexp "[\]\[)(}{]"))
-;;       (while (and continue (re-search-backward regexp limit t))
-;;         (cond
-;;          ((web-mode-is-comment-or-string)
-;;           )
-;;          (t
-;;           (setq c (string (char-after)))
-;;           (cond
-;;            ((member c '("(" "{" "["))
-;;             (setq n (gethash c h 0))
-;;             (if (= n 0)
-;;                 (setq continue nil
-;;                       pt (point))
-;;               (puthash c (1+ n) h)
-;;               ))
-;;            (t
-;;             (setq c (cdr (assoc c pairs)))
-;;             (setq n (gethash c h 0))
-;;             (puthash c (1- n) h))
-;;            ) ;cond
-;;           ) ;t
-;;          ) ;cond
-;;         ) ;while
-;;       pt)))
 
 (defun web-mode-block-opening-paren-position (pos limit)
   (save-excursion
