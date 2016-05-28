@@ -3,8 +3,8 @@
 ;; Copyright (C) 2007 Davis Herring
 
 ;; Author: Davis Herring <herring@lanl.gov>
-;; Version: 20140307.928
-;; X-Original-Version: 0.1
+;; Version: 0.1
+;; Package-Version: 20160505.2355
 ;; Maintainer: Davis Herring
 ;; Keywords: keyboard
 
@@ -88,11 +88,11 @@ Currently KEY must be of the [(control shift ?s) ...] format."
 (defvar unbound-keys nil
   "Used internally by `unbound-keys'.")
 
-(defun unbound-keys (max)
+(defun unbound-keys (max &optional map)
   "Return a list of unbound keystrokes of complexity no greater than MAX.
 Keys are sorted by their complexity; `key-complexity' determines it."
   (let (unbound-keys)
-    (unbound-keys-1 max nil nil)
+    (unbound-keys-1 max map nil)
     (mapcar 'car (sort unbound-keys (lambda (k l) (< (cdr k) (cdr l)))))))
 
 ;; Adds to `unbound-keys'.
@@ -130,14 +130,17 @@ Keys are sorted by their complexity; `key-complexity' determines it."
                     (t (push (cons total comp) unbound-keys))))))))))
 
 ;;;###autoload
-(defun describe-unbound-keys (max)
+(defun describe-unbound-keys (max &optional map)
   "Display a list of unbound keystrokes of complexity no greater than MAX.
 Keys are sorted by their complexity; `key-complexity' determines it."
-  (interactive "nMaximum key complexity: ")
+  (interactive
+   (list (read-number "Maximum key complexity: ")
+         (intern (read-string "Keymap (default global-map): " nil nil "global-map"))))
+  (unless (keymapp (eval map)) (error "%s is not a keymap" map))
   (with-output-to-temp-buffer "*Unbound Keys*"
-    (let ((keys (unbound-keys max)))
-      (princ (format "%s unbound keys with complexity at most %s:\n"
-                     (length keys) max))
+    (let ((keys (unbound-keys max (eval map))))
+      (princ (format "%s unbound keys in %s with complexity at most %s:\n"
+                     (length keys) map max))
       (princ (mapconcat 'key-description keys "\n")))))
 
 (provide 'unbound)
