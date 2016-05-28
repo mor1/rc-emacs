@@ -55,7 +55,8 @@ Defaults to `elfeed-kill-buffer'.")
       (define-key map [tab] 'shr-next-link)
       (define-key map "\e\t" 'shr-previous-link)
       (define-key map [backtab] 'shr-previous-link)
-      (define-key map [mouse-2] 'shr-browse-url)))
+      (define-key map [mouse-2] 'shr-browse-url)
+      (define-key map "P" 'elfeed-show-play-enclosure)))
   "Keymap for `elfeed-show-mode'.")
 
 (defun elfeed-show-mode ()
@@ -176,13 +177,17 @@ Defaults to `elfeed-kill-buffer'.")
   (elfeed)
   (elfeed-search-live-filter))
 
-(defun elfeed-show-visit ()
-  "Visit the current entry in the browser."
-  (interactive)
+(defun elfeed-show-visit (&optional use-generic-p)
+  "Visit the current entry in your browser using `browse-url'.
+If there is a prefix argument, visit the current entry in the
+browser defined by `browse-url-generic-program'."
+  (interactive "P")
   (let ((link (elfeed-entry-link elfeed-show-entry)))
     (when link
       (message "Sent to browser: %s" link)
-      (browse-url link))))
+      (if use-generic-p
+          (browse-url-generic link)
+        (browse-url link)))))
 
 (defun elfeed-show-yank ()
   "Copy the current entry link URL to the clipboard."
@@ -349,6 +354,21 @@ offer to save a range of enclosures."
   (if multi
       (elfeed-show-save-enclosure-multi)
     (elfeed-show-save-enclosure-single)))
+
+(defun elfeed-show-play-enclosure (&optional entry enclosure-index)
+  "Play enclosure number ENCLOSURE-INDEX from ENTRY using emms.
+If ENTRY is nil use the elfeed-show-entry variable.
+If ENCLOSURE-INDEX is nil ask for the enclosure number."
+  (interactive)
+  (require 'emms) ;; optional
+  (let* ((entry (or entry elfeed-show-entry))
+         (enclosure-index (or enclosure-index
+                              (elfeed--get-enclosure-num
+                               "Enclosure to play" entry)))
+         (url-enclosure (car (elt (elfeed-entry-enclosures entry)
+                                  (- enclosure-index 1)))))
+    (with-no-warnings ;; due to lazy require
+      (emms-play-url url-enclosure))))
 
 (provide 'elfeed-show)
 

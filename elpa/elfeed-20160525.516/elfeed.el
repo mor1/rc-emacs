@@ -14,6 +14,15 @@
 
 ;;; History:
 
+;; Version 1.4.1: features and fixes
+;;   * Major bug fix: disable local variables when loading the index
+;;   * New command `elfeed-show-play-enclosure' (requires emms)
+;;   * Yank now works on regions in the search buffer
+;;   * Feed structs now have author field filled out
+;;   * New command `elfeed-search-set-feed-title'
+;;   * New command `elfeed-search-set-entry-title'
+;;   * Smarter handling of invalid timestamps
+;;   * Following links in show mode (`elfeed-show-visit') takes a prefix arg
 ;; Version 1.4.0: features and fixes
 ;;   * New header built on Emacs' built-in buffer headers
 ;;   * New hook: `elfeed-new-entry-parse-hook'
@@ -86,7 +95,7 @@
   "An Emacs web feed reader."
   :group 'comm)
 
-(defconst elfeed-version "1.4.0")
+(defconst elfeed-version "1.4.1")
 
 (defcustom elfeed-feeds ()
   "List of all feeds that Elfeed should follow. You must add your
@@ -412,12 +421,29 @@ Only a list of strings will be returned."
   "Face for showing the `info' log level in the elfeed log buffer."
   :group 'elfeed)
 
+(defvar elfeed-log-buffer-name "*elfeed-log*"
+  "Name of buffer used for logging Elfeed events.")
+
+(defun elfeed-log-buffer ()
+  "Returns the buffer for `elfeed-log', creating it as needed."
+  (let ((buffer (get-buffer elfeed-log-buffer-name)))
+    (if buffer
+        buffer
+      (with-current-buffer (generate-new-buffer elfeed-log-buffer-name)
+        (special-mode)
+        (current-buffer)))))
+
 (defun elfeed-log (level fmt &rest objects)
-  (let ((log-buffer (get-buffer-create "*elfeed-log*"))
+  "Write log message FMT at LEVEL to Elfeed's log buffer.
+
+LEVEL should be a symbol: info, warn, error.
+FMT must be a string suitable for `format' given OBJECTS as arguments."
+  (let ((log-buffer (elfeed-log-buffer))
         (log-level-face (cond
                          ((eq level 'info) 'elfeed-log-info-level-face)
                          ((eq level 'warn) 'elfeed-log-warn-level-face)
-                         ((eq level 'error) 'elfeed-log-error-level-face))))
+                         ((eq level 'error) 'elfeed-log-error-level-face)))
+        (inhibit-read-only t))
     (with-current-buffer log-buffer
       (goto-char (point-max))
       (insert
