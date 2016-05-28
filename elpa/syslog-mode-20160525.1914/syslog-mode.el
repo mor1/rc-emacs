@@ -6,7 +6,7 @@
 ;; Maintainer: Joe Bloggs <vapniks@yahoo.com>
 ;; Created: 2003-03-17 18:50:12 Harley Gorrell
 ;; Version: 2.2
-;; Package-Version: 20140217.1618
+;; Package-Version: 20160525.1914
 ;; Last-Updated: 2013-10-21 19:04:00
 ;;           By: Joe Bloggs
 ;; URL: https://github.com/vapniks/syslog-mode
@@ -16,7 +16,7 @@
 ;;
 ;; Features that might be required by this library:
 ;;
-;; hide-lines cl ido
+;; hide-lines cl ido dash
 ;;
 
 ;;; This file is NOT part of GNU Emacs
@@ -94,22 +94,22 @@
 ;;    Face for IPs
 ;;    default = (quote ((t :underline t :slant italic ...)))
 ;;  `syslog-hour'
-;;    Face for IPs
+;;    Face for hours
 ;;    default = (quote ((t :weight bold :inherit font-lock-type-face)))
 ;;  `syslog-error'
-;;    Face for IPs
+;;    Face for errors
 ;;    default = (quote ((t :weight bold :foreground "red")))
 ;;  `syslog-warn'
-;;    Face for IPs
+;;    Face for warnings
 ;;    default = (quote ((t :weight bold :foreground "goldenrod")))
 ;;  `syslog-info'
-;;    Face for IPs
+;;    Face for info lines
 ;;    default = (quote ((t :weight bold :foreground "deep sky blue")))
 ;;  `syslog-debug'
-;;    Face for IPs
+;;    Face for debug lines
 ;;    default = (quote ((t :weight bold :foreground "medium spring green")))
 ;;  `syslog-su'
-;;    Face for IPs
+;;    Face for su and sudo
 ;;    default = (quote ((t :weight bold :foreground "firebrick")))
 ;;
 ;; All of the above can customized by:
@@ -196,11 +196,14 @@
     (define-key map "<" 'syslog-previous-file)
     (define-key map ">" 'syslog-next-file)
     (define-key map "o" 'syslog-open-files)
+    (define-key map "a" 'syslog-append-files)
+    (define-key map "p" 'syslog-prepend-files)
+    (define-key map "v" 'syslog-view)
     (define-key map "c" 'syslog-count-matches)
+    (define-key map "W" 'syslog-whois-reverse-lookup)
     (define-key map "q" 'quit-window)
     ;; XEmacs does not like the Alt bindings
-    (if (string-match "XEmacs" (emacs-version))
-	t)
+    (if (string-match "XEmacs" (emacs-version)) t)
     map)
   "The local keymap for `syslog-mode'.")
 
@@ -217,34 +220,219 @@ and number is a number."
          (num (or (and str (string-to-number str)) (1- syslog-number-suffix-start))))
     (cons basename num)))
 
-(defun syslog-open-files (filename num)
-  "Open consecutive log files in same buffer.
-When called interactively the user is prompted for the initial file FILENAME,
-and the number NUM of consecutive backup files to include."
-  (interactive (list (ido-read-file-name "Log file: " syslog-log-file-directory "syslog" t)
-                     (read-number "Number of consecutive backup files to include" 0)))
-  (let* ((pair (syslog-get-basename-and-number filename))
-         (basename (car pair))
-         (curver (cdr pair))
-         (buf (get-buffer-create
-               (concat (file-name-nondirectory basename)
-                       "[" (number-to-string curver) "-"
-                       (number-to-string (+ curver num)) "]"))))
+(defun syslog-get-filenames (&optional pairs prompt onlyone)
+  "Get log files associated with PAIRS argument, or prompt user for files.
+The PAIRS argument should be a list of cons cells whose cars are paths to log files,
+and whose cdrs are numbers indicating how many previous log files (if positive) or days 
+ (if negative) to include. If PAIRS is missing then the user is prompted for those values.
+If ONLYONE is non-nil then the user is only prompted for a single file.
+The PROMPT argument is an optional prompt to use for prompting the user for files."
+  (let* ((continue t)
+	 (num 0)
+	 (pairs
+	  (or pairs
+	      (cl-loop
+	       while continue
+	       do (setq
+		   filename
+		   (ido-read-file-name
+		    (or prompt "Log file: ")
+		    syslog-log-file-directory "syslog" nil)
+		   num (if onlyone 0
+			 (read-number
+			  "Number of previous files (if positive) or days (if negative) to include"
+			  num)))
+	       collect (cons filename num)
+	       if onlyone do (setq continue nil)
+	       else do (setq continue (y-or-n-p "Add more files? "))))))
+    (cl-remove-duplicates
+     (cl-loop for pair1 in pairs
+	      for filename = (car pair1)
+	      for num = (cdr pair1)
+	      for pair = (syslog-get-basename-and-number filename)
+	      for basename = (car pair)
+	      for basename2 = (file-name-nondirectory basename)
+	      for curver = (cdr pair)
+	      for num2 = (if (>= num 0) num
+			   (- (let* ((startdate (+ (float-time (nth 5 (file-attributes filename)))
+						   (* num 86400))))
+				(cl-loop for file2 in (directory-files (file-name-directory filename)
+								       t basename2)
+					 for filedate2 = (float-time (nth 5 (file-attributes file2)))
+					 if (>= filedate2 startdate)
+					 maximize (cdr (syslog-get-basename-and-number file2))))
+			      curver))
+	      for files = (cl-loop for n from (1+ curver) to (+ curver num2)
+				   for numstr = (number-to-string n)
+				   for nextfile = (cl-loop for suffix in '(nil ".gz" ".tgz")
+							   for filename3 = (concat basename "." numstr suffix)
+							   if (file-readable-p filename3)
+							   return filename3)
+				   collect nextfile)
+	      nconc (nconc (list filename) (cl-remove-if 'null files))) :test 'equal)))
+
+(defun syslog-append-files (files buf &optional replace label)
+  "Append FILES into buffer BUF.
+If REPLACE is non-nil then the contents of BUF will be overwritten.
+If the optional argument LABEL is non-nil then each new line will be labelled
+with the corresponding filename.
+When called interactively the current buffer is used, FILES are prompted for
+using `syslog-get-filenames', and REPLACE & LABEL are set to nil, unless
+a prefix argument is used in which case they are prompted for."
+  (interactive (list (syslog-get-filenames nil "Append log file: "
+					   (not current-prefix-arg))
+		     (current-buffer)
+		     (if current-prefix-arg
+			 (y-or-n-p "Replace current buffer contents? "))
+		     (if current-prefix-arg
+			 (y-or-n-p "Label lines with filenames? "))))
+  (with-current-buffer buf
+    (let ((ro buffer-read-only))
+      (read-only-mode -1)
+      (set-visited-file-name nil)
+      (cl-loop for file in (cl-remove-duplicates files :test 'equal)
+	       do (goto-char (point-max))
+	       do (insert-file-contents file)
+	       (progn (goto-char (point-max))
+		      (forward-line 0)
+		      (setq start (point))
+		      (insert-file-contents file)
+		      (unless (not label)
+			(goto-char (point-max))
+			(forward-line 0)
+			(string-rectangle
+			 start (point) (concat (file-name-nondirectory file) ": ")))))
+      (read-only-mode (if ro 1 -1)))))
+
+(defun syslog-prepend-files (files buf &optional replace label)
+  "Prepend FILES into buffer BUF.
+If REPLACE is non-nil then the contents of BUF will be overwritten.
+If the optional argument LABEL is non-nil then each new line will be labelled
+with the corresponding filename.
+When called interactively the current buffer is used, FILES are prompted for
+using `syslog-get-filenames', and REPLACE & LABEL are set to nil, unless
+a prefix argument is used in which case they are prompted for."
+  (interactive (list (syslog-get-filenames nil "Prepend log file: "
+					   (not current-prefix-arg))
+		     (current-buffer)
+		     (if current-prefix-arg
+			 (y-or-n-p "Replace current buffer contents? "))
+		     (if current-prefix-arg
+			 (y-or-n-p "Label lines with filenames? "))))
+  (with-current-buffer buf
+    (let ((ro buffer-read-only))
+      (read-only-mode -1)
+      (set-visited-file-name nil)
+      (cl-loop for file in (cl-remove-duplicates files :test 'equal)
+	       do (progn (setq start (goto-char (point-min))
+			       nchars (second (insert-file-contents file)))
+			 (unless (not label)
+			   (forward-char nchars)			   
+			   (forward-line 0)
+			   (string-rectangle
+			    start (point) (concat (file-name-nondirectory file) ": ")))))
+      (read-only-mode (if ro 1 -1)))))
+
+(defun syslog-create-buffer (filenames)
+  "Create a new buffer named after the files in FILENAMES."
+  (let* ((uniquefiles (mapcar 'file-name-nondirectory
+			      (cl-remove-duplicates filenames :test 'equal)))
+	 (basenames (mapcar (lambda (x)
+			      (replace-regexp-in-string
+			       "\\(\\.gz\\|\\.tgz\\)$" ""
+			       (file-name-nondirectory x)))
+			    uniquefiles))
+	 (basenames2 (cl-remove-duplicates
+		      (mapcar (lambda (x) (replace-regexp-in-string "\\.[0-9]+$" "" x)) basenames)
+		      :test 'equal)))
+    (get-buffer-create
+     (substring (cl-loop for file in basenames2
+			 for files = (cl-remove-if-not
+				      (lambda (x) (string-match-p (regexp-opt (list file)) x))
+				      basenames)
+			 for nums = (mapcar (lambda (x)
+					      (let* ((match (string-match "\\.\\([0-9]+\\)" x))
+						     (n (if match (match-string 1 x) "0")))
+						(string-to-number n)))
+					    files)
+			 for min = (if nums (apply 'min nums) 0)
+			 for max = (if nums (apply 'max nums) 0)
+			 concat (concat file "." (if (= min max) (number-to-string min)
+						   (concat "{" (number-to-string min)
+							   "-" (number-to-string max) "}"))
+					","))
+		0 -1))))
+
+(defun syslog-open-files (files &optional label)
+  "Insert log FILES into new buffer.
+If the optional argument LABEL is non-nil then each new line will be labelled
+with the corresponding filename.
+When called interactively the FILES are prompted for using `syslog-get-filenames'."
+  (interactive (list (syslog-get-filenames nil "View log file: ")
+		     (y-or-n-p "Label lines with filenames? ")))
+  (let ((buf (syslog-create-buffer files)))
     (with-current-buffer buf
-      (erase-buffer)
-      (goto-char (point-min))
-      (insert-file-contents filename)
-      (loop for n from (1+ curver) to (+ curver num)
-            for numsuffix = (concat "." (number-to-string n))
-            for nextfile = (loop for suffix in '(nil ".gz" ".tgz")
-                                 if (file-readable-p (concat basename numsuffix suffix))
-                                 return (concat basename numsuffix suffix))
-            if nextfile do
-            (goto-char (point-min))
-            (insert-file-contents nextfile))
-      (goto-char (point-min))
-      (syslog-mode))
+      (let ((ro buffer-read-only)
+	    start end)
+	(read-only-mode -1)
+	(set-visited-file-name nil)
+	(cl-loop for file in (cl-remove-duplicates files :test 'equal)
+		 do (progn (setq start (goto-char (point-max)))
+			   (insert-file-contents file)
+			   (goto-char (point-max))
+			   (unless (not label)
+			     (forward-line 0)
+			     (string-rectangle
+			      start (point) (concat (file-name-nondirectory file) ": ")))))
+	(read-only-mode (if ro 1 -1)))
+      (syslog-mode)
+      (setq default-directory (file-name-directory (car files))))
     (switch-to-buffer buf)))
+
+;;;###autoload
+(defun syslog-view (files &optional label rxshow rxhide startdate enddate removedates
+			  highlights bufname)
+  "Open a view of syslog files with optional filters and highlights applied.
+When called interactively the user is prompted for a member of `syslog-views' and the
+arguments are determined from the chosen member.
+FILES can be either nil in which case the view is applied to the current log file, or
+it can be the same as the first argument to `syslog-get-filenames' - a list of cons
+cells whose cars are filenames and whose cdrs indicate how many logfiles to include.
+LABEL indicates whether or not to label each line with the filename it came from.
+RXSHOW and RXHIDE are optional regexps which will be used to filter in/out buffer lines 
+with `syslog-filter-lines'. STARTDATE and ENDDATE are optional dates used to filter the 
+lines with `syslog-filter-dates'; they can be either date strings or time lists as returned 
+by `syslog-date-to-time'.
+HIGHLIGHTS is a list of cons cells whose cars are regexps and whose cdrs are faces to 
+highlight those regexps with."
+  (interactive (let ((view (cdr (cl-assoc (ido-completing-read "View: " (mapcar 'car syslog-views))
+					  syslog-views :test 'equal))))
+		 (list (first view)
+		       (second view)
+		       (third view)
+		       (fourth view)
+		       (fifth view)
+		       (sixth view)
+		       (seventh view)
+		       (eighth view)
+		       (ninth view))))
+  (let ((rxshow (unless (or (not rxshow) (equal rxshow "")) rxshow))
+	(rxhide (unless (or (not rxhide) (equal rxhide "")) rxhide))
+	(startdate (unless (or (not startdate) (equal startdate "")) startdate))
+	(enddate (unless (or (not enddate) (equal enddate "")) enddate))
+	(bufname (unless (or (not bufname) (equal bufname "")) bufname))) 
+    (if files (syslog-open-files (syslog-get-filenames files) label))
+    (if (not (eq major-mode 'syslog-mode))
+	(error "Not in syslog-mode")
+      (if rxshow (hide-lines-not-matching rxshow))
+      (if rxhide (hide-lines-matching rxhide))
+      (if (or startdate enddate)
+	  (syslog-filter-dates startdate enddate removedates))
+      (if highlights
+	  (cl-loop for hl in highlights
+		   for (regex . face) = hl
+		   do (highlight-regexp regex face)))
+      (if bufname (rename-buffer bufname t)))))
 
 (defun syslog-previous-file (&optional arg)
   "Open the previous logfile backup, or the next one if a prefix arg is used.
@@ -281,15 +469,35 @@ This just calls `syslog-previous-file' with non-nil argument, so we can bind it 
 With prefix arg: remove lines matching regexp."
   (interactive "p")
   (if (> arg 1)
-      (let ((regex (read-regexp "Regexp matching lines to remove")))
+      (let ((regex (read-regexp "Regexp matching lines to remove"
+				(symbol-name (symbol-at-point)))))
         (unless (string= regex "")
           (hide-lines-matching regex)))
-    (let ((regex (read-regexp "Regexp matching lines to keep")))
-        (unless (string= regex "")
-          (hide-lines-not-matching regex)))))
+    (let ((regex (read-regexp "Regexp matching lines to keep"
+			      (symbol-name (symbol-at-point)))))
+      (unless (string= regex "")
+	(hide-lines-not-matching regex)))))
 
 ;;;###autoload
-(defcustom syslog-datetime-regexp "^[a-z]\\{3\\} [0-9]\\{1,2\\} \\([0-9]\\{2\\}:\\)\\{2\\}[0-9]\\{2\\} "
+(defcustom syslog-views nil
+  "A list of views."
+  :group 'syslog
+  :type '(repeat (list (string :tag "Name")
+		       (repeat (cons (string :tag "Base file")
+				     (number :tag "Number of previous files/days")))
+		       (choice (const :tag "No file labels" nil)
+			       (const :tag "Add file labels" t))
+		       (regexp :tag "Regexp matching lines to show")
+		       (regexp :tag "Regexp matching lines to hide")
+		       (string :tag "Start date")
+		       (string :tag "End date")
+		       (choice (const :tag "Keep matching dates" nil)
+			       (const :tag "Remove matching dates" t))
+		       (repeat (cons (regexp :tag "Regexp to highlight")
+				     (face :tag "Face")))
+		       (string :tag "Buffer name"))))
+
+(defcustom syslog-datetime-regexp "^\\(?:[^ :]+: \\)?\\(\\(?:[[:alpha:]]\\{3\\}\\)?[[:space:]]*[[:alpha:]]\\{3\\}\\s-+[0-9]+\\s-+[0-9:]+\\)"
   "A regular expression matching the date-time at the beginning of each line in the log file."
   :group 'syslog
   :type 'regexp)
@@ -300,57 +508,63 @@ With prefix arg: remove lines matching regexp."
   :type 'directory)
 
 ;;;###autoload
-(defun* syslog-date-to-time (date &optional safe)
+(cl-defun syslog-date-to-time (date &optional safe)
   "Convert DATE string to time.
 If no year is present in the date then the current year is used.
 If DATE can't be parsed then if SAFE is non-nil return nil otherwise throw an error."
   (if safe
       (let ((time (safe-date-to-time (concat date " " (substring (current-time-string) -4)))))
-        (if (and (= (car time) 0) (= (cdr time) 0))
-            nil
-          time))
+	(if (and (= (car time) 0) (= (cdr time) 0))
+	    nil
+	  time))
     (date-to-time (concat date " " (substring (current-time-string) -4)))))
 
 ;;;###autoload
 (defun syslog-filter-dates (start end &optional arg)
-  "Restrict buffer to lines between dates.
-With prefix arg: remove lines between dates."
+  "Restrict buffer to lines between times START and END (Emacs time lists).
+With prefix ARG: remove lines between dates.
+If either START or END are nil then treat them as the first/last time in the
+buffer respectively."
   (interactive (let (firstdate lastdate)
                  (save-excursion
                    (goto-char (point-min))
                    (beginning-of-line)
                    (re-search-forward syslog-datetime-regexp nil t)
-                   (setq firstdate (match-string 0))
+                   (setq firstdate (match-string 1))
                    (goto-char (point-max))
                    (beginning-of-line)
                    (re-search-backward syslog-datetime-regexp nil t)
-                   (setq lastdate (match-string 0)))
+                   (setq lastdate (match-string 1)))
                  (list (syslog-date-to-time (read-string "Start date and time: "
                                                          firstdate nil firstdate))
                        (syslog-date-to-time (read-string "End date and time: "
                                                          lastdate nil lastdate))
-                     current-prefix-arg)))
-  (set (make-local-variable 'line-move-ignore-invisible) t)
-  (goto-char (point-min))
-  (let* ((start-position (point-min))
-         (pos (re-search-forward syslog-datetime-regexp nil t))
-         (intime-p (if arg (lambda (time)
-                             (and time (not (and (time-less-p time end)
-                                                 (not (time-less-p time start))))))
-                     (lambda (time)
-                       (and time (and (time-less-p time end)
-                                      (not (time-less-p time start)))))))
-         (keeptime (funcall intime-p (syslog-date-to-time (match-string 0) t)))
-         (dodelete t))
-    (while pos
-      (cond ((and keeptime dodelete)
-             (add-invisible-overlay start-position (point-at-bol))
-             (setq dodelete nil))
-            ((not (or keeptime dodelete))
-             (setq dodelete t start-position (point-at-bol))))
-      (setq pos (re-search-forward syslog-datetime-regexp nil t)
-            keeptime (funcall intime-p (syslog-date-to-time (match-string 0) t))))
-    (if dodelete (add-invisible-overlay start-position (point-max)))))
+		       current-prefix-arg)))
+  (let ((start (if (stringp start)
+		   (syslog-date-to-time start)
+		 start))
+	(end (if (stringp end)
+		 (syslog-date-to-time end)
+	       end)))
+    (set (make-local-variable 'line-move-ignore-invisible) t)
+    (goto-char (point-min))
+    (let* ((start-position (point-min))
+	   (pos (re-search-forward syslog-datetime-regexp nil t))
+	   (intime-p (lambda (time)
+		       (let ((isin (and (or (not end) (time-less-p time end))
+					(or (not start) (not (time-less-p time start))))))
+			 (and time (if arg (not isin) isin)))))
+	   (keeptime (funcall intime-p (syslog-date-to-time (match-string 1) t)))
+	   (dodelete t))
+      (while pos
+	(cond ((and keeptime dodelete)
+	       (hide-lines-add-overlay start-position (point-at-bol))
+	       (setq dodelete nil))
+	      ((not (or keeptime dodelete))
+	       (setq dodelete t start-position (point-at-bol))))
+	(setq pos (re-search-forward syslog-datetime-regexp nil t)
+	      keeptime (funcall intime-p (syslog-date-to-time (match-string 1) t))))
+      (if dodelete (hide-lines-add-overlay start-position (point-max))))))
 
 ;;;###autoload
 (defun syslog-mode ()
@@ -373,11 +587,11 @@ With prefix arg: remove lines between dates."
 
 (defun syslog-count-matches (regexp)
   "Count strings which match the given pattern."
-  (interactive (list (read-regexp "How many matches for regexp")))
+  (interactive (list (read-regexp "How many matches for regexp"
+				  (symbol-name (symbol-at-point)))))
   (message "%s occurrences" (count-matches regexp
                                            (point-min)
-                                           (point-max) nil))
-)
+                                           (point-max) nil)))
 
 (defun syslog-boot-start ()
   "Jump forward in the log to when the system booted."
@@ -385,54 +599,75 @@ With prefix arg: remove lines between dates."
   (search-forward-regexp syslog-boot-start-regexp (point-max) t)
   (beginning-of-line))
 
+(defun syslog-whois-reverse-lookup (arg search-string)
+  "This is a wrapper around the `whois' command using symbol at point as default search string.
+Also `whois-server-name' is set to `whois-reverse-lookup-server'.
+The ARG and SEARCH-STRING arguments are the same as for `whois'."
+  (interactive (list current-prefix-arg
+		     (let* ((symb (symbol-at-point))
+			    (default (replace-regexp-in-string ":[0-9]+$" "" (symbol-name symb))))
+		       (read-string (if symb (concat "Whois (default " default "): ")
+				      "Whois: ") nil nil default))))
+  (let ((whois-server-name whois-reverse-lookup-server))
+    (whois arg search-string)))
+
 (defface syslog-ip
   '((t :underline t :slant italic :weight bold))
   "Face for IPs"
   :group 'syslog)
 
+(defface syslog-file
+  (list (list t :weight 'bold
+	      :inherit (if (facep 'diredp-file-name)
+			   'diredp-file-name
+			 'dired-ignored)))
+  "Face for filenames"
+  :group 'syslog)
+
 (defface syslog-hour
   '((t :weight bold  :inherit font-lock-type-face))
-  "Face for IPs"
+  "Face for hours"
   :group 'syslog)
 
 (defface syslog-error
   '((t  :weight bold :foreground "red"))
-  "Face for IPs"
+  "Face for errors"
   :group 'syslog)
 
 (defface syslog-warn
   '((t  :weight bold :foreground "goldenrod"))
-  "Face for IPs"
+  "Face for warnings"
   :group 'syslog)
 
 (defface syslog-info
   '((t  :weight bold :foreground "deep sky blue"))
-  "Face for IPs"
+  "Face for info lines"
   :group 'syslog)
 
 (defface syslog-debug
   '((t  :weight bold :foreground "medium spring green"))
-  "Face for IPs"
+  "Face for debug lines"
   :group 'syslog)
 
 (defface syslog-su
   '((t  :weight bold :foreground "firebrick"))
-  "Face for IPs"
+  "Face for su and sudo"
   :group 'syslog)
 
 ;; Keywords
-;; Todo: Seperate the keywords into a list for each format, rather
-;; than one for all.
+;; TODO: Seperate the keywords into a list for each format, rather than one for all.
+;;       Better matching of dates (even when not at beginning of line).
 (defvar syslog-font-lock-keywords
-  '(
-    ("\"[^\"]*\"" . 'font-lock-string-face)
+  '(("\"[^\"]*\"" . 'font-lock-string-face)
     ("'[^']*'" . 'font-lock-string-face)
+    ;; Filename at beginning of line
+    ("^\\([^ :]+\\): " 1 'syslog-file append)
     ;; Hours: 17:36:00
     ("\\(?:^\\|[[:space:]]\\)\\([[:digit:]]\\{1,2\\}:[[:digit:]]\\{1,2\\}\\(:[[:digit:]]\\{1,2\\}\\)?\\)\\(?:$\\|[[:space:]]\\)" 1 'syslog-hour append)
     ;; Date
     ("\\(?:^\\|[[:space:]]\\)\\([[:digit:]]\\{1,2\\}/[[:digit:]]\\{1,2\\}/[[:digit:]]\\{2,4\\}\\)\\(?:$\\|[[:space:]]\\)" 1 'syslog-hour append)
     ;; Dates: May  9 15:52:34
-    ("^\\(\\(?:[[:alpha:]]\\{3\\}\\)?[[:space:]]*[[:alpha:]]\\{3\\}\\s-+[0-9]+\\s-+[0-9:]+\\)" 1 'font-lock-type-face t)
+    ("^\\(?:[^ :]+: \\)?\\(\\(?:[[:alpha:]]\\{3\\}\\)?[[:space:]]*[[:alpha:]]\\{3\\}\\s-+[0-9]+\\s-+[0-9:]+\\)" 1 'font-lock-type-face t)
     ;; Su events
     ("\\(su:.*$\\)" 1 'syslog-su t)
     ("\\(sudo:.*$\\)" 1 'syslog-su t)
@@ -440,7 +675,7 @@ With prefix arg: remove lines between dates."
     ;; IPs
     ("[[:digit:]]\\{1,3\\}\\.[[:digit:]]\\{1,3\\}\\.[[:digit:]]\\{1,3\\}\\.[[:digit:]]\\{1,3\\}" 0 'syslog-ip append)
     ("\\<[Ee][Rr][Rr]\\(?:[Oo][Rr][Ss]?\\)\\>" 0 'syslog-error append)
-    ("\\<[Ii][Nn][Ff][Oo]\\>" 0 'syslog-info append)    
+    ("\\<[Ii][Nn][Ff][Oo]\\>" 0 'syslog-info append)
     ("\\<[Cc][Rr][Ii][Tt][Ii][Cc][Aa][Ll]\\>" 0 'syslog-error append)
     ("STARTUP" 0 'syslog-info append)
     ("CMD" 0 'syslog-info append)
