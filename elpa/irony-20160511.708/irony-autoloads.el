@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "irony" "irony.el" (22305 3472 0 0))
+;;;### (autoloads nil "irony" "irony.el" (22346 2915 0 0))
 ;;; Generated autoloads from irony.el
 
 (defvar irony-additional-clang-options nil "\
@@ -42,7 +42,7 @@ Get the type of symbol under cursor.
 
 ;;;***
 
-;;;### (autoloads nil "irony-cdb" "irony-cdb.el" (22305 3471 0 0))
+;;;### (autoloads nil "irony-cdb" "irony-cdb.el" (22346 2915 0 0))
 ;;; Generated autoloads from irony-cdb.el
 
 (autoload 'irony-cdb-autosetup-compile-options "irony-cdb" "\
@@ -58,7 +58,7 @@ Get the type of symbol under cursor.
 ;;;***
 
 ;;;### (autoloads nil "irony-cdb-clang-complete" "irony-cdb-clang-complete.el"
-;;;;;;  (22305 3472 0 0))
+;;;;;;  (22346 2915 0 0))
 ;;; Generated autoloads from irony-cdb-clang-complete.el
 
 (autoload 'irony-cdb-clang-complete "irony-cdb-clang-complete" "\
@@ -68,8 +68,8 @@ Get the type of symbol under cursor.
 
 ;;;***
 
-;;;### (autoloads nil "irony-cdb-json" "irony-cdb-json.el" (22305
-;;;;;;  3472 0 0))
+;;;### (autoloads nil "irony-cdb-json" "irony-cdb-json.el" (22346
+;;;;;;  2915 0 0))
 ;;; Generated autoloads from irony-cdb-json.el
 
 (autoload 'irony-cdb-json "irony-cdb-json" "\
@@ -89,10 +89,28 @@ directories to project directory.
 
 \(fn PROJECT-ROOT COMPILE-COMMANDS-PATH)" t nil)
 
+(autoload 'irony-cdb-json-select "irony-cdb-json" "\
+Select CDB to use with a prompt.
+
+It is useful when you have several CDBs with the same project
+root.
+
+The completion function used internally is `completing-read' so
+it could easily be used with other completion functions by
+temporarily using a let-bind on `completing-read-function'. Or
+even helm by enabling `helm-mode' before calling the function.
+
+\(fn)" t nil)
+
+(autoload 'irony-cdb-json-select-most-recent "irony-cdb-json" "\
+Select CDB that is most recently modified.
+
+\(fn)" t nil)
+
 ;;;***
 
 ;;;### (autoloads nil "irony-cdb-libclang" "irony-cdb-libclang.el"
-;;;;;;  (22305 3472 0 0))
+;;;;;;  (22346 2915 0 0))
 ;;; Generated autoloads from irony-cdb-libclang.el
 
 (autoload 'irony-cdb-libclang "irony-cdb-libclang" "\
@@ -102,8 +120,8 @@ directories to project directory.
 
 ;;;***
 
-;;;### (autoloads nil "irony-completion" "irony-completion.el" (22305
-;;;;;;  3471 0 0))
+;;;### (autoloads nil "irony-completion" "irony-completion.el" (22346
+;;;;;;  2915 0 0))
 ;;; Generated autoloads from irony-completion.el
 
 (autoload 'irony-completion-at-point "irony-completion" "\
@@ -119,7 +137,7 @@ directories to project directory.
 ;;;***
 
 ;;;### (autoloads nil nil ("irony-diagnostics.el" "irony-pkg.el"
-;;;;;;  "irony-snippet.el") (22305 3472 35467 0))
+;;;;;;  "irony-snippet.el") (22346 2915 472436 0))
 
 ;;;***
 

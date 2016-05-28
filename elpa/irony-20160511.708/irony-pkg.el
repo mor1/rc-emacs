@@ -1,4 +1,4 @@
-(define-package "irony" "20160317.1527" "C/C++ minor mode powered by libclang"
+(define-package "irony" "20160511.708" "C/C++ minor mode powered by libclang"
   '((cl-lib "0.5")
     (json "1.2"))
   :url "https://github.com/Sarcasm/irony-mode" :keywords
