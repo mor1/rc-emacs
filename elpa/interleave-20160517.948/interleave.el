@@ -2,8 +2,8 @@
 
 ;; Author: Sebastian Christ <rudolfo.christ@gmail.com>
 ;; URL: https://github.com/rudolfochrist/interleave
-;; Package-Version: 20160208.237
-;; Version: 1.1.0
+;; Package-Version: 20160517.948
+;; Version: 1.1.1
 
 ;; This file is not part of GNU Emacs
 
@@ -182,6 +182,9 @@ property set to PAGE. It narrows the subtree when found."
     (save-excursion
       (widen)
       (interleave--goto-search-position)
+      (when *interleave--multi-pdf-notes-file*
+        ;; only search the current subtree for notes. See. Issue #16
+        (org-narrow-to-subtree))
       (when (re-search-forward (format "^\[ \t\r\]*\:interleave_page_note\: %s$"
                                        page)
                                nil t)
