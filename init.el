@@ -98,6 +98,7 @@ started from a shell."
 ;; for display purposes
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-fontset-auto2")
+;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-fontset-auto2")
 (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
 
 ;; frame size
@@ -1019,9 +1020,9 @@ This command is convenient when reading novel, documentation."
   "A minor mode so that my key settings override annoying major modes."
   t " my-keys" 'my-keys-minor-mode-map)
 
-(defun my-minibuffer-setup-hook ()
-  (my-keys-minor-mode 0))
-(add-hook 'minibuffer-setup-hook 'my-minibuffer-setup-hook)
+;(defun my-minibuffer-setup-hook ()
+;  (my-keys-minor-mode 0))
+;(add-hook 'minibuffer-setup-hook 'my-minibuffer-setup-hook)
 
 ;; (defadvice load (after give-my-keybindings-priority)
 ;;   "Try to ensure that my keybindings always have priority."

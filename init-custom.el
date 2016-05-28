@@ -94,6 +94,7 @@
  '(mu4e-user-mail-address-list
    (quote
     ("mort@cantab.net" "mort@live.co.uk" "mort@microsoft.com" "mort@sprintlabs.com" "mort@vipadia.com" "richard.mortier@cl.cam.ac.uk" "richard.mortier@gmail.com" "richard.mortier@hotmail.com" "richard.mortier@nottingham.ac.uk" "richard.mortier@unikernel.com" "rmm1002@cam.ac.uk" "rmm1002@hermes.cam.ac.uk" "rmm@cs.nott.ac.uk")))
+ '(mu4e-view-show-addresses t)
  '(next-screen-context-lines 0)
  '(nobreak-char-display t t)
  '(notmuch-hello-sections
@@ -148,7 +149,7 @@
  '(uniquify-buffer-name-style (quote post-forward-angle-brackets) nil (uniquify))
  '(unkillable-scratch t)
  '(vc-follow-symlinks t)
- '(visible-bell nill)
+ '(visible-bell nil)
  '(visual-line-fringe-indicators (quote (right-triangle right-curly-arrow)))
  '(web-mode-attr-indent-offset 2)
  '(web-mode-code-indent-offset 2)
