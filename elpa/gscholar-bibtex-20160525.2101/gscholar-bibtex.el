@@ -4,7 +4,7 @@
 
 ;; Author: Junpeng Qiu <qjpchmail@gmail.com>
 ;; Keywords: extensions
-;; Package-Version: 20160412.1419
+;; Package-Version: 20160525.2101
 ;; Version: 0.3.1
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -178,6 +178,10 @@
 (defconst gscholar-bibtex-entry-buffer-name "*BibTeX entry*"
   "Buffer name for BibTeX entry.")
 
+(defconst gscholar-bibtex-user-agent-string
+  "Mozilla/5.0 (X11; Linux x86_64; rv:46.0) Gecko/20100101 Firefox/46.0"
+  "User agent for `gscholar-bibtex'.")
+
 (defconst gscholar-bibtex-function-suffixes-alist
   '((:search-results . "search-results")
     (:titles . "titles")
@@ -218,10 +222,10 @@
   (forward-line (1- N)))
 
 (defun gscholar-bibtex-prettify-title (s)
-  (propertize s 'face 'gscholar-bibtex-title))
+  (propertize (or s "") 'face 'gscholar-bibtex-title))
 
 (defun gscholar-bibtex-prettify-subtitle (s)
-  (propertize s 'face 'gscholar-bibtex-subtitle))
+  (propertize (or s "") 'face 'gscholar-bibtex-subtitle))
 
 (defun gscholar-bibtex-highlight-current-item-hook ()
   (save-excursion
@@ -310,9 +314,12 @@
    (xml-get-children node child-name)))
 
 (defun gscholar-bibtex--url-retrieve-as-buffer (url)
-  (let ((response-buffer (url-retrieve-synchronously url)))
+  (let* ((url-request-extra-headers
+          `(("User-Agent" . ,gscholar-bibtex-user-agent-string)))
+         (response-buffer (url-retrieve-synchronously url)))
     (with-current-buffer response-buffer
-      (gscholar-bibtex--delete-response-header))
+      (gscholar-bibtex--delete-response-header)
+      (set-buffer-multibyte t))
     response-buffer))
 
 (defun gscholar-bibtex--url-retrieve-as-string (url)
@@ -613,7 +620,7 @@
   (gscholar-bibtex-re-search buffer-content "\\(/scholar\.bib.*?\\)\"" 1))
 
 (defun gscholar-bibtex-google-scholar-titles (buffer-content)
-  (gscholar-bibtex-re-search buffer-content "<h3.*?>\\(.*?\\)</h3>" 1))
+  (gscholar-bibtex-re-search buffer-content "<div class=\"gs_ri\"><h3.*?>\\(.*?\\)</h3>" 1))
 
 (defun gscholar-bibtex-google-scholar-subtitles (buffer-content)
   (gscholar-bibtex-re-search
