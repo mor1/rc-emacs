@@ -1,7 +1,7 @@
 ;;; bbdb-com.el --- user-level commands of BBDB
 
 ;; Copyright (C) 1991, 1992, 1993 Jamie Zawinski <jwz@netscape.com>.
-;; Copyright (C) 2010-2015 Roland Winkler <winkler@gnu.org>
+;; Copyright (C) 2010-2016 Roland Winkler <winkler@gnu.org>
 
 ;; This file is part of the Insidious Big Brother Database (aka BBDB),
 
@@ -1499,7 +1499,7 @@ With prefix N, omit the next N records.  If negative, omit backwards."
       (setq n (min (- n) num))
       (bbdb-prev-record n))
     (dotimes (i n)
-      (bbdb-redisplay-record (bbdb-current-record) t))))
+      (bbdb-redisplay-record (bbdb-current-record) nil t))))
 
 ;;; Fixing up bogus records
 
@@ -1840,21 +1840,18 @@ The primary mail of each of the records currently listed in the
 ;;; completion
 
 ;;;###autoload
-(defun bbdb-completion-predicate (symbol)
+(defun bbdb-completion-predicate (key records)
   "For use as the third argument to `completing-read'.
 Obey `bbdb-completion-list'."
   (cond ((null bbdb-completion-list)
          nil)
         ((eq t bbdb-completion-list)
          t)
-        ((not (boundp symbol))
-         nil) ; deleted (unhashed) record
         (t
-         (let ((key (symbol-name symbol)))
-           (catch 'bbdb-hash-ok
-             (dolist (record (symbol-value symbol))
-               (bbdb-hash-p key record bbdb-completion-list))
-             nil)))))
+         (catch 'bbdb-hash-ok
+           (dolist (record records)
+             (bbdb-hash-p key record bbdb-completion-list))
+           nil))))
 
 (defun bbdb-completing-read-records (prompt &optional omit-records)
   "Read and return list of records from the bbdb.
@@ -1862,15 +1859,13 @@ Completion is done according to `bbdb-completion-list'.  If the user
 just hits return, nil is returned.  Otherwise, a valid response is forced."
   (let* ((completion-ignore-case t)
          (string (completing-read prompt bbdb-hashtable
-                                  'bbdb-completion-predicate t))
-         symbol ret)
-  (unless (string= "" string)
-    (setq symbol (intern-soft string bbdb-hashtable))
-    (if (and (boundp symbol) (symbol-value symbol))
-        (dolist (record (symbol-value symbol) (delete-dups ret))
+                                  'bbdb-completion-predicate t)))
+    (unless (string= "" string)
+      (let (records)
+        (dolist (record (gethash string bbdb-hashtable))
           (if (not (memq record omit-records))
-              (push record ret)))
-      (error "Selecting deleted (unhashed) record \"%s\"" symbol)))))
+              (push record records)))
+        (delete-dups records)))))
 
 (defun bbdb-completing-read-record (prompt &optional omit-records)
   "Prompt for and return a single record from the bbdb;
@@ -1998,17 +1993,14 @@ as part of the MUA insinuation."
                (string-match "," completion))
           (setq completion (substring completion 0 (match-beginning 0))))
 
-      ;; We cannot use the return value of the function `all-completions'
-      ;; to set the variable `all-completions' because this function
-      ;; converts all symbols into strings
-      (all-completions orig bbdb-hashtable
-                       (lambda (sym)
-                         (if (bbdb-completion-predicate sym)
-                             (push sym all-completions))))
+      (setq all-completions (all-completions orig bbdb-hashtable
+                                             'bbdb-completion-predicate))
       ;; Resolve the records matching ORIG:
       ;; Multiple completions may match the same record
       (let ((records (delete-dups
-                      (apply 'append (mapcar 'symbol-value all-completions)))))
+                      (apply 'append (mapcar (lambda (compl)
+                                               (gethash compl bbdb-hashtable))
+                                             all-completions)))))
         ;; Is there only one matching record?
         (setq one-record (and (not (cdr records))
                               (car records))))
@@ -2083,38 +2075,36 @@ as part of the MUA insinuation."
        (completion
         (let ((completion-list (if (eq t bbdb-completion-list)
                                    '(fl-name lf-name mail aka organization)
-                                 bbdb-completion-list))
-              sname)
+                                 bbdb-completion-list)))
           ;; Now collect all the dwim-addresses for each completion.
           ;; Add it if the mail is part of the completions
-          (dolist (sym all-completions)
-            (setq sname (symbol-name sym))
-            (dolist (record (symbol-value sym))
+          (dolist (key all-completions)
+            (dolist (record (gethash key bbdb-hashtable))
               (let ((mails (bbdb-record-mail record))
                     accept)
                 (when mails
                   (dolist (field completion-list)
                     (cond ((eq field 'fl-name)
-                           (if (bbdb-string= sname (bbdb-record-name record))
+                           (if (bbdb-string= key (bbdb-record-name record))
                                (push (car mails) accept)))
                           ((eq field 'lf-name)
-                           (if (bbdb-string= sname (bbdb-cache-lf-name
-                                                    (bbdb-record-cache record)))
+                           (if (bbdb-string= key (bbdb-cache-lf-name
+                                                  (bbdb-record-cache record)))
                                (push (car mails) accept)))
                           ((eq field 'aka)
-                           (if (member-ignore-case sname (bbdb-record-field
-                                                          record 'aka-all))
+                           (if (member-ignore-case key (bbdb-record-field
+                                                        record 'aka-all))
                                (push (car mails) accept)))
                           ((eq field 'organization)
-                           (if (member-ignore-case sname (bbdb-record-organization
-                                                          record))
+                           (if (member-ignore-case key (bbdb-record-organization
+                                                        record))
                                (push (car mails) accept)))
                           ((eq field 'primary)
-                           (if (bbdb-string= sname (car mails))
+                           (if (bbdb-string= key (car mails))
                                (push (car mails) accept)))
                           ((eq field 'mail)
                            (dolist (mail mails)
-                             (if (bbdb-string= sname mail)
+                             (if (bbdb-string= key mail)
                                  (push mail accept))))))
                   (dolist (mail (delete-dups accept))
                     (push (bbdb-dwim-mail record mail) dwim-completions))))))
@@ -2347,7 +2337,7 @@ Rebuilding the aliases is enforced if prefix FORCE-REBUILT is t."
                    (setq alias (format "%s%s" aliasstem count))))
             (setq count (1+ count))
 
-            (add-to-list 'mail-aliases (cons alias expansion))
+            (bbdb-pushnew (cons alias expansion) mail-aliases)
 
             (define-mail-abbrev alias expansion)
             (unless (setq f-alias (intern-soft (downcase alias) mail-abbrevs))
@@ -2399,9 +2389,10 @@ Rebuilding the aliases is enforced if prefix FORCE-REBUILT is t."
   (let ((records (bbdb-search (bbdb-records) nil nil nil
                               (cons bbdb-mail-alias-field ".")))
         result)
-    (dolist (record records result)
+    (dolist (record records)
       (dolist (alias (bbdb-record-xfield-split record bbdb-mail-alias-field))
-        (add-to-list 'result alias)))))
+        (bbdb-pushnew alias result)))
+    result))
 
 ;;;###autoload
 (defsubst bbdb-mail-alias-list (alias)
@@ -2454,7 +2445,7 @@ one arg RECORD to define the default value for ALIAS of RECORD."
           (if delete
               (setq r-a-list (delete a r-a-list))
             ;; Add alias only if it is not there yet
-            (add-to-list 'r-a-list a)))
+            (bbdb-pushnew a r-a-list)))
         ;; This also handles `bbdb-mail-aliases-need-rebuilt'
         (bbdb-record-set-xfield record bbdb-mail-alias-field
                                 (bbdb-concat bbdb-mail-alias-field r-a-list))

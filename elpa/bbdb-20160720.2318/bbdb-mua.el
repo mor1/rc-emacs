@@ -1,7 +1,7 @@
 ;;; bbdb-mua.el --- various MUA functionality for BBDB
 
 ;; Copyright (C) 1991, 1992, 1993 Jamie Zawinski <jwz@netscape.com>.
-;; Copyright (C) 2010-2015 Roland Winkler <winkler@gnu.org>
+;; Copyright (C) 2010-2016 Roland Winkler <winkler@gnu.org>
 
 ;; This file is part of the Insidious Big Brother Database (aka BBDB),
 
@@ -59,16 +59,19 @@
   (defvar mu4e~view-buffer-name)
 
   (autoload 'message-field-value "message")
-  (autoload 'mail-decode-encoded-word-string "mail-parse"))
+  (autoload 'mail-decode-encoded-word-string "mail-parse")
+
+  (autoload 'bbdb/wl-header "bbdb-wl"))
 
 (defconst bbdb-mua-mode-alist
   '((vm vm-mode vm-virtual-mode vm-summary-mode vm-presentation-mode)
     (gnus gnus-summary-mode gnus-article-mode gnus-tree-mode)
     (rmail rmail-mode rmail-summary-mode)
     (mh mhe-mode mhe-summary-mode mh-folder-mode)
-    (message message-mode)
+    (message message-mode mu4e-compose-mode notmuch-message-mode)
     (mail mail-mode)
-    (mu4e mu4e-view-mode)) ; Tackle `mu4e-headers-mode' later
+    (mu4e mu4e-view-mode)  ; Tackle `mu4e-headers-mode' later
+    (wl wl-summary-mode wl-draft-mode))
   "Alist of MUA modes supported by BBDB.
 Each element is of the form (MUA MODE MODE ...), where MODEs are used by MUA.")
 
@@ -81,6 +84,7 @@ Return values include
   mh        Emacs interface to the MH mail system (aka MH-E)
   message   Mail and News composition mode that goes with Gnus
   mu4e      Mu4e
+  wl        Wanderlust
   mail      Emacs Mail Mode."
   (let ((mm-alist bbdb-mua-mode-alist)
         elt mua)
@@ -115,6 +119,7 @@ MIME encoded headers are decoded.  Return nil if HEADER does not exist."
                     ((eq mua 'rmail) (bbdb/rmail-header header))
                     ((eq mua 'mh) (bbdb/mh-header header))
                     ((eq mua 'mu4e) (message-field-value header))
+                    ((eq mua 'wl) (bbdb/wl-header header))
                     ((memq mua '(message mail)) (message-field-value header))
                     (t (error "BBDB/%s: header function undefined" mua)))))
     (if val (mail-decode-encoded-word-string val))))
@@ -279,8 +284,7 @@ Usually this function is called by the wrapper `bbdb-mua-update-records'."
                  (setq address-list nil))
                 ((not (eq task 'next))
                  (dolist (hit (delq nil (nreverse hits)))
-                   ;; people should be listed only once so we use `add-to-list'
-                   (add-to-list 'records hit))))
+                   (bbdb-pushnew hit records))))
           (if (and records (not bbdb-message-all-addresses))
               (setq address-list nil))))
       (setq records
@@ -602,6 +606,10 @@ If SORT is non-nil, sort records according to `bbdb-record-lessp'."
         (set-buffer mu4e~view-buffer-name)
         (bbdb-update-records (bbdb-get-address-components header-class)
                              update-p sort))
+       ;; Wanderlust
+       ((eq mua 'wl)
+        (bbdb-update-records (bbdb-get-address-components header-class)
+                             update-p sort))
       ;; Message and Mail
        ((memq mua '(message mail))
         (bbdb-update-records (bbdb-get-address-components header-class)
@@ -619,10 +627,10 @@ If SORT is non-nil, sort records according to `bbdb-record-lessp'."
             (save-current-buffer
               (gnus-summary-select-article) ; sets buffer `gnus-summary-buffer'
               ,@body))
-           ((memq mua '(mail message rmail mh vm mu4e))
+           ((memq mua '(mail message rmail mh vm mu4e wl))
             (cond ((eq mua 'vm) (vm-follow-summary-cursor))
                   ((eq mua 'mh) (mh-show)))
-            ;; rmail, mail, message and mu4e do not require any wrapper
+            ;; rmail, mail, message, mu4e and wl do not require any wrapper
             ,@body))))
 
 (defun bbdb-mua-update-interactive-p ()
@@ -898,7 +906,8 @@ See `bbdb-mua-auto-update' for details about the auto update feature."
                  (rmail . rmail-show-message-hook)
                  (gnus . gnus-article-prepare-hook)
                  (mh . mh-show-hook)
-                 (vm . vm-select-message-hook)))
+                 (vm . vm-select-message-hook)
+                 (wl . wl-message-redisplay-hook)))
     (if (memq (car mua) muas)
         (add-hook (cdr mua) 'bbdb-mua-auto-update)
       (remove-hook (cdr mua) 'bbdb-mua-auto-update))))
