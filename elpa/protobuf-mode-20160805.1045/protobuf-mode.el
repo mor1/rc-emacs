@@ -3,7 +3,7 @@
 ;; Author: Alexandre Vassalotti <alexandre@peadrop.com>
 ;; Created: 23-Apr-2009
 ;; Version: 0.3
-;; Package-Version: 20150521.2011
+;; Package-Version: 20160805.1045
 ;; Keywords: google protobuf languages
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -65,12 +65,13 @@
 ;;; Code:
 
 (require 'cc-mode)
+(require 'cl)
 
 (eval-when-compile
   (require 'cc-langs)
   (require 'cc-fonts))
 
-;; This mode does not inherit properties from other modes. So, we do not use 
+;; This mode does not inherit properties from other modes. So, we do not use
 ;; the usual `c-add-language' function.
 (eval-and-compile
   (put 'protobuf-mode 'c-mode-prefix "protobuf-"))
