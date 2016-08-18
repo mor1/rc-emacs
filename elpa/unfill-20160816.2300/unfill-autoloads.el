@@ -1,10 +1,9 @@
 ;;; unfill-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-
+(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads (toggle-fill-unfill unfill-region unfill-paragraph)
-;;;;;;  "unfill" "unfill.el" (21508 15994 0 0))
+;;;### (autoloads nil "unfill" "unfill.el" (22452 38356 0 0))
 ;;; Generated autoloads from unfill.el
 
 (autoload 'unfill-paragraph "unfill" "\
@@ -19,22 +18,18 @@ This command does the inverse of `fill-region'.
 
 \(fn START END)" t nil)
 
-(autoload 'toggle-fill-unfill "unfill" "\
-Remove or add line ending chars on current paragraph.  This command is similar to a toggle of `fill-paragraph'.  When there is a text selection, act on the region.
+(autoload 'unfill-toggle "unfill" "\
+Toggle filling/unfilling of the current region, or current paragraph if no region active.
 
 \(fn)" t nil)
 
-;;;***
-
-;;;### (autoloads nil nil ("unfill-pkg.el") (21508 15994 359162 0))
+(define-obsolete-function-alias 'toggle-fill-unfill 'unfill-toggle)
 
 ;;;***
 
-(provide 'unfill-autoloads)
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
-;; coding: utf-8
 ;; End:
 ;;; unfill-autoloads.el ends here
