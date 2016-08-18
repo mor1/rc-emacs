@@ -7,13 +7,19 @@
 
 ;;; Commentary:
 
-;; Elfreed is a web feed client for Emacs, inspired by notmuch. See
+;; Elfeed is a web feed client for Emacs, inspired by notmuch. See
 ;; the README for full documentation.
-
-;; Elfreed requires Emacs 24 (lexical closures).
 
 ;;; History:
 
+;; Version 2.0.0: new cURL fetching backend
+;;   * Elfeed now uses cURL when available (`elfeed-use-curl')
+;;   * Windows OS now supported when using cURL
+;;   * Conditional GET (ETag, If-Modified-Since) when using cURL
+;;   * Support for xml:base in Atom feeds
+;;   * New options: `elfeed-set-max-connections', `elfeed-set-timeout'
+;;   * New feed metadata: :canonical-url, :etag, :last-modified
+;;   * New variable: `elfeed-log-level'
 ;; Version 1.4.1: features and fixes
 ;;   * Major bug fix: disable local variables when loading the index
 ;;   * New command `elfeed-show-play-enclosure' (requires emms)
@@ -90,6 +96,8 @@
 (require 'xml-query)
 (require 'url-parse)
 (require 'url-queue)
+(require 'elfeed-log)
+(require 'elfeed-curl)
 
 (defgroup elfeed nil
   "An Emacs web feed reader."
@@ -116,6 +124,17 @@ when they are first discovered."
   :type '(repeat (choice string
                          (cons string (repeat symbol)))))
 
+(defcustom elfeed-use-curl
+  (not (null (executable-find elfeed-curl-program-name)))
+  "If non-nil, fetch feeds using curl instead of `url-retrieve'."
+  :group 'elfeed
+  :type 'bool)
+
+(defcustom elfeed-user-agent (format "Emacs Elfeed %s" elfeed-version)
+  "User agent string to use for Elfeed (requires `elfeed-use-curl')."
+  :group 'elfeed
+  :type 'string)
+
 (provide 'elfeed)
 
 (require 'elfeed-search)
@@ -128,9 +147,6 @@ when they are first discovered."
   :type '(repeat symbol))
 
 ;; Fetching:
-
-(define-obsolete-variable-alias
-  'elfeed-max-connections 'url-queue-parallel-processes nil)
 
 (defvar elfeed-http-error-hooks ()
   "Hooks to run when an http connection error occurs.
@@ -148,28 +164,73 @@ It is called with 1 argument: the URL of the feed that was just
 updated. The hook is called even when no new entries were
 found.")
 
-(define-obsolete-variable-alias
-  'elfeed-connections 'url-queue nil)
+(defun elfeed-queue-count-active ()
+  "Return the number of items in process."
+  (if elfeed-use-curl
+      elfeed-curl-queue-active
+    (cl-count-if #'url-queue-buffer url-queue)))
 
-(define-obsolete-variable-alias
-  'elfeed-waiting 'url-queue nil)
+(defun elfeed-queue-count-total ()
+  "Return the number of items in process."
+  (if elfeed-use-curl
+      (+ (length elfeed-curl-queue) elfeed-curl-queue-active)
+    (length url-queue)))
+
+(defun elfeed-set-max-connections (n)
+  "Limit the maximum number of concurrent connections to N."
+  (if elfeed-use-curl
+      (setf elfeed-curl-max-connections n)
+    (setf url-queue-parallel-processes n)))
+
+(defun elfeed-get-max-connections ()
+  "Get the maximum number of concurrent connections."
+  (if elfeed-use-curl
+      elfeed-curl-max-connections
+    url-queue-parallel-processes))
+
+(defun elfeed-set-timeout (seconds)
+  "Limit the time for fetching a feed to SECONDS."
+  (if elfeed-use-curl
+      (setf elfeed-curl-timeout seconds)
+    (setf url-queue-timeout seconds)))
+
+(defun elfeed-get-timeout ()
+  "Get the time limit for fetching feeds in SECONDS."
+  (if elfeed-use-curl
+      elfeed-curl-timeout
+    url-queue-timeout))
 
 (defmacro elfeed-with-fetch (url &rest body)
   "Asynchronously run BODY in a buffer with the contents from
 URL. This macro is anaphoric, with STATUS referring to the status
 from `url-retrieve'."
   (declare (indent defun))
-  `(url-queue-retrieve ,url (lambda (status) ,@body) () t t))
+  `(let* ((use-curl elfeed-use-curl) ; capture current value in closure
+          (cb (lambda (status) ,@body)))
+     (if elfeed-use-curl
+         (let* ((feed (elfeed-db-get-feed url))
+                (last-modified (elfeed-meta feed :last-modified))
+                (etag (elfeed-meta feed :etag))
+                (headers `(("User-Agent" . ,elfeed-user-agent))))
+           (when etag
+             (push `("If-None-Match" . ,etag) headers))
+           (when last-modified
+             (push `("If-Modified-Since" . ,last-modified) headers))
+           (elfeed-curl-enqueue ,url cb headers))
+       (url-queue-retrieve ,url cb () t t))))
 
 (defun elfeed-unjam ()
   "Manually clear the connection pool when connections fail to timeout.
 This is a workaround for issues in `url-queue-retrieve'."
   (interactive)
-  (let ((fails (mapcar #'url-queue-url elfeed-connections)))
-    (when fails
-      (elfeed-log 'warn "Elfeed aborted feeds: %s"
-                  (mapconcat #'identity fails " ")))
-    (setf url-queue nil))
+  (if elfeed-use-curl
+      (setf elfeed-curl-queue nil
+            elfeed-curl-queue-active 0)
+    (let ((fails (mapcar #'url-queue-url url-queue)))
+      (when fails
+        (elfeed-log 'warn "Elfeed aborted feeds: %s"
+                    (mapconcat #'identity fails " ")))
+      (setf url-queue nil)))
   (elfeed-search-update :force))
 
 ;; Parsing:
@@ -216,15 +277,19 @@ is called for side-effects on the ENTRY object.")
          (feed (elfeed-db-get-feed feed-id))
          (title (elfeed-cleanup (xml-query '(feed title *) xml)))
          (author (elfeed-cleanup (xml-query '(feed author name *) xml)))
+         (xml-base (or (xml-query '(feed :xml:base) xml) url))
          (autotags (elfeed-feed-autotags url)))
     (setf (elfeed-feed-url feed) url
           (elfeed-feed-title feed) title
           (elfeed-feed-author feed) author)
     (cl-loop for entry in (xml-query-all '(feed entry) xml) collect
              (let* ((title (or (xml-query '(title *) entry) ""))
+                    (xml-base (elfeed-update-location
+                               xml-base (xml-query '(:xml:base) (list entry))))
                     (anylink (xml-query '(link :href) entry))
                     (altlink (xml-query '(link [rel "alternate"] :href) entry))
-                    (link (or altlink anylink))
+                    (link (elfeed-update-location
+                           xml-base (or altlink anylink)))
                     (date (or (xml-query '(published *) entry)
                               (xml-query '(updated *) entry)
                               (xml-query '(date *) entry)))
@@ -340,6 +405,13 @@ is called for side-effects on the ENTRY object.")
 (defun elfeed-feed-list ()
   "Return a flat list version of `elfeed-feeds'.
 Only a list of strings will be returned."
+  ;; Validate elfeed-feeds and fail early rather than asynchronously later.
+  (dolist (feed elfeed-feeds)
+    (unless (cl-typecase feed
+              (list (and (stringp (car feed))
+                         (cl-every #'symbolp (cdr feed))))
+              (string t))
+      (error "elfeed-feeds malformed, bad entry: %S" feed)))
   (cl-loop for feed in elfeed-feeds
            when (listp feed) collect (car feed)
            else collect feed))
@@ -356,36 +428,49 @@ Only a list of strings will be returned."
   "Handle an http error during retrieval of URL with STATUS code."
   (cl-incf (elfeed-meta (elfeed-db-get-feed url) :failures 0))
   (run-hook-with-args 'elfeed-http-error-hooks url status)
-  (elfeed-log 'error "Elfeed fetch failed for %s: %S" url status))
+  (elfeed-log 'error "%s: %S" url status))
 
 (defun elfeed-handle-parse-error (url error)
   "Handle parse error during parsing of URL with ERROR message."
   (cl-incf (elfeed-meta (elfeed-db-get-feed url) :failures 0))
   (run-hook-with-args 'elfeed-parse-error-hooks url error)
-  (elfeed-log 'error "Elfeed parse failed for %s: %s" url error))
+  (elfeed-log 'error "%s: %s" url error))
 
 (defun elfeed-update-feed (url)
   "Update a specific feed."
   (interactive (list (completing-read "Feed: " (elfeed-feed-list))))
   (elfeed-with-fetch url
-    (if (and status (eq (car status) :error))
+    (if (or (and use-curl (null status)) ; nil = error
+            (and (not use-curl) (eq (car status) :error)))
         (let ((print-escape-newlines t))
-          (elfeed-handle-http-error url status))
+          (elfeed-handle-http-error
+           url (if use-curl elfeed-curl-error-message status)))
       (condition-case error
-          (progn
-            (elfeed-move-to-first-empty-line)
-            (set-buffer-multibyte t)
-            (let* ((xml (elfeed-xml-parse-region (point) (point-max)))
-                   (entries (cl-case (elfeed-feed-type xml)
-                              (:atom (elfeed-entries-from-atom url xml))
-                              (:rss (elfeed-entries-from-rss url xml))
-                              (:rss1.0 (elfeed-entries-from-rss1.0 url xml))
-                              (otherwise
-                               (error (elfeed-handle-parse-error
-                                       url "Unknown feed type."))))))
-              (elfeed-db-add entries)))
+          (let ((feed (elfeed-db-get-feed url)))
+            (unless use-curl
+              (elfeed-move-to-first-empty-line)
+              (set-buffer-multibyte t))
+            (unless (eql elfeed-curl-status-code 304)
+              ;; Update Last-Modified and Etag
+              (setf (elfeed-meta feed :last-modified)
+                    (cdr (assoc "last-modified" elfeed-curl-headers))
+                    (elfeed-meta feed :etag)
+                    (cdr (assoc "etag" elfeed-curl-headers)))
+              (if (equal url elfeed-curl-location)
+                  (setf (elfeed-meta feed :canonical-url) nil)
+                (setf (elfeed-meta feed :canonical-url) elfeed-curl-location))
+              (let* ((xml (elfeed-xml-parse-region (point) (point-max)))
+                     (entries (cl-case (elfeed-feed-type xml)
+                                (:atom (elfeed-entries-from-atom url xml))
+                                (:rss (elfeed-entries-from-rss url xml))
+                                (:rss1.0 (elfeed-entries-from-rss1.0 url xml))
+                                (otherwise
+                                 (error (elfeed-handle-parse-error
+                                         url "Unknown feed type."))))))
+                (elfeed-db-add entries))))
         (error (elfeed-handle-parse-error url error))))
-    (kill-buffer)
+    (unless use-curl
+      (kill-buffer))
     (run-hook-with-args 'elfeed-update-hooks url)))
 
 (defun elfeed-add-feed (url)
@@ -400,59 +485,6 @@ Only a list of strings will be returned."
     (customize-save-variable 'elfeed-feeds elfeed-feeds))
   (elfeed-update-feed url)
   (elfeed-search-update :force))
-
-(defface elfeed-log-date-face
-  '((t :inherit font-lock-type-face))
-  "Face for showing the date in the elfeed log buffer."
-  :group 'elfeed)
-
-(defface elfeed-log-error-level-face
-  '((t :foreground "red"))
-  "Face for showing the `error' log level in the elfeed log buffer."
-  :group 'elfeed)
-
-(defface elfeed-log-warn-level-face
-  '((t :foreground "goldenrod"))
-  "Face for showing the `warn' log level in the elfeed log buffer."
-  :group 'elfeed)
-
-(defface elfeed-log-info-level-face
-  '((t :foreground "deep sky blue"))
-  "Face for showing the `info' log level in the elfeed log buffer."
-  :group 'elfeed)
-
-(defvar elfeed-log-buffer-name "*elfeed-log*"
-  "Name of buffer used for logging Elfeed events.")
-
-(defun elfeed-log-buffer ()
-  "Returns the buffer for `elfeed-log', creating it as needed."
-  (let ((buffer (get-buffer elfeed-log-buffer-name)))
-    (if buffer
-        buffer
-      (with-current-buffer (generate-new-buffer elfeed-log-buffer-name)
-        (special-mode)
-        (current-buffer)))))
-
-(defun elfeed-log (level fmt &rest objects)
-  "Write log message FMT at LEVEL to Elfeed's log buffer.
-
-LEVEL should be a symbol: info, warn, error.
-FMT must be a string suitable for `format' given OBJECTS as arguments."
-  (let ((log-buffer (elfeed-log-buffer))
-        (log-level-face (cond
-                         ((eq level 'info) 'elfeed-log-info-level-face)
-                         ((eq level 'warn) 'elfeed-log-warn-level-face)
-                         ((eq level 'error) 'elfeed-log-error-level-face)))
-        (inhibit-read-only t))
-    (with-current-buffer log-buffer
-      (goto-char (point-max))
-      (insert
-       (format
-        (concat "[" (propertize "%s" 'face 'elfeed-log-date-face) "] "
-                "[" (propertize "%s" 'face log-level-face) "]: %s\n")
-        (format-time-string "%Y-%m-%d %H:%M:%S")
-        level
-        (apply #'format fmt objects))))))
 
 ;;;###autoload
 (defun elfeed-update ()

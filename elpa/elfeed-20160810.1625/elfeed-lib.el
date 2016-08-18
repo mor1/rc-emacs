@@ -280,6 +280,65 @@ This includes expanding e.g. 3-5 into 3,4,5.  If the letter
         ;; else just a number
         (push (string-to-number elem) list)))))
 
+(defun elfeed-remove-dot-segments (input)
+  "Relative URL algorithm as described in RFC 3986 §5.2.4."
+  (cl-loop
+   with output = ""
+   for s = input
+   then (cond
+         ((string-match-p "^\\.\\./" s)
+          (substring s 3))
+         ((string-match-p "^\\./" s)
+          (substring s 2))
+         ((string-match-p "^/\\./" s)
+          (substring s 2))
+         ((string-match-p "^/\\.$" s) "/")
+         ((string-match-p "^/\\.\\./" s)
+          (setf output (replace-regexp-in-string "/?[^/]*$" "" output))
+          (substring s 3))
+         ((string-match-p "^/\\.\\.$" s)
+          (setf output (replace-regexp-in-string "/?[^/]*$" "" output))
+          "/")
+         ((string-match-p "^\\.\\.?$" s)
+          "")
+         ((string-match "^/?[^/]*" s)
+          (setf output (concat output (match-string 0 s)))
+          (replace-regexp-in-string "^/?[^/]*" "" s)))
+   until (zerop (length s))
+   finally return output))
+
+(defun elfeed-update-location (old-url new-url)
+  "Return full URL for maybe-relative NEW-URL based on full OLD-URL."
+  (if (null new-url)
+      old-url
+    (let ((old (url-generic-parse-url old-url))
+          (new (url-generic-parse-url new-url)))
+      (cond
+       ;; Is new URL absolute already?
+       ((url-type new) new-url)
+       ;; Empty is a special case (clear fragment)
+       ((equal new-url "")
+        (setf (url-target old) nil)
+        (url-recreate-url old))
+       ;; Does it start with //? Append the old protocol.
+       ((url-fullness new) (concat (url-type old) ":" new-url))
+       ;; Is it a relative path?
+       ((not (string-match-p "^/" new-url))
+        (let* ((old-dir (or (file-name-directory (url-filename old)) "/"))
+               (concat (concat old-dir new-url))
+               (new-file (elfeed-remove-dot-segments concat)))
+          (setf (url-filename old) nil
+                (url-target old) nil
+                (url-attributes old) nil
+                (url-filename old) new-file)
+          (url-recreate-url old)))
+       ;; Replace the relative part.
+       ((progn
+          (setf (url-filename old) (elfeed-remove-dot-segments new-url)
+                (url-target old) nil
+                (url-attributes old) nil)
+          (url-recreate-url old)))))))
+
 (provide 'elfeed-lib)
 
 ;;; elfeed-lib.el ends here

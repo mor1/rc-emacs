@@ -147,9 +147,9 @@ When live editing the filter, it is bound to :live.")
   (cond
    ((zerop (elfeed-db-last-update))
     (elfeed-search--intro-header))
-   (url-queue
-    (let ((total (length url-queue))
-          (in-process (cl-count-if #'url-queue-buffer url-queue)))
+   ((> (elfeed-queue-count-total) 0)
+    (let ((total (elfeed-queue-count-total))
+          (in-process (elfeed-queue-count-active)))
       (format "%d feeds pending, %d in process ..."
               (- total in-process) in-process)))
    ((let* ((db-time (seconds-to-time (elfeed-db-last-update)))
