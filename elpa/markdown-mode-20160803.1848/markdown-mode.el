@@ -33,7 +33,7 @@
 ;; Maintainer: Jason R. Blevins <jrblevin@sdf.org>
 ;; Created: May 24, 2007
 ;; Version: 2.1
-;; Package-Version: 20160527.235
+;; Package-Version: 20160803.1848
 ;; Package-Requires: ((emacs "24") (cl-lib "0.5"))
 ;; Keywords: Markdown, GitHub Flavored Markdown, itex
 ;; URL: http://jblevins.org/projects/markdown-mode/
@@ -1278,7 +1278,7 @@ Group 2 matches only the label, without the surrounding markup.
 Group 3 matches the closing square bracket.")
 
 (defconst markdown-regex-header
-  "^\\(?:\\([^\r\n-].*\\)\n\\(?:\\(=+\\)\\|\\(-+\\)\\)\\|\\(#+\\)[ \t]+\\(.*?\\)[ \t]*\\(#*\\)\\)$"
+  "^\\(?:\\([^\r\n- ].*\\)\n\\(?:\\(=+\\)\\|\\(-+\\)\\)\\|\\(#+\\)[ \t]+\\(.*?\\)[ \t]*\\(#*\\)\\)$"
   "Regexp identifying Markdown headings.
 Group 1 matches the text of a setext heading.
 Group 2 matches the underline of a level-1 setext heading.
@@ -1288,7 +1288,7 @@ Group 5 matches the text, without surrounding whitespace, of an atx heading.
 Group 6 matches the closing hash marks of an atx heading.")
 
 (defconst markdown-regex-header-setext
-  "^\\([^\r\n-].*\\)\n\\(=+\\|-+\\)$"
+  "^\\([^\r\n- ].*\\)\n\\(=+\\|-+\\)$"
   "Regular expression for generic setext-style (underline) headers.")
 
 (defconst markdown-regex-header-atx
@@ -4818,14 +4818,16 @@ See `imenu-create-index-function' and `imenu--index-alist' for details."
     (save-excursion
       (goto-char (point-min))
       (while (re-search-forward markdown-regex-header (point-max) t)
-        (cond
-         ((setq heading (match-string-no-properties 1))
-          (setq pos (match-beginning 1)))
-         ((setq heading (match-string-no-properties 5))
-          (setq pos (match-beginning 4))))
-        (or (> (length heading) 0)
-            (setq heading empty-heading))
-        (setq index (append index (list (cons heading pos)))))
+        (when (and (not (markdown-code-block-at-point))
+                   (not (markdown-text-property-at-point 'markdown-yaml-metadata-begin)))
+          (cond
+           ((setq heading (match-string-no-properties 1))
+            (setq pos (match-beginning 1)))
+           ((setq heading (match-string-no-properties 5))
+            (setq pos (match-beginning 4))))
+          (or (> (length heading) 0)
+              (setq heading empty-heading))
+          (setq index (append index (list (cons heading pos))))))
       index)))
 
 
@@ -5541,13 +5543,14 @@ setext header, but should not be folded."
     (goto-char (point-min))
     ;; Unhide any false positives in metadata blocks
     (when (markdown-text-property-at-point 'markdown-yaml-metadata-begin)
-      (let* ((body (progn (forward-line)
-                          (markdown-text-property-at-point
-                           'markdown-yaml-metadata-section)))
-             (end (progn (goto-char (cl-second body))
+      (let ((body (progn (forward-line)
                          (markdown-text-property-at-point
-                          'markdown-yaml-metadata-end))))
-        (outline-flag-region (point-min) (1+ (cl-second end)) nil)))
+                          'markdown-yaml-metadata-section))))
+        (when body
+          (let ((end (progn (goto-char (cl-second body))
+                            (markdown-text-property-at-point
+                             'markdown-yaml-metadata-end))))
+            (outline-flag-region (point-min) (1+ (cl-second end)) nil)))))
     ;; Hide any false positives in code blocks
     (unless (outline-on-heading-p)
       (outline-next-visible-heading 1))
@@ -6275,8 +6278,12 @@ See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
 (defun markdown-unfontify-region-wiki-links (from to)
   "Remove wiki link faces from the region specified by FROM and TO."
   (interactive "*r")
-  (remove-text-properties from to '(font-lock-face markdown-link-face))
-  (remove-text-properties from to '(font-lock-face markdown-missing-link-face)))
+  (let ((modified (buffer-modified-p)))
+    (remove-text-properties from to '(font-lock-face markdown-link-face))
+    (remove-text-properties from to '(font-lock-face markdown-missing-link-face))
+    ;; remove-text-properties marks the buffer modified in emacs 24.3,
+    ;; undo that if it wasn't originally marked modified
+    (set-buffer-modified-p modified)))
 
 (defun markdown-fontify-region-wiki-links (from to)
   "Search region given by FROM and TO for wiki links and fontify them.
