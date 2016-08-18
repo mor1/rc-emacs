@@ -11,7 +11,7 @@
 ;;      Sean McLaughlin <seanmcl@gmail.com>
 ;;      Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Created: 8 Jan 1997
-;; Version: 2.0.9
+;; Version: 2.0.10
 ;; Package-Requires: ((caml "3.12.0.1"))
 ;; Keywords: ocaml languages
 ;; URL: https://github.com/ocaml/tuareg
@@ -645,7 +645,7 @@ Regexp match data 0 points to the chars."
       ("\\({\\)[a-z_]*|"
        (1 (prog1 "|" (tuareg--syntax-quotation end))))
       )
-     start end)))
+     (point) end)))
 
 (defun tuareg--syntax-quotation (end)
   (let ((ppss (syntax-ppss)))
@@ -653,7 +653,7 @@ Regexp match data 0 points to the chars."
       (ecase (char-after (nth 8 ppss))
         (?<
          ;; We're indeed inside a quotation.
-         (when (re-search-forward ">>" end t)
+         (when (re-search-forward ">>" end 'move)
            (put-text-property (1- (point)) (point)
                               'syntax-table (string-to-syntax "|"))))
         (?\{
@@ -664,7 +664,7 @@ Regexp match data 0 points to the chars."
                      (buffer-substring (point)
                                        (progn (skip-chars-forward "a-z_")
                                               (point))))))
-           (when (search-forward (concat "|" id "}") end t)
+	   (when (search-forward (concat "|" id "}") end 'move)
              (put-text-property (1- (point)) (point)
                                 'syntax-table (string-to-syntax "|")))))))))
 
