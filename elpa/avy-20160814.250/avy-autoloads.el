@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
 
-;;;### (autoloads nil "avy" "avy.el" (22346 2943 0 0))
+;;;### (autoloads nil "avy" "avy.el" (22452 38367 0 0))
 ;;; Generated autoloads from avy.el
 
 (autoload 'avy-goto-char "avy" "\
@@ -52,7 +52,7 @@ The window scope is determined by `avy-all-windows' (ARG negates it).
 Jump to the currently visible CHAR at a word start.
 The window scope is determined by `avy-all-windows' (ARG negates it).
 
-\(fn CHAR &optional ARG BEG END)" t nil)
+\(fn CHAR &optional ARG BEG END SYMBOL)" t nil)
 
 (autoload 'avy-goto-word-1-above "avy" "\
 Jump to the currently visible CHAR at a word start.
@@ -64,6 +64,26 @@ the visible part of the current buffer up to point.
 (autoload 'avy-goto-word-1-below "avy" "\
 Jump to the currently visible CHAR at a word start.
 This is a scoped version of `avy-goto-word-1', where the scope is
+the visible part of the current buffer following point. 
+
+\(fn CHAR &optional ARG)" t nil)
+
+(autoload 'avy-goto-symbol-1 "avy" "\
+Jump to the currently visible CHAR at a symbol start.
+The window scope is determined by `avy-all-windows' (ARG negates it).
+
+\(fn CHAR &optional ARG)" t nil)
+
+(autoload 'avy-goto-symbol-1-above "avy" "\
+Jump to the currently visible CHAR at a symbol start.
+This is a scoped version of `avy-goto-symbol-1', where the scope is
+the visible part of the current buffer up to point. 
+
+\(fn CHAR &optional ARG)" t nil)
+
+(autoload 'avy-goto-symbol-1-below "avy" "\
+Jump to the currently visible CHAR at a symbol start.
+This is a scoped version of `avy-goto-symbol-1', where the scope is
 the visible part of the current buffer following point. 
 
 \(fn CHAR &optional ARG)" t nil)
@@ -138,6 +158,44 @@ The window scope is determined by `avy-all-windows' or
 Select two lines and move the text between them here.
 
 \(fn)" t nil)
+
+(autoload 'avy-kill-region "avy" "\
+Select two lines and kill the region between them.
+
+The window scope is determined by `avy-all-windows' or
+`avy-all-windows-alt' when ARG is non-nil.
+
+\(fn ARG)" t nil)
+
+(autoload 'avy-kill-ring-save-region "avy" "\
+Select two lines and save the region between them to the kill ring.
+
+\(fn ARG)" t nil)
+
+(autoload 'avy-kill-whole-line "avy" "\
+Select line and kill the whole selected line.
+
+With a numerical prefix ARG, kill ARG line(s) starting from the
+selected line. If ARG is negative, kill backward.
+
+If ARG is zero, kill the selected line but exclude the trailing
+newline.
+
+\\[universal-argument] 3 \\[avy-kil-whole-line] kill three lines
+starting from the selected line.  \\[universal-argument] -3
+
+\\[avy-kill-whole-line] kill three lines backward including the
+selected line.
+
+\(fn ARG)" t nil)
+
+(autoload 'avy-kill-ring-save-whole-line "avy" "\
+Select line and Save the whole selected line as if killed, but don’t kill it.
+
+This command is similar to `avy-kill-whole-line', except that it
+saves the line(s) as if killed, but does not kill it(them).
+
+\(fn ARG)" t nil)
 
 (autoload 'avy-setup-default "avy" "\
 Setup the default shortcuts.
