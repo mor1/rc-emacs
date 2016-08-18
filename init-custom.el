@@ -31,11 +31,13 @@
  '(custom-safe-themes
    (quote
     ("d677ef584c6dfc0697901a44b885cc18e206f05114c8a3b7fde674fce6180879" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
+ '(default-input-method nil)
  '(default-major-mode (quote text-mode) t)
  '(fci-handle-truncate-lines nil)
  '(fci-rule-width 2)
  '(fill-column 80)
  '(frame-title-format "%b  %f" t)
+ '(gc-cons-threshold 80000000)
  '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
  '(highlight-symbol-colors
    (--map
@@ -68,7 +70,8 @@
      (holiday-fixed 11 11 "Veteran's Day")
      (holiday-float 11 4 4 "Thanksgiving"))))
  '(indent-tabs-mode nil)
- '(initial-frame-alist (quote ((fullscreen . maximized))))
+ '(inhibit-startup-screen t)
+ '(initial-frame-alist '((top . 1) (left . 1) (width . 170) (height . 80)))
  '(interprogram-paste-function (quote x-selection-value) t)
  '(linum-delay t)
  '(magit-diff-refine-hunk (quote all))
@@ -78,6 +81,7 @@
  '(magit-set-upstream-on-push t)
  '(magit-use-overlays nil)
  '(make-backup-files nil)
+ '(menu-bar-mode nil)
  '(mouse-buffer-menu-mode-mult 1)
  '(mouse-wheel-follow-mouse t)
  '(mouse-wheel-progressive-speed t)
@@ -100,7 +104,7 @@
  '(notmuch-hello-sections
    (quote
     (notmuch-hello-insert-header notmuch-hello-insert-saved-searches notmuch-hello-insert-inbox notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)))
- '(ns-alternate-modifier (quote super))
+ '(ns-alternate-modifier (quote none))
  '(ns-command-modifier (quote meta))
  '(ns-function-modifier (quote hyper))
  '(nxml-slash-auto-complete-flag t)

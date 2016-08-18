@@ -25,19 +25,10 @@
 ;; split out customisations
 (setq custom-file "~/.emacs.d/init-custom.el")
 
-;; tidy-up display on startup <http://whattheemacsd.com/>
-(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
-(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
-(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
-(setq inhibit-startup-message t)
-
 ;; server
 (load "server")
 (setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))
 (unless (server-running-p) (server-start))
-
-;; input method
-(setq default-input-method "TeX")
 
 ;; <http://stackoverflow.com/questions/8606954/
 ;;    path-and-exec-path-set-but-emacs-does-not-find-executable>
@@ -95,17 +86,10 @@ started from a shell."
        )
 
 ;; fonts
-;; for display purposes
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-fontset-auto2")
 (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
-
-;; frame size
-(if window-system
-    (set-frame-size (selected-frame) 90 50)
-  (set-frame-position (selected-frame) 0 0)
-  )
 
 ;; ispell
 (setq-default ispell-program-name "/usr/local/bin/aspell")
@@ -942,17 +926,7 @@ This command is convenient when reading novel, documentation."
 
 (defvar my-keys-minor-mode-map (make-keymap) "my-keys-minor-mode keymap.")
 
-;; uk macbook pro retina
-(define-key my-keys-minor-mode-map (kbd "s-2") "€")
-(define-key my-keys-minor-mode-map (kbd "s-3") "#")
-
-;; uk macbook pro, pre-retina
-;; (define-key my-keys-minor-mode-map (kbd "s-@") "€")
-;; (define-key my-keys-minor-mode-map (kbd "s-3")
-;;   '(lambda () (interactive) (insert-char #x00A3))) ; £
-
 (define-key my-keys-minor-mode-map (kbd "C-x C-c") 'my-kill-emacs)
-
 (define-key my-keys-minor-mode-map (kbd "C-x z")   'my-suspend-frame)
 (define-key my-keys-minor-mode-map (kbd "C-x C-z") 'my-suspend-frame)
 (define-key my-keys-minor-mode-map (kbd "C-z")     'nil)
@@ -1037,9 +1011,9 @@ This command is convenient when reading novel, documentation."
 
 (load custom-file)
 
+(put 'narrow-to-region 'disabled nil)
 (message "My .emacs loaded in %ds"
          (destructuring-bind (hi lo ms ps) (current-time)
            (- (+ hi lo) (+ (first *emacs-load-start*)
                            (second *emacs-load-start*))))
          )
-(put 'narrow-to-region 'disabled nil)
