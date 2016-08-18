@@ -4,7 +4,7 @@
 
 ;; Author: Junpeng Qiu <qjpchmail@gmail.com>
 ;; Keywords: extensions
-;; Package-Version: 20160525.2101
+;; Package-Version: 20160701.1627
 ;; Version: 0.3.1
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -608,13 +608,24 @@
 ;;; Google Scholar
 (defun gscholar-bibtex-google-scholar-search-results (query)
   (let* ((url-request-method "GET")
+	 ;; Fabricate a cookie with a random ID that expires in an hour.
          (random-id (format "%016x" (random (expt 16 16))))
-         (url-request-extra-headers
-          `(("Cookie" . ,(concat "GSP=ID=" random-id ":CF=4")))))
+	 (expiration (format-time-string "%a, %d %b %Y %H:%M:%S.00 %Z"
+					 (time-add (current-time)
+						   (seconds-to-time 3600)) t))
+         (my-cookie (mapconcat #'identity
+			       (list (format "GSP=ID=%s:CF=4; " random-id)
+				     (format "expires=%s" expiration)
+				     "path=/"
+				     "domain=scholar.google.com")
+			       "; ")))
+    (let ((url-current-object
+	   (url-generic-parse-url "http://scholar.google.com") ))
+      (url-cookie-handle-set-cookie my-cookie))
     (gscholar-bibtex--url-retrieve-as-string
-     (concat  "http://scholar.google.com/scholar?q="
-              (url-hexify-string
-               (replace-regexp-in-string " " "\+" query))))))
+     (concat "http://scholar.google.com/scholar?q="
+	     (url-hexify-string
+	      (replace-regexp-in-string " " "\+" query))))))
 
 (defun gscholar-bibtex-google-scholar-bibtex-urls (buffer-content)
   (gscholar-bibtex-re-search buffer-content "\\(/scholar\.bib.*?\\)\"" 1))
