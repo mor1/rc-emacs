@@ -12,7 +12,7 @@
 (defconst php-mode-version-number "1.17.0"
   "PHP Mode version number.")
 
-(defconst php-mode-modified "2016-03-06"
+(defconst php-mode-modified "2016-08-31"
   "PHP Mode build date.")
 
 ;;; License
@@ -115,6 +115,7 @@
 ;;;###autoload
 (defgroup php nil
   "Major mode `php-mode' for editing PHP code."
+  :tag "PHP"
   :prefix "php-"
   :group 'languages
   :link '(url-link :tag "Official Site" "https://github.com/ejmr/php-mode")
@@ -529,6 +530,8 @@ PHP does not have an \"enum\"-like keyword."
     "and"
     "array"
     "callable"
+    "iterable"
+    "void"
     "as"
     "break"
     "catch all"
@@ -1351,7 +1354,7 @@ a completion list."
      ("\\(\\$\\|->\\)\\([a-zA-Z0-9_]+\\)" 2 font-lock-variable-name-face)
 
      ;; Highlight function/method names
-     ("\\<function\\s-+&?\\(\\sw+\\)\\s-*(" 1 font-lock-function-name-face)
+     ("\\<function\\s-+&?\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*(" 1 font-lock-function-name-face)
 
      ;; The dollar sign should not get a variable-name face, below
      ;; pattern resets the face to default in case cc-mode sets the
@@ -1405,7 +1408,7 @@ a completion list."
       1 font-lock-type-face)
 
      ;; Highlight return types in functions and methods.
-     ("function.+:\\s-?\\(\\sw+\\)" 1 font-lock-type-face)
+     ("function.+:\\s-?\\(\\(?:\\sw\\|\\s_\\)+\\)" 1 font-lock-type-face)
 
      ;; While c-opt-cpp-* highlights the <?php opening tags, it is not
      ;; possible to make it highlight short open tags and closing tags
