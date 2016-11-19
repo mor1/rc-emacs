@@ -921,10 +921,36 @@ This command is convenient when reading novel, documentation."
     (call-interactively 'org-agenda-schedule)
     ))
 
+;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
+(defun org-archive-done-tasks ()
+  (interactive)
+  (org-map-entries
+   (lambda ()
+     (org-archive-subtree)
+     (setq org-map-continue-from (outline-previous-heading)))
+   "/DONE" 'agenda)
+  )
+(defun org-archive-cancelled-tasks ()
+  (interactive)
+  (org-map-entries
+   (lambda ()
+     (org-archive-subtree)
+     (setq org-map-continue-from (outline-previous-heading)))
+   "/CANCELLED" 'agenda)
+  )
+
 ;; Patch org-mode to use vertical splitting, http://orgmode.org/worg/org-hacks.html
 ;; (defadvice org-prepare-agenda (after org-fix-split)
 ;;   (toggle-window-split))
 ;; (ad-activate 'org-prepare-agenda)
+
+;; lilypond
+
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/lilypond-elisp"))
+(autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
+(add-to-list 'auto-mode-alist '("\\.ly$" . LilyPond-mode))
+(add-to-list 'auto-mode-alist '("\\.ily$" . LilyPond-mode))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -71,7 +71,7 @@
      (holiday-float 11 4 4 "Thanksgiving"))))
  '(indent-tabs-mode nil)
  '(inhibit-startup-screen t)
- '(initial-frame-alist '((top . 1) (left . 1) (width . 170) (height . 80)))
+ '(initial-frame-alist (quote ((top . 1) (left . 1) (width . 170) (height . 80))))
  '(interprogram-paste-function (quote x-selection-value) t)
  '(linum-delay t)
  '(magit-diff-refine-hunk (quote all))
@@ -127,6 +127,9 @@
      (110 "* %u %?" "~/me/todo/notes.org" "Notes"))))
  '(org-reverse-note-order t)
  '(org-tags-match-list-sublevels t)
+ '(package-selected-packages
+   (quote
+    (yasnippet yaml-mode web-mode web-completion-data vline vlf utop use-package unkillable-scratch unfill unbound tuareg syslog-mode smart-tab rainbow-mode rainbow-delimiters protobuf-mode popup pointback point-stack php-mode pcsv paradox on-screen names merlin memolist magit latex-preview-pane latex-pretty-symbols irony interleave gscholar-bibtex go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh flycheck fill-column-indicator elfeed e2ansi dockerfile-mode diff-hl diff-git d-mode company color-theme-sanityinc-solarized color-theme coffee-mode bbdb bash-completion avy auctex aggressive-indent)))
  '(paradox-github-token t)
  '(remember-annotation-functions (quote (org-remember-annotation)))
  '(remember-handler-functions (quote (org-remember-handler)))
@@ -141,6 +144,7 @@
  '(scroll-error-top-bottom t)
  '(scroll-preserve-screen-position t)
  '(scroll-step 0)
+ '(select-enable-clipboard t)
  '(sentence-end-double-space nil)
  '(show-paren-mode t)
  '(show-paren-style (quote expression))
@@ -153,7 +157,7 @@
  '(uniquify-buffer-name-style (quote post-forward-angle-brackets) nil (uniquify))
  '(unkillable-scratch t)
  '(vc-follow-symlinks t)
- '(visible-bell nil)
+ '(visible-bell t)
  '(visual-line-fringe-indicators (quote (right-triangle right-curly-arrow)))
  '(web-mode-attr-indent-offset 2)
  '(web-mode-code-indent-offset 2)
@@ -166,7 +170,6 @@
  '(whitespace-style
    (quote
     (face trailing tabs lines space-before-tab newline empty tab-mark)))
- '(x-select-enable-clipboard t)
  '(x-stretch-cursor t))
 
 ;; (custom-set-faces
