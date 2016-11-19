@@ -1,9 +1,9 @@
 ;;; gh-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "gh-api" "gh-api.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-api" "gh-api.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-api.el
 
 (require 'eieio)
@@ -24,7 +24,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-auth" "gh-auth.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-auth" "gh-auth.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-auth.el
 
 (require 'eieio)
@@ -39,7 +39,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-cache" "gh-cache.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-cache" "gh-cache.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-cache.el
 
 (require 'eieio)
@@ -50,7 +50,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-comments" "gh-comments.el" (22444 32610
+;;;### (autoloads nil "gh-comments" "gh-comments.el" (22576 23558
 ;;;;;;  0 0))
 ;;; Generated autoloads from gh-comments.el
 
@@ -60,7 +60,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-common" "gh-common.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-common" "gh-common.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-common.el
 
 (require 'eieio)
@@ -85,7 +85,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-gist" "gh-gist.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-gist" "gh-gist.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-gist.el
 
 (require 'eieio)
@@ -107,21 +107,21 @@
 ;;;***
 
 ;;;### (autoloads nil "gh-issue-comments" "gh-issue-comments.el"
-;;;;;;  (22444 32610 0 0))
+;;;;;;  (22576 23558 0 0))
 ;;; Generated autoloads from gh-issue-comments.el
 
 (require 'eieio)
 
 ;;;***
 
-;;;### (autoloads nil "gh-issues" "gh-issues.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-issues" "gh-issues.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-issues.el
 
 (require 'eieio)
 
 (eieio-defclass-autoload 'gh-issues-api '(gh-api-v3 gh-comments-api-mixin) "gh-issues" "Github Issues api")
 
-(gh-defclass gh-issues-issue (gh-ref-object) ((number :initarg :number) (state :initarg :state) (title :initarg :title) (body :initarg :body) (user :initarg :user :initform nil :marshal-type gh-user) (labels :initarg :labels :initform nil :marshal-type (list gh-issues-label)) (assignee :initarg :assignee :initform nil :marshal-type gh-user) (milestone :initarg :milestone :initform nil :marshal-type gh-issues-milestone) (comments :initarg :comments :initform 0) (pull-request :initarg :pull-request :marshal-type gh-issues-pull-request) (closed-at :initarg :created-at) (created-at :initarg :created-at) (updated-at :initarg :updated-at)) "issues request")
+(gh-defclass gh-issues-issue (gh-ref-object) ((number :initarg :number) (state :initarg :state) (title :initarg :title) (body :initarg :body) (user :initarg :user :initform nil :marshal-type gh-user) (labels :initarg :labels :initform nil :marshal-type (list gh-issues-label)) (assignees :initarg :assignees :initform nil :marshal-type (list gh-user)) (assignee :initarg :assignee :initform nil :marshal-type gh-user) (milestone :initarg :milestone :initform nil :marshal-type gh-issues-milestone) (comments :initarg :comments :initform 0) (pull-request :initarg :pull-request :marshal-type gh-issues-pull-request) (closed-at :initarg :closed-at) (created-at :initarg :created-at) (updated-at :initarg :updated-at)) "issues request")
 
 (gh-defclass gh-issues-pull-request (gh-object) ((html-url :initarg :html-url) (diff-url :initarg :diff-url) (patch-url :initarg :patch-url)))
 
@@ -133,7 +133,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-oauth" "gh-oauth.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-oauth" "gh-oauth.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-oauth.el
 
 (require 'eieio)
@@ -148,7 +148,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-orgs" "gh-orgs.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-orgs" "gh-orgs.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-orgs.el
 
 (require 'eieio)
@@ -163,15 +163,15 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-pull-comments" "gh-pull-comments.el" (22444
-;;;;;;  32610 0 0))
+;;;### (autoloads nil "gh-pull-comments" "gh-pull-comments.el" (22576
+;;;;;;  23558 0 0))
 ;;; Generated autoloads from gh-pull-comments.el
 
 (require 'eieio)
 
 ;;;***
 
-;;;### (autoloads nil "gh-pulls" "gh-pulls.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-pulls" "gh-pulls.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-pulls.el
 
 (require 'eieio)
@@ -188,7 +188,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-repos" "gh-repos.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-repos" "gh-repos.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-repos.el
 
 (require 'eieio)
@@ -203,14 +203,14 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-search" "gh-search.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-search" "gh-search.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-search.el
 
 (eieio-defclass-autoload 'gh-search-api '(gh-api-v3) "gh-search" nil)
 
 ;;;***
 
-;;;### (autoloads nil "gh-url" "gh-url.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-url" "gh-url.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-url.el
 
 (require 'eieio)
@@ -223,7 +223,7 @@
 
 ;;;***
 
-;;;### (autoloads nil "gh-users" "gh-users.el" (22444 32610 0 0))
+;;;### (autoloads nil "gh-users" "gh-users.el" (22576 23558 0 0))
 ;;; Generated autoloads from gh-users.el
 
 (require 'eieio)
@@ -234,8 +234,8 @@
 
 ;;;***
 
-;;;### (autoloads nil nil ("gh-pkg.el" "gh-profile.el" "gh.el") (22444
-;;;;;;  32610 501993 0))
+;;;### (autoloads nil nil ("gh-pkg.el" "gh-profile.el" "gh.el") (22576
+;;;;;;  23558 0 0))
 
 ;;;***
 
