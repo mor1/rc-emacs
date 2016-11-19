@@ -12,6 +12,11 @@
 
 ;;; History:
 
+;; Version 2.0.1: features and fixes
+;;   * Added `elfeed-curl-extra-arguments' customization
+;;   * Use `x-get-selection' instead of `x-get-selection-value'
+;;   * More flexible date handling (including Atom 0.3 support)
+;;   * Various elfeed-web fixes
 ;; Version 2.0.0: new cURL fetching backend
 ;;   * Elfeed now uses cURL when available (`elfeed-use-curl')
 ;;   * Windows OS now supported when using cURL
@@ -105,7 +110,7 @@
   "An Emacs web feed reader."
   :group 'comm)
 
-(defconst elfeed-version "2.0.0")
+(defconst elfeed-version "2.0.1")
 
 (defcustom elfeed-feeds ()
   "List of all feeds that Elfeed should follow. You must add your
@@ -295,7 +300,9 @@ is called for side-effects on the ENTRY object.")
                            xml-base (or altlink anylink)))
                     (date (or (xml-query '(published *) entry)
                               (xml-query '(updated *) entry)
-                              (xml-query '(date *) entry)))
+                              (xml-query '(date *) entry)
+                              (xml-query '(modified *) entry) ; Atom 0.3
+                              (xml-query '(issued *) entry))) ; Atom 0.3
                     (content (elfeed--atom-content entry))
                     (id (or (xml-query '(id *) entry) link
                             (elfeed-generate-id content)))
@@ -318,7 +325,7 @@ is called for side-effects on the ENTRY object.")
                                :id (cons feed-id (elfeed-cleanup id))
                                :link (elfeed-cleanup link)
                                :tags tags
-                               :date (elfeed-float-time date)
+                               :date (or (elfeed-float-time date) (float-time))
                                :content content
                                :enclosures enclosures
                                :content-type content-type)))

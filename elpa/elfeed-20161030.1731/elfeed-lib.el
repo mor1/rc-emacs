@@ -108,8 +108,8 @@ be relative to now (`elfeed-time-duration')."
            (if duration
                (- (float-time) duration)
              (let ((time (ignore-errors (date-to-time date))))
-               (if (equal time '(14445 17280)) ; date-to-time silently failed
-                   nil
+               ;; check if date-to-time failed, silently or otherwise
+               (unless (or (null time) (equal time '(14445 17280)))
                  (float-time time))))))))
     (integer date)
     (otherwise nil)))
@@ -234,8 +234,8 @@ On systems running X, it will try to use the PRIMARY selection
 first, then fall back onto the standard clipboard like other
 systems."
   (elfeed-strip-properties
-   (or (and (fboundp 'x-get-selection-value)
-            (funcall 'x-get-selection-value))
+   (or (and (fboundp 'x-get-selection)
+            (funcall 'x-get-selection))
        (and (functionp interprogram-paste-function)
             (funcall interprogram-paste-function))
        (and (fboundp 'w32-get-clipboard-data)
