@@ -1,9 +1,9 @@
 ;;; syslog-mode-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "syslog-mode" "syslog-mode.el" (22346 2822
+;;;### (autoloads nil "syslog-mode" "syslog-mode.el" (22576 23541
 ;;;;;;  0 0))
 ;;; Generated autoloads from syslog-mode.el
 
@@ -18,23 +18,25 @@ FILES can be either nil in which case the view is applied to the current log fil
 it can be the same as the first argument to `syslog-get-filenames' - a list of cons
 cells whose cars are filenames and whose cdrs indicate how many logfiles to include.
 LABEL indicates whether or not to label each line with the filename it came from.
-RXSHOW and RXHIDE are optional regexps which will be used to filter in/out buffer lines 
-with `syslog-filter-lines'. STARTDATE and ENDDATE are optional dates used to filter the 
-lines with `syslog-filter-dates'; they can be either date strings or time lists as returned 
-by `syslog-date-to-time'.
+RXSHOWSTART, RXSHOWEND and RXHIDESTART, RXHIDEEND are optional regexps which will be 
+used to filter in/out blocks of buffer lines with `syslog-filter-lines'. 
+STARTDATE and ENDDATE are optional dates used to filter the lines with `syslog-filter-dates'; 
+they can be either date strings or time lists as returned by `syslog-date-to-time'.
 HIGHLIGHTS is a list of cons cells whose cars are regexps and whose cdrs are faces to 
 highlight those regexps with.
 
-\(fn FILES &optional LABEL RXSHOW RXHIDE STARTDATE ENDDATE REMOVEDATES HIGHLIGHTS BUFNAME)" t nil)
+\(fn FILES &optional LABEL RXSHOWSTART RXSHOWEND RXHIDESTART RXHIDEEND STARTDATE ENDDATE REMOVEDATES HIGHLIGHTS BUFNAME)" t nil)
 
 (autoload 'syslog-filter-lines "syslog-mode" "\
-Restrict buffer to lines matching regexp.
-With prefix arg: remove lines matching regexp.
+Restrict buffer to blocks of text between matching regexps.
+If the user only enters one regexp then just filter matching lines instead of blocks.
+With prefix ARG: remove matching blocks.
 
 \(fn &optional ARG)" t nil)
 
 (defvar syslog-views nil "\
-A list of views.")
+A list of views.
+If regexps matching end lines are left blank then lines will be filtered instead of blocks (see `syslog-filter-lines').")
 
 (custom-autoload 'syslog-views "syslog-mode" t)
 

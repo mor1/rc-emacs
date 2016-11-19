@@ -6,7 +6,7 @@
 ;; Maintainer: Joe Bloggs <vapniks@yahoo.com>
 ;; Created: 2003-03-17 18:50:12 Harley Gorrell
 ;; Version: 2.2
-;; Package-Version: 20160525.1914
+;; Package-Version: 20161116.506
 ;; Last-Updated: 2013-10-21 19:04:00
 ;;           By: Joe Bloggs
 ;; URL: https://github.com/vapniks/syslog-mode
@@ -16,7 +16,7 @@
 ;;
 ;; Features that might be required by this library:
 ;;
-;; hide-lines cl ido dash
+;; hide-lines cl ido dash dired+
 ;;
 
 ;;; This file is NOT part of GNU Emacs
@@ -166,8 +166,10 @@
   "syslog-mode - a major mode for viewing log files"
   :link '(url-link "https://github.com/vapniks/syslog-mode"))
 
-(defvar syslog-mode-hook nil
-  "*Hook to setup `syslog-mode'.")
+(defcustom syslog-mode-hook nil
+  "*Hook to setup `syslog-mode'."
+  :group 'syslog
+  :type 'hook)
 
 (defvar syslog-mode-load-hook nil
   "*Hook to run when `syslog-mode' is loaded.")
@@ -193,6 +195,7 @@
     (define-key map (kbd "C-/") 'syslog-filter-dates)
     (define-key map "D" (lambda nil (interactive) (dired syslog-log-file-directory)))
     (define-key map "j" 'ffap)
+    (define-key map "f" 'ffap)
     (define-key map "<" 'syslog-previous-file)
     (define-key map ">" 'syslog-next-file)
     (define-key map "o" 'syslog-open-files)
@@ -390,7 +393,8 @@ When called interactively the FILES are prompted for using `syslog-get-filenames
     (switch-to-buffer buf)))
 
 ;;;###autoload
-(defun syslog-view (files &optional label rxshow rxhide startdate enddate removedates
+(defun syslog-view (files &optional label rxshowstart rxshowend
+			  rxhidestart rxhideend startdate enddate removedates
 			  highlights bufname)
   "Open a view of syslog files with optional filters and highlights applied.
 When called interactively the user is prompted for a member of `syslog-views' and the
@@ -399,33 +403,43 @@ FILES can be either nil in which case the view is applied to the current log fil
 it can be the same as the first argument to `syslog-get-filenames' - a list of cons
 cells whose cars are filenames and whose cdrs indicate how many logfiles to include.
 LABEL indicates whether or not to label each line with the filename it came from.
-RXSHOW and RXHIDE are optional regexps which will be used to filter in/out buffer lines 
-with `syslog-filter-lines'. STARTDATE and ENDDATE are optional dates used to filter the 
-lines with `syslog-filter-dates'; they can be either date strings or time lists as returned 
-by `syslog-date-to-time'.
+RXSHOWSTART, RXSHOWEND and RXHIDESTART, RXHIDEEND are optional regexps which will be 
+used to filter in/out blocks of buffer lines with `syslog-filter-lines'. 
+STARTDATE and ENDDATE are optional dates used to filter the lines with `syslog-filter-dates'; 
+they can be either date strings or time lists as returned by `syslog-date-to-time'.
 HIGHLIGHTS is a list of cons cells whose cars are regexps and whose cdrs are faces to 
 highlight those regexps with."
   (interactive (let ((view (cdr (cl-assoc (ido-completing-read "View: " (mapcar 'car syslog-views))
-					  syslog-views :test 'equal))))
-		 (list (first view)
-		       (second view)
-		       (third view)
-		       (fourth view)
-		       (fifth view)
-		       (sixth view)
-		       (seventh view)
-		       (eighth view)
-		       (ninth view))))
-  (let ((rxshow (unless (or (not rxshow) (equal rxshow "")) rxshow))
-	(rxhide (unless (or (not rxhide) (equal rxhide "")) rxhide))
-	(startdate (unless (or (not startdate) (equal startdate "")) startdate))
-	(enddate (unless (or (not enddate) (equal enddate "")) enddate))
-	(bufname (unless (or (not bufname) (equal bufname "")) bufname))) 
+					  syslog-views :test 'string=))))
+		 (list (cl-first view)
+		       (cl-second view)
+		       (cl-third view)
+		       (cl-fourth view)
+		       (cl-fifth view)
+		       (cl-sixth view)
+		       (cl-seventh view)
+		       (cl-eighth view)
+		       (cl-ninth view)
+		       (cl-tenth view)
+		       (nth 10 view))))
+  (let ((rxshowstart (unless (or (not rxshowstart) (string= rxshowstart "")) rxshowstart))
+	(rxshowend (unless (or (not rxshowend) (string= rxshowend "")) rxshowend))
+	(rxhidestart (unless (or (not rxhidestart) (string= rxhidestart "")) rxhidestart))
+	(rxhideend (unless (or (not rxhideend) (string= rxhideend "")) rxhideend))
+	(startdate (unless (or (not startdate) (string= startdate "")) startdate))
+	(enddate (unless (or (not enddate) (string= enddate "")) enddate))
+	(bufname (unless (or (not bufname) (string= bufname "")) bufname))) 
     (if files (syslog-open-files (syslog-get-filenames files) label))
     (if (not (eq major-mode 'syslog-mode))
 	(error "Not in syslog-mode")
-      (if rxshow (hide-lines-not-matching rxshow))
-      (if rxhide (hide-lines-matching rxhide))
+      (if rxshowstart
+	  (if rxshowend
+	      (hide-blocks-not-matching rxshowstart rxshowend)
+	    (hide-lines-not-matching rxshowstart)))
+      (if rxhidestart
+	  (if rxhideend
+	      (hide-blocks-not-matching rxhidestart rxhideend)
+	    (hide-lines-matching rxhidestart)))
       (if (or startdate enddate)
 	  (syslog-filter-dates startdate enddate removedates))
       (if highlights
@@ -465,30 +479,39 @@ This just calls `syslog-previous-file' with non-nil argument, so we can bind it 
 
 ;;;###autoload
 (defun syslog-filter-lines (&optional arg)
-  "Restrict buffer to lines matching regexp.
-With prefix arg: remove lines matching regexp."
+  "Restrict buffer to blocks of text between matching regexps.
+If the user only enters one regexp then just filter matching lines instead of blocks.
+With prefix ARG: remove matching blocks."
   (interactive "p")
-  (if (> arg 1)
-      (let ((regex (read-regexp "Regexp matching lines to remove"
-				(symbol-name (symbol-at-point)))))
-        (unless (string= regex "")
-          (hide-lines-matching regex)))
-    (let ((regex (read-regexp "Regexp matching lines to keep"
-			      (symbol-name (symbol-at-point)))))
-      (unless (string= regex "")
-	(hide-lines-not-matching regex)))))
+  (let* ((str (if (> arg 1) "to remove" "to keep"))
+	 (startregex (read-regexp
+		      (format "Regexp matching start lines of blocks %s" str)
+		      (symbol-name (symbol-at-point))))
+	 (endregex (read-regexp
+		    (format "Regexp matching end lines of blocks %s (default=filter start lines only)" str))))
+    (unless (string= startregex "")
+      (if (> arg 1)
+	  (if (string= endregex "")
+	      (hide-lines-matching startregex)
+	    (hide-blocks-matching startregex endregex))
+	(if (string= endregex "")
+	    (hide-lines-not-matching startregex)
+	  (hide-blocks-not-matching startregex endregex))))))
 
 ;;;###autoload
 (defcustom syslog-views nil
-  "A list of views."
+  "A list of views.
+If regexps matching end lines are left blank then lines will be filtered instead of blocks (see `syslog-filter-lines')."
   :group 'syslog
   :type '(repeat (list (string :tag "Name")
 		       (repeat (cons (string :tag "Base file")
 				     (number :tag "Number of previous files/days")))
 		       (choice (const :tag "No file labels" nil)
 			       (const :tag "Add file labels" t))
-		       (regexp :tag "Regexp matching lines to show")
-		       (regexp :tag "Regexp matching lines to hide")
+		       (regexp :tag "Regexp matching start lines of blocks to show")
+		       (regexp :tag "Regexp matching end lines of blocks to show")
+		       (regexp :tag "Regexp matching start lines of blocks to hide")
+		       (regexp :tag "Regexp matching end lines of blocks to hide")
 		       (string :tag "Start date")
 		       (string :tag "End date")
 		       (choice (const :tag "Keep matching dates" nil)
@@ -497,8 +520,10 @@ With prefix arg: remove lines matching regexp."
 				     (face :tag "Face")))
 		       (string :tag "Buffer name"))))
 
-(defcustom syslog-datetime-regexp "^\\(?:[^ :]+: \\)?\\(\\(?:[[:alpha:]]\\{3\\}\\)?[[:space:]]*[[:alpha:]]\\{3\\}\\s-+[0-9]+\\s-+[0-9:]+\\)"
-  "A regular expression matching the date-time at the beginning of each line in the log file."
+(defcustom syslog-datetime-regexp
+  "^\\(?:[^ :]+: \\)?\\(\\(?:\\(?:[[:alpha:]]\\{3\\}\\)?[[:space:]]*[[:alpha:]]\\{3\\}\\s-+[0-9]+\\s-+[0-9:]+\\)\\|\\(?:[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\s-+[0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\}\\)\\)"
+  "A regular expression matching the date-time at the beginning of each line in the log file.
+It should contain one non-shy subexpression matching the datetime string."
   :group 'syslog
   :type 'regexp)
 
@@ -576,6 +601,41 @@ buffer respectively."
   (setq mode-name "syslog")
   (setq major-mode 'syslog-mode)
   (use-local-map syslog-mode-map)
+  ;; Menu definition
+  (easy-menu-define nil syslog-mode-map "test"
+    `("Syslog"
+      ["Quit" quit-window :help "Quit and bury this buffer" :key "q"]
+      ["Revert buffer" revert-buffer :help "View the function at point" :key "R"]
+      ["Show all"  hide-lines-show-all :help "Show all hidden lines/blocks" :key "g"]
+      ["Filter lines..." syslog-filter-lines :help "Show/hide blocks of text between matching regexps" :key "/"]
+      ["Filter dates..." syslog-filter-dates :help "Show/hide lines between start and end dates" :key "C-/"]
+      ["Jump to boot start" syslog-boot-start :help "Jump forward in the log to when the system booted" :key "<C-down>"]
+      ["Previous log file" syslog-previous-file :help "Open previous logfile backup" :key "<"]
+      ["Next log file" syslog-next-file :help "Open next logfile backup" :key ">"]
+      ["Open log files..." syslog-open-files :help "Insert log files into new buffer" :key "o"]
+      ["Append files..." syslog-append-files :help "Append files into current buffer" :key "a"]
+      ["Prepend files..." syslog-prepend-files :help "Prepend files into current buffer" :key "p"]
+      ["Find file at point" ffap :help "Find file at point" :key "f"]
+      ["Whois" syslog-whois-reverse-lookup :help "Perform whois lookup on hostname at point" :key "W"]
+      ["Count matches" syslog-count-matches :help "Count strings which match the given pattern" :key "c"]
+      ["Dired" (lambda nil (interactive) (dired syslog-log-file-directory)) :help "Enter logfiles directory" :keys "D"]
+      ["Highlight..." (keymap "Highlight"
+			      (regexp menu-item "Regexp" highlight-regexp
+				      :help "Highlight each match of regexp"
+				      :keys "h r")
+			      (phrase menu-item "Phrase" highlight-phrase
+				      :help "Highlight each match of phrase"
+				      :keys "h p")
+			      (lines menu-item "Lines matching regexp" highlight-lines-matching-regexp
+				     :help "Highlight lines containing match of regexp"
+				     :keys "h l")
+			      (unhighlight menu-item "Unhighlight regexp" unhighlight-regexp
+					   :help "Remove highlighting"
+					   :keys "h u"))]
+      ["Open stored view..." syslog-view :help "Open a stored view of syslog files" :key "v"]
+      ["Edit stored views..." (lambda nil (interactive) (customize-variable 'syslog-views)) :help "Customize `syslog-views'"]
+      ["---" "---"]))
+  ;; font locking
   (make-local-variable 'font-lock-defaults)
   (setq font-lock-defaults '(syslog-font-lock-keywords t t nil ))
   (buffer-disable-undo)
@@ -654,6 +714,11 @@ The ARG and SEARCH-STRING arguments are the same as for `whois'."
   "Face for su and sudo"
   :group 'syslog)
 
+(defface syslog-hide
+  '((t :foreground "black" :background "black"))
+  "Face for hiding text"
+  :group 'syslog)
+
 ;; Keywords
 ;; TODO: Seperate the keywords into a list for each format, rather than one for all.
 ;;       Better matching of dates (even when not at beginning of line).
@@ -674,7 +739,7 @@ The ARG and SEARCH-STRING arguments are the same as for `whois'."
     ("\\[[^]]*\\]" . 'font-lock-comment-face)
     ;; IPs
     ("[[:digit:]]\\{1,3\\}\\.[[:digit:]]\\{1,3\\}\\.[[:digit:]]\\{1,3\\}\\.[[:digit:]]\\{1,3\\}" 0 'syslog-ip append)
-    ("\\<[Ee][Rr][Rr]\\(?:[Oo][Rr][Ss]?\\)\\>" 0 'syslog-error append)
+    ("\\<[Ee][Rr][Rr]\\(?:[Oo][Rr][Ss]?\\)?\\>" 0 'syslog-error append)
     ("\\<[Ii][Nn][Ff][Oo]\\>" 0 'syslog-info append)
     ("\\<[Cc][Rr][Ii][Tt][Ii][Cc][Aa][Ll]\\>" 0 'syslog-error append)
     ("STARTUP" 0 'syslog-info append)
