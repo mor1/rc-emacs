@@ -4,7 +4,7 @@
 
 ;; Author: Wilfred Hughes <me@wilfred.me.uk>
 ;; Version: 2.2
-;; Package-Version: 20160806.1753
+;; Package-Version: 20161015.1945
 ;; Keywords: hash table, hash map, hash
 ;; Package-Requires: ((dash "2.12.0"))
 
@@ -69,30 +69,6 @@ user-supplied test created via `define-hash-table-test'."
 
 (defalias 'ht-from-alist 'ht<-alist)
 
-;; based on the excellent -partition from dash.el, but we aim to be self-contained
-(defun ht/group-pairs (list)
-  "Return a new list with the items in LIST grouped into pairs.
-Errors if LIST doesn't contain an even number of elements."
-  (let ((result)
-        (sublist)
-        (len 0))
-
-    (while list
-      ;; take the head of LIST and push onto SUBLIST
-      (setq sublist (cons (car list) sublist))
-      (setq list (cdr list))
-      
-      (setq len (1+ len))
-
-      (when (= len 2)
-        ;; push this two-item list onto RESULT
-        (setq result (cons (nreverse sublist) result))
-        (setq sublist nil)
-        (setq len 0)))
-    
-    (when sublist (error "Expected an even number of elements"))
-    (nreverse result)))
-
 (defun ht<-plist (plist &optional test)
   "Create a hash table with initial values according to PLIST.
 
@@ -100,7 +76,7 @@ TEST indicates the function used to compare the hash
 keys.  Default is `equal'.  It can be `eq', `eql', `equal' or a
 user-supplied test created via `define-hash-table-test'."
   (let ((h (ht-create test)))
-    (dolist (pair (ht/group-pairs plist) h)
+    (dolist (pair (-partition 2 plist) h)
       (let ((key (car pair))
             (value (cadr pair)))
         (ht-set! h key value)))))
@@ -186,6 +162,14 @@ Returns nil, used for side-effects only.")
 For every key-value pair in TABLE, evaluate FORM with the
 variables key and value bound."
   `(ht-each (lambda (key value) ,form) ,table))
+
+(defun ht-select-keys (table keys)
+  "Return a copy of TABLE with only the specified KEYS."
+  (let (result)
+    (setq result (make-hash-table :test (hash-table-test table)))
+    (dolist (key keys result)
+      (if (not (equal (gethash key table 'key-not-found) 'key-not-found))
+          (puthash key (gethash key table) result)))))
 
 (defun ht->plist (table)
   "Return a flat list '(key1 value1 key2 value2...) from TABLE.
