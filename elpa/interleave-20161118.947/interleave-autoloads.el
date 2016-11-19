@@ -1,13 +1,27 @@
 ;;; interleave-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "interleave" "interleave.el" (22483 1166 0
+;;;### (autoloads nil "interleave" "interleave.el" (22576 23552 0
 ;;;;;;  0))
 ;;; Generated autoloads from interleave.el
 
-(autoload 'interleave--open-notes-file-for-pdf "interleave" "\
+(define-obsolete-variable-alias 'interleave--pdf-current-page-fn 'interleave-pdf-current-page-fn "1.3.0")
+
+(define-obsolete-variable-alias 'interleave--pdf-next-page-fn 'interleave-pdf-next-page-fn "1.3.0")
+
+(define-obsolete-variable-alias 'interleave--pdf-previous-page-fn 'interleave-pdf-previous-page-fn "1.3.0")
+
+(define-obsolete-variable-alias 'interleave--pdf-goto-page-fn 'interleave-pdf-goto-page-fn "1.3.0")
+
+(define-obsolete-variable-alias 'interleave--pdf-scroll-up-or-next-page-fn 'interleave-pdf-scroll-up-or-next-page-fn "1.3.0")
+
+(define-obsolete-variable-alias 'interleave--pdf-scroll-down-or-previous-page-fn 'interleave-pdf-scroll-down-or-previous-page-fn "1.3.0")
+
+(define-obsolete-function-alias 'interleave--open-notes-file-for-pdf 'interleave-open-notes-file-for-pdf "1.3.0")
+
+(autoload 'interleave-open-notes-file-for-pdf "interleave" "\
 Open the notes org file for the current pdf file if it exists.
 Else create it.
 
@@ -17,7 +31,13 @@ of .pdf).
 
 \(fn)" t nil)
 
-(autoload 'interleave "interleave" "\
+(define-obsolete-variable-alias 'interleave 'interleave-mode "1.3.0")
+
+(define-obsolete-variable-alias 'interleave-hook 'interleave-mode-hook "1.3.0")
+
+(define-obsolete-function-alias 'interleave 'interleave-mode "1.3.0")
+
+(autoload 'interleave-mode "interleave" "\
 Interleaving your text books since 2015.
 
 In the past, textbooks were sometimes published as 'interleaved' editions.
@@ -38,9 +58,15 @@ Usage:
 
 - Create a Org file that will keep your notes. In the Org headers section, add
 #+INTERLEAVE_PDF: /the/path/to/your/pdf.pdf
-- Start `interleave' with `M-x interleave'.
+- Start `interleave-mode' with `M-x interleave-mode'.
 - To insert a note for a page, type `i'.
 - Navigation is the same as in `doc-view-mode'/`pdf-view-mode'.
+
+The split direction is determined by the customizable variable
+`interleave-split-direction'. When `interleave-mode' is invoked
+with a prefix argument the inverse split direction is used
+e.g. if `interleave-split-direction' is 'vertical the buffer is
+split horizontally.
 
 Keybindings (`doc-view-mode'/`pdf-view-mode'):
 
