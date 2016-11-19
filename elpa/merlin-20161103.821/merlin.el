@@ -312,10 +312,10 @@ return (LOC1 . LOC2)."
 
 (defun merlin/unmake-point (point)
   "Destruct POINT to line / col."
-  (save-excursion (goto-char point)
-                  (list (cons 'assoc nil)
-                        (cons 'line (line-number-at-pos nil))
-                        (cons 'col (current-column)))))
+  (save-excursion
+    (goto-char point)
+    (beginning-of-line)
+    `((assoc . nil) (line . ,(line-number-at-pos nil)) (col . ,(- point (point))))))
 
 (defun bounds-of-ocaml-atom-at-point ()
   "Return the start and end points of an ocaml atom near point.
@@ -470,12 +470,13 @@ Try to find a satisfying default directory."
         (setq merlin-guessed-favorite-caml-mode (car main-caml-mode)))))
 
   ; Really start process
-  (let* ((command (lookup-default 'command configuration (merlin-command)))
-        (extra-flags (lookup-default 'flags configuration nil))
-        (name (lookup-default 'name configuration "default"))
-        (environment (lookup-default 'env configuration nil))
-        (logfile (lookup-default 'logfile configuration nil))
-        (buffer-name (merlin-instance-buffer-name name)))
+  (let* ((command (lookup-default 'command configuration nil))
+         (command (if command command (merlin-command)))
+         (extra-flags (lookup-default 'flags configuration nil))
+         (name (lookup-default 'name configuration "default"))
+         (environment (lookup-default 'env configuration nil))
+         (logfile (lookup-default 'logfile configuration nil))
+         (buffer-name (merlin-instance-buffer-name name)))
     (when (not merlin-quiet-startup)
       (message "Starting merlin instance: %s (binary=%s)."
 	       name command))
@@ -791,10 +792,6 @@ the error message otherwise print a generic error message."
 ;;;;;;;;;;;;;;;;;;
 ;; ERROR REPORT ;;
 ;;;;;;;;;;;;;;;;;;
-
-(defun merlin--chomp (str)
-  "Remove whitespace at the beginning and end of STR."
-  (replace-regexp-in-string "^[[:space:]\n]\+\\|[[:space:]\n]\+$" "" str))
 
 (defun merlin--error-position-delta (point err)
   "Distance between point and error."
@@ -1319,11 +1316,9 @@ If QUIET is non nil, then an overlay and the merlin types can be used."
   (merlin/sync)
   (if (region-active-p)
       (merlin--type-region)
-    (if (merlin--type-enclosing-query)
-      (progn
-        (merlin-type-enclosing-go-up)
-        (merlin--type-enclosing-after))
-      (message "merlin: no result"))))
+    (when (merlin--type-enclosing-query)
+      (merlin-type-enclosing-go-up)
+      (merlin--type-enclosing-after))))
 
 (defun merlin--find-extents (list low high)
   "Return the smallest extent in LIST that LOW and HIGH fit
@@ -1391,9 +1386,8 @@ is active)."
   (interactive)
   (merlin/sync)
   (if (not merlin-enclosing-types)
-    (if (merlin--type-enclosing-query)
-      (merlin--destruct-enclosing)
-      (error "merlin: no result"))
+    (when (merlin--type-enclosing-query)
+      (merlin--destruct-enclosing))
     (merlin--destruct-enclosing)))
 
 
@@ -1743,7 +1737,7 @@ Returns the position."
   "Return path of ocamlmerlin binary selected by configuration"
   (if (equal merlin-command 'opam)
       (with-temp-buffer
-        (if (eq (call-process "opam" nil (current-buffer) nil "config" "var" "bin") 0)
+        (if (eq (call-process-shell-command "opam config var bin" nil (current-buffer) nil) 0)
             (concat (replace-regexp-in-string "\n$" "" (buffer-string)) "/ocamlmerlin")
           (message "merlin-command: opam config failed, falling back to 'ocamlmerlin' (message: %S)" (buffer-string))
           "ocamlmerlin"))
