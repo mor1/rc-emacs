@@ -100,6 +100,9 @@
   "If a Hydra head sets this to t, exit the Hydra.
 This will be done even if the head wasn't designated for exiting.")
 
+(defvar hydra-amaranth-warn-message "An amaranth Hydra can only exit through a blue head"
+  "Amaranth Warning message.  Shown when the user tries to press an unbound/non-exit key while in an amaranth head.")
+
 (defun hydra-set-transient-map (keymap on-exit &optional foreign-keys)
   "Set KEYMAP to the highest priority.
 
@@ -185,7 +188,7 @@ warn: keep KEYMAP and issue a warning instead of running the command."
 (defun hydra-amaranth-warn ()
   "Issue a warning that the current input was ignored."
   (interactive)
-  (message "An amaranth Hydra can only exit through a blue head"))
+  (message hydra-amaranth-warn-message))
 
 ;;* Customize
 (defgroup hydra nil
@@ -552,18 +555,17 @@ HEAD's binding is returned as a string with a colored face."
     (when (and (null (cadr head))
                (not head-exit))
       (hydra--complain "nil cmd can only be blue"))
-    (propertize (if (string= (car head) "%")
-                    "%%"
-                  (car head))
-                'face
-                (or (hydra--head-property head :face)
-                    (cl-case head-color
-                      (blue 'hydra-face-blue)
-                      (red 'hydra-face-red)
-                      (amaranth 'hydra-face-amaranth)
-                      (pink 'hydra-face-pink)
-                      (teal 'hydra-face-teal)
-                      (t (error "Unknown color for %S" head)))))))
+    (propertize
+     (replace-regexp-in-string "%" "%%" (car head))
+     'face
+     (or (hydra--head-property head :face)
+         (cl-case head-color
+           (blue 'hydra-face-blue)
+           (red 'hydra-face-red)
+           (amaranth 'hydra-face-amaranth)
+           (pink 'hydra-face-pink)
+           (teal 'hydra-face-teal)
+           (t (error "Unknown color for %S" head)))))))
 
 (defun hydra-fontify-head-greyscale (head _body)
   "Produce a pretty string from HEAD and BODY.
@@ -772,7 +774,7 @@ BODY-AFTER-EXIT is added to the end of the wrapper."
                  `(condition-case err
                       ,(hydra--call-interactively cmd (cadr head))
                     ((quit error)
-                     (message "%S" err)
+                     (message (error-message-string err))
                      (unless hydra-lv
                        (sit-for 0.8)))))
               ,(if (and body-idle (eq (cadr head) 'body))
