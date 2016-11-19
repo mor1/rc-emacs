@@ -1,9 +1,9 @@
 ;;; diff-hl-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "diff-hl" "diff-hl.el" (22483 1174 0 0))
+;;;### (autoloads nil "diff-hl" "diff-hl.el" (22576 23563 0 0))
 ;;; Generated autoloads from diff-hl.el
 
 (autoload 'diff-hl-mode "diff-hl" "\
@@ -17,8 +17,9 @@ Turn on `diff-hl-mode' or `diff-hl-dir-mode' in a buffer if appropriate.
 \(fn)" nil nil)
 
 (defvar global-diff-hl-mode nil "\
-Non-nil if Global-Diff-Hl mode is enabled.
-See the command `global-diff-hl-mode' for a description of this minor mode.
+Non-nil if Global Diff-Hl mode is enabled.
+See the `global-diff-hl-mode' command
+for a description of this minor mode.
 Setting this variable directly does not take effect;
 either customize it (see the info node `Easy Customization')
 or call the function `global-diff-hl-mode'.")
@@ -27,7 +28,7 @@ or call the function `global-diff-hl-mode'.")
 
 (autoload 'global-diff-hl-mode "diff-hl" "\
 Toggle Diff-Hl mode in all buffers.
-With prefix ARG, enable Global-Diff-Hl mode if ARG is positive;
+With prefix ARG, enable Global Diff-Hl mode if ARG is positive;
 otherwise, disable it.  If called from Lisp, enable the mode if
 ARG is omitted or nil.
 
@@ -39,7 +40,7 @@ See `diff-hl-mode' for more information on Diff-Hl mode.
 
 ;;;***
 
-;;;### (autoloads nil "diff-hl-amend" "diff-hl-amend.el" (22483 1174
+;;;### (autoloads nil "diff-hl-amend" "diff-hl-amend.el" (22576 23563
 ;;;;;;  0 0))
 ;;; Generated autoloads from diff-hl-amend.el
 
@@ -52,8 +53,9 @@ Currently only supports Git, Mercurial and Bazaar.
 \(fn &optional ARG)" t nil)
 
 (defvar global-diff-hl-amend-mode nil "\
-Non-nil if Global-Diff-Hl-Amend mode is enabled.
-See the command `global-diff-hl-amend-mode' for a description of this minor mode.
+Non-nil if Global Diff-Hl-Amend mode is enabled.
+See the `global-diff-hl-amend-mode' command
+for a description of this minor mode.
 Setting this variable directly does not take effect;
 either customize it (see the info node `Easy Customization')
 or call the function `global-diff-hl-amend-mode'.")
@@ -62,7 +64,7 @@ or call the function `global-diff-hl-amend-mode'.")
 
 (autoload 'global-diff-hl-amend-mode "diff-hl-amend" "\
 Toggle Diff-Hl-Amend mode in all buffers.
-With prefix ARG, enable Global-Diff-Hl-Amend mode if ARG is positive;
+With prefix ARG, enable Global Diff-Hl-Amend mode if ARG is positive;
 otherwise, disable it.  If called from Lisp, enable the mode if
 ARG is omitted or nil.
 
@@ -74,7 +76,7 @@ See `diff-hl-amend-mode' for more information on Diff-Hl-Amend mode.
 
 ;;;***
 
-;;;### (autoloads nil "diff-hl-dired" "diff-hl-dired.el" (22483 1174
+;;;### (autoloads nil "diff-hl-dired" "diff-hl-dired.el" (22576 23563
 ;;;;;;  0 0))
 ;;; Generated autoloads from diff-hl-dired.el
 
@@ -90,13 +92,14 @@ Toggle VC diff highlighting on the side of a Dired window.
 
 ;;;***
 
-;;;### (autoloads nil "diff-hl-flydiff" "diff-hl-flydiff.el" (22483
-;;;;;;  1174 0 0))
+;;;### (autoloads nil "diff-hl-flydiff" "diff-hl-flydiff.el" (22576
+;;;;;;  23563 0 0))
 ;;; Generated autoloads from diff-hl-flydiff.el
 
 (defvar diff-hl-flydiff-mode nil "\
 Non-nil if Diff-Hl-Flydiff mode is enabled.
-See the command `diff-hl-flydiff-mode' for a description of this minor mode.
+See the `diff-hl-flydiff-mode' command
+for a description of this minor mode.
 Setting this variable directly does not take effect;
 either customize it (see the info node `Easy Customization')
 or call the function `diff-hl-flydiff-mode'.")
@@ -110,13 +113,14 @@ Highlight diffs on-the-fly
 
 ;;;***
 
-;;;### (autoloads nil "diff-hl-margin" "diff-hl-margin.el" (22483
-;;;;;;  1174 0 0))
+;;;### (autoloads nil "diff-hl-margin" "diff-hl-margin.el" (22576
+;;;;;;  23563 0 0))
 ;;; Generated autoloads from diff-hl-margin.el
 
 (defvar diff-hl-margin-mode nil "\
 Non-nil if Diff-Hl-Margin mode is enabled.
-See the command `diff-hl-margin-mode' for a description of this minor mode.
+See the `diff-hl-margin-mode' command
+for a description of this minor mode.
 Setting this variable directly does not take effect;
 either customize it (see the info node `Easy Customization')
 or call the function `diff-hl-margin-mode'.")
@@ -130,7 +134,7 @@ Toggle displaying `diff-hl-mode' highlights on the margin.
 
 ;;;***
 
-;;;### (autoloads nil nil ("diff-hl-pkg.el") (22483 1174 177801 0))
+;;;### (autoloads nil nil ("diff-hl-pkg.el") (22576 23563 0 0))
 
 ;;;***
 
