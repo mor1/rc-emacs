@@ -129,7 +129,7 @@
  '(org-tags-match-list-sublevels t)
  '(package-selected-packages
    (quote
-    (yasnippet yaml-mode web-mode web-completion-data vline vlf utop use-package unkillable-scratch unfill unbound tuareg syslog-mode smart-tab rainbow-mode rainbow-delimiters protobuf-mode popup pointback point-stack php-mode pcsv paradox on-screen names merlin memolist magit latex-preview-pane latex-pretty-symbols irony interleave gscholar-bibtex go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh flycheck fill-column-indicator elfeed e2ansi dockerfile-mode diff-hl diff-git d-mode company color-theme-sanityinc-solarized color-theme coffee-mode bbdb bash-completion avy auctex aggressive-indent)))
+    (magit magit-popup yasnippet yaml-mode web-mode web-completion-data vline vlf utop use-package unkillable-scratch unfill unbound tuareg syslog-mode smart-tab rainbow-mode rainbow-delimiters protobuf-mode popup pointback point-stack php-mode pcsv paradox on-screen names merlin memolist latex-preview-pane latex-pretty-symbols irony interleave gscholar-bibtex go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh flycheck fill-column-indicator elfeed e2ansi dockerfile-mode diff-hl diff-git d-mode company color-theme-sanityinc-solarized color-theme coffee-mode bbdb bash-completion avy auctex aggressive-indent)))
  '(paradox-github-token t)
  '(remember-annotation-functions (quote (org-remember-annotation)))
  '(remember-handler-functions (quote (org-remember-handler)))
