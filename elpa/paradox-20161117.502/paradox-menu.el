@@ -83,9 +83,9 @@
   :package-version '(paradox . "1.2.3"))
 
 (defface paradox-mode-line-face
-  '((t :inherit (mode-line-buffer-id font-lock-keyword-face)
+  '((t :inherit (font-lock-keyword-face mode-line-buffer-id)
        :weight normal))
-  "Face used on the package's name."
+  "Face used on mode line statuses."
   :group 'paradox)
 (defface paradox-name-face
   '((t :inherit link))
@@ -215,7 +215,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
          (name (symbol-name (package-desc-name pkg-desc)))
          (name-length (length name))
          (counts (paradox--count-print (package-desc-name pkg-desc)))
-         (button-length (length paradox-homepage-button-string)))
+         (button-length (if paradox-use-homepage-buttons (length paradox-homepage-button-string) 0)))
     (paradox--incf status)
     (let ((cell (assq :stars (package-desc-extras pkg-desc))))
       (if cell
@@ -223,26 +223,26 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
         (push (cons :stars counts) (package-desc-extras pkg-desc))))
     (list pkg-desc
           `[,(concat
-              (propertize name
-                          'font-lock-face 'paradox-name-face
-                          'button t
-                          'follow-link t
-                          'help-echo (format "Package: %s" name)
-                          'package-desc pkg-desc
-                          'action 'package-menu-describe-package)
-              (if (and paradox-use-homepage-buttons url
-                       (< (+ name-length button-length) paradox-column-width-package))
-                  (concat
-                   (make-string (- paradox-column-width-package name-length button-length) ?\s)
-                   (propertize paradox-homepage-button-string
-                               'font-lock-face 'paradox-homepage-button-face
-                               'mouse-face 'custom-button-mouse
-                               'help-echo (format "Visit %s" url)
-                               'button t
-                               'follow-link t
-                               'keymap '(keymap (mouse-2 . push-button))
-                               'action #'paradox-menu-visit-homepage))
-                ""))
+              (truncate-string-to-width
+               (propertize name
+                           'font-lock-face 'paradox-name-face
+                           'button t
+                           'follow-link t
+                           'help-echo (format "Package: %s" name)
+                           'package-desc pkg-desc
+                           'action 'package-menu-describe-package)
+               (- paradox-column-width-package button-length) 0 nil t)
+              (when (and paradox-use-homepage-buttons url)
+                (make-string (max 0 (- paradox-column-width-package name-length button-length)) ?\s))
+              (when (and paradox-use-homepage-buttons url)
+                (propertize paradox-homepage-button-string
+                            'font-lock-face 'paradox-homepage-button-face
+                            'mouse-face 'custom-button-mouse
+                            'help-echo (format "Visit %s" url)
+                            'button t
+                            'follow-link t
+                            'keymap '(keymap (mouse-2 . push-button))
+                            'action #'paradox-menu-visit-homepage)))
             ,(propertize (package-version-join
                           (package-desc-version pkg-desc))
                          'font-lock-face face)
@@ -287,6 +287,7 @@ Return (PKG-DESC [STAR NAME VERSION STATUS DOC])."
     (or homepage
         (and (setq extras (gethash name paradox--package-repo-list))
              (format "https://github.com/%s" extras)))))
+
 (defun paradox--get-or-return-package (pkg)
   "Take a marker or package name PKG and return a package name."
   (if (or (markerp pkg) (null pkg))
@@ -344,8 +345,8 @@ automatically decides whether to download asynchronously based on
          (paradox--update-downloads-in-progress 'paradox--data))
     `(package--with-work-buffer ,location ,file ,@body)))
 
-(defun paradox--refresh-star-count ()
-  "Download the star-count file and populate the respective variable."
+(defun paradox--refresh-remote-data ()
+  "Download metadata and populate the respective variables."
   (interactive)
   (when (boundp 'package--downloads-in-progress)
     (add-to-list 'package--downloads-in-progress 'paradox--data))
@@ -369,11 +370,11 @@ automatically decides whether to download asynchronously based on
        'paradox-star-face))))
 
 (defun paradox--star-predicate (A B)
-  "Non-nil t if star count of A is larget than B."
+  "Non-nil t if star count of A is larger than B."
   (> (string-to-number (elt (cadr A) paradox--column-index-star))
      (string-to-number (elt (cadr B) paradox--column-index-star))))
 (defun paradox--download-predicate (A B)
-  "Non-nil t if download count of A is larget than B."
+  "Non-nil t if download count of A is larger than B."
   (> (get-text-property 0 'value (elt (cadr A) paradox--column-index-download))
      (get-text-property 0 'value (elt (cadr B) paradox--column-index-download))))
 
@@ -510,7 +511,7 @@ Letters do not insert themselves; instead, they are commands.
   (setq tabulated-list-sort-key (cons "Status" nil))
   (add-hook 'tabulated-list-revert-hook #'paradox-menu--refresh nil t)
   (add-hook 'tabulated-list-revert-hook #'paradox-refresh-upgradeable-packages nil t)
-  ;; (add-hook 'tabulated-list-revert-hook #'paradox--refresh-star-count nil t)
+  ;; (add-hook 'tabulated-list-revert-hook #'paradox--refresh-remote-data nil t)
   (add-hook 'tabulated-list-revert-hook #'paradox--update-mode-line 'append t)
   (tabulated-list-init-header)
   ;; We need package-menu-mode to be our parent, otherwise some
@@ -694,7 +695,7 @@ Status:  _i_nstalled _a_vailable _d_ependency _b_uilt-in
 
     "--"
     ("Filter Package List"
-     ["Clear filer" paradox-filter-clear :help "Go back to unfiltered list"]
+     ["Clear filter" paradox-filter-clear :help "Go back to unfiltered list"]
      ["By Keyword" package-menu-filter :help "Filter by package keyword"]
      ["By Upgrades" paradox-filter-upgrades :help "List only upgradeable packages"]
      ["By Regexp" paradox-filter-regexp :help "Filter packages matching a regexp"]
@@ -755,7 +756,7 @@ With prefix N, move to the N-th previous package instead."
 
 (defvar paradox--key-descriptors
   '(("next," "previous," "install," "delete," ("execute," . 1) "refresh," "help")
-    ("star," "visit homepage")
+    ("star," "visit homepage," "unmark," ("mark Upgrades," . 5) "~delete obsolete")
     ("list commits")
     ("filter by" "+" "upgrades" "regexp" "keyword" "starred" "clear")
     ("Sort by" "+" "Package name" "Status" "*(star)")))
