@@ -4,7 +4,7 @@
 
 ;; Author: Junpeng Qiu <qjpchmail@gmail.com>
 ;; Keywords: extensions
-;; Package-Version: 20160701.1627
+;; Package-Version: 20161006.1944
 ;; Version: 0.3.1
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -134,6 +134,7 @@
 
 (require 'bibtex)
 (require 'xml)
+(require 'url)
 
 (defgroup gscholar-bibtex nil
   "Retrieve BibTeX from Google Scholar and other online sources(ACM, IEEE, DBLP)."
@@ -608,24 +609,25 @@
 ;;; Google Scholar
 (defun gscholar-bibtex-google-scholar-search-results (query)
   (let* ((url-request-method "GET")
-	 ;; Fabricate a cookie with a random ID that expires in an hour.
+         (system-time-locale "C")
+         ;; Fabricate a cookie with a random ID that expires in an hour.
          (random-id (format "%016x" (random (expt 16 16))))
-	 (expiration (format-time-string "%a, %d %b %Y %H:%M:%S.00 %Z"
-					 (time-add (current-time)
-						   (seconds-to-time 3600)) t))
+         (expiration (format-time-string "%a, %d %b %Y %H:%M:%S.00 %Z"
+                                         (time-add (current-time)
+                                                   (seconds-to-time 3600)) t))
          (my-cookie (mapconcat #'identity
-			       (list (format "GSP=ID=%s:CF=4; " random-id)
-				     (format "expires=%s" expiration)
-				     "path=/"
-				     "domain=scholar.google.com")
-			       "; ")))
-    (let ((url-current-object
-	   (url-generic-parse-url "http://scholar.google.com") ))
-      (url-cookie-handle-set-cookie my-cookie))
+                               (list (format "GSP=ID=%s:CF=4" random-id)
+                                     (format "expires=%s" expiration)
+                                     "path=/"
+                                     "domain=scholar.google.com")
+                               "; "))
+         (url-current-object
+          (url-generic-parse-url "http://scholar.google.com")))
+    (url-cookie-handle-set-cookie my-cookie)
     (gscholar-bibtex--url-retrieve-as-string
      (concat "http://scholar.google.com/scholar?q="
-	     (url-hexify-string
-	      (replace-regexp-in-string " " "\+" query))))))
+             (url-hexify-string
+              (replace-regexp-in-string " " "\+" query))))))
 
 (defun gscholar-bibtex-google-scholar-bibtex-urls (buffer-content)
   (gscholar-bibtex-re-search buffer-content "\\(/scholar\.bib.*?\\)\"" 1))
@@ -729,7 +731,7 @@
           (gscholar-bibtex-dispatcher :bibtex-urls search-results))
     (setq gscholar-bibtex-entries-cache
           (make-vector (length gscholar-bibtex-urls-cache) ""))
-    (unless (get-buffer-window gscholar-buffer)
+    (unless (eq gscholar-buffer (window-buffer (selected-window)))
       (switch-to-buffer-other-window gscholar-buffer))
     (setq buffer-read-only nil)
     (erase-buffer)
