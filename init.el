@@ -87,15 +87,22 @@ started from a shell."
 
 ;; fonts
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-fontset-auto2")
+;; (set-frame-font "-*-Hack-normal-normal-normal-*-14-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-fontset-auto2")
-(set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
+;; (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
+(add-to-list 'default-frame-alist
+             '(font . "Hack 10"))
 
 ;; ispell
 (setq-default ispell-program-name "/usr/local/bin/aspell")
 (setq ispell-dictionary "british")
 
 ;; default save encoding- ut8
+(setq locale-coding-system 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
 (set-language-environment "utf-8")
 (set-coding-priority (list 'coding-category-utf-8))
 (prefer-coding-system 'utf-8)
