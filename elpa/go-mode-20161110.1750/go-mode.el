@@ -6,6 +6,7 @@
 
 ;; Author: The go-mode Authors
 ;; Version: 1.4.0
+;; Package-Version: 20161110.1750
 ;; Keywords: languages go
 ;; URL: https://github.com/dominikh/go-mode.el
 ;;
@@ -955,6 +956,12 @@ Function result is a unparenthesized type or a parameter list."
          (go--match-parameter-list end))
         (t nil)))
 
+(defun go--reset-dangling-cache-before-change (&optional unused-beg unused-end)
+  "Reset `go-dangling-cache'.
+
+This is intended to be called from `before-change-functions'."
+  (setq go-dangling-cache (make-hash-table :test 'eql)))
+
 ;;;###autoload
 (define-derived-mode go-mode prog-mode "Go"
   "Major mode for editing Go source text.
@@ -1048,7 +1055,7 @@ with goflymake \(see URL `https://github.com/dougm/goflymake'), gocode
   (set (make-local-variable 'compilation-error-screen-columns) nil)
 
   (set (make-local-variable 'go-dangling-cache) (make-hash-table :test 'eql))
-  (add-hook 'before-change-functions (lambda (x y) (setq go-dangling-cache (make-hash-table :test 'eql))) t t)
+  (add-hook 'before-change-functions #'go--reset-dangling-cache-before-change t t)
 
   ;; ff-find-other-file
   (setq ff-other-file-alist 'go-other-file-alist)
@@ -1152,7 +1159,11 @@ with goflymake \(see URL `https://github.com/dougm/goflymake'), gocode
           (when (and (gofmt--is-goimports-p) buffer-file-name)
             (setq our-gofmt-args
                   (append our-gofmt-args
-                          (list "-srcdir" (file-name-directory (file-truename buffer-file-name))))))
+                          ;; srcdir, despite its name, supports
+                          ;; accepting a full path, and some features
+                          ;; of goimports rely on knowing the full
+                          ;; name.
+                          (list "-srcdir" (file-truename buffer-file-name)))))
           (setq our-gofmt-args (append our-gofmt-args
                                        gofmt-args
                                        (list "-w" tmpfile)))
@@ -1527,25 +1538,25 @@ description at POINT."
       (error "godef does not reliably work in XEmacs, expect bad results"))
   (if (not (buffer-file-name (go--coverage-origin-buffer)))
       (error "Cannot use godef on a buffer without a file name")
-    (let ((outbuf (get-buffer-create "*godef*"))
+    (let ((outbuf (generate-new-buffer "*godef*"))
           (coding-system-for-read 'utf-8)
           (coding-system-for-write 'utf-8))
-      (with-current-buffer outbuf
-        (erase-buffer))
-      (call-process-region (point-min)
-                           (point-max)
-                           godef-command
-                           nil
-                           outbuf
-                           nil
-                           "-i"
-                           "-t"
-                           "-f"
-                           (file-truename (buffer-file-name (go--coverage-origin-buffer)))
-                           "-o"
-                           (number-to-string (go--position-bytes point)))
-      (with-current-buffer outbuf
-        (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n")))))
+      (prog2
+          (call-process-region (point-min)
+                               (point-max)
+                               godef-command
+                               nil
+                               outbuf
+                               nil
+                               "-i"
+                               "-t"
+                               "-f"
+                               (file-truename (buffer-file-name (go--coverage-origin-buffer)))
+                               "-o"
+                               (number-to-string (go--position-bytes point)))
+          (with-current-buffer outbuf
+            (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n"))
+        (kill-buffer outbuf)))))
 
 (defun godef--successful-p (output)
   (not (or (string= "-" output)
