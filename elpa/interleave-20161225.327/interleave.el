@@ -2,8 +2,8 @@
 
 ;; Author: Sebastian Christ <rudolfo.christ@gmail.com>
 ;; URL: https://github.com/rudolfochrist/interleave
-;; Package-Version: 20161118.947
-;; Version: 1.3.20161108-492
+;; Package-Version: 20161225.327
+;; Version: 1.4.20161123-610
 
 ;; This file is not part of GNU Emacs
 
@@ -168,6 +168,11 @@ taken as columns."
   :type '(choice integer
                  (const nil)))
 
+(defcustom interleave-disable-narrowing nil
+  "Disable narrowing in notes/org buffer."
+  :group 'interleave
+  :type 'boolean)
+
 ;;; suppress "functions are not known to be defined" warnings
 (declare-function pdf-view-next-page "pdf-view.el")
 (declare-function pdf-view-previous-page "pdf-view.el")
@@ -226,24 +231,24 @@ taken as columns."
 
 SPLIT-WINDOW is a function that actually splits the window, so it must be either
 `split-window-right' or `split-window-below'."
-  (let ((buf (current-buffer)))
-    (condition-case nil
-        (progn
-          (delete-other-windows)
-          (funcall split-window)
-          (when (integerp interleave-split-lines)
-            (if (eql interleave-split-direction 'horizontal)
-                (enlarge-window interleave-split-lines)
-              (enlarge-window-horizontally interleave-split-lines)))
-          (find-file (expand-file-name (or (interleave--headline-pdf-path buf)
-                                           (interleave--find-pdf-path buf)))))
-      ('error
-       (let ((pdf-file-name
-              (read-file-name "No #+INTERLEAVE_PDF property found. Please specify path: " "~/")))
-         (find-file (expand-file-name pdf-file-name))
-         (with-current-buffer buf
-           (insert "#+INTERLEAVE_PDF: " pdf-file-name)))))
-    (interleave-pdf-mode 1)))
+  (let* ((buf (current-buffer))
+         (pdf-file-name
+          (or (interleave--headline-pdf-path buf)
+              (interleave--find-pdf-path buf)
+              (let ((filename
+                     (read-file-name "No #+INTERLEAVE_PDF property found. Please specify path: " "~/")))
+                (with-current-buffer buf
+                  (insert "#+INTERLEAVE_PDF: " filename))
+                filename))))
+    (delete-other-windows)
+    (funcall split-window)
+    (when (integerp interleave-split-lines)
+      (if (eql interleave-split-direction 'horizontal)
+          (enlarge-window interleave-split-lines)
+        (enlarge-window-horizontally interleave-split-lines)))
+    (find-file (expand-file-name pdf-file-name))
+    (interleave-pdf-mode 1)
+    pdf-file-name))
 
 (defun interleave--goto-parent-headline (property)
   "Traverse the tree until the parent headline.
@@ -268,28 +273,57 @@ this is the beginning of the buffer."
       (interleave--goto-parent-headline interleave--pdf-prop)
     (goto-char (point-min))))
 
+(defun interleave--narrow-to-subtree (&optional force)
+  "Narrow buffer to the current subtree.
+
+If `interleave-disable-narrowing' is non-nil this
+function does nothing.
+
+When FORCE is non-nil `interleave-disable-narrowing' is
+ignored."
+  (when (and (not (org-before-first-heading-p))
+             (or (not interleave-disable-narrowing)
+                 force))
+    (org-narrow-to-subtree)))
+
 (defun interleave--go-to-page-note (page)
   "Look up the notes for the current pdf PAGE.
 
 Effectively resolves the headline with the interleave_page_note
-property set to PAGE.
+property set to PAGE and returns the point.
 
- It narrows the subtree when found."
+If `interleave-disable-narrowing' is non-nil then the buffer gets
+re-centered to the page heading.
+
+It (possibly) narrows the subtree when found."
   (with-current-buffer interleave-org-buffer
-    (save-excursion
-      (widen)
-      (interleave--goto-search-position)
-      (when interleave-multi-pdf-notes-file
-        ;; only search the current subtree for notes. See. Issue #16
-        (org-narrow-to-subtree))
-      (when (re-search-forward (format "^\[ \t\r\]*\:interleave_page_note\: %s$"
-                                       page)
-                               nil t)
-        (org-back-to-heading t)
-        (org-narrow-to-subtree)
-        (org-show-subtree)
-        (org-cycle-hide-drawers t)
-        t))))
+    (let (point
+          (window (get-buffer-window (current-buffer) 'visible)))
+      (save-excursion
+        (widen)
+        (interleave--goto-search-position)
+        (when interleave-multi-pdf-notes-file
+          ;; only search the current subtree for notes. See. Issue #16
+          (interleave--narrow-to-subtree t))
+        (when (re-search-forward (format "^\[ \t\r\]*\:interleave_page_note\: %s$"
+                                         page)
+                                 nil t)
+          ;; widen the buffer again for the case it is narrowed from
+          ;; multi-pdf notes search. Kinda ugly I know. Maybe a macro helps?
+          (widen) 
+          (org-back-to-heading t)
+          (interleave--narrow-to-subtree)
+          (org-show-subtree)
+          (org-cycle-hide-drawers t)
+          (setq point (point))))
+      ;; When narrowing is disabled, and the notes/org buffer is
+      ;; visible recenter to the current headline. So even if not
+      ;; narrowed the notes buffer scrolls allong with the PDF.
+      (when (and interleave-disable-narrowing point window)
+        (with-selected-window window
+          (goto-char point)
+          (recenter)))
+      point)))
 
 (defun interleave-go-to-next-page ()
   "Go to the next page in PDF.  Look up for available notes."
@@ -319,17 +353,26 @@ property set to PAGE.
   (unless (= interleave-page-marker (funcall interleave-pdf-current-page-fn))
     (interleave--go-to-page-note (funcall interleave-pdf-current-page-fn))))
 
-(defun interleave--switch-to-org-buffer (&optional insert-newline-maybe)
+(defun interleave--switch-to-org-buffer (&optional insert-newline-maybe position)
   "Switch to the notes buffer.
 
 Inserts a newline into the notes buffer if INSERT-NEWLINE-MAYBE
-is non-nil."
+is non-nil.
+If POSITION is non-nil move point to it."
   (if (or (derived-mode-p 'doc-view-mode)
           (derived-mode-p 'pdf-view-mode))
       (switch-to-buffer-other-window interleave-org-buffer)
     (switch-to-buffer interleave-org-buffer))
+  (when (integerp position)
+    (goto-char position))
   (when insert-newline-maybe
-    (goto-char (point-max))
+    (save-restriction
+      (when interleave-disable-narrowing
+        (interleave--narrow-to-subtree t))
+      (interleave--goto-insert-position))
+    ;; Expand again. Sometimes the new content is outside the narrowed
+    ;; region.
+    (org-show-subtree)
     (redisplay)
     ;; Insert a new line if not already on a new line
     (when (not (looking-back "^ *" (line-beginning-position)))
@@ -355,7 +398,11 @@ this is the end of the buffer"
 (defun interleave--insert-heading-respect-content (parent-headline)
   "Create a new heading in the notes buffer.
 
-Adjusts the heading level automatically."
+Adjusts the heading level automatically.  Argument
+PARENT-HEADLINE Adjust the level of the new headline according to
+the PARENT-HEADLINE.
+
+Returns the position of newly inserted heading."
   (org-insert-heading-respect-content)
   (when interleave-multi-pdf-notes-file
     (let* ((parent-level (org-element-property :level parent-headline))
@@ -365,20 +412,22 @@ Adjusts the heading level automatically."
                            #'org-demote)))
       (while (/= (org-element-property :level (org-element-at-point))
                  (1+ parent-level))
-        (funcall change-level)))))
+        (funcall change-level))))
+  (point))
 
 (defun interleave--create-new-note (page)
   "Create a new headline for the page PAGE."
-  (with-current-buffer interleave-org-buffer
-    (save-excursion
-      (widen)
-      (let ((position (interleave--goto-insert-position)))
-        (interleave--insert-heading-respect-content position))
-      (insert (format "Notes for page %d" page))
-      (org-set-property interleave--page-note-prop (number-to-string page))
-      (org-narrow-to-subtree)
-      (org-cycle-hide-drawers t)))
-  (interleave--switch-to-org-buffer t))
+  (let (new-note-position)
+    (with-current-buffer interleave-org-buffer
+      (save-excursion
+        (widen)
+        (let ((position (interleave--goto-insert-position)))
+          (setq new-note-position (interleave--insert-heading-respect-content position)))
+        (insert (format "Notes for page %d" page))
+        (org-set-property interleave--page-note-prop (number-to-string page))
+        (interleave--narrow-to-subtree)
+        (org-cycle-hide-drawers t)))
+    (interleave--switch-to-org-buffer t new-note-position)))
 
 (defun interleave-add-note ()
   "Add note for the current page.
@@ -386,9 +435,10 @@ Adjusts the heading level automatically."
 If there are already notes for this page, jump to the notes
 buffer."
   (interactive)
-  (let ((page (funcall interleave-pdf-current-page-fn)))
-    (if (interleave--go-to-page-note page)
-        (interleave--switch-to-org-buffer t)
+  (let* ((page (funcall interleave-pdf-current-page-fn))
+         (position (interleave--go-to-page-note page)))
+    (if position 
+        (interleave--switch-to-org-buffer t position)
       (interleave--create-new-note page))))
 
 (define-obsolete-function-alias
@@ -401,7 +451,7 @@ buffer."
                    (org-entry-get-with-inheritance interleave--page-note-prop))))
     (when (and (integerp pdf-page)
                (> pdf-page 0)) ; The page number needs to be a positive integer
-      (org-narrow-to-subtree)
+      (interleave--narrow-to-subtree)
       (interleave--switch-to-pdf-buffer)
       (funcall interleave-pdf-goto-page-fn pdf-page))))
 
@@ -416,7 +466,7 @@ This show the previous notes and synchronizes the PDF to the right page number."
   (widen)
   (interleave--goto-parent-headline interleave--page-note-prop)
   (org-backward-heading-same-level 1)
-  (org-narrow-to-subtree)
+  (interleave--narrow-to-subtree)
   (org-show-subtree)
   (org-cycle-hide-drawers t)
   (let ((pdf-page (string-to-number
@@ -445,7 +495,7 @@ This shows the next notes and synchronizes the PDF to the right page number."
     (when interleave-multi-pdf-notes-file
       (org-show-subtree))
     (outline-next-visible-heading 1))
-  (org-narrow-to-subtree)
+  (interleave--narrow-to-subtree)
   (org-show-subtree)
   (org-cycle-hide-drawers t)
   (let ((pdf-page (string-to-number
@@ -537,10 +587,10 @@ SORT-ORDER is either 'asc or 'desc."
   (condition-case nil
       (org-sort-entries nil ?f
                         (lambda ()
-                          (or (string-to-number
-                               (org-entry-get nil
-                                              "interleave_page_note"))
-                              -1))
+                          (let ((page-note (org-entry-get nil "interleave_page_note")))
+                            (if page-note
+                                (string-to-number page-note)
+                              -1)))
                         (if (eq sort-order 'asc)
                             #'<
                           #'>))
@@ -621,19 +671,33 @@ Keybindings (org-mode buffer):
   :lighter " ≡"
   :keymap  interleave-mode-map
   (if interleave-mode
-      (progn
-        (message "Interleave enabled")
-        (setq interleave--window-configuration (current-window-configuration))
-        (setq interleave-org-buffer (buffer-name))
-        (interleave--open-file (interleave--select-split-function))
-        (interleave--go-to-page-note 1))
-    (progn
-      ;; Disable the corresponding minor mode in the PDF file too.
-      (when (get-buffer interleave-pdf-buffer)
-        (interleave--switch-to-pdf-buffer)
-        (interleave-pdf-mode -1))
-      (message "Interleave mode disabled")
-      (set-window-configuration interleave--window-configuration))))
+      (condition-case nil
+          (progn
+            (setq interleave-org-buffer (buffer-name))
+            (setq interleave--window-configuration (current-window-configuration))
+            (interleave--open-file (interleave--select-split-function))
+            ;; expand/show all headlines if narrowing is disabled
+            (when interleave-disable-narrowing
+              (with-current-buffer interleave-org-buffer
+                (interleave--goto-search-position)
+                (if interleave-multi-pdf-notes-file
+                    (org-show-subtree) 
+                  (outline-show-all))
+                (org-cycle-hide-drawers 'all)))
+            (interleave--go-to-page-note 1)
+            (message "Interleave enabled"))
+        ('quit
+         (interleave-mode -1)))
+    ;; Disable the corresponding minor mode in the PDF file too.
+    (when (and interleave-pdf-buffer
+               (get-buffer interleave-pdf-buffer))
+      (interleave--switch-to-pdf-buffer)
+      (interleave-pdf-mode -1)
+      (setq interleave-pdf-buffer nil))
+    (set-window-configuration interleave--window-configuration)
+    (setq interleave--window-configuration nil)
+    (setq interleave-org-buffer nil)
+    (message "Interleave mode disabled")))
 
 ;;; Interleave PDF Mode
 ;; Minor mode for the pdf file buffer associated with the notes
