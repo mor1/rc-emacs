@@ -5733,7 +5733,22 @@ https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
               :checker checker
               :buffer buffer
               :filename primary-filename)
-             errors)))))
+             errors)))
+
+        ;; If there are no spans, the error is not associated with a specific
+        ;; file but with the project as a whole.  We still need to report it to
+        ;; the user by emitting a corresponding flycheck-error object.
+        (unless spans
+          (push (flycheck-error-new-at
+                 ;; We have no specific position to attach the error to, so
+                 ;; let's use the top of the file.
+                 1 1
+                 error-level
+                 error-message
+                 :id error-code
+                 :checker checker
+                 :buffer buffer)
+                errors))))
     (nreverse errors)))
 
 
@@ -8741,12 +8756,11 @@ This syntax checker needs Rust 1.7 or newer.  See URL
             (option-list "-L" flycheck-rust-library-path concat)
             (eval flycheck-rust-args)
             (eval (or flycheck-rust-crate-root
-                      (flycheck-substitute-argument 'source-inplace 'rust))))
+                      (flycheck-substitute-argument 'source-original 'rust))))
   :error-parser flycheck-parse-rust
   :error-explainer flycheck-rust-error-explainer
   :modes rust-mode
-  :predicate (lambda ()
-               (and (not flycheck-rust-crate-root) (flycheck-buffer-saved-p))))
+  :predicate flycheck-buffer-saved-p)
 
 (defvar flycheck-sass-scss-cache-directory nil
   "The cache directory for `sass' and `scss'.")
