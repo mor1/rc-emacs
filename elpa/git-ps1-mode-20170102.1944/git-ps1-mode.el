@@ -2,7 +2,7 @@
 
 ;; Author: 10sr <8slashes+el [at] gmail [dot] com>
 ;; URL: https://github.com/10sr/git-ps1-mode-el
-;; Package-Version: 20151228.102
+;; Package-Version: 20170102.1944
 ;; Version: 0.2.2
 ;; Keywords: utility mode-line git
 
@@ -167,7 +167,7 @@ This variable is used when `git-ps1-mode-ps1-file' is set to nil.")
   "Return F if F exists and it contain function \"__git_ps1\"."
   (and (file-readable-p f)
        (with-temp-buffer
-         (insert ". " f "; "
+         (insert ". " (shell-quote-argument f) "; "
                  "__git_ps1 %s;")
          (= 0 (shell-command-on-region (point-min)
                                        (point-max)
@@ -181,13 +181,14 @@ This variable is used when `git-ps1-mode-ps1-file' is set to nil.")
   "Find file that contain \"__git_ps1\" definition from LIST.
 This function returns the path of the first file foundor nil if none.  If LIST
  if omitted `git-ps1-mode-ps1-file-candidates-list' will be used."
-  (let ((l (or list
-               git-ps1-mode-ps1-file-candidates-list)))
-    (and l
-         (if (git-ps1-mode-ps1-available-p (car l))
-             (car l)
-           (and (cdr l)
-                (git-ps1-mode-find-ps1-file (cdr l)))))))
+  (let ((default-directory (convert-standard-filename "/")))
+    (let ((l (or list
+                 git-ps1-mode-ps1-file-candidates-list)))
+      (and l
+           (if (git-ps1-mode-ps1-available-p (car l))
+               (car l)
+             (and (cdr l)
+                  (git-ps1-mode-find-ps1-file (cdr l))))))))
 
 
 (defun git-ps1-mode-run-process (buffer force)
@@ -225,9 +226,10 @@ Set FORCE to non-nil to skip buffer check."
             (set-process-query-on-exit-flag git-ps1-mode-process
                                             nil)
             (process-send-string git-ps1-mode-process
-                                 (format ". \"%s\"; __git_ps1 %s"
-                                         (or git-ps1-mode-ps1-file
-                                             git-ps1-mode--ps1-file-candidates-found)
+                                 (format ". %s; __git_ps1 %s"
+                                         (shell-quote-argument
+                                          (or git-ps1-mode-ps1-file
+                                              git-ps1-mode--ps1-file-candidates-found))
                                          "%s"))
             (process-send-eof git-ps1-mode-process)))))))
 

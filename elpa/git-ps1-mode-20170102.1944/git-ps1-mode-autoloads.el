@@ -1,15 +1,16 @@
 ;;; git-ps1-mode-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (22150 30200
+;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (22636 51185
 ;;;;;;  0 0))
 ;;; Generated autoloads from git-ps1-mode.el
 
 (defvar git-ps1-mode nil "\
 Non-nil if Git-Ps1 mode is enabled.
-See the command `git-ps1-mode' for a description of this minor mode.
+See the `git-ps1-mode' command
+for a description of this minor mode.
 Setting this variable directly does not take effect;
 either customize it (see the info node `Easy Customization')
 or call the function `git-ps1-mode'.")
