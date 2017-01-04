@@ -580,14 +580,14 @@ This command is convenient when reading novel, documentation."
              ))
 
 ;; mu4e email
-(require 'mu4e)
+;; (require 'mu4e)
 
-(setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
-      mu4e-sent-folder   "/sent"               ;; folder for sent messages
-      mu4e-drafts-folder "/drafts"             ;; unfinished messages
-      mu4e-trash-folder  "/trash"              ;; trashed messages
-      mu4e-refile-folder "/archive"            ;; saved messages
-      )
+;; (setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
+;;       mu4e-sent-folder   "/sent"               ;; folder for sent messages
+;;       mu4e-drafts-folder "/drafts"             ;; unfinished messages
+;;       mu4e-trash-folder  "/trash"              ;; trashed messages
+;;       mu4e-refile-folder "/archive"            ;; saved messages
+;;       )
 
 ;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
 ;;       mu4e-update-interval 300              ;; update every 5 minutes
@@ -635,54 +635,54 @@ This command is convenient when reading novel, documentation."
 ;; css-mode
 (push '("\\.less$" . css-mode) auto-mode-alist)
 
-;; ocaml
-(setq explicit-bash-args '("--login" "-i"))
+;; ;; ocaml
+;; (setq explicit-bash-args '("--login" "-i"))
 
-(setq opam-share
-      (substring
-       (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
-(add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
+;; (setq opam-share
+;;       (substring
+;;        (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
+;; (add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
 
-(require 'ocp-index)
-(require 'ocp-indent)
-(require 'merlin)
+;; (require 'ocp-index)
+;; (require 'ocp-indent)
+;; (require 'merlin)
 
-(setq merlin-use-auto-complete-mode 'easy)
-(setq merlin-command 'opam)
+;; (setq merlin-use-auto-complete-mode 'easy)
+;; (setq merlin-command 'opam)
 
-;; utop
-;; Setup environment variables using opam
-(dolist (var (car (read-from-string (shell-command-to-string "opam config env --sexp"))))
-  (setenv (car var) (cadr var)))
+;; ;; utop
+;; ;; Setup environment variables using opam
+;; (dolist (var (car (read-from-string (shell-command-to-string "opam config env --sexp"))))
+;;   (setenv (car var) (cadr var)))
 
-;; Update the emacs path
-(setq exec-path
-      (append (parse-colon-path (getenv "PATH")) (list exec-directory)))
+;; ;; Update the emacs path
+;; (setq exec-path
+;;       (append (parse-colon-path (getenv "PATH")) (list exec-directory)))
 
-;; Update the emacs load path
-(add-to-list 'load-path (expand-file-name "../../share/emacs/site-lisp"
-                                          (getenv "OCAML_TOPLEVEL_PATH")))
+;; ;; Update the emacs load path
+;; (add-to-list 'load-path (expand-file-name "../../share/emacs/site-lisp"
+;;                                           (getenv "OCAML_TOPLEVEL_PATH")))
 
-(autoload 'utop "utop" "Toplevel for OCaml" t)
-(autoload 'utop-minor-mode "utop" "Minor mode for utop" t)
+;; (autoload 'utop "utop" "Toplevel for OCaml" t)
+;; (autoload 'utop-minor-mode "utop" "Minor mode for utop" t)
 
-(add-hook 'caml-mode-hook 'merlin-mode t)
-(add-hook 'tuareg-mode-hook 'utop-minor-mode)
-(add-hook 'tuareg-mode-hook
-          '(lambda ()
-             (merlin-mode)
-             ;; (setq indent-line-function 'ocp-indent-line)
-             ;; (setq indent-region-function 'ocp-indent-region)
-             (setq merlin-use-auto-complete-mode 'easy)
-             ;; (setq tuareg-lazy-= t) ; indent `=' like a standard keyword
-             ;; (setq tuareg-lazy-paren t) ; indent [({ like standard keywords
-             ;; (setq tuareg-in-indent 0) ; no indentation after `in' keywords
-             (local-set-key (kbd "C-S-<up>") 'merlin-type-enclosing-go-up)
-             (local-set-key (kbd "C-S-<down>") 'merlin-type-enclosing-go-down)
-             ))
-(push'("\\.ml[iylp]?" . tuareg-mode) auto-mode-alist)
-(push '("\\.fs[ix]?" . tuareg-mode) auto-mode-alist)
-(push '("[i]?ocamlinit$" . tuareg-mode) auto-mode-alist)
+;; (add-hook 'caml-mode-hook 'merlin-mode t)
+;; (add-hook 'tuareg-mode-hook 'utop-minor-mode)
+;; (add-hook 'tuareg-mode-hook
+;;           '(lambda ()
+;;              (merlin-mode)
+;;              ;; (setq indent-line-function 'ocp-indent-line)
+;;              ;; (setq indent-region-function 'ocp-indent-region)
+;;              (setq merlin-use-auto-complete-mode 'easy)
+;;              ;; (setq tuareg-lazy-= t) ; indent `=' like a standard keyword
+;;              ;; (setq tuareg-lazy-paren t) ; indent [({ like standard keywords
+;;              ;; (setq tuareg-in-indent 0) ; no indentation after `in' keywords
+;;              (local-set-key (kbd "C-S-<up>") 'merlin-type-enclosing-go-up)
+;;              (local-set-key (kbd "C-S-<down>") 'merlin-type-enclosing-go-down)
+;;              ))
+;; (push'("\\.ml[iylp]?" . tuareg-mode) auto-mode-alist)
+;; (push '("\\.fs[ix]?" . tuareg-mode) auto-mode-alist)
+;; (push '("[i]?ocamlinit$" . tuareg-mode) auto-mode-alist)
 
 ;; org-mode: Holidays -- from <http://www.gnomon.org.uk/diary.html>
 
@@ -1027,9 +1027,9 @@ This command is convenient when reading novel, documentation."
   "A minor mode so that my key settings override annoying major modes."
   t " my-keys" 'my-keys-minor-mode-map)
 
-;(defun my-minibuffer-setup-hook ()
-;  (my-keys-minor-mode 0))
-;(add-hook 'minibuffer-setup-hook 'my-minibuffer-setup-hook)
+;; (defun my-minibuffer-setup-hook ()
+;;   (my-keys-minor-mode 0))
+;; (add-hook 'minibuffer-setup-hook 'my-minibuffer-setup-hook)
 
 ;; (defadvice load (after give-my-keybindings-priority)
 ;;   "Try to ensure that my keybindings always have priority."
