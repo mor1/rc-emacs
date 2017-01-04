@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "syslog-mode" "syslog-mode.el" (22576 23541
+;;;### (autoloads nil "syslog-mode" "syslog-mode.el" (22636 51170
 ;;;;;;  0 0))
 ;;; Generated autoloads from syslog-mode.el
 
