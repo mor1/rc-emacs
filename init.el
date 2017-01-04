@@ -580,18 +580,18 @@ This command is convenient when reading novel, documentation."
              ))
 
 ;; mu4e email
-;; (require 'mu4e)
+(require 'mu4e)
 
-;; (setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
-;;       mu4e-sent-folder   "/sent"               ;; folder for sent messages
-;;       mu4e-drafts-folder "/drafts"             ;; unfinished messages
-;;       mu4e-trash-folder  "/trash"              ;; trashed messages
-;;       mu4e-refile-folder "/archive"            ;; saved messages
-;;       )
+(setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
+      mu4e-sent-folder   "/sent"               ;; folder for sent messages
+      mu4e-drafts-folder "/drafts"             ;; unfinished messages
+      mu4e-trash-folder  "/trash"              ;; trashed messages
+      mu4e-refile-folder "/archive"            ;; saved messages
+      )
 
-;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
-;;       mu4e-update-interval 300              ;; update every 5 minutes
-;; )
+(setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
+      mu4e-update-interval 300              ;; update every 5 minutes
+      )
 
 ;; ;; tell message-mode how to send mail
 ;; (setq message-send-mail-function 'smtpmail-send-it)
