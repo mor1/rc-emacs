@@ -106,15 +106,15 @@
 (require 'elfeed-log)
 (require 'elfeed-curl)
 
-(defgroup elfeed nil
+(defgroup elfeed ()
   "An Emacs web feed reader."
   :group 'comm)
 
 (defconst elfeed-version "2.0.1")
 
 (defcustom elfeed-feeds ()
-  "List of all feeds that Elfeed should follow. You must add your
-feeds to this list.
+  "List of all feeds that Elfeed should follow.
+You must add your feeds to this list.
 
 In its simplest form this will be a list of strings of feed URLs.
 Items in this list can also be list whose car is the feed URL
@@ -130,6 +130,18 @@ when they are first discovered."
   :group 'elfeed
   :type '(repeat (choice string
                          (cons string (repeat symbol)))))
+
+(defcustom elfeed-feed-functions
+  '(elfeed-get-link-at-point
+    elfeed-get-url-at-point
+    elfeed-clipboard-get)
+  "List of functions to use to get possible feeds for `elfeed-add-feed'.
+Each function should accept no arguments, and return a string or nil."
+  :group 'elfeed
+  :type 'hook
+  :options '(elfeed-get-link-at-point
+             elfeed-get-url-at-point
+             elfeed-clipboard-get))
 
 (defcustom elfeed-use-curl
   (not (null (executable-find elfeed-curl-program-name)))
@@ -209,9 +221,10 @@ found.")
     url-queue-timeout))
 
 (defmacro elfeed-with-fetch (url &rest body)
-  "Asynchronously run BODY in a buffer with the contents from
-URL. This macro is anaphoric, with STATUS referring to the status
-from `url-retrieve'."
+  "Asynchronously run BODY in a buffer with the contents from URL.
+This macro is anaphoric, with STATUS referring to the status from
+`url-retrieve'/cURL and USE-CURL being the original invoked-value
+of `elfeed-use-curl'."
   (declare (indent defun))
   `(let* ((use-curl elfeed-use-curl) ; capture current value in closure
           (cb (lambda (status) ,@body)))
@@ -244,8 +257,7 @@ This is a workaround for issues in `url-queue-retrieve'."
 ;; Parsing:
 
 (defun elfeed-feed-type (content)
-  "Return the feed type given the parsed content (:atom, :rss) or
-NIL for unknown."
+  "Return the feed type (:atom, :rss, :rss1.0) or nil for unknown."
   (let ((top (xml-query-strip-ns (caar content))))
     (cadr (assoc top '((feed :atom)
                        (rss :rss)
@@ -257,18 +269,18 @@ NIL for unknown."
 
 (defun elfeed--atom-content (entry)
   "Get content string from ENTRY."
-  (let ((content-type (xml-query '(content :type) entry)))
+  (let ((content-type (xml-query* (content :type) entry)))
     (if (equal content-type "xhtml")
         (with-temp-buffer
-          (let ((xhtml (cddr (xml-query '(content) entry))))
+          (let ((xhtml (cddr (xml-query* (content) entry))))
             (dolist (element xhtml)
               (if (stringp element)
                   (insert element)
                 (elfeed-xml-unparse element))))
           (buffer-string))
       (let ((all-content
-             (or (xml-query-all '(content *) entry)
-                 (xml-query-all '(summary *) entry))))
+             (or (xml-query-all* (content *) entry)
+                 (xml-query-all* (summary *) entry))))
         (when all-content
           (apply #'concat all-content))))))
 
@@ -282,53 +294,66 @@ is called for side-effects on the ENTRY object.")
 (defun elfeed-entries-from-atom (url xml)
   "Turn parsed Atom content into a list of elfeed-entry structs."
   (let* ((feed-id url)
+         (namespace (elfeed-url-to-namespace url))
          (feed (elfeed-db-get-feed feed-id))
-         (title (elfeed-cleanup (xml-query '(feed title *) xml)))
-         (author (elfeed-cleanup (xml-query '(feed author name *) xml)))
-         (xml-base (or (xml-query '(feed :xml:base) xml) url))
+         (title (elfeed-cleanup (xml-query* (feed title *) xml)))
+         (author (elfeed-cleanup (xml-query* (feed author name *) xml)))
+         (xml-base (or (xml-query* (feed :base) xml) url))
          (autotags (elfeed-feed-autotags url)))
     (setf (elfeed-feed-url feed) url
           (elfeed-feed-title feed) title
           (elfeed-feed-author feed) author)
-    (cl-loop for entry in (xml-query-all '(feed entry) xml) collect
-             (let* ((title (or (xml-query '(title *) entry) ""))
+    (cl-loop for entry in (xml-query-all* (feed entry) xml) collect
+             (let* ((title (or (xml-query* (title *) entry) ""))
                     (xml-base (elfeed-update-location
-                               xml-base (xml-query '(:xml:base) (list entry))))
-                    (anylink (xml-query '(link :href) entry))
-                    (altlink (xml-query '(link [rel "alternate"] :href) entry))
+                               xml-base (xml-query* (:base) (list entry))))
+                    (anylink (xml-query* (link :href) entry))
+                    (altlink (xml-query* (link [rel "alternate"] :href) entry))
                     (link (elfeed-update-location
                            xml-base (or altlink anylink)))
-                    (date (or (xml-query '(published *) entry)
-                              (xml-query '(updated *) entry)
-                              (xml-query '(date *) entry)
-                              (xml-query '(modified *) entry) ; Atom 0.3
-                              (xml-query '(issued *) entry))) ; Atom 0.3
+                    (date (or (xml-query* (published *) entry)
+                              (xml-query* (updated *) entry)
+                              (xml-query* (date *) entry)
+                              (xml-query* (modified *) entry) ; Atom 0.3
+                              (xml-query* (issued *) entry))) ; Atom 0.3
+                    (author-name (or (xml-query* (author name *) entry)
+                                     ;; Dublin Core
+                                     (xml-query* (creator *) entry)))
+                    (author-email (xml-query* (author email *) entry))
+                    (author (cond ((and author-name author-email)
+                                   (format "%s <%s>" author-name author-email))
+                                  (author-name)))
+                    (categories (xml-query-all* (category :term) entry))
                     (content (elfeed--atom-content entry))
-                    (id (or (xml-query '(id *) entry) link
+                    (id (or (xml-query* (id *) entry) link
                             (elfeed-generate-id content)))
-                    (type (or (xml-query '(content :type) entry)
-                              (xml-query '(summary :type) entry)
+                    (type (or (xml-query* (content :type) entry)
+                              (xml-query* (summary :type) entry)
                               ""))
                     (tags (elfeed-normalize-tags autotags elfeed-initial-tags))
                     (content-type (if (string-match-p "html" type) 'html nil))
-                    (etags (xml-query-all '(link [rel "enclosure"]) entry))
+                    (etags (xml-query-all* (link [rel "enclosure"]) entry))
                     (enclosures
                      (cl-loop for enclosure in etags
                               for wrap = (list enclosure)
-                              for href = (xml-query '(:href) wrap)
-                              for type = (xml-query '(:type) wrap)
-                              for length = (xml-query '(:length) wrap)
+                              for href = (xml-query* (:href) wrap)
+                              for type = (xml-query* (:type) wrap)
+                              for length = (xml-query* (:length) wrap)
                               collect (list href type length)))
                     (db-entry (elfeed-entry--create
                                :title (elfeed-cleanup title)
                                :feed-id feed-id
-                               :id (cons feed-id (elfeed-cleanup id))
+                               :id (cons namespace (elfeed-cleanup id))
                                :link (elfeed-cleanup link)
                                :tags tags
                                :date (or (elfeed-float-time date) (float-time))
                                :content content
                                :enclosures enclosures
-                               :content-type content-type)))
+                               :content-type content-type
+                               :meta `(,@(when author
+                                           (list :author author))
+                                       ,@(when categories
+                                           (list :categories categories))))))
                (dolist (hook elfeed-new-entry-parse-hook)
                  (funcall hook :atom entry db-entry))
                db-entry))))
@@ -336,32 +361,37 @@ is called for side-effects on the ENTRY object.")
 (defun elfeed-entries-from-rss (url xml)
   "Turn parsed RSS content into a list of elfeed-entry structs."
   (let* ((feed-id url)
+         (namespace (elfeed-url-to-namespace url))
          (feed (elfeed-db-get-feed feed-id))
-         (title (elfeed-cleanup (xml-query '(rss channel title *) xml)))
+         (title (elfeed-cleanup (xml-query* (rss channel title *) xml)))
          (autotags (elfeed-feed-autotags url)))
     (setf (elfeed-feed-url feed) url
           (elfeed-feed-title feed) title)
-    (cl-loop for item in (xml-query-all '(rss channel item) xml) collect
-             (let* ((title (or (xml-query '(title *) item) ""))
-                    (guid (xml-query '(guid *) item))
-                    (link (or (xml-query '(link *) item) guid))
-                    (date (or (xml-query '(pubDate *) item)
-                              (xml-query '(date *) item)))
-                    (content (or (xml-query-all '(encoded *) item)
-                                 (xml-query-all '(description *) item)))
+    (cl-loop for item in (xml-query-all* (rss channel item) xml) collect
+             (let* ((title (or (xml-query* (title *) item) ""))
+                    (guid (xml-query* (guid *) item))
+                    (link (or (xml-query* (link *) item) guid))
+                    (date (or (xml-query* (pubDate *) item)
+                              (xml-query* (date *) item)))
+                    (author (or (xml-query* (author *) item)
+                                ;; Dublin Core
+                                (xml-query* (creator *) item)))
+                    (categories (xml-query-all* (category *) item))
+                    (content (or (xml-query-all* (encoded *) item)
+                                 (xml-query-all* (description *) item)))
                     (description (apply #'concat content))
                     (id (or guid link (elfeed-generate-id description)))
-                    (full-id (cons feed-id (elfeed-cleanup id)))
+                    (full-id (cons namespace (elfeed-cleanup id)))
                     (original (elfeed-db-get-entry full-id))
                     (original-date (and original (elfeed-entry-date original)))
                     (tags (elfeed-normalize-tags autotags elfeed-initial-tags))
-                    (etags (xml-query-all '(enclosure) item))
+                    (etags (xml-query-all* (enclosure) item))
                     (enclosures
                      (cl-loop for enclosure in etags
                               for wrap = (list enclosure)
-                              for url = (xml-query '(:url) wrap)
-                              for type = (xml-query '(:type) wrap)
-                              for length = (xml-query '(:length) wrap)
+                              for url = (xml-query* (:url) wrap)
+                              for type = (xml-query* (:type) wrap)
+                              for length = (xml-query* (:length) wrap)
                               collect (list url type length)))
                     (db-entry (elfeed-entry--create
                                :title (elfeed-cleanup title)
@@ -373,7 +403,11 @@ is called for side-effects on the ENTRY object.")
                                       original-date date)
                                :enclosures enclosures
                                :content description
-                               :content-type 'html)))
+                               :content-type 'html
+                               :meta `(,@(when author
+                                           (list :author author))
+                                       ,@(when categories
+                                           (list :categories categories))))))
                (dolist (hook elfeed-new-entry-parse-hook)
                  (funcall hook :rss item db-entry))
                db-entry))))
@@ -381,20 +415,21 @@ is called for side-effects on the ENTRY object.")
 (defun elfeed-entries-from-rss1.0 (url xml)
   "Turn parsed RSS 1.0 content into a list of elfeed-entry structs."
   (let* ((feed-id url)
+         (namespace (elfeed-url-to-namespace url))
          (feed (elfeed-db-get-feed feed-id))
-         (title (elfeed-cleanup (xml-query '(RDF channel title *) xml)))
+         (title (elfeed-cleanup (xml-query* (RDF channel title *) xml)))
          (autotags (elfeed-feed-autotags url)))
     (setf (elfeed-feed-url feed) url
           (elfeed-feed-title feed) title)
-    (cl-loop for item in (xml-query-all '(RDF item) xml) collect
-             (let* ((title (or (xml-query '(title *) item) ""))
-                    (link (xml-query '(link *) item))
-                    (date (or (xml-query '(pubDate *) item)
-                              (xml-query '(date *) item)))
+    (cl-loop for item in (xml-query-all* (RDF item) xml) collect
+             (let* ((title (or (xml-query* (title *) item) ""))
+                    (link (xml-query* (link *) item))
+                    (date (or (xml-query* (pubDate *) item)
+                              (xml-query* (date *) item)))
                     (description
-                     (apply #'concat (xml-query-all '(description *) item)))
+                     (apply #'concat (xml-query-all* (description *) item)))
                     (id (or link (elfeed-generate-id description)))
-                    (full-id (cons feed-id (elfeed-cleanup id)))
+                    (full-id (cons namespace (elfeed-cleanup id)))
                     (original (elfeed-db-get-entry full-id))
                     (original-date (and original (elfeed-entry-date original)))
                     (tags (elfeed-normalize-tags autotags elfeed-initial-tags))
@@ -483,13 +518,31 @@ Only a list of strings will be returned."
       (kill-buffer))
     (run-hook-with-args 'elfeed-update-hooks url)))
 
+(defun elfeed-candidate-feeds ()
+  "Return a list of possible feeds from `elfeed-feed-functions'."
+  (let (res)
+    (run-hook-wrapped
+     'elfeed-feed-functions
+     (lambda (fun)
+       (let* ((val (elfeed-cleanup (funcall fun))))
+         (when (and (not (zerop (length val)))
+                    (elfeed-looks-like-url-p val))
+           (cl-pushnew val res :test #'equal)))
+       nil))
+    (nreverse res)))
+
 (defun elfeed-add-feed (url)
   "Manually add a feed to the database."
-  (interactive (list
-                (let ((clipboard (elfeed-cleanup (elfeed-clipboard-get))))
-                  (read-from-minibuffer
-                   "URL: " (when (elfeed-looks-like-url-p clipboard)
-                             clipboard)))))
+  (interactive
+   (list
+    (let* ((feeds (elfeed-candidate-feeds))
+           (prompt (if feeds (concat "URL (default " (car feeds)  "): ")
+                     "URL: "))
+           (input (read-from-minibuffer prompt nil nil nil nil feeds))
+           (result (elfeed-cleanup input)))
+      (cond ((not (zerop (length result))) result)
+            (feeds (car feeds))
+            ((user-error "No feed to add"))))))
   (cl-pushnew url elfeed-feeds)
   (when (called-interactively-p 'any)
     (customize-save-variable 'elfeed-feeds elfeed-feeds))
