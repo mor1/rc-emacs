@@ -136,36 +136,31 @@ attention to case differences."
   :prefix "flycheck-"
   :group 'tools
   :link '(url-link :tag "Website" "http://www.flycheck.org")
-  :link '(url-link :tag "Github" "https://github.com/flycheck/flycheck")
-  :link '(custom-manual "(flycheck)Top")
-  :link '(info-link "(flycheck)Usage"))
+  :link '(url-link :tag "Github" "https://github.com/flycheck/flycheck"))
 
 (defgroup flycheck-config-files nil
   "Configuration files for on-the-fly syntax checkers."
   :prefix "flycheck-"
-  :group 'flycheck
-  :link '(custom-manual "(flycheck)Syntax checker configuration files"))
+  :group 'flycheck)
 
 (defgroup flycheck-options nil
   "Options for on-the-fly syntax checkers."
   :prefix "flycheck-"
-  :group 'flycheck
-  :link '(custom-manual "(flycheck)Syntax checker options"))
+  :group 'flycheck)
 
 (defgroup flycheck-executables nil
   "Executables of syntax checkers."
   :prefix "flycheck-"
-  :group 'flycheck
-  :link '(custom-manual "(flycheck)Syntax checker executables"))
+  :group 'flycheck)
 
 (defgroup flycheck-faces nil
   "Faces used by on-the-fly syntax checking."
   :prefix "flycheck-"
-  :group 'flycheck
-  :link '(info-link "(flycheck)Error reporting"))
+  :group 'flycheck)
 
 (defcustom flycheck-checkers
   '(ada-gnat
+    asciidoctor
     asciidoc
     c/c++-clang
     c/c++-gcc
@@ -176,7 +171,9 @@ attention to case differences."
     coffee-coffeelint
     coq
     css-csslint
+    css-stylelint
     d-dmd
+    dockerfile-hadolint
     elixir-dogma
     emacs-lisp
     emacs-lisp-checkdoc
@@ -199,12 +196,12 @@ attention to case differences."
     html-tidy
     javascript-eslint
     javascript-jshint
-    javascript-gjslint
     javascript-jscs
     javascript-standard
     json-jsonlint
     json-python-json
     less
+    less-stylelint
     lua-luacheck
     lua
     perl
@@ -236,6 +233,7 @@ attention to case differences."
     scala-scalastyle
     scheme-chicken
     scss-lint
+    scss-stylelint
     sass/scss-sass-lint
     sass
     scss
@@ -704,7 +702,7 @@ This variable is a normal hook.  See Info node `(elisp)Hooks'."
   "Functions to run if the Flycheck status changed.
 
 This hook is run whenever the status of Flycheck changes.  Each
-hook function takes the status symbol as sinlge argument, as
+hook function takes the status symbol as single argument, as
 given to `flycheck-report-status', which see.
 
 This variable is a abnormal hook.  See Info
@@ -2151,10 +2149,11 @@ possible problems are shown."
   (let ((buffer (current-buffer))
         ;; Get all checkers that support the current major mode
         (checkers (seq-filter #'flycheck-checker-supports-major-mode-p
-                              flycheck-checkers)))
+                              flycheck-checkers))
+        (help-buffer (get-buffer-create " *Flycheck checkers*")))
 
     ;; Now print all applicable checkers
-    (with-help-window (get-buffer-create " *Flycheck checkers*")
+    (with-help-window help-buffer
       (with-current-buffer standard-output
         (flycheck--verify-print-header "Syntax checkers for buffer " buffer)
         (unless checkers
@@ -2179,7 +2178,12 @@ possible problems are shown."
               (princ "\n"))
             (princ "\nTry adding these syntax checkers to `flycheck-checkers'.\n")))
 
-        (flycheck--verify-print-footer buffer)))))
+        (flycheck--verify-print-footer buffer)))
+
+    (with-current-buffer help-buffer
+      (setq-local revert-buffer-function
+                  (lambda (_ignore-auto _noconfirm)
+                    (with-current-buffer buffer (flycheck-verify-setup)))))))
 
 
 ;;; Predicates for generic syntax checkers
@@ -2466,7 +2470,7 @@ buffer-local value of `flycheck-disabled-checkers'."
 
 Set `flycheck-current-syntax-check' accordingly."
   ;; Allocate the current syntax check *before* starting it.  This allows for
-  ;; synchronous checks, which call the status callback immediately in there
+  ;; synchronous checks, which call the status callback immediately in their
   ;; start function.
   (let* ((check (flycheck-syntax-check-new
                  :buffer (current-buffer)
@@ -3138,7 +3142,8 @@ otherwise."
        ;; and the current buffer has no file name, too, or if it refers to the
        ;; same file as the current buffer.
        (or (and (not file-name) (not buffer-file-name))
-           (flycheck-same-files-p file-name (buffer-file-name)))
+           (and buffer-file-name file-name
+                (flycheck-same-files-p file-name buffer-file-name)))
        message
        (not (string-empty-p message))
        (flycheck-error-line err)))))
@@ -5550,7 +5555,9 @@ about Cppcheck."
                           (push (flycheck-error-new-at
                                  (flycheck-string-to-number-safe .line)
                                  nil
-                                 level message
+                                 level
+                                 ;; cppcheck return newline characters as "\012"
+                                 (replace-regexp-in-string "\\\\012" "\n" message)
                                  :id id
                                  :checker checker
                                  :buffer buffer
@@ -5609,7 +5616,7 @@ about TSLint."
                   :filename .name)))
              ;; Don't try to parse empty output as JSON
              (and (not (string-empty-p output))
-                  (json-read-from-string output)))))
+                  (car (flycheck-parse-json output))))))
 
 (defun flycheck-parse-rust-collect-spans (span)
   "Return a list of spans contained in a SPAN object."
@@ -5628,8 +5635,140 @@ about TSLint."
                   spans)
         spans))))
 
-(defun flycheck-parse-rust (output checker buffer)
-  "Parse rust errors from OUTPUT and return a list of `flycheck-error'.
+(defun flycheck-parse-rustc-diagnostic (diagnostic checker buffer)
+  "Turn a rustc DIAGNOSTIC into a `flycheck-error'.
+
+CHECKER and BUFFER denote the CHECKER that returned DIAGNOSTIC
+and the BUFFER that was checked respectively.
+
+DIAGNOSTIC should be a parsed JSON object describing a rustc
+diagnostic, following the format described there:
+
+https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
+  (let ((error-message)
+        (error-level)
+        (error-code)
+        (primary-filename)
+        (primary-line)
+        (primary-column)
+        (spans)
+        (children)
+        (errors))
+    ;; The diagnostic format is described in the link above.  The gist of it is
+    ;; that a diagnostic can have several causes in the source text; these
+    ;; causes are represented by spans.  The diagnostic has a message and a
+    ;; level (error, warning), while the spans have a filename, line, column,
+    ;; and an optional label.  The primary span points to the root cause of the
+    ;; error in the source text, while non-primary spans point to related
+    ;; causes.  Spans may have an 'expansion' field for macro expansion errors;
+    ;; these expansion fields will contain another span (and so on).  In
+    ;; addition, a diagnostic can also have children diagnostics that are used
+    ;; to provide additional information through their message field, but do not
+    ;; seem to contain any spans (yet).
+    ;;
+    ;; We first gather spans in order to turn every span into a flycheck error
+    ;; object, that we collect into the `errors' list.
+
+    ;; Nested `let-alist' cause compilation warnings, hence we `setq' all
+    ;; these values here first to avoid nesting.
+    (let-alist diagnostic
+      (setq error-message .message
+            error-level (pcase .level
+                          (`"error" 'error)
+                          (`"warning" 'warning)
+                          (`"note" 'info)
+                          (_ 'error))
+            ;; The 'code' field of the diagnostic contains the actual error
+            ;; code and an optional explanation that we ignore
+            error-code .code.code
+            ;; Collect all spans recursively
+            spans (seq-mapcat #'flycheck-parse-rust-collect-spans .spans)
+            children .children))
+
+    ;; Turn each span into a flycheck error
+    (dolist (span spans)
+      (let-alist span
+        ;; Children lack any filename/line/column information, so we use
+        ;; those from the primary span
+        (when .is_primary
+          (setq primary-filename .file_name
+                primary-line .line_start
+                primary-column .column_start))
+        (push
+         (flycheck-error-new-at
+          .line_start
+          .column_start
+          ;; Non-primary spans are used for notes
+          (if .is_primary error-level 'info)
+          (if .is_primary
+              ;; Primary spans may have labels with additional information
+              (concat error-message (when .label
+                                      (format " (%s)" .label)))
+            ;; If the label is empty, fallback on the error message,
+            ;; otherwise we won't be able to display anything
+            (or .label error-message))
+          :id error-code
+          :checker checker
+          :buffer buffer
+          :filename .file_name)
+         errors)))
+
+    ;; Then we turn children messages into flycheck errors pointing to the
+    ;; location of the primary span.  According to the format, children
+    ;; may contain spans, but they do not seem to use them in practice.
+    (dolist (child children)
+      (let-alist child
+        (push
+         (flycheck-error-new-at
+          primary-line
+          primary-column
+          'info
+          .message
+          :id error-code
+          :checker checker
+          :buffer buffer
+          :filename primary-filename)
+         errors)))
+
+    ;; If there are no spans, the error is not associated with a specific
+    ;; file but with the project as a whole.  We still need to report it to
+    ;; the user by emitting a corresponding flycheck-error object.
+    (unless spans
+      (push (flycheck-error-new-at
+             ;; We have no specific position to attach the error to, so
+             ;; let's use the top of the file.
+             1 1
+             error-level
+             error-message
+             :id error-code
+             :checker checker
+             :buffer buffer)
+            errors))
+    (nreverse errors)))
+
+(defun flycheck-parse-json (output)
+  "Return parsed JSON data from OUTPUT.
+
+OUTPUT is a string that contains JSON data.  Each line of OUTPUT
+may be either plain text, a JSON array (starting with `['), or a
+JSON object (starting with `{').
+
+This function ignores the plain text lines, parses the JSON
+lines, and returns the parsed JSON lines in a list."
+  (let ((objects nil)
+        (json-array-type 'list)
+        (json-false nil))
+    (with-temp-buffer
+      (insert output)
+      (goto-char (point-min))
+      (while (not (eobp))
+        (when (memq (char-after) '(?\{ ?\[))
+          (push (json-read) objects))
+        (forward-line)))
+    (nreverse objects)))
+
+(defun flycheck-parse-rustc (output checker buffer)
+  "Parse rustc errors from OUTPUT and return a list of `flycheck-error'.
 
 CHECKER and BUFFER denote the CHECKER that returned OUTPUT and
 the BUFFER that was checked respectively.
@@ -5641,115 +5780,33 @@ object that corresponds to a diagnostic from the compiler.  The
 expected diagnostic format is described there:
 
 https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
-  (let* ((json-array-type 'list)
-         (json-false nil)
-         ;; Skip the plain text lines in OUTPUT, keep the JSON lines.
-         (json-lines (seq-filter (lambda (line)
-                                   (string-match-p "^{" line))
-                                 (split-string output "\n")))
-         ;; Each JSON line is a JSON object.
-         (diagnostics (seq-map #'json-read-from-string json-lines))
-         (errors))
-    ;; The diagnostic format is described in the link above.  The gist of it is
-    ;; that each diagnostic can have several causes in the source text; these
-    ;; causes are represented by spans.  The diagnostic has a message and a
-    ;; level (error, warning), while the spans have a filename, line, column,
-    ;; and an optional label.  The primary span points to the root cause of the
-    ;; error in the source text, while non-primary spans point to related
-    ;; causes.  Spans may have an 'expansion' field for macro expansion errors;
-    ;; these expansion fields will contain another span (and so on).  In
-    ;; addition, each diagnostic can also have children diagnostics that are
-    ;; used to provide additional information through their message field, but
-    ;; do not seem to contain any spans (yet).
-    ;;
-    ;; We first iterate over diagnostics, get all their spans and turn every
-    ;; span into a flycheck error object, that we collect into the `errors'
-    ;; list.
-    (dolist (diagnostic diagnostics)
-      (let ((error-message)
-            (error-level)
-            (error-code)
-            (primary-filename)
-            (primary-line)
-            (primary-column)
-            (spans)
-            (children))
+  (seq-mapcat (lambda (msg)
+                (flycheck-parse-rustc-diagnostic msg checker buffer))
+              (flycheck-parse-json output)))
 
-        ;; Nested `let-alist' cause compilation warnings, hence we `setq' all
-        ;; these values here first to avoid nesting.
-        (let-alist diagnostic
-          (setq error-message .message
-                error-level (pcase .level
-                              (`"error" 'error)
-                              (`"warning" 'warning)
-                              (_ 'error))
-                ;; The 'code' field of the diagnostic contains the actual error
-                ;; code and an optional explanation that we ignore
-                error-code .code.code
-                ;; Collect all spans recursively
-                spans (seq-mapcat #'flycheck-parse-rust-collect-spans .spans)
-                children .children))
+(defun flycheck-parse-cargo-rustc (output checker buffer)
+  "Parse Cargo errors from OUTPUT and return a list of `flycheck-error'.
 
-        ;; Turn each span into a flycheck error
-        (dolist (span spans)
-          (let-alist span
-            ;; Children lack any filename/line/column information, so we use
-            ;; those from the primary span
-            (when .is_primary
-              (setq primary-filename .file_name
-                    primary-line .line_start
-                    primary-column .column_start))
-            (push
-             (flycheck-error-new-at
-              .line_start
-              .column_start
-              ;; Non-primary spans are used for notes
-              (if .is_primary error-level 'info)
-              (if .is_primary
-                  ;; Primary spans may have labels with additional information
-                  (concat error-message (when .label
-                                          (format " (%s)" .label)))
-                ;; If the label is empty, fallback on the error message,
-                ;; otherwise we won't be able to display anything
-                (or .label error-message))
-              :id error-code
-              :checker checker
-              :buffer buffer
-              :filename .file_name)
-             errors)))
+CHECKER and BUFFER denote the CHECKER that returned OUTPUT and
+the BUFFER that was checked respectively.
 
-        ;; Then we turn children messages into flycheck errors pointing to the
-        ;; location of the primary span.  According to the format, children
-        ;; may contain spans, but they do not seem to use them in practice.
-        (dolist (child children)
-          (let-alist child
-            (push
-             (flycheck-error-new-at
-              primary-line
-              primary-column
-              'info
-              .message
-              :id error-code
-              :checker checker
-              :buffer buffer
-              :filename primary-filename)
-             errors)))
+The expected format for OUTPUT is a mix of plain text lines and
+JSON lines.  This function ignores the plain text lines and
+parses only JSON lines.  Each JSON line is expected to be a JSON
+object that represents a message from Cargo.  The format of
+messages emitted by Cargo is described there:
 
-        ;; If there are no spans, the error is not associated with a specific
-        ;; file but with the project as a whole.  We still need to report it to
-        ;; the user by emitting a corresponding flycheck-error object.
-        (unless spans
-          (push (flycheck-error-new-at
-                 ;; We have no specific position to attach the error to, so
-                 ;; let's use the top of the file.
-                 1 1
-                 error-level
-                 error-message
-                 :id error-code
-                 :checker checker
-                 :buffer buffer)
+https://github.com/rust-lang/cargo/blob/master/src/cargo/util/machine_message.rs#L20-L31"
+  (let ((errors))
+    (dolist (msg (flycheck-parse-json output))
+      (let-alist msg
+        ;; Errors and warnings from rustc are wrapped by cargo, so we filter and
+        ;; unwrap them, and delegate the actual construction of `flycheck-error'
+        ;; objects to `flycheck-parse-rustc-diagnostic'.
+        (when (string= .reason "compiler-message")
+          (push (flycheck-parse-rustc-diagnostic .message checker buffer)
                 errors))))
-    (nreverse errors)))
+    (apply #'nconc errors)))
 
 
 ;;; Error parsing with regular expressions
@@ -5961,6 +6018,21 @@ See URL `http://www.methods.co.nz/asciidoc'."
    (info line-start
          "asciidoc: DEPRECATED: <stdin>: Line " line ": " (message)
          line-end))
+  :modes adoc-mode)
+
+(flycheck-define-checker asciidoctor
+  "An AsciiDoc syntax checker using the Asciidoctor compiler.
+
+See URL `http://asciidoctor.org'."
+  :command ("asciidoctor" "-o" null-device "-")
+  :standard-input t
+  :error-patterns
+  ((error line-start
+          "asciidoctor: ERROR: <stdin>: Line " line ": " (message)
+          line-end)
+   (warning line-start
+            "asciidoctor: WARNING: <stdin>: Line " line ": " (message)
+            line-end))
   :modes adoc-mode)
 
 (flycheck-def-args-var flycheck-clang-args c/c++-clang
@@ -6525,6 +6597,123 @@ See URL `https://github.com/CSSLint/csslint'."
   :error-filter flycheck-dequalify-error-ids
   :modes css-mode)
 
+(defconst flycheck-stylelint-args '("--formatter" "json")
+  "Common arguments to stylelint invocations.")
+
+(flycheck-def-config-file-var flycheck-stylelintrc
+    (css-stylelint scss-stylelint less-stylelint) nil
+  :safe #'stringp)
+
+(flycheck-def-option-var flycheck-stylelint-quiet
+    nil (css-stylelint scss-stylelint less-stylelint)
+  "Whether to run stylelint in quiet mode.
+
+When non-nil, enable quiet mode, via `--quiet'."
+  :type 'boolean
+  :safe #'booleanp
+  :package-version '(flycheck . 26))
+
+(defconst flycheck-stylelint-error-re
+  (flycheck-rx-to-string
+   '(: line-start (id (one-or-more word)) ": " (message) line-end)))
+
+(defun flycheck-parse-stylelint (output checker buffer)
+  "Parse stylelint errors from OUTPUT.
+
+CHECKER and BUFFER denoted the CHECKER that returned OUTPUT and
+the BUFFER that was checked respectively.
+
+The CHECKER usually returns the errors as JSON.
+
+If the CHECKER throws an Error it returns an Error message with a stacktrace."
+  (condition-case nil
+      (flycheck-parse-stylelint-json output checker buffer)
+
+    ;; The output could not be parsed as JSON
+    (json-error
+
+     ;; Extract a flycheck error from the output (with a regular expression)
+     ;; For match-string 4/5 see flycheck-rx-message/flycheck-rx-id
+     (when (string-match flycheck-stylelint-error-re output)
+       (list (flycheck-error-new-at
+              1 nil 'error
+              (match-string 4 output)
+              :id (match-string 5 output)
+              :checker checker
+              :buffer buffer
+              :filename (buffer-file-name buffer)))))))
+
+(defun flycheck-parse-stylelint-json (output checker buffer)
+  "Parse stylelint JSON errors from OUTPUT.
+
+CHECKER and BUFFER denoted the CHECKER that returned OUTPUT and
+the BUFFER that was checked respectively.
+
+See URL `http://stylelint.io/developer-guide/formatters/' for information
+about the JSON format of stylelint."
+  (let ((json-object-type 'plist))
+
+    ;; stylelint returns a vector of result objects
+    ;; Since we only passed one file, the first element is enough
+    (let* ((stylelint-output (elt (json-read-from-string output) 0))
+           (filename (buffer-file-name buffer))
+
+           ;; Turn all deprecations into warnings
+           (deprecations
+            (mapcar (lambda (d)
+                      (flycheck-error-new-at
+                       1 nil 'warning
+                       (plist-get d :text)
+                       :id "Deprecation Warning"
+                       :checker checker
+                       :buffer buffer
+                       :filename filename))
+                    (plist-get stylelint-output :deprecations)))
+
+           ;; Turn all invalid options into errors
+           (invalid-options
+            (mapcar (lambda (io)
+                      (flycheck-error-new-at
+                       1 nil 'error
+                       (plist-get io :text)
+                       :id "Invalid Option"
+                       :checker checker
+                       :buffer buffer
+                       :filename filename))
+                    (plist-get stylelint-output :invalidOptionWarnings)))
+
+           ;; Read all linting warnings
+           (warnings
+            (mapcar (lambda (w)
+                      (flycheck-error-new-at
+                       (plist-get w :line) (plist-get w :column)
+                       (pcase (plist-get w :severity)
+                         (`"error"   'error)
+                         (`"warning" 'warning)
+                         ;; Default to info for unknown .severity
+                         (_          'info))
+                       (plist-get w :text)
+                       :id (plist-get w :rule)
+                       :checker checker
+                       :buffer buffer
+                       :filename filename))
+                    (plist-get stylelint-output :warnings))))
+
+      ;; Return the combined errors (deprecations, invalid options, warnings)
+      (append deprecations invalid-options warnings))))
+
+(flycheck-define-checker css-stylelint
+  "A CSS syntax and style checker using stylelint.
+
+See URL `http://stylelint.io/'."
+  :command ("stylelint"
+            (eval flycheck-stylelint-args)
+            (option-flag "--quiet" flycheck-stylelint-quiet)
+            (config-file "--config" flycheck-stylelintrc))
+  :standard-input t
+  :error-parser flycheck-parse-stylelint
+  :modes (css-mode))
+
 (defconst flycheck-d-module-re
   (rx "module" (one-or-more (syntax whitespace))
       (group (one-or-more (not (syntax whitespace))))
@@ -6578,6 +6767,25 @@ Requires DMD 2.066 or newer.  See URL `http://dlang.org/'."
    (info line-start (file-name) "(" line "," column "): "
          (one-or-more " ") (message) line-end))
   :modes d-mode)
+
+(flycheck-define-checker dockerfile-hadolint
+  "A Dockerfile syntax checker using the hadolint.
+
+See URL `http://hadolint.lukasmartinelli.ch/'."
+  :command ("hadolint" "-")
+  :standard-input t
+  :error-patterns
+  ((error line-start
+          (file-name) ":" line ":" column " " (message)
+          line-end)
+   (warning line-start
+            (file-name) ":" line " " (id (one-or-more alnum)) " " (message)
+            line-end))
+  :error-filter
+  (lambda (errors)
+    (flycheck-sanitize-errors
+     (flycheck-remove-error-file-names "/dev/stdin" errors)))
+  :modes dockerfile-mode)
 
 (defun flycheck-elixir--find-default-directory (_checker)
   "Come up with a suitable default directory to run CHECKER in.
@@ -6860,7 +7068,8 @@ See Info Node `(elisp)Byte Compilation'."
     checkdoc-package-keywords-flag
     checkdoc-spellcheck-documentation-flag
     checkdoc-verb-check-experimental-flag
-    checkdoc-max-keyref-before-warn)
+    checkdoc-max-keyref-before-warn
+    sentence-end-double-space)
   "Variables inherited by the checkdoc subprocess.")
 
 (defun flycheck-emacs-lisp-checkdoc-variables-form ()
@@ -6929,7 +7138,8 @@ See URL `http://www.erlang.org/'."
   :error-patterns
   ((warning line-start (file-name) ":" line ": Warning:" (message) line-end)
    (error line-start (file-name) ":" line ": " (message) line-end))
-  :modes erlang-mode)
+  :modes erlang-mode
+  :enabled (lambda () (string-suffix-p ".erl" (buffer-file-name))))
 
 (flycheck-define-checker eruby-erubis
   "A eRuby syntax checker using the `erubis' command.
@@ -7425,7 +7635,9 @@ See URL `https://github.com/commercialhaskell/stack'."
             source)
   :error-patterns
   ((warning line-start (file-name) ":" line ":" column ":"
-            (or " " "\n    ") "Warning:" (optional "\n")
+            (or " " "\n    ") "Warning:"
+            (optional " " "[" (id (one-or-more not-newline)) "]")
+            (optional "\n")
             (message
              (one-or-more " ") (one-or-more not-newline)
              (zero-or-more "\n"
@@ -7473,7 +7685,9 @@ See URL `https://www.haskell.org/ghc/'."
             source)
   :error-patterns
   ((warning line-start (file-name) ":" line ":" column ":"
-            (or " " "\n    ") "Warning:" (optional "\n")
+            (or " " "\n    ") "Warning:"
+            (optional " " "[" (id (one-or-more not-newline)) "]")
+            (optional "\n")
             (message
              (one-or-more " ") (one-or-more not-newline)
              (zero-or-more "\n"
@@ -7683,22 +7897,6 @@ See URL `https://github.com/eslint/eslint'."
         :message (if have-config "found" "missing")
         :face (if have-config 'success '(bold error)))))))
 
-(flycheck-def-config-file-var flycheck-gjslintrc javascript-gjslint ".gjslintrc"
-  :safe #'stringp)
-
-(flycheck-define-checker javascript-gjslint
-  "A Javascript syntax and style checker using Closure Linter.
-
-See URL `https://developers.google.com/closure/utilities'."
-  :command ("gjslint" "--unix_mode"
-            (config-file "--flagfile" flycheck-gjslintrc)
-            source)
-  :error-patterns ((warning
-                    line-start (file-name) ":" line ":("
-                    (id (one-or-more digit)) ") " (message) line-end))
-  :modes (js-mode js2-mode js3-mode rjsx-mode)
-  :next-checkers ((warning . javascript-jscs)))
-
 (defun flycheck-parse-jscs (output checker buffer)
   "Parse JSCS OUTPUT from CHECKER and BUFFER.
 
@@ -7799,6 +7997,34 @@ See URL `http://lesscss.org'."
           line-end))
   :modes less-css-mode)
 
+(flycheck-define-checker less-stylelint
+  "A LESS syntax and style checker using stylelint.
+
+See URL `http://stylelint.io/'."
+  :command ("stylelint"
+            (eval flycheck-stylelint-args)
+            "--syntax" "less"
+            (option-flag "--quiet" flycheck-stylelint-quiet)
+            (config-file "--config" flycheck-stylelintrc))
+  :standard-input t
+  :error-parser flycheck-parse-stylelint
+  :modes (less-css-mode))
+
+(flycheck-def-config-file-var flycheck-luacheckrc lua-luacheck ".luacheckrc"
+  :safe #'stringp)
+
+(flycheck-def-option-var flycheck-luacheck-standards nil lua-luacheck
+  "The standards to use in luacheck.
+
+The value of this variable is either a list of strings denoting
+the standards to use, or nil to pass nothing to luacheck.  When
+non-nil, pass the standards via one or more `--std' options."
+  :type '(choice (const :tag "Default" nil)
+                 (repeat :tag "Custom standards"
+                         (string :tag "Standard name")))
+  :safe #'flycheck-string-list-p)
+(make-variable-buffer-local 'flycheck-luacheck-standards)
+
 (flycheck-define-checker lua-luacheck
   "A Lua syntax checker using luacheck.
 
@@ -7807,6 +8033,8 @@ See URL `https://github.com/mpeterv/luacheck'."
             "--formatter" "plain"
             "--codes"                   ; Show warning codes
             "--no-color"
+            (option-list "--std" flycheck-luacheck-standards)
+            (config-file "--config" flycheck-luacheckrc)
             "--filename" source-original
             ;; Read from standard input
             "-")
@@ -8673,28 +8901,45 @@ if it is not modified, i.e. after it has been saved."
 (flycheck-def-option-var flycheck-rust-crate-type "lib" (rust-cargo rust)
   "The type of the Rust Crate to check.
 
-The value of this variable is a string denoting the crate type,
-for the `--crate-type' flag."
-  :type 'string
+For `rust-cargo', the value should be a string denoting the
+target type passed to Cargo.  See
+`flycheck-rust-valid-crate-type-p' for the list of allowed
+values.
+
+For `rust', the value should be a string denoting the crate type
+for the `--crate-type' flag of rustc."
+  :type '(choice (const :tag "nil (rust/rust-cargo)" nil)
+                 (const :tag "lib (rust/rust-cargo)" "lib")
+                 (const :tag "bin (rust/rust-cargo)" "bin")
+                 (const :tag "example (rust-cargo)" "example")
+                 (const :tag "test (rust-cargo)" "test")
+                 (const :tag "bench (rust-cargo)" "bench")
+                 (const :tag "rlib (rust)" "rlib")
+                 (const :tag "dylib (rust)" "dylib")
+                 (const :tag "cdylib (rust)" "cdylib")
+                 (const :tag "staticlib (rust)" "staticlib")
+                 (const :tag "metadata (rust)" "metadata"))
   :safe #'stringp
   :package-version '(flycheck . "0.20"))
 (make-variable-buffer-local 'flycheck-rust-crate-type)
 
 (flycheck-def-option-var flycheck-rust-binary-name nil rust-cargo
-  "The name of the binary to pass to `cargo rustc --bin'.
+  "The name of the binary to pass to `cargo rustc --CRATE-TYPE'.
 
 The value of this variable is a string denoting the name of the
-binary to build: Either the name of the crate, or the name of one
-of the files under `src/bin'.
+target to check: usually the name of the crate, or the name of
+one of the files under `src/bin', `tests', `examples' or
+`benches'.
 
-This variable is used only when `flycheck-rust-crate-type' is
-`bin', and is only useful for crates with multiple targets."
+This always requires a non-nil value, unless
+`flycheck-rust-crate-type' is `lib' or nil, in which case it is
+ignored."
   :type 'string
   :safe #'stringp
   :package-version '(flycheck . "28"))
 (make-variable-buffer-local 'flycheck-rust-binary-name)
 
-(flycheck-def-option-var flycheck-rust-library-path nil (rust-cargo rust)
+(flycheck-def-option-var flycheck-rust-library-path nil rust
   "A list of library directories for Rust.
 
 The value of this variable is a list of strings, where each
@@ -8710,35 +8955,81 @@ Relative paths are relative to the file being checked."
     (with-output-to-string
       (call-process "rustc" nil standard-output nil "--explain" error-code))))
 
+(defun flycheck-rust-error-filter (errors)
+  "Filter ERRORS from rustc output that have no explanatory value."
+  (seq-remove (lambda (err)
+                (string-match-p
+                 (rx "aborting due to " (optional (one-or-more num) " ")
+                     "previous error")
+                 (flycheck-error-message err)))
+              errors))
+
+(defun flycheck-rust-valid-crate-type-p (crate-type)
+  "Whether CRATE-TYPE is a valid target type for Cargo.
+
+A valid Cargo target type is one of `lib', `bin', `example',
+`test' or `bench'."
+  (member crate-type '(nil "lib" "bin" "example" "test" "bench")))
+
 (flycheck-define-checker rust-cargo
   "A Rust syntax checker using Cargo.
 
-This syntax checker needs Rust 1.7 or newer, and Cargo with the
-rustc command.  See URL `https://www.rust-lang.org'."
+This syntax checker requires Rust 1.15 or newer.  See URL
+`https://www.rust-lang.org'."
   :command ("cargo" "rustc"
-            (eval (cond
-                   ((string= flycheck-rust-crate-type "lib") "--lib")
-                   (flycheck-rust-binary-name
-                    (list "--bin" flycheck-rust-binary-name))))
+            (eval (when flycheck-rust-crate-type
+                    (concat "--" flycheck-rust-crate-type)))
+            ;; All crate targets except "lib" need a binary name
+            (eval (when (and flycheck-rust-crate-type
+                             (not (string= flycheck-rust-crate-type "lib")))
+                    flycheck-rust-binary-name))
+            "--message-format=json"
             (eval flycheck-cargo-rustc-args)
             "--" "-Z" "no-trans"
-            ;; Passing the "unstable-options" flag may raise an error in the
-            ;; future.  For the moment, we need it to access JSON output in all
-            ;; rust versions >= 1.7.
-            "-Z" "unstable-options"
-            "--error-format=json"
-            (option-flag "--test" flycheck-rust-check-tests)
-            (option-list "-L" flycheck-rust-library-path concat)
+            ;; Passing the "--test" flag when the target is a test binary or
+            ;; bench is unnecessary and triggers an error.
+            (eval (when flycheck-rust-check-tests
+                    (unless (member flycheck-rust-crate-type '("test" "bench"))
+                      "--test")))
             (eval flycheck-rust-args))
-  :error-parser flycheck-parse-rust
+  :error-parser flycheck-parse-cargo-rustc
+  :error-filter flycheck-rust-error-filter
   :error-explainer flycheck-rust-error-explainer
   :modes rust-mode
-  :predicate (lambda ()
-               ;; Since we build the entire project with cargo rustc we require
-               ;; that the buffer is saved.  And of course, we also need a Cargo
-               ;; file :)
-               (and (flycheck-buffer-saved-p)
-                    (locate-dominating-file (buffer-file-name) "Cargo.toml"))))
+  :predicate flycheck-buffer-saved-p
+  :enabled (lambda ()
+             (-when-let (file (buffer-file-name))
+               (locate-dominating-file file "Cargo.toml")))
+  :verify (lambda (_)
+            (-when-let (file (buffer-file-name))
+              (let* ((has-toml (locate-dominating-file file "Cargo.toml"))
+                     (valid-crate-type (flycheck-rust-valid-crate-type-p
+                                        flycheck-rust-crate-type))
+                     (need-binary-name
+                      (and flycheck-rust-crate-type
+                           (not (string= flycheck-rust-crate-type "lib")))))
+                (list
+                 (flycheck-verification-result-new
+                  :label "Cargo.toml"
+                  :message (if has-toml "Found" "Missing")
+                  :face (if has-toml 'success '(bold warning)))
+                 (flycheck-verification-result-new
+                  :label "Crate type"
+                  :message (if valid-crate-type
+                               (format "%s" flycheck-rust-crate-type)
+                             (format "%s (invalid, should be one of 'lib', 'bin', 'test', 'example' or 'bench')"
+                                     flycheck-rust-crate-type))
+                  :face (if valid-crate-type 'success '(bold error)))
+                 (flycheck-verification-result-new
+                  :label "Binary name"
+                  :message (cond
+                            ((not need-binary-name) "Not required")
+                            ((not flycheck-rust-binary-name) "Required")
+                            (t (format "%s" flycheck-rust-binary-name)))
+                  :face (cond
+                         ((not need-binary-name) 'success)
+                         ((not flycheck-rust-binary-name) '(bold error))
+                         (t 'success))))))))
 
 (flycheck-define-checker rust
   "A Rust syntax checker using Rust compiler.
@@ -8757,7 +9048,8 @@ This syntax checker needs Rust 1.7 or newer.  See URL
             (eval flycheck-rust-args)
             (eval (or flycheck-rust-crate-root
                       (flycheck-substitute-argument 'source-original 'rust))))
-  :error-parser flycheck-parse-rust
+  :error-parser flycheck-parse-rustc
+  :error-filter flycheck-rust-error-filter
   :error-explainer flycheck-rust-error-explainer
   :modes rust-mode
   :predicate flycheck-buffer-saved-p)
@@ -8997,6 +9289,19 @@ See URL `https://github.com/brigade/scss-lint'."
                             '(bold error)
                           'success)))))))
 
+(flycheck-define-checker scss-stylelint
+  "A SCSS syntax and style checker using stylelint.
+
+See URL `http://stylelint.io/'."
+  :command ("stylelint"
+            (eval flycheck-stylelint-args)
+            "--syntax" "scss"
+            (option-flag "--quiet" flycheck-stylelint-quiet)
+            (config-file "--config" flycheck-stylelintrc))
+  :standard-input t
+  :error-parser flycheck-parse-stylelint
+  :modes (scss-mode))
+
 (flycheck-def-option-var flycheck-scss-compass nil scss
   "Whether to enable the Compass CSS framework.
 
@@ -9182,7 +9487,7 @@ See URL `https://github.com/purcell/sqlint'."
   "A systemd unit checker using systemd-analyze(1).
 
 See URL `https://www.freedesktop.org/software/systemd/man/systemd-analyze.html'."
-  :command ("systemd-analyze" "verify" source-original)
+  :command ("systemd-analyze" "verify" source)
   :error-patterns
   ((error line-start "[" (file-name) ":" line "] " (message) line-end))
   :modes (systemd-mode))
@@ -9255,6 +9560,9 @@ for more information about the custom directory."
   :safe #'stringp
   :package-version '(flycheck . "27"))
 
+(flycheck-def-args-var flycheck-tslint-args (typescript-tslint)
+  :package-version '(flycheck . "31"))
+
 (flycheck-define-checker typescript-tslint
   "TypeScript style checker using TSLint.
 
@@ -9266,6 +9574,7 @@ See URL `https://github.com/palantir/tslint'."
   :command ("tslint" "--format" "json"
             (config-file "--config" flycheck-typescript-tslint-config)
             (option "--rules-dir" flycheck-typescript-tslint-rulesdir)
+            (eval flycheck-tslint-args)
             source)
   :error-parser flycheck-parse-tslint
   :modes (typescript-mode))
@@ -9283,7 +9592,7 @@ Relative paths are relative to the file being checked."
 (flycheck-define-checker verilog-verilator
   "A Verilog syntax checker using the Verilator Verilog HDL simulator.
 
-See URL `http://www.veripool.org/wiki/verilator'."
+See URL `https://www.veripool.org/wiki/verilator'."
   :command ("verilator" "--lint-only" "-Wall"
             (option-list "-I" flycheck-verilator-include-path concat)
             source)
