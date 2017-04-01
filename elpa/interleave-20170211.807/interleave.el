@@ -1,8 +1,8 @@
-;;; interleave.el --- Interleaving text books since 2015
+;;; interleave.el --- Interleaving text books since 2015 -*- lexical-binding: t -*-
 
 ;; Author: Sebastian Christ <rudolfo.christ@gmail.com>
 ;; URL: https://github.com/rudolfochrist/interleave
-;; Package-Version: 20161225.327
+;; Package-Version: 20170211.807
 ;; Version: 1.4.20161123-610
 
 ;; This file is not part of GNU Emacs
@@ -398,11 +398,10 @@ this is the end of the buffer"
 (defun interleave--insert-heading-respect-content (parent-headline)
   "Create a new heading in the notes buffer.
 
-Adjusts the heading level automatically.  Argument
-PARENT-HEADLINE Adjust the level of the new headline according to
-the PARENT-HEADLINE.
+Adjust the level of the new headline according to the
+PARENT-HEADLINE.  
 
-Returns the position of newly inserted heading."
+Return the position of the newly inserted heading."
   (org-insert-heading-respect-content)
   (when interleave-multi-pdf-notes-file
     (let* ((parent-level (org-element-property :level parent-headline))
