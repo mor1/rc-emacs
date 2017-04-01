@@ -6,13 +6,13 @@
 
 ;; Author: Eric James Michael Ritz
 ;; URL: https://github.com/ejmr/php-mode
-;; Version: 1.17.0
+;; Version: 1.18.2
 ;; Package-Requires: ((emacs "24") (cl-lib "0.5"))
 
-(defconst php-mode-version-number "1.17.0"
+(defconst php-mode-version-number "1.18.2"
   "PHP Mode version number.")
 
-(defconst php-mode-modified "2016-08-31"
+(defconst php-mode-modified "2017-02-20"
   "PHP Mode build date.")
 
 ;;; License
@@ -257,14 +257,33 @@ can be used to match against definitions for that classlike."
     "^\\s-*function\\s-+\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*(" 1))
  "Imenu generic expression for PHP Mode. See `imenu-generic-expression'.")
 
-(defcustom php-manual-url "http://www.php.net/manual/en/"
+(defcustom php-site-url "http://php.net/"
+  "Default PHP.net site URL.
+
+The URL to use open PHP manual and search word.
+You can find a mirror site closer to you."
+  :type 'string
+  :link '(url-link :tag "List of Mirror Sites" "http://php.net/mirrors.php"))
+
+(defcustom php-manual-url 'en
   "URL at which to find PHP manual.
 You can replace \"en\" with your ISO language code."
-  :type 'string)
+  :type '(choice (const  :tag "English" 'en)
+                 (const  :tag "Brazilian Portuguese" 'pt_BR)
+                 (const  :tag "Chinese (Simplified)" 'zh)
+                 (const  :tag "French" 'fr)
+                 (const  :tag "German" 'de)
+                 (const  :tag "Japanese" 'ja)
+                 (const  :tag "Romanian" 'ro)
+                 (const  :tag "Russian" 'ru)
+                 (const  :tag "Spanish" 'es)
+                 (const  :tag "Turkish" 'tr)
+                 (string :tag "PHP manual URL")))
 
-(defcustom php-search-url "http://www.php.net/"
+(defcustom php-search-url nil
   "URL at which to search for documentation on a word."
-  :type 'string)
+  :type '(choice (string :tag "URL to search PHP documentation")
+                 (const  :tag "Use `php-site-url' variable" nil)))
 
 (defcustom php-completion-file ""
   "Path to the file which contains the function names known to PHP."
@@ -523,6 +542,9 @@ PHP does not have an \"enum\"-like keyword."
   php '("function"
         "use"))
 
+(c-lang-defconst c-other-block-decl-kwds
+  php '("namespace"))
+
 (c-lang-defconst c-other-kwds
   "Keywords not accounted for by any other `*-kwds' language constant."
   php '(
@@ -603,17 +625,17 @@ but only if the setting is enabled"
 (c-add-style
  "php"
  '((c-basic-offset . 4)
-   (c-doc-comment-style . javadoc)
    (c-offsets-alist . ((arglist-close . php-lineup-arglist-close)
                        (arglist-cont . (first php-lineup-cascaded-calls 0))
                        (arglist-cont-nonempty . (first php-lineup-cascaded-calls c-lineup-arglist))
                        (arglist-intro . php-lineup-arglist-intro)
                        (case-label . +)
-                       (class-open . -)
+                       (class-open . 0)
                        (comment-intro . 0)
                        (inlambda . 0)
-                       (lambda-intro-cont . +)
                        (inline-open . 0)
+                       (namespace-open . 0)
+                       (lambda-intro-cont . +)
                        (label . +)
                        (statement-cont . (first php-lineup-cascaded-calls php-lineup-string-cont +))
                        (substatement-open . 0)
@@ -1306,12 +1328,12 @@ With a prefix argument, prompt (with completion) for a word to search for."
       t)))
 
 (defsubst php-search-web-documentation (word)
-  (php-browse-documentation-url (concat php-search-url
-                                        (replace-regexp-in-string "_" "-" (downcase word)))))
+  "Return URL to search PHP manual search by `WORD'."
+  (php-browse-documentation-url (concat (or php-search-url php-site-url) word)))
 
 ;; Define function documentation function
 (defun php-search-documentation (word)
-  "Search PHP documentation for the word at point.
+  "Search PHP documentation for the `WORD' at point.
 
 If `php-manual-path' has a non-empty string value then the command
 will first try searching the local documentation.  If the requested
@@ -1332,7 +1354,41 @@ a completion list."
 (defun php-browse-manual ()
   "Bring up manual for PHP."
   (interactive)
-  (browse-url php-manual-url))
+  (browse-url (if (stringp php-manual-url)
+                  php-manual-url
+                (format "%smanual/%s/" php-site-url php-manual-url))))
+
+(defconst php-phpdoc-type-keywords
+  (list "string" "integer" "int" "boolean" "bool" "float"
+        "double" "object" "mixed" "array" "resource" "$this"
+        "void" "null" "false" "true" "self" "static"
+        "callable" "iterable" "number"))
+
+(defconst php-phpdoc-type-tags
+  (list "param" "property" "property-read" "property-write" "return" "var"))
+
+(defconst php-phpdoc-font-lock-doc-comments
+  `(("{@[-[:alpha:]]+\\s-\\([^}]*\\)}" ; "{@foo ...}" markup.
+     (0 'php-annotations-annotation-face prepend nil)
+     (1 'font-lock-string-face prepend nil))
+    (,(rx "$" (in "A-Za-z_") (* (in "0-9A-Za-z_")))
+     0 font-lock-variable-name-face prepend nil)
+    (,(concat "\\s-@" (regexp-opt php-phpdoc-type-tags) "\\s-+"
+              "\\(" (rx (+ (? "\\") (+ (in "0-9A-Z_a-z")) (? "[]") (? "|"))) "\\)+")
+     1 font-lock-string-face prepend nil)
+    (,(concat "\\(?:|\\|\\s-\\)\\("
+              (regexp-opt php-phpdoc-type-keywords 'words)
+              "\\)")
+     1 font-lock-type-face prepend nil)
+    ("https?://[^\n\t ]+"
+     0 'link prepend nil)
+    ("^\\(?:/\\*\\)?\\(?:\\s \\|\\*\\)*\\(@[[:alpha:]][-[:alpha:]\\]*\\)" ; "@foo ..." markup.
+     1 'php-annotations-annotation-face prepend nil)))
+
+(defvar php-phpdoc-font-lock-keywords
+  `((,(lambda (limit)
+	(c-font-lock-doc-comments "/\\*\\*" limit
+	  php-phpdoc-font-lock-doc-comments)))))
 
 (defconst php-font-lock-keywords-1 (c-lang-const c-matchers-1 php)
   "Basic highlighting for PHP mode.")
@@ -1342,6 +1398,7 @@ a completion list."
 
 (defconst php-font-lock-keywords-3
   (append
+   php-phpdoc-font-lock-keywords
    ;; php-mode patterns *before* cc-mode:
    ;;  only add patterns here if you want to prevent cc-mode from applying
    ;;  a different face.
@@ -1463,25 +1520,6 @@ The output will appear in the buffer *PHP*."
 (defface php-annotations-annotation-face '((t . (:inherit font-lock-constant-face)))
   "Face used to highlight annotations.")
 
-(defconst php-annotations-re "\\(\\s-\\|{\\)\\(@[-\\[:alpha:]]+\\)")
-
-(defmacro php-annotations-inside-comment-p (pos)
-  "Return non-nil if POS is inside a comment."
-  `(or (eq (get-char-property ,pos 'face) 'font-lock-comment-face)
-       (eq (get-char-property ,pos 'face) 'font-lock-comment-delimiter-face)))
-
-(defun php-annotations-font-lock-find-annotation (limit)
-  (let ((match
-         (catch 'match
-           (save-match-data
-             (while (re-search-forward php-annotations-re limit t)
-               (when (php-annotations-inside-comment-p (match-beginning 0))
-                 (goto-char (match-end 0))
-                 (throw 'match (match-data))))))))
-    (when match
-      (set-match-data match)
-      t)))
-
 (defconst php-string-interpolated-variable-regexp
   "{\\$[^}\n\\\\]*\\(?:\\\\.[^}\n\\\\]*\\)*}\\|\\${\\sw+}\\|\\$\\sw+")
 
@@ -1495,9 +1533,6 @@ The output will appear in the buffer *PHP*."
 
 (eval-after-load 'php-mode
   '(progn
-     (font-lock-add-keywords
-      'php-mode
-      '((php-annotations-font-lock-find-annotation (2 'php-annotations-annotation-face t))))
      (font-lock-add-keywords
       'php-mode
       `((php-string-intepolated-variable-font-lock-find))
