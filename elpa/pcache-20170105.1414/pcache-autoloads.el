@@ -1,9 +1,9 @@
 ;;; pcache-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil nil ("pcache.el") (22444 32591 443934 0))
+;;;### (autoloads nil nil ("pcache.el") (22721 10688 0 0))
 
 ;;;***
 
