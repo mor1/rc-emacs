@@ -3,8 +3,8 @@
 ;; Copyright (C) 2014 Peter Stiernström
 
 ;; Author: Peter Stiernström <peter@stiernstrom.se>
-;; Version: 4.1
-;; Package-Version: 20161125.142
+;; Version: 4.3
+;; Package-Version: 20170325.220
 ;; URL: https://github.com/pidu/git-timemachine
 ;; Keywords: git
 ;; Package-Requires: ((emacs "24.3"))
@@ -49,14 +49,20 @@ will be shown in the minibuffer while navigating commits."
  :group 'git-timemachine)
 
 (defface git-timemachine-minibuffer-detail-face
- '((t (:foreground "yellow")))
- "How to display the minibuffer detail"
- :group 'git-timemachine)
+  '((((class color) (background dark))
+     :foreground "yellow")
+    (((class color) (background light))
+     :foreground "yellow4"))
+  "How to display the minibuffer detail"
+  :group 'git-timemachine)
 
 (defface git-timemachine-minibuffer-author-face
- '((t (:foreground "orange")))
- "How to display the author in minibuffer"
- :group 'git-timemachine)
+  '((((class color) (background dark))
+     :foreground "orange")
+    (((class color) (background light))
+     :foreground "DarkOrange4"))
+  "How to display the author in minibuffer"
+  :group 'git-timemachine)
 
 (defcustom git-timemachine-minibuffer-detail
  'subject
@@ -269,6 +275,13 @@ respect to the window first line"
  (interactive)
  (kill-buffer))
 
+(defun git-timemachine-blame ()
+ "Call magit-blame on current revision."
+ (interactive)
+ (if (fboundp 'magit-blame)
+  (magit-blame (car git-timemachine-revision) (buffer-file-name))
+  (message "You need to install magit for blame capabilities")))
+
 (defun git-timemachine-kill-revision ()
  "Kill the current revisions abbreviated commit hash."
  (interactive)
@@ -293,7 +306,8 @@ respect to the window first line"
    ("g" . git-timemachine-show-nth-revision)
    ("q" . git-timemachine-quit)
    ("w" . git-timemachine-kill-abbreviated-revision)
-   ("W" . git-timemachine-kill-revision))
+   ("W" . git-timemachine-kill-revision)
+   ("b" . git-timemachine-blame))
  :group 'git-timemachine)
 
 (defun git-timemachine-validate (file)
