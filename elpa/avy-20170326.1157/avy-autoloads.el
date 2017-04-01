@@ -1,9 +1,9 @@
 ;;; avy-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "avy" "avy.el" (22452 38367 0 0))
+;;;### (autoloads nil "avy" "avy.el" (22751 32904 0 0))
 ;;; Generated autoloads from avy.el
 
 (autoload 'avy-goto-char "avy" "\
@@ -46,7 +46,7 @@ Jump to one of the current isearch candidates.
 Jump to a word start.
 The window scope is determined by `avy-all-windows' (ARG negates it).
 
-\(fn ARG)" t nil)
+\(fn ARG &optional BEG END)" t nil)
 
 (autoload 'avy-goto-word-1 "avy" "\
 Jump to the currently visible CHAR at a word start.
