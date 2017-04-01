@@ -91,8 +91,14 @@
 
 ;;; OCamldebug mode.
 
+(defvar ocamldebug-prefix-map (make-sparse-keymap)
+  "Keymap bound to prefix keys in `ocamldebug-mode' and `tuareg-mode'.")
+
+(define-key tuareg-mode-map "\C-x\C-a" ocamldebug-prefix-map)
+
 (defvar ocamldebug-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c" ocamldebug-prefix-map)
     (define-key map "\C-l" 'ocamldebug-refresh)
     ;; This is already the default anyway!
     ;;(define-key map "\t" 'comint-dynamic-complete)
@@ -134,7 +140,10 @@ C-x SPACE sets break point at current line."
        #'ocamldebug-marker-filter)
   (set (make-local-variable 'comint-prompt-regexp) ocamldebug-prompt-pattern)
   (set (make-local-variable 'comint-dynamic-complete-functions)
-       (cons #'ocamldebug-complete comint-dynamic-complete-functions))
+       (cons (if (boundp 'completion-at-point-functions)
+                 #'ocamldebug-capf #'ocamldebug-complete)
+             comint-dynamic-complete-functions))
+  (set (make-local-variable 'comint-prompt-read-only) t)
   (set (make-local-variable 'paragraph-start) comint-prompt-regexp)
   (set (make-local-variable 'ocamldebug-last-frame-displayed-p) t)
   (set (make-local-variable 'shell-dirtrackp) t)
@@ -176,8 +185,7 @@ representation is simply concatenated with the COMMAND."
                (interactive "P")
                (ocamldebug-call ,name ,args
                                 (ocamldebug-numeric-arg arg))))
-       (define-key ocamldebug-mode-map ,(concat "\C-c" key) ',fun)
-       (define-key tuareg-mode-map ,(concat "\C-x\C-a" key) ',fun))))
+       (define-key ocamldebug-prefix-map ,key ',fun))))
 
 (def-ocamldebug "step"	"\C-s"	"Step one source line with display.")
 (def-ocamldebug "run"	"\C-r"	"Run the program.")
@@ -221,7 +229,7 @@ representation is simply concatenated with the COMMAND."
   (let ((ocamldebug-kill-output))
     (with-current-buffer ocamldebug-current-buffer
       (let ((proc (get-buffer-process (current-buffer)))
-	    (ocamldebug-filter-function 'ocamldebug-kill-filter))
+	    (ocamldebug-filter-function #'ocamldebug-kill-filter))
 	(ocamldebug-call "kill")
 	(while (not (and ocamldebug-kill-output
 			 (zerop (length ocamldebug-filter-accumulator))))
@@ -301,7 +309,7 @@ buffer, then try to obtain the time from context around point."
       ;get a list of all events in the current module
       (with-current-buffer ocamldebug-current-buffer
 	(let* ((proc (get-buffer-process (current-buffer)))
-	       (ocamldebug-filter-function 'ocamldebug-goto-filter))
+	       (ocamldebug-filter-function #'ocamldebug-goto-filter))
 	  (ocamldebug-call-1 (concat "info events " module))
 	  (while (not (and ocamldebug-goto-output
 		      (zerop (length ocamldebug-filter-accumulator))))
@@ -311,7 +319,8 @@ buffer, then try to obtain the time from context around point."
 			   (concat "^Time : \\([0-9]+\\) - pc : "
 				   ocamldebug-goto-output
 				   " - module "
-				   module "$") nil t)
+				   module "$")
+                           nil t)
 			  (match-string 1)))))
       (if address (ocamldebug-call "goto" nil (string-to-number address))
 	(error "No time at %s at %s" module ocamldebug-goto-position))))))
@@ -382,7 +391,7 @@ around point."
 	  (ocamldebug-delete-position (ocamldebug-format-command "%c")))
       (with-current-buffer ocamldebug-current-buffer
 	(let ((proc (get-buffer-process (current-buffer)))
-	      (ocamldebug-filter-function 'ocamldebug-delete-filter)
+	      (ocamldebug-filter-function #'ocamldebug-delete-filter)
 	      (ocamldebug-delete-output))
 	  (ocamldebug-call-1 "info break")
 	  (while (not (and ocamldebug-delete-output
@@ -418,73 +427,100 @@ around point."
   "")
 
 (defun ocamldebug-complete ()
-
   "Perform completion on the ocamldebug command preceding point."
-
   (interactive)
+  (let* ((capf-data (ocamldebug-capf))
+         (command-word (buffer-substring (nth 0 capf-data) (nth 1 capf-data))))
+    (comint-dynamic-simple-complete
+     command-word (sort (all-completions command-word (nth 2 capf-data))
+                        #'string-lessp))))
+
+(when (fboundp 'completion-at-point)
+  (make-obsolete 'ocamldebug-complete 'completion-at-point "24.1"))
+
+(defun ocamldebug-capf ()
+  ;; FIXME: Use an `end' after point when applicable.
   (let* ((end (point))
-	 (command (save-excursion
-		    (beginning-of-line)
-		    (and (looking-at comint-prompt-regexp)
-			 (goto-char (match-end 0)))
-		    (buffer-substring (point) end)))
-	 (ocamldebug-complete-list nil) (command-word))
+         (cmd-start (save-excursion
+                      (beginning-of-line)
+                      (if (looking-at comint-prompt-regexp)
+                          (match-end 0) (point))))
+         (start (save-excursion
+                  (skip-chars-backward "^ \n" cmd-start)
+                  (point))))
+    `(,start ,end
+      ,(completion-table-dynamic
+        (apply-partially #'ocamldebug--get-completions
+                         (buffer-substring cmd-start start))))))
 
-    ;; Find the word break.  This match will always succeed.
-    (string-match "\\(\\`\\| \\)\\([^ ]*\\)\\'" command)
-    (setq command-word (match-string 2 command))
+(defun ocamldebug--get-completions (command-prefix str)
+  ;; FIXME: Add some caching?
+  (let ((ocamldebug-complete-list nil))
+    ;; itz 04-21-96 If we are trying to complete a word of nonzero
+    ;; length, chop off the last character.  This is a nasty hack, but it
+    ;; works - in general, not just for this set of words: the completion
+    ;; code will weed out false matches - and it avoids further
+    ;; mucking with ocamldebug's lexer.
+    ;; FIXME: Which problem is this trying to fix/avoid/circumvent?
+    (when (> (length str) 0)
+      (setq str (substring str 0 (1- (length str)))))
 
-    ;itz 04-21-96 if we are trying to complete a word of nonzero
-    ;length, chop off the last character. This is a nasty hack, but it
-    ;works - in general, not just for this set of words: the comint
-    ;call below will weed out false matches - and it avoids further
-    ;mucking with ocamldebug's lexer.
-    (when (> (length command-word) 0)
-      (setq command (substring command 0 (1- (length command)))))
-
-    (let ((ocamldebug-filter-function 'ocamldebug-complete-filter))
-      (ocamldebug-call-1 (concat "complete " command))
+    (let ((ocamldebug-filter-function #'ocamldebug-complete-filter))
+      (ocamldebug-call-1 (concat "complete " command-prefix str))
       (set-marker ocamldebug-delete-prompt-marker nil)
       (while (not (and ocamldebug-complete-list
-		       (zerop (length ocamldebug-filter-accumulator))))
-	(accept-process-output (get-buffer-process
-				(current-buffer)))))
-    (when (eq ocamldebug-complete-list 'fail)
-      (setq ocamldebug-complete-list nil))
-    (setq ocamldebug-complete-list
-	  (sort ocamldebug-complete-list 'string-lessp))
-    (comint-dynamic-simple-complete command-word ocamldebug-complete-list)))
+                       (zerop (length ocamldebug-filter-accumulator))))
+        (accept-process-output (get-buffer-process
+                                (current-buffer)))))
+    (if (eq ocamldebug-complete-list 'fail)
+        nil
+      ocamldebug-complete-list)))
 
 (define-key tuareg-mode-map "\C-x " 'ocamldebug-break)
 
 (defvar ocamldebug-command-name "ocamldebug"
   "Pathname for executing the OCaml debugger.")
 
+(defvar ocamldebug-debuggee-args ""
+  "Default arguments to the program being debugged (space
+separated and possibly quoted as they would be passed on the
+command line).")
+
 ;;;###autoload
-(defun ocamldebug (path)
+(defun ocamldebug (pgm-path)
   "Run ocamldebug on program FILE in buffer *ocamldebug-FILE*.
 The directory containing FILE becomes the initial working directory
 and source-file directory for ocamldebug.  If you wish to change this, use
 the ocamldebug commands `cd DIR' and `directory'."
   (interactive "fRun ocamldebug on file: ")
-  (setq path (expand-file-name path))
-  (let ((file (file-name-nondirectory path)))
-    (pop-to-buffer (concat "*ocamldebug-" file "*"))
-    (setq default-directory (file-name-directory path))
-    (message "Current directory is %s" default-directory)
-    (setq ocamldebug-command-name
-	  (read-from-minibuffer "OCaml debugguer to run: "
-				ocamldebug-command-name))
-    (make-comint (concat "ocamldebug-" file)
-		 (substitute-in-file-name ocamldebug-command-name)
-		 nil
-		 "-emacs" "-cd" default-directory path)
-    (set-process-filter (get-buffer-process (current-buffer))
-			'ocamldebug-filter)
-    (set-process-sentinel (get-buffer-process (current-buffer))
-			  'ocamldebug-sentinel)
-    (ocamldebug-mode)
-    (ocamldebug-set-buffer)))
+  (setq pgm-path (expand-file-name pgm-path))
+  (let* ((file (file-name-nondirectory pgm-path))
+         (name (concat "ocamldebug-" file))
+         (buffer-name (concat "*" name "*")))
+    (pop-to-buffer buffer-name)
+    (unless (comint-check-proc buffer-name)
+      (setq default-directory (file-name-directory pgm-path))
+      (setq ocamldebug-debuggee-args
+            (read-from-minibuffer (format "Args for %s: " file)
+                                  ocamldebug-debuggee-args))
+      (setq ocamldebug-command-name
+            (read-from-minibuffer "OCaml debugger to run: "
+                                  ocamldebug-command-name))
+      (message "Current directory is %s" default-directory)
+      (let* ((args (tuareg--split-args ocamldebug-debuggee-args))
+             (cmdlist (tuareg--split-args ocamldebug-command-name))
+             (cmdlist (mapcar #'substitute-in-file-name cmdlist)))
+        (apply #'make-comint name
+               (car cmdlist)
+               nil
+               "-emacs" "-cd" default-directory
+               (append (cdr cmdlist) (cons pgm-path args)))
+        (set-process-filter (get-buffer-process (current-buffer))
+                            'ocamldebug-filter)
+        (set-process-sentinel (get-buffer-process (current-buffer))
+                              'ocamldebug-sentinel)
+        (ocamldebug-mode)))
+  (ocamldebug-set-buffer)))
 
 ;;;###autoload
 (defalias 'camldebug 'ocamldebug)
@@ -643,8 +679,12 @@ Obeying it means displaying in another window the specified file and line."
     (with-current-buffer buffer
       (save-restriction
 	(widen)
-        (setq spos (+ (point-min) schar))
-        (setq epos (+ (point-min) echar))
+        (setq spos (if (fboundp 'filepos-to-bufferpos)
+                       (filepos-to-bufferpos schar 'approximate)
+                     (+ (point-min) schar)))
+        (setq epos (if (fboundp 'filepos-to-bufferpos)
+                       (filepos-to-bufferpos echar 'approximate)
+                     (+ (point-min) echar)))
         (setq pos (if kind spos epos))
         (ocamldebug-set-current-event spos epos pos (current-buffer) kind))
       (cond ((or (< pos (point-min)) (> pos (point-max)))
