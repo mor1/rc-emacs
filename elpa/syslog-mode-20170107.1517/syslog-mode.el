@@ -6,7 +6,7 @@
 ;; Maintainer: Joe Bloggs <vapniks@yahoo.com>
 ;; Created: 2003-03-17 18:50:12 Harley Gorrell
 ;; Version: 2.2
-;; Package-Version: 20161124.910
+;; Package-Version: 20170107.1517
 ;; Last-Updated: 2013-10-21 19:04:00
 ;;           By: Joe Bloggs
 ;; URL: https://github.com/vapniks/syslog-mode
@@ -159,6 +159,7 @@
 (eval-when-compile (require 'cl))
 (require 'ido)
 (require 'hi-lock)
+(require 'net-utils)
 
 ;;; Code:
 
