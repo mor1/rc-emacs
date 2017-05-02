@@ -1,3 +1,67 @@
+2017-04-21  Stefan Monnier  <monnier@iro.umontreal.ca>
+
+	Try and better support direct loading of tex-site
+
+2017-04-21  Tassilo Horn  <tsdh@gnu.org>
+
+	Release GNU AUCTeX 11.90.2
+
+	* Version 11.90.2 released.
+
+2017-04-21  Tassilo Horn  <tsdh@gnu.org>
+
+	Merge branch 'master' into externals/auctex
+
+2017-04-21  Mosè Giordano  <mose@gnu.org>
+
+	Do not highlight thin spaces with \,
+
+	* font-latex.el (font-latex-match-simple-command): Add comma to the list
+	of characters to be ignored.
+
+2017-04-19  Mosè Giordano  <mose@gnu.org>
+
+	Fix parsing of LaTeX2e date formats
+
+	* tex-buf.el (TeX-LaTeX-sentinel): Support ISO date format, now used by 
+	LaTeX2e.  Reported by Uwe Siart.
+	* tests/tex/error-parsing.el (TeX-LaTeX2e-date): Add a test for LaTeX2e
+	date formats.
+
+2017-04-20  Ikumi Keita	 <ikumi@ikumi.que.jp>
+
+	Improve error handling for Japanese users
+
+	* tex-buf.el (TeX-help-error): Use number based condition to detect
+	whether the search over `TeX-error-description-list' comes to its last
+	element.  Comparison with a literal string breaks when tex-jp.el
+	installs Japanese help messages into
+	`TeX-error-description-list'.
+
+2017-04-18  Ikumi Keita	 <ikumi@ikumi.que.jp>
+
+	Deal with strange file name
+
+	* tex-jp.el (): Increase `pos' in case the master file name happens to
+	contain special %-sequence.
+
+2017-04-17  Ikumi Keita	 <ikumi@ikumi.que.jp>
+
+	Support upmendex
+
+	* tex-jp.el (): Make "%(makeindex)" to expand to upmendex when upmendex
+	is available and `TeX-engine' is supported by it. Add "%(dic)" expander
+	for the dictionary option of (up)mendex.
+	* tex.el (TeX-command-list): Add "upMendex" entry.  Set 4th element to t
+	so that user will get a chance to supply dictionary option to the
+	command line string.
+
+2017-04-17  Tassilo Horn  <tsdh@gnu.org>
+
+	Improve command highlighting to not be triggered by hyphenation
+
+	Reported by François Patte.
+
 2017-04-17  Tassilo Horn  <tsdh@gnu.org>
 
 	Release GNU AUCTeX 11.90.1

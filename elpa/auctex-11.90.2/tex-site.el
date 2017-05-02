@@ -39,7 +39,14 @@
 ;;; Code:
 
 (if (< emacs-major-version 21)
-  (error "AUCTeX requires Emacs 21 or later"))
+  (error "AUCTeX requires Emacs 21 or later")) ;FIXME: Really?
+
+(unless (or (fboundp 'TeX-modes-set)     ;Avoid inf-looping.
+            (fboundp 'TeX-tex-mode))     ;auctex-autoloads is not loaded.
+  ;; Try and support the case where someone loads tex-site.el or
+  ;; auctex.el directly, in the old way.
+  (provide 'tex-site)        ;Avoid (re)loading tex-site from auctex-autoloads.
+  (load "auctex-autoloads" 'noerror 'nomessage))
 
 ;; Define here in order for `M-x customize-group <RET> AUCTeX <RET>'
 ;; to work if the main AUCTeX files are not loaded yet.
@@ -150,11 +157,11 @@ set it with `TeX-modes-set'."
 		       `(TeX-modes-set ',var ,var t))
 		     (setq list (cdr list)))))) )
 
-(defconst AUCTeX-version "11.90.1"
+(defconst AUCTeX-version "11.90.2"
   "AUCTeX version.
 If not a regular release, the date of the last change.")
 
-(defconst AUCTeX-date "2017-04-16"
+(defconst AUCTeX-date "2017-04-21"
   "AUCTeX release date using the ISO 8601 format, yyyy-mm-dd.")
 
 ;; Store bibitems when saving a BibTeX buffer
