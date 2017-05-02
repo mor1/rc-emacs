@@ -3,7 +3,7 @@
 ;; Copyright (C) 2011-2016  Guillaume Papin
 
 ;; Author: Guillaume Papin <guillaume.papin@epitech.eu>
-;; Version: 0.2.2-cvs
+;; Version: 0.3.0-cvs
 ;; URL: https://github.com/Sarcasm/irony-mode
 ;; Compatibility: GNU Emacs 23.x, GNU Emacs 24.x
 ;; Keywords: c, convenience, tools
@@ -31,15 +31,6 @@
 ;;     (add-hook 'c-mode-hook 'irony-mode)
 ;;     (add-hook 'objc-mode-hook 'irony-mode)
 ;;
-;;     ;; replace the `completion-at-point' and `complete-symbol' bindings in
-;;     ;; irony-mode's buffers by irony-mode's asynchronous function
-;;     (defun my-irony-mode-hook ()
-;;       (define-key irony-mode-map [remap completion-at-point]
-;;         'irony-completion-at-point-async)
-;;       (define-key irony-mode-map [remap complete-symbol]
-;;         'irony-completion-at-point-async))
-;;     (add-hook 'irony-mode-hook 'my-irony-mode-hook)
-;;
 ;;     ;; Windows performance tweaks
 ;;     ;;
 ;;     (when (boundp 'w32-pipe-read-delay)
@@ -54,6 +45,8 @@
 ;; - https://github.com/Sarcasm/ac-irony
 
 ;;; Code:
+
+(require 'irony-iotask)
 
 (autoload 'irony-completion--enter "irony-completion")
 (autoload 'irony-completion--exit "irony-completion")
@@ -216,6 +209,36 @@ buffer file.")
 
 
 ;;
+;; Error conditions
+;;
+
+;; `define-error' breaks backward compatibility with Emacs < 24.4
+(defun irony--define-error (name message &optional parent)
+  "Define NAME as a new error signal.
+MESSAGE is a string that will be output to the echo area if such an error
+is signaled without being caught by a `condition-case'.
+PARENT is either a signal or a list of signals from which it inherits.
+Defaults to `error'."
+  (unless parent (setq parent 'error))
+  (let ((conditions
+         (if (consp parent)
+             (apply #'nconc
+                    (mapcar (lambda (parent)
+                              (cons parent
+                                    (or (get parent 'error-conditions)
+                                        (error "Unknown signal `%s'" parent))))
+                            parent))
+           (cons parent (get parent 'error-conditions)))))
+    (put name 'error-conditions
+         (delete-dups (copy-sequence (cons name conditions))))
+    (when message (put name 'error-message message))))
+
+(irony--define-error 'irony-error "Irony-Mode error")
+(irony--define-error 'irony-parse-error "Irony-Mode parsing error" 'irony-error)
+(irony--define-error 'irony-server-error "Irony-Mode server error" 'irony-error)
+
+
+;;
 ;; Utility functions & macros
 ;;
 
@@ -332,7 +355,7 @@ breaks with escaped quotes in compile_commands.json, such as in:
        ((eq ch ?\")                     ;quoted string
         (let ((endq (string-match-p "[^\\]\"" cmd-line i)))
           (unless endq
-            (error "Irony: ill formed command line"))
+            (signal 'irony-parse-error (list "ill formed command line" cmd-line)))
           (let ((quoted-str (substring cmd-line (1+ i) (1+ endq))))
             (setq cur-arg (append (irony--split-command-line-1 quoted-str)
                                   cur-arg)
@@ -352,6 +375,16 @@ breaks with escaped quotes in compile_commands.json, such as in:
     (when cur-arg
       (setq args (cons (apply 'string (nreverse cur-arg)) args)))
     (nreverse args)))
+
+(defun irony--get-buffer-path-for-server (&optional buffer)
+  "Get the path of the current buffer to send to irony-server.
+
+If no such file exists on the filesystem the special file '-' is
+  returned instead."
+  (let ((file (buffer-file-name buffer)))
+    (if (and file (file-exists-p file))
+        file
+      "-")))
 
 
 ;;
@@ -519,34 +552,40 @@ The installation requires CMake and the libclang developpement package."
       (message "irony-server installed successfully!")
     (message "Failed to build irony-server, you are on your own buddy!")))
 
-(defun irony--locate-server-executable ()
-  "Check if an irony-server exists for the current buffer."
+(defun irony--find-server-executable ()
+  "Return the path to the irony-server executable.
+
+Throw an `irony-server-error' if a proper executable cannot be
+found."
   (let ((exe (expand-file-name "bin/irony-server" irony-server-install-prefix)))
     (condition-case err
-        (let ((irony-server-version (car (process-lines exe "--version"))))
-          (if (and (string-match "^irony-server version " irony-server-version)
+        (let ((version (car (process-lines exe "--version"))))
+          (if (and (string-match "^irony-server version " version)
                    (version= (irony-version)
-                             (substring irony-server-version
+                             (substring version
                                         (length "irony-server version "))))
               ;; irony-server is working and up-to-date!
               exe
-            (message "irony-server version mismatch: %s"
-                     (substitute-command-keys
-                      "type `\\[irony-install-server]' to reinstall"))
-            nil))
+            (signal 'irony-server-error
+                    (list
+                     (format "irony-server version mismatch: %s"
+                             (substitute-command-keys
+                              "type `\\[irony-install-server]' to reinstall"))))))
+      (irony-server-error
+       (signal (car err) (cdr err)))
       (error
-       (if (file-executable-p exe)
-           ;; failed to execute due to a runtime problem, i.e: libclang.so isn't
-           ;; in the ld paths
-           (message "error: irony-server is broken, good luck buddy! %s"
-                    (error-message-string err))
-         ;; irony-server doesn't exists, first time irony-mode is used? inform
-         ;; the user about how to build the executable
-         (message "%s"
-                  (substitute-command-keys
-                   "Type `\\[irony-install-server]' to install irony-server")))
-       ;; return nil on error
-       nil))))
+       (signal 'irony-server-error
+               (if (file-executable-p exe)
+                   ;; failed to execute due to a runtime problem, i.e:
+                   ;; libclang.so isn't in the ld paths
+                   (list (format "irony-server is broken! %s"
+                                 (error-message-string err)))
+                 ;; irony-server doesn't exists, first time irony-mode is used?
+                 ;; inform the user about how to build the executable
+                 (list
+                  (format "irony-server not installed! %s"
+                          (substitute-command-keys
+                           "Type `\\[irony-install-server]' to install")))))))))
 
 
 ;;
@@ -562,28 +601,27 @@ When using a leading space, the buffer is hidden from the buffer
 list (and undo information is not kept).")
 
 (defun irony--start-server-process ()
-  (when (setq irony--server-executable (or irony--server-executable
-                                           (irony--locate-server-executable)))
-    (let ((process-connection-type nil)
-          (process-adaptive-read-buffering nil)
-          (w32-pipe-buffer-size (when (boundp 'w32-pipe-buffer-size)
-                                  (or irony-server-w32-pipe-buffer-size
-                                      w32-pipe-buffer-size)))
-          process)
-      (setq process
-            (start-process-shell-command
-             "Irony"                    ;process name
-             irony--server-buffer       ;buffer
-             (format "%s -i 2> %s"      ;command
-                     (shell-quote-argument irony--server-executable)
-                     (expand-file-name
-                      (format-time-string "irony.%Y-%m-%d_%Hh-%Mm-%Ss.log")
-                      temporary-file-directory))))
-      (buffer-disable-undo irony--server-buffer)
-      (set-process-query-on-exit-flag process nil)
-      (set-process-sentinel process 'irony--server-process-sentinel)
-      (set-process-filter process 'irony--server-process-filter)
-      process)))
+  (unless irony--server-executable
+    ;; if not found, an `irony-server-error' error is signaled
+    (setq irony--server-executable (irony--find-server-executable)))
+  (let ((process-connection-type nil)
+        (process-adaptive-read-buffering nil)
+        (w32-pipe-buffer-size (when (boundp 'w32-pipe-buffer-size)
+                                (or irony-server-w32-pipe-buffer-size
+                                    w32-pipe-buffer-size)))
+        process)
+    (setq process
+          (start-process-shell-command
+           "Irony"                    ;process name
+           irony--server-buffer       ;buffer
+           (format "%s -i 2> %s"      ;command
+                   (shell-quote-argument irony--server-executable)
+                   (expand-file-name
+                    (format-time-string "irony.%Y-%m-%d_%Hh-%Mm-%Ss.log")
+                    temporary-file-directory))))
+    (set-process-query-on-exit-flag process nil)
+    (irony-iotask-setup-process process)
+    process))
 
 ;;;###autoload
 (defun irony-server-kill ()
@@ -594,10 +632,9 @@ list (and undo information is not kept).")
     (setq irony--server-process nil)))
 
 (defun irony--get-server-process-create ()
-  (if (and irony--server-process
-           (process-live-p irony--server-process))
-      irony--server-process
-    (setq irony--server-process (irony--start-server-process))))
+  (unless irony--server-process
+    (setq irony--server-process (irony--start-server-process)))
+  irony--server-process)
 
 (defun irony--server-process-sentinel (process event)
   (unless (process-live-p process)
@@ -645,198 +682,234 @@ list (and undo information is not kept).")
     (process-put p 'irony-callback-stack (cdr callbacks))
     (car callbacks)))
 
+(defun irony--run-task (task)
+  (irony-iotask-run (irony--get-server-process-create) task))
+
+(defun irony--run-task-asynchronously (task callback)
+  (irony-iotask-schedule (irony--get-server-process-create) task callback))
+
+(defun irony--server-send-command (command &rest args)
+  (let ((command-line (concat (combine-and-quote-strings
+                               (mapcar (lambda (arg)
+                                         (if (numberp arg)
+                                             (number-to-string arg)
+                                           arg))
+                                       (cons command args)))
+                              "\n")))
+    (irony-iotask-send-string command-line)))
+
+;; XXX: this code can run in very tight very sensitive on big inputs,
+;; every change should be measured
+(defun irony--server-command-update (&rest _args)
+  (when (and (>= (buffer-size) (length irony--eot))
+             (string-equal (buffer-substring-no-properties
+                            (- (point-max) (length irony--eot)) (point-max))
+                           irony--eot))
+    (condition-case-unless-debug nil
+        (let ((result (read (current-buffer))))
+          (cl-case (car result)
+            (success
+             (irony-iotask-set-result (cdr result)))
+            (error
+             (apply #'irony-iotask-set-error 'irony-server-error
+                    (cdr result)))))
+      (error
+       (throw 'invalid-msg t)))))
+
+;; FIXME: code duplication with `irony--server-command-update'
+;; XXX: this code can run in very tight very sensitive on big inputs,
+;; every change should be measured
+(defun irony--server-query-update (&rest _args)
+  (when (and (>= (buffer-size) (length irony--eot))
+             (string-equal (buffer-substring-no-properties
+                            (- (point-max) (length irony--eot)) (point-max))
+                           irony--eot))
+    (condition-case-unless-debug nil
+        (irony-iotask-set-result (read (current-buffer)))
+      (error
+       (throw 'invalid-msg t)))))
+
 
 ;;
 ;; Server commands
 ;;
 
-(defun irony--get-buffer-path-for-server ()
-  "Get the path of the current buffer to send to irony-server.
+(irony-iotask-define-task irony--t-get-compile-options
+  "`get-compile-options' server command."
+  :start (lambda (build-dir file)
+           (irony--server-send-command "get-compile-options" build-dir file))
+  :update irony--server-command-update)
 
-If no such file exists on the filesystem the special file '-' is
-  returned instead."
-  (if (and buffer-file-name (file-exists-p buffer-file-name))
-      buffer-file-name
-    "-"))
+(defun irony--get-compile-options-task (build-dir file)
+  (irony-iotask-package-task irony--t-get-compile-options build-dir file))
 
-(defun irony--send-request (request callback &rest args)
-  (let ((process (irony--get-server-process-create))
-        (argv (cons request args)))
-    (when (and process (process-live-p process))
-      (irony--server-process-push-callback process callback)
-      ;; skip narrowing to compute buffer size and content
-      (irony--without-narrowing
-        (process-send-string process
-                             (format "%s\n"
-                                     (combine-and-quote-strings argv)))))))
+(cl-defstruct (irony--buffer-state
+               (:constructor irony--buffer-state-create-1))
+  file
+  exists
+  modified
+  tick)
 
-(defvar irony--sync-id 0 "ID of next sync request.")
-(defvar irony--sync-result '(-1 . nil)
-  "The car stores the id of the result and the cdr stores the return value.")
+(defun irony--buffer-state-create (buffer)
+  (let ((file (buffer-file-name buffer)))
+    (irony--buffer-state-create-1 :file file
+                                  :exists (and file (file-exists-p file))
+                                  :modified (buffer-modified-p buffer)
+                                  :tick (buffer-chars-modified-tick buffer))))
 
-(defun irony--sync-request-callback (response id)
-  (setq irony--sync-result (cons id response)))
-
-(defun irony--send-request-sync (request &rest args)
-  "Send a request to irony-server and wait for the result."
-  (let* ((id irony--sync-id)
-         (callback (list #'irony--sync-request-callback id)))
-    (setq irony--sync-id (1+ irony--sync-id))
-    (with-local-quit
-      (let ((process (irony--get-server-process-create)))
-        (when process
-          (apply 'irony--send-request request callback args)
-          (while (not (= id (car irony--sync-result)))
-            (accept-process-output process))
-          (cdr irony--sync-result))))))
-
-(defun irony--send-parse-request (request callback &rest args)
-  "Send a request that acts on the current buffer to irony-server.
-
-This concerns mainly irony-server commands that do some work on a
-translation unit for libclang, the unsaved buffer data are taken
-care of."
-  (let ((process (irony--get-server-process-create))
-        (argv (append (list request
-                            "--num-unsaved=1"
-                            (irony--get-buffer-path-for-server))
-                      args))
-        (compile-options (irony--adjust-compile-options)))
-    (when (and process (process-live-p process))
-      (irony--server-process-push-callback process callback)
-      ;; skip narrowing to compute buffer size and content
-      (irony--without-narrowing
-        ;; always make sure to finish with a newline (required by irony-server
-        ;; to play nice with line buffering even when the file doesn't end with
-        ;; a newline)
-        ;;
-        ;; it is important to send the request atomically rather than using
-        ;; multiple process-send calls. On Windows at least, if the request is
-        ;; not atomic, content from subsequent requests can get intermixed with
-        ;; earlier requests. This may be because of how Emacs behaves when the
-        ;; buffers to communicate with processes are full (see
-        ;; http://www.gnu.org/software/emacs/manual/html_node/elisp/Input-to-Processes.html).
-        (process-send-string process
-                             (format "%s\n%s\n%s\n%d\n%s\n"
-                                     (combine-and-quote-strings argv)
-                                     (combine-and-quote-strings compile-options)
-                                     buffer-file-name
-                                     (irony--buffer-size-in-bytes)
-                                     (buffer-substring (point-min) (point-max))))))))
-
-
-;;
-;; Buffer parsing
-;;
-
-(defvar-local irony--parse-buffer-state nil
-  "If non-nil, state is of the form (context . status) where:
-
-- context is `irony--parse-buffer-context'
-- status is one of the following symbol: requested, done")
-
-(defvar-local irony--parse-buffer-callbacks nil)
-(defvar-local irony--parse-buffer-last-results nil
-  "Holds the last parsing results.")
-
-(defun irony--parse-buffer-context ()
-  ;; FIXME: use the ticks of all irony's files that may influence this one?
-  ;; FIXME: compile options should be part of the context? or settings the
-  ;; compile options should flush the context alternatively.
-  (buffer-chars-modified-tick))
-
-(defun irony--buffer-parsed-p (&optional ctx)
-  (equal irony--parse-buffer-state
-         (cons (or ctx (irony--parse-buffer-context)) 'done)))
-
-(defun irony--buffer-parsing-in-progress-p (&optional ctx)
-  (equal irony--parse-buffer-state
-         (cons (or ctx (irony--parse-buffer-context)) 'requested)))
-
-(defun irony--parse-request-handler (result context buffer)
-  (with-current-buffer buffer
-    (let ((callbacks irony--parse-buffer-callbacks)
-          (status (cond
-                   ;; context out-of-date?
-                   ((not (equal context (irony--parse-buffer-context)))
-                    'cancelled)
-                   (result
-                    'success)
-                   (t
-                    'failed))))
-      (setq irony--parse-buffer-last-results (list status)
-            irony--parse-buffer-callbacks nil
-            irony--parse-buffer-state (cons context 'done))
-      (mapc #'(lambda (cb) (funcall cb status)) callbacks))))
-
-;; TODO: provide a synchronous/blocking counterpart, see how
-;; `url-retrieve-synchronously' does it
-(defun irony--parse-buffer-async (callback &optional force)
-  "Parse the current buffer and call CALLACK when done.
-
-Parsing is effectively done only if needed, if the buffer hasn't
-changed since the last parsing, CALLBACK is called immediately.
-
-Use FORCE to force a re-parse unconditionally.
-
-Callback is a function that is called with one argument, the
-status of the parsing request, the value is one of the following
-symbol:
-
-- success: parsing the file was a sucess, irony-server has
-  up-to-date information about the buffer
-
-- failed: parsing the file resulted in a failure (file access
-  rights wrong, whatever)
-
-- cancelled: if the request for this callback was superseded by
-  another request or if the callback is out-of-date (but not
-  necessarily superseded by another request)"
-  (when force
-    (setq irony--parse-buffer-state nil))
-  (let ((context (irony--parse-buffer-context)))
+(defun irony--buffer-state-compare (old new)
+  (unless (equal old new)
     (cond
-     ((irony--buffer-parsed-p context)
-      ;; buffer already parsed, call callback immediately
-      (apply callback irony--parse-buffer-last-results))
-     ((irony--buffer-parsing-in-progress-p context)
-      ;; the request is already pending, add callback to the list
-      (push callback irony--parse-buffer-callbacks))
-     (t
-      ;; current request is either out-of-date or inexistant,
-      ;; cancel callbacks if any, and make new request
-      (let ((obselete-callbacks irony--parse-buffer-callbacks))
-        (setq irony--parse-buffer-callbacks (list callback)
-              irony--parse-buffer-state (cons context 'requested))
-        (irony--send-parse-request "parse"
-                                   (list 'irony--parse-request-handler context
-                                         (current-buffer)))
-        ;; it's safer to call this last, since the function may be called recursively
-        (mapc #'(lambda (cb) (funcall cb 'cancelled)) obselete-callbacks))))))
+     ((irony--buffer-state-modified new) 'set-unsaved)
+     ((null old) nil)                   ;noop
+     ((irony--buffer-state-modified old) 'reset-unsaved))))
 
-(defun irony-get-type--request-handler (types)
-  (when types
-    (if (cdr types)
-        (if (string= (car types) (cadr types))
-            (message "%s" (car types))
-          (message "%s (aka '%s')" (car types) (cadr types)))
-      (message "%s" (car types)))))
+(irony-iotask-define-task irony--t-set-unsaved
+  "`set-unsaved' server command."
+  :start (lambda (process buffer buf-state)
+           (let ((elem (assq buffer (process-get process :unsaved-buffers)))
+                 temp-file)
+             (if (eq (cdr elem) buf-state)
+                 ;; early exit if already cached
+                 (irony-iotask-set-result t)
+               (setq temp-file (make-temp-file "irony-unsaved-"))
+               (irony-iotask-put :temp-file temp-file)
+               (irony-iotask-put :buffer-state buf-state)
+               (process-put process :buffer-state buf-state)
+               (with-current-buffer buffer
+                 (irony--without-narrowing
+                   (let ((write-region-inhibit-fsync t))
+                     (write-region nil nil temp-file nil 0)))
+                 (irony--server-send-command "set-unsaved"
+                                             (irony--get-buffer-path-for-server)
+                                             temp-file)))))
+  :update irony--server-command-update
+  :finish (lambda (&rest _args)
+            (delete-file (irony-iotask-get :temp-file)))
+  :on-success
+  (lambda (process buffer &rest _args)
+    (let* ((unsaved-buffers (process-get process :unsaved-buffers))
+           (elem (assq buffer unsaved-buffers))
+           (buf-state (irony-iotask-get :buffer-state)))
+      (if elem
+          (setcdr elem buf-state)
+        (process-put process :unsaved-buffers (cons (cons buffer buf-state)
+                                                    unsaved-buffers))))))
+
+(defun irony--set-unsaved-task (process buffer buf-state)
+  (irony-iotask-package-task irony--t-set-unsaved process buffer buf-state))
+
+(irony-iotask-define-task irony--t-reset-unsaved
+  "`reset-unsaved' server command."
+  :start (lambda (process buffer)
+           (if (assq buffer (process-get process :unsaved-buffers))
+               (irony--server-send-command "reset-unsaved"
+                                           (irony--get-buffer-path-for-server
+                                            buffer))
+             ;; exit early if already reset
+             (irony-iotask-set-result t)))
+  :update irony--server-command-update
+  :finish (lambda (process buffer)
+            (process-put
+             process
+             :unsaved-buffers
+             (assq-delete-all buffer (process-get process :unsaved-buffers)))))
+
+(defun irony--reset-unsaved-task (process buffer)
+  (irony-iotask-package-task irony--t-reset-unsaved process buffer))
+
+(defun irony--list-unsaved-irony-mode-buffers (&optional ignore-list)
+  (delq nil (mapcar (lambda (buf)
+                      (unless (memq buf ignore-list)
+                        (when (buffer-modified-p buf)
+                          (with-current-buffer buf
+                            (and irony-mode buf)))))
+                    (buffer-list))))
+
+(defun irony--get-buffer-change-alist (process)
+  "Return a list of (buffer . old-state).
+
+old-state can be nil if the old state isn't known."
+  (let ((unsaved-list (process-get process :unsaved-buffers)))
+    (append unsaved-list
+            (mapcar (lambda (buf)
+                      (cons buf nil))
+                    (irony--list-unsaved-irony-mode-buffers
+                     (mapcar #'car unsaved-list))))))
+
+(defun irony--unsaved-buffers-tasks ()
+  (let ((process (irony--get-server-process-create))
+        result)
+    (dolist (buffer-old-state-cons (irony--get-buffer-change-alist process)
+                                   result)
+      (let* ((buffer (car buffer-old-state-cons))
+             (old-state (cdr buffer-old-state-cons))
+             (new-state (irony--buffer-state-create buffer))
+             (task
+              (cl-case (irony--buffer-state-compare old-state new-state)
+                (set-unsaved
+                 (irony--set-unsaved-task process buffer new-state))
+                (reset-unsaved
+                 (irony--reset-unsaved-task process buffer)))))
+        (when task
+          (setq result (if result
+                           (irony-iotask-chain result task)
+                         task)))))))
+
+(irony-iotask-define-task irony--t-parse
+  "`parse' server command."
+  :start (lambda (file compile-options)
+           (apply #'irony--server-send-command "parse" file "--"
+                  compile-options))
+  :update irony--server-command-update)
+
+(defun irony--parse-task-1 (&optional buffer)
+  (with-current-buffer (or buffer (current-buffer))
+    (irony-iotask-package-task irony--t-parse
+                               (irony--get-buffer-path-for-server)
+                               (irony--adjust-compile-options))))
+
+(defun irony--parse-task (&optional buffer)
+  (let ((unsaved-tasks (irony--unsaved-buffers-tasks))
+        (parse-task (irony--parse-task-1 buffer)))
+    (if unsaved-tasks
+        (irony-iotask-chain unsaved-tasks parse-task)
+      parse-task)))
+
+(irony-iotask-define-task irony--t-diagnostics
+  "`parse' server command."
+  :start (lambda ()
+           (irony--server-send-command "diagnostics"))
+  :update irony--server-query-update)
+
+(defun irony--diagnostics-task (&optional buffer)
+  (irony-iotask-chain
+   (irony--parse-task buffer)
+   (irony-iotask-package-task irony--t-diagnostics)))
+
+(irony-iotask-define-task irony--t-get-type
+  "`get-type' server command."
+  :start (lambda (line col)
+           (irony--server-send-command "get-type" line col))
+  :update irony--server-query-update)
+
+(defun irony--get-type-task (&optional buffer pos)
+  (let ((line-column (irony--completion-line-column pos)))
+    (irony-iotask-chain
+     (irony--parse-task buffer)
+     (irony-iotask-package-task irony--t-get-type
+                                (car line-column) (cdr line-column)))))
 
 ;;;###autoload
 (defun irony-get-type ()
-    "Get the type of symbol under cursor."
+  "Get the type of symbol under cursor."
   (interactive)
-  (let ((line (line-number-at-pos))
-        (column (1+ (- (position-bytes (point))
-                       (position-bytes (point-at-bol))))))
-    (irony--parse-buffer-async
-     (lambda (parse-status)
-       (when (eq parse-status 'success)
-         (irony--send-request
-          "get-type"
-          (list 'irony-get-type--request-handler)
-          (number-to-string line)
-          (number-to-string column)))))))
+  (let ((types (irony--run-task (irony--get-type-task))))
+    (unless types
+      (user-error "Type not found"))
+    (if (and (cdr types) (not (string= (car types) (cadr types))))
+        (message "%s (aka '%s')" (car types) (cadr types))
+      (message "%s" (car types)))))
 
 (provide 'irony)
 
