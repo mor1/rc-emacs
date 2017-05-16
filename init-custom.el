@@ -111,6 +111,7 @@
  '(ocp-indent-syntax (quote ("lwt" "cstruct")))
  '(org-agenda-files (quote ("~/me/todo/todo.org")))
  '(org-agenda-include-diary t)
+ '(org-agenda-log-mode-items (quote (closed clock)))
  '(org-agenda-ndays 7)
  '(org-agenda-show-all-dates t)
  '(org-agenda-sorting-strategy
