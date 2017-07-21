@@ -177,6 +177,7 @@ attention to case differences."
     elixir-dogma
     emacs-lisp
     emacs-lisp-checkdoc
+    erlang-rebar3
     erlang
     eruby-erubis
     fortran-gfortran
@@ -187,6 +188,7 @@ attention to case differences."
     go-test
     go-errcheck
     go-unconvert
+    go-gosimple
     groovy
     haml
     handlebars
@@ -550,7 +552,7 @@ If nil, never check syntax automatically.  In this case, use
               (const :tag "After a new line was inserted" new-line)
               (const :tag "After `flycheck-mode' was enabled" mode-enabled))
   :package-version '(flycheck . "0.12")
-  :safe #'symbolp)
+  :safe #'flycheck-symbol-list-p)
 
 (defcustom flycheck-idle-change-delay 0.5
   "How many seconds to wait before checking syntax automatically.
@@ -2864,7 +2866,7 @@ variables of Flycheck."
                (:constructor flycheck-error-new)
                (:constructor flycheck-error-new-at (line column
                                                          &optional level message
-                                                         &key checker id
+                                                         &key checker id group
                                                          (filename (buffer-file-name))
                                                          (buffer (current-buffer)))))
   "Structure representing an error reported by a syntax checker.
@@ -2894,12 +2896,25 @@ Slots:
      columns must be adjusted for Flycheck, see
      `flycheck-increment-error-columns'.
 
+`message' (optional)
+     The error message as a string, if any.
+
 `level'
-     The error level, as either `warning' or `error'.
+     The error level, as either `info', `warning' or `error'.
 
 `id' (optional)
-     An ID identifying the kind of error."
-  buffer checker filename line column message level id)
+     An ID identifying the kind of error.
+
+`group` (optional)
+     A symbol identifying the group the error belongs to.
+
+     Some tools will emit multiple errors that relate to the same
+     issue (e.g., lifetime errors in Rust).  All related errors
+     collected by a checker should have the same `group` value,
+     in order to be able to present them to the user.
+
+     See `flycheck-errors-from-group`."
+  buffer checker filename line column message level id group)
 
 (defmacro flycheck-error-with-buffer (err &rest forms)
   "Switch to the buffer of ERR and evaluate FORMS.
@@ -3160,6 +3175,18 @@ otherwise."
 Return a list of all errors that are relevant for their
 corresponding buffer."
   (seq-filter #'flycheck-relevant-error-p errors))
+
+(defun flycheck-related-errors (err)
+  "Get all the errors that are in the same group as ERR.
+
+Return a list of all errors (in `flycheck-current-errors') that
+have the same `flycheck-error-group' as ERR, including ERR
+itself."
+  (-if-let (group (flycheck-error-group err))
+      (seq-filter (lambda (e)
+                    (eq (flycheck-error-group e) group))
+                  flycheck-current-errors)
+    (list err)))
 
 
 ;;; Status reporting for the current buffer
@@ -5683,6 +5710,7 @@ https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
         (primary-filename)
         (primary-line)
         (primary-column)
+        (group (make-symbol "group"))
         (spans)
         (children)
         (errors))
@@ -5742,7 +5770,8 @@ https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
           :id error-code
           :checker checker
           :buffer buffer
-          :filename .file_name)
+          :filename .file_name
+          :group group)
          errors)))
 
     ;; Then we turn children messages into flycheck errors pointing to the
@@ -5759,7 +5788,8 @@ https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
           :id error-code
           :checker checker
           :buffer buffer
-          :filename primary-filename)
+          :filename primary-filename
+          :group group)
          errors)))
 
     ;; If there are no spans, the error is not associated with a specific
@@ -5774,7 +5804,8 @@ https://github.com/rust-lang/rust/blob/master/src/libsyntax/json.rs#L67-L139"
              error-message
              :id error-code
              :checker checker
-             :buffer buffer)
+             :buffer buffer
+             :group group)
             errors))
     (nreverse errors)))
 
@@ -7171,6 +7202,62 @@ See URL `http://www.erlang.org/'."
   :modes erlang-mode
   :enabled (lambda () (string-suffix-p ".erl" (buffer-file-name))))
 
+(defun contains-rebar-config (dir-name)
+  "Return DIR-NAME if DIR-NAME/rebar.config exists, nil otherwise."
+  (when (file-exists-p (expand-file-name "rebar.config" dir-name))
+    dir-name))
+
+(defun locate-rebar3-project-root (file-name &optional prev-file-name acc)
+  "Find the top-most rebar project root for source FILE-NAME.
+
+A project root directory is any directory containing a
+rebar.config file.  Find the top-most directory to move out of any
+nested dependencies.
+
+FILE-NAME is a source file for which to find the project.
+
+PREV-FILE-NAME helps us prevent infinite looping
+
+ACC is an accumulator that keeps the list of results, the first
+non-nil of which will be our project root.
+
+Return the absolute path to the directory"
+  (if (string= file-name prev-file-name)
+      (car (remove nil acc))
+    (let ((current-dir (file-name-directory file-name)))
+      (locate-rebar3-project-root
+       (directory-file-name current-dir)
+       file-name
+       (cons (contains-rebar-config current-dir) acc)))))
+
+(defun flycheck-rebar3-project-root (&optional _checker)
+  "Return directory where rebar.config is located."
+  (locate-rebar3-project-root buffer-file-name))
+
+(flycheck-define-checker erlang-rebar3
+  "An Erlang syntax checker using the rebar3 build tool."
+  :command ("rebar3" "compile")
+  :error-parser
+  (lambda (output checker buffer)
+    ;; rebar3 outputs ANSI terminal colors, which don't match up with
+    ;; :error-patterns, so we strip those color codes from the output
+    ;; here before passing it along to the default behavior. The
+    ;; relevant disucssion can be found at
+    ;; https://github.com/flycheck/flycheck/pull/1144
+    (require 'ansi-color)
+    (flycheck-parse-with-patterns
+     (and (fboundp 'ansi-color-filter-apply) (ansi-color-filter-apply output))
+     checker buffer))
+  :error-patterns
+  ((warning line-start
+            (file-name) ":" line ": Warning:" (message) line-end)
+   (error line-start
+          (file-name) ":" line ": " (message) line-end))
+  :modes erlang-mode
+  :enabled flycheck-rebar3-project-root
+  :predicate flycheck-buffer-saved-p
+  :working-directory flycheck-rebar3-project-root)
+
 (flycheck-define-checker eruby-erubis
   "A eRuby syntax checker using the `erubis' command.
 
@@ -7297,7 +7384,8 @@ See URL `https://golang.org/cmd/gofmt/'."
                   ;; Fall back, if go-vet doesn't exist
                   (warning . go-build) (warning . go-test)
                   (warning . go-errcheck)
-                  (warning . go-unconvert)))
+                  (warning . go-unconvert)
+                  (warning . go-gosimple)))
 
 (flycheck-define-checker go-golint
   "A Go style checker using Golint.
@@ -7309,7 +7397,7 @@ See URL `https://github.com/golang/lint'."
   :modes go-mode
   :next-checkers (go-vet
                   ;; Fall back, if go-vet doesn't exist
-                  go-build go-test go-errcheck go-unconvert))
+                  go-build go-test go-errcheck go-unconvert go-gosimple))
 
 (flycheck-def-option-var flycheck-go-vet-print-functions nil go-vet
   "A list of print-like functions for `go tool vet'.
@@ -7363,7 +7451,8 @@ See URL `https://golang.org/cmd/go/' and URL
                   go-test
                   ;; Fall back if `go build' or `go test' can be used
                   go-errcheck
-                  go-unconvert)
+                  go-unconvert
+                  go-gosimple)
   :verify (lambda (_)
             (let* ((go (flycheck-checker-executable 'go-vet))
                    (have-vet (member "vet" (ignore-errors
@@ -7428,7 +7517,8 @@ Requires Go 1.6 or newer.  See URL `https://golang.org/cmd/go'."
                (and (flycheck-buffer-saved-p)
                     (not (string-suffix-p "_test.go" (buffer-file-name)))))
   :next-checkers ((warning . go-errcheck)
-                  (warning . go-unconvert)))
+                  (warning . go-unconvert)
+                  (warning . go-gosimple)))
 
 (flycheck-define-checker go-test
   "A Go syntax and type checker using the `go test' command.
@@ -7448,7 +7538,8 @@ Requires Go 1.6 or newer.  See URL `https://golang.org/cmd/go'."
   (lambda () (and (flycheck-buffer-saved-p)
                   (string-suffix-p "_test.go" (buffer-file-name))))
   :next-checkers ((warning . go-errcheck)
-                  (warning . go-unconvert)))
+                  (warning . go-unconvert)
+                  (warning . go-gosimple)))
 
 (flycheck-define-checker go-errcheck
   "A Go checker for unchecked errors.
@@ -7476,7 +7567,8 @@ See URL `https://github.com/kisielk/errcheck'."
     errors)
   :modes go-mode
   :predicate (lambda () (flycheck-buffer-saved-p))
-  :next-checkers ((warning . go-unconvert)))
+  :next-checkers ((warning . go-unconvert)
+                  (warning . go-gosimple)))
 
 (flycheck-define-checker go-unconvert
   "A Go checker looking for unnecessary type conversions.
@@ -7486,7 +7578,19 @@ See URL `https://github.com/mdempsky/unconvert'."
   :error-patterns
   ((warning line-start (file-name) ":" line ":" column ": " (message) line-end))
   :modes go-mode
-  :predicate (lambda () (flycheck-buffer-saved-p)))
+  :predicate (lambda () (flycheck-buffer-saved-p))
+  :next-checkers ((warning . go-gosimple)))
+
+(flycheck-define-checker go-gosimple
+  "A Go linter that simplifies code using the `gosimple' command.
+
+Requires Go 1.6 or newer. See URL `https://github.com/dominikh/go-tools'."
+  :command ("gosimple"
+            (option-list "-tags=" flycheck-go-build-tags concat)
+            source)
+  :error-patterns
+  ((warning line-start (file-name) ":" line ":" column ": " (message) line-end))
+  :modes go-mode)
 
 (flycheck-define-checker groovy
   "A groovy syntax checker using groovy compiler API.
@@ -7665,7 +7769,7 @@ See URL `https://github.com/commercialhaskell/stack'."
             source)
   :error-patterns
   ((warning line-start (file-name) ":" line ":" column ":"
-            (or " " "\n    ") "Warning:"
+            (or " " "\n    ") (in "Ww") "arning:"
             (optional " " "[" (id (one-or-more not-newline)) "]")
             (optional "\n")
             (message
@@ -7715,7 +7819,7 @@ See URL `https://www.haskell.org/ghc/'."
             source)
   :error-patterns
   ((warning line-start (file-name) ":" line ":" column ":"
-            (or " " "\n    ") "Warning:"
+            (or " " "\n    ") (in "Ww") "arning:"
             (optional " " "[" (id (one-or-more not-newline)) "]")
             (optional "\n")
             (message
@@ -9481,6 +9585,19 @@ By default, no warnings are excluded."
   :safe #'flycheck-string-list-p
   :package-version '(flycheck . "0.21"))
 
+(flycheck-def-option-var flycheck-shellcheck-follow-sources t sh-shellcheck
+  "Whether to follow external sourced files in scripts.
+
+Shellcheck will follow and parse sourced files so long as a
+pre-runtime resolvable path to the file is present.  This can
+either be part of the source command itself:
+   source /full/path/to/file.txt
+or added as a shellcheck directive before the source command:
+   # shellcheck source=/full/path/to/file.txt."
+  :type 'boolean
+  :safe #'booleanp
+  :package-version '(flycheck . "31"))
+
 (flycheck-define-checker sh-shellcheck
   "A shell script syntax and style checker using Shellcheck.
 
@@ -9488,6 +9605,7 @@ See URL `https://github.com/koalaman/shellcheck/'."
   :command ("shellcheck"
             "--format" "checkstyle"
             "--shell" (eval (symbol-name sh-shell))
+            (option-flag "--external-sources" flycheck-shellcheck-follow-sources)
             (option "--exclude" flycheck-shellcheck-excluded-warnings list
                     flycheck-option-comma-separated-list)
             "-")
@@ -9671,24 +9789,40 @@ See URL `https://www.veripool.org/wiki/verilator'."
           line ": " (message) line-end))
   :modes verilog-mode)
 
+(flycheck-def-option-var flycheck-xml-xmlstarlet-xsd-path nil xml-xmlstarlet
+  "An XSD schema to validate against."
+  :type '(file :tag "XSD schema")
+  :safe #'stringp
+  :package-version '(flycheck . "31"))
+
 (flycheck-define-checker xml-xmlstarlet
   "A XML syntax checker and validator using the xmlstarlet utility.
 
 See URL `http://xmlstar.sourceforge.net/'."
   ;; Validate standard input with verbose error messages, and do not dump
   ;; contents to standard output
-  :command ("xmlstarlet" "val" "--err" "--quiet" "-")
+  :command ("xmlstarlet" "val" "--err" "--quiet"
+            (option "--xsd" flycheck-xml-xmlstarlet-xsd-path)
+            "-")
   :standard-input t
   :error-patterns
   ((error line-start "-:" line "." column ": " (message) line-end))
   :modes (xml-mode nxml-mode))
+
+(flycheck-def-option-var flycheck-xml-xmllint-xsd-path nil xml-xmllint
+  "An XSD schema to validate against."
+  :type '(file :tag "XSD schema")
+  :safe #'stringp
+  :package-version '(flycheck . "31"))
 
 (flycheck-define-checker xml-xmllint
   "A XML syntax checker and validator using the xmllint utility.
 
 The xmllint is part of libxml2, see URL
 `http://www.xmlsoft.org/'."
-  :command ("xmllint" "--noout" "-")
+  :command ("xmllint" "--noout"
+            (option "--schema" flycheck-xml-xmllint-xsd-path)
+            "-")
   :standard-input t
   :error-patterns
   ((error line-start "-:" line ": " (message) line-end))
