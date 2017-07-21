@@ -82,8 +82,7 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'server)
-(require 'tramp)
-(require 'tramp-sh nil t)
+(require 'shell)
 
 (and (require 'async-bytecomp nil t)
      (memq 'magit (bound-and-true-p async-bytecomp-allowed-packages))
@@ -108,15 +107,13 @@
 
 (defun with-editor-locate-emacsclient ()
   "Search for a suitable Emacsclient executable."
-  (--if-let (with-editor-locate-emacsclient-1 (with-editor-emacsclient-path) 3)
-      it
-    (display-warning 'with-editor (format "\
+  (or (with-editor-locate-emacsclient-1 (with-editor-emacsclient-path) 3)
+      (prog1 nil (display-warning 'with-editor "\
 Cannot determine a suitable Emacsclient
 
 Determining an Emacsclient executable suitable for the
 current Emacs instance failed.  For more information
-please see https://github.com/magit/magit/wiki/Emacsclient."))
-    nil))
+please see https://github.com/magit/magit/wiki/Emacsclient."))))
 
 (defun with-editor-locate-emacsclient-1 (path depth)
   (let* ((version-lst (-take depth (split-string emacs-version "\\.")))
@@ -516,10 +513,7 @@ which may or may not insert the text into the PROCESS' buffer."
           (with-current-buffer
               (find-file-noselect
                (if (file-name-absolute-p file)
-                   (if (tramp-tramp-file-p default-directory)
-                       (with-parsed-tramp-file-name default-directory nil
-                         (tramp-make-tramp-file-name method user host file hop))
-                     file)
+                   (concat (file-remote-p default-directory) file)
                  (expand-file-name file)))
             (with-editor-mode 1)
             (setq with-editor--pid pid)
@@ -748,7 +742,7 @@ See info node `(with-editor)Debugging' for instructions."
           (fun (let ((warning-minimum-level :error)
                      (warning-minimum-log-level :error))
                  (with-editor-locate-emacsclient))))
-      (insert "magit-emacsclient-executable:\n"
+      (insert "with-editor-emacsclient-executable:\n"
               (format " value:   %s (%s)\n" val
                       (and val (with-editor-emacsclient-version val)))
               (format " default: %s (%s)\n" def
@@ -762,7 +756,8 @@ See info node `(with-editor)Debugging' for instructions."
     (--each (with-editor-emacsclient-path)
       (insert (format "    %s (%s)\n" it (car (file-attributes it))))
       (when (file-directory-p it)
-        (dolist (exec (directory-files it t "emacsclient"))
+        ;; Don't match emacsclientw.exe, it makes popup windows.
+        (dolist (exec (directory-files it t "emacsclient\\(?:[^w]\\|\\'\\)"))
           (insert (format "      %s (%s)\n" exec
                           (with-editor-emacsclient-version exec))))))))
 
