@@ -1,10 +1,10 @@
 ;;; bash-completion-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (or (file-name-directory #$) (car load-path)))
+(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "bash-completion" "bash-completion.el" (21849
-;;;;;;  64465 0 0))
+;;;### (autoloads nil "bash-completion" "bash-completion.el" (22885
+;;;;;;  892 0 0))
 ;;; Generated autoloads from bash-completion.el
 
 (autoload 'bash-completion-setup "bash-completion" "\
@@ -49,7 +49,7 @@ and would like bash completion in Emacs to take these changes into account.
 ;;;***
 
 ;;;### (autoloads nil nil ("bash-completion-pkg.el" "sz-testutils.el")
-;;;;;;  (21849 64465 476931 0))
+;;;;;;  (22885 892 0 0))
 
 ;;;***
 
