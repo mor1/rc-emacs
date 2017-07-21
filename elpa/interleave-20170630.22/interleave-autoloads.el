@@ -3,8 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "interleave" "interleave.el" (22721 10697 0
-;;;;;;  0))
+;;;### (autoloads nil "interleave" "interleave.el" (22885 882 0 0))
 ;;; Generated autoloads from interleave.el
 
 (define-obsolete-variable-alias 'interleave--pdf-current-page-fn 'interleave-pdf-current-page-fn "1.3.0")
