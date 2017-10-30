@@ -22,6 +22,10 @@
 (require 'cl)
 (defvar *emacs-load-start* (current-time))
 
+;; add homebrew site-lisp directories to the load-path
+(let ((default-directory "/usr/local/share/emacs/site-lisp/"))
+  (normal-top-level-add-subdirs-to-load-path))
+
 ;; split out customisations
 (setq custom-file "~/.emacs.d/init-custom.el")
 
