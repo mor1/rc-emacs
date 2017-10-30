@@ -94,6 +94,7 @@
  '(inhibit-startup-screen t)
  '(initial-frame-alist (quote ((top . 1) (left . 1) (width . 170) (height . 80))))
  '(interprogram-paste-function (quote x-selection-value) t)
+ '(js-indent-level 2)
  '(linum-delay t)
  '(magit-diff-refine-hunk (quote all))
  '(magit-diff-use-overlays nil)
@@ -115,6 +116,7 @@
  '(mu4e-headers-long-date-format "%F%FT%z")
  '(mu4e-headers-time-format "%F%FT%z")
  '(mu4e-maildir "/Users/mort/me/footprint/mail")
+ '(mu4e-update-interval nil)
  '(mu4e-use-fancy-chars t)
  '(mu4e-user-mail-address-list
    (quote
@@ -168,6 +170,8 @@
  '(scroll-step 0)
  '(select-enable-clipboard t)
  '(sentence-end-double-space nil)
+ '(sh-basic-offset 2)
+ '(sh-indentation 2)
  '(show-paren-mode t)
  '(show-paren-style (quote expression))
  '(size-indication-mode t)

@@ -513,6 +513,7 @@ This command is convenient when reading novel, documentation."
   ;; (setq indent-region-function 'nil) ;; clean up ocp-indent bug
   (local-set-key (kbd "M-q") 'fill-paragraph)
   (local-set-key (kbd "%") 'match-paren)
+  (local-set-key (kbd "C-x C-d") 'insdate-insert-current-date)
   (local-unset-key (kbd "S-<tab>"))
   )
 (add-hook 'prog-mode-hook 'prog-mode-hook-f)
@@ -528,7 +529,7 @@ This command is convenient when reading novel, documentation."
              (local-set-key (kbd "S-<up>") 'org-move-line-up)
              (local-set-key (kbd "S-<down>") 'org-move-line-down)
              (local-set-key (kbd "S-C-<tab>") 'org-shifttab)
-             (local-set-key (kbd "C-x C-d") `insdate-insert-current-date)
+             (local-set-key (kbd "C-x C-d") 'insdate-insert-current-date)
              (local-unset-key (kbd "M-<return>"))
              ))
 
@@ -597,6 +598,11 @@ This command is convenient when reading novel, documentation."
              (setq coffee-command "/usr/local/bin/coffee")
              ))
 
+(add-hook 'yaml-mode-hook
+          '(lambda ()
+             (local-set-key (kbd "C-x C-d") 'insdate-insert-current-date)
+             ))
+
 ;; mu4e email
 (require 'mu4e)
 
@@ -607,9 +613,9 @@ This command is convenient when reading novel, documentation."
       mu4e-refile-folder "/archive"            ;; saved messages
       )
 
-(setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
-      mu4e-update-interval 300              ;; update every 5 minutes
-      )
+;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
+;;      mu4e-update-interval 300              ;; update every 5 minutes
+;;      )
 
 ;; ;; tell message-mode how to send mail
 ;; (setq message-send-mail-function 'smtpmail-send-it)
