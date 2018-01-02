@@ -12,7 +12,7 @@
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
 ;; Package-Requires: ((emacs "24.4") (dash "20170810") (with-editor "20170817"))
-;; Package-Version: 20171007.346
+;; Package-Version: 20171203.1127
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -317,8 +317,8 @@ already using it, then you probably shouldn't start doing so."
 (defvar git-commit-mode-map
   (let ((map (make-sparse-keymap)))
     (cond ((featurep 'jkl)
-           (define-key map (kbd "M-i") 'git-commit-prev-message)
-           (define-key map (kbd "M-k") 'git-commit-next-message))
+           (define-key map (kbd "C-M-i") 'git-commit-prev-message)
+           (define-key map (kbd "C-M-k") 'git-commit-next-message))
           (t
            (define-key map (kbd "M-p") 'git-commit-prev-message)
            (define-key map (kbd "M-n") 'git-commit-next-message)
@@ -504,7 +504,15 @@ finally check current non-comment text."
   (turn-on-flyspell)
   (setq flyspell-generic-check-word-predicate
         'git-commit-flyspell-verify)
-  (flyspell-buffer))
+  (let (end)
+    (save-excursion
+      (goto-char (point-max))
+      (while (and (not (bobp)) (looking-at "^\\(#\\|$\\)"))
+        (forward-line -1))
+      (unless (looking-at "^\\(#\\|$\\)")
+        (forward-line))
+      (setq end (point)))
+    (flyspell-region (point-min) end)))
 
 (defun git-commit-flyspell-verify ()
   (not (= (char-after (line-beginning-position)) ?#)))
