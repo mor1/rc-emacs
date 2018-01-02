@@ -24,32 +24,14 @@
 (defvar tuareg-opam-indent-basic 2
   "The default amount of indentation.")
 
+(defvar tuareg-opam-flymake nil
+  "It t, use flymake to lint OPAM files.")
 
 (defvar tuareg-opam-mode-map
   (let ((map (make-keymap)))
     (define-key map "\C-j" 'newline-and-indent)
     map)
   "Keymap for tuareg-opam mode")
-
-(defvar tuareg-opam-skeleton
-  "opam-version: \"1.2\"
-maintainer: \"\"
-authors: []
-tags: []
-license: \"\"
-homepage: \"\"
-dev-repo: \"\"
-bug-reports: \"\"
-doc: \"\"
-build: [
-  [ \"jbuilder\" \"subst\" ] {pinned}
-  [ \"jbuilder\" \"build\" \"-p\" name \"-j\" jobs ]
-]
-build-test: [[\"jbuilder\" \"runtest\" \"-p\" name \"-j\" jobs]]
-depends: [
-  \"jbuilder\" {build}
-]\n"
-  "If not nil, propose to fill new files with this skeleton")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       Syntax highlighting
@@ -73,13 +55,15 @@ depends: [
                 "name" "pinned"
                 "ocaml-version" "opam-version" "compiler" "preinstalled"
                 "switch" "jobs" "ocaml-native" "ocaml-native-tools"
-                "ocaml-native-dynlink" "arch") 'symbols)
+                "ocaml-native-dynlink" "arch")
+              'symbols)
   "Variables declared in OPAM.")
 
 (defconst tuareg-opam-pkg-variables-regex
   (regexp-opt '("name" "version" "depends" "installed" "enable" "pinned"
                 "bin" "sbin" "lib" "man" "doc" "share" "etc" "build"
-                "hash") 'symbols)
+                "hash")
+              'symbols)
   "Package variables in OPAM.")
 
 (defvar tuareg-opam-font-lock-keywords
@@ -175,6 +159,66 @@ See `prettify-symbols-alist' for more information.")
      value)
     value))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                           Linting
+
+(require 'flymake)
+
+(defun tuareg-opam-flymake-init ()
+  (let ((fname (flymake-init-create-temp-buffer-copy
+                #'flymake-create-temp-inplace)))
+    (list "opam" (list "lint" fname))))
+
+(defvar tuareg-opam--allowed-file-name-masks
+  '("[./]opam_?\\'" tuareg-opam-flymake-init)
+  "Flymake entry for OPAM files.  See `flymake-allowed-file-name-masks'.")
+
+(defvar tuareg-opam--err-line-patterns
+  '(("File \"\\([^\"]+\\)\", line \\([0-9]+\\), \
+characters \\([0-9]+\\)-\\([0-9]+\\): +\\([^\n]*\\)$"
+     1 2 3 5))
+  "Value of `flymake-err-line-patterns' for OPAM files.")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                           Skeleton
+
+(define-skeleton tuareg-opam-insert-opam-form
+  "Insert a minimal opam file."
+  nil
+  "opam-version: \"1.2\"" > \n
+  "maintainer: \"" _ "\"" > \n
+  "authors: [" _ "]" > \n
+  "tags: [" _ "]" > \n
+  "license: \"" _ "\"" > \n
+  "homepage: \"" _ "\"" > \n
+  "dev-repo: \"" _ "\"" > \n
+  "bug-reports: \"" _ "\"" > \n
+  "doc: \"" _ "\"" > \n
+  "build: [" > \n
+  "[ \"jbuilder\" \"subst\" ] {pinned}" > \n
+  "[ \"jbuilder\" \"build\" \"-p\" name \"-j\" jobs ]" > \n
+  "]" > \n
+  "build-test: [[\"jbuilder\" \"runtest\" \"-p\" name \"-j\" jobs]]" > \n
+  "depends: [" > \n
+  "\"jbuilder\" {build}" > \n
+  "]" > ?\n)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar tuareg-opam-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c.o" 'tuareg-opam-insert-opam-form)
+    map)
+  "Keymap used in Tuareg-opam mode.")
+
+(defun tuareg-opam-build-menu ()
+  (easy-menu-define
+    tuareg-opam-mode-menu  (list tuareg-opam-mode-map)
+    "Tuareg-opam mode menu."
+    '("OPAM"
+      ["Skeleton" tuareg-opam-insert-opam-form t]))
+  (easy-menu-add tuareg-opam-mode-menu))
+
 
 ;;;###autoload
 (define-derived-mode tuareg-opam-mode prog-mode "Tuareg-opam"
@@ -186,11 +230,11 @@ See `prettify-symbols-alist' for more information.")
   (setq indent-tabs-mode nil)
   (setq-local require-final-newline mode-require-final-newline)
   (smie-setup tuareg-opam-smie-grammar #'tuareg-opam-smie-rules)
-  (let ((fname (buffer-file-name)))
-    (when (and tuareg-opam-skeleton
-               (not (and fname (file-exists-p fname)))
-               (y-or-n-p "New file; fill with skeleton?"))
-      (save-excursion (insert tuareg-opam-skeleton))))
+  (push tuareg-opam--allowed-file-name-masks flymake-allowed-file-name-masks)
+  (setq-local flymake-err-line-patterns tuareg-opam--err-line-patterns)
+  (when (and tuareg-opam-flymake buffer-file-name)
+    (flymake-mode t))
+  (tuareg-opam-build-menu)
   (run-mode-hooks 'tuareg-opam-mode-hook))
 
 

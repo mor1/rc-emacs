@@ -26,21 +26,6 @@
 (defvar tuareg-jbuild-flymake nil
   "If t, check your jbuild file with flymake.")
 
-(defvar tuareg-jbuild-skeleton
-  "(jbuild_version 1)\n
-\(library
- ((name        )
-  (public_name )
-  (synopsis \"\")
-  (libraries ())))
-
-\(executables
- ((names        ())
-  (public_names ())
-  (libraries ())))\n"
-  "If not nil, propose to fill new files with this skeleton")
-
-
 (defvar tuareg-jbuild-temporary-file-directory
   (expand-file-name "Tuareg-jbuild" temporary-file-directory)
   "Directory where to duplicate the files for flymake.")
@@ -55,7 +40,7 @@
 (defconst tuareg-jbuild-keywords-regex
   (regexp-opt
    '("jbuild_version" "library" "executable" "executables" "rule"
-     "ocamllex" "ocamlyacc" "menhir" "alias" "install")
+     "ocamllex" "ocamlyacc" "menhir" "alias" "install" "copy_files")
    'symbols)
   "Keywords in jbuild files.")
 
@@ -79,11 +64,97 @@
    'symbols)
   "Field names allowed in jbuild files.")
 
+(defvar tuareg-jbuild-actions-regex
+  (regexp-opt
+   '("run" "chdir" "setenv"
+     "with-stdout-to" "with-stderr-to" "with-outputs-to"
+     "ignore-stdout" "ignore-stderr" "ignore-outputs"
+     "progn" "echo" "write-file" "cat" "copy" "copy#" "system" "bash")
+   t)
+  "Builtin actions in jbuilder")
+
+(defvar tuareg-jbuild-var-kind-regex
+  (regexp-opt
+   '("path" "path-no-dep" "exe" "bin" "lib" "libexec" "lib-available"
+     "version" "read" "read-lines" "read-strings")
+   'words)
+  "Optional prefix to variable names.")
+
+(defvar tuareg-jbuild-var-regex
+      (concat "\\(\\(?:!\\|" tuareg-jbuild-var-kind-regex
+              ":\\)?\\)\\([a-zA-Z][a-zA-Z0-9_.]*\\|[<@^]\\)"
+              "\\(\\(?::[a-zA-Z][a-zA-Z0-9_.]*\\)?\\)"))
+
 (defvar tuareg-jbuild-font-lock-keywords
   `((,tuareg-jbuild-keywords-regex . font-lock-keyword-face)
     (,tuareg-jbuild-fields-regex . font-lock-constant-face)
-    ("${\\([a-zA-Z:]+\\|[<@]\\)}" 1 font-lock-variable-name-face)
-    ("$(\\([a-zA-Z:]+\\|[<@]\\))" 1 font-lock-variable-name-face)))
+    ("\\(true\\|false\\)" 1 font-lock-constant-face)
+    (,(concat "(" tuareg-jbuild-actions-regex) 1 font-lock-builtin-face)
+    (,(concat "${" tuareg-jbuild-var-regex "}")
+     (1 font-lock-builtin-face)
+     (3 font-lock-variable-name-face)
+     (4 font-lock-variable-name-face))
+    (,(concat "$(" tuareg-jbuild-var-regex ")")
+     (1 font-lock-builtin-face)
+     (3 font-lock-variable-name-face)
+     (4 font-lock-variable-name-face))
+    ("\\(:[a-zA-Z]+\\)\\b" 1 font-lock-builtin-face)))
+
+(defvar tuareg-jbuild-mode-syntax-table
+  (let ((table (make-syntax-table)))
+    (modify-syntax-entry ?\; "< b" table)
+    (modify-syntax-entry ?\n "> b" table)
+    (modify-syntax-entry ?\( "()" table)
+    (modify-syntax-entry ?\) ")(" table)
+    (modify-syntax-entry ?\{ "(}" table)
+    (modify-syntax-entry ?\} "){" table)
+    (modify-syntax-entry ?\[ "(]" table)
+    (modify-syntax-entry ?\] ")[" table)
+    table)
+  "Tuareg-jbuild syntax table.")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                             SMIE
+
+(require 'smie)
+
+(defvar tuareg-jbuild-smie-grammar
+  (when (fboundp 'smie-prec2->grammar)
+    (smie-prec2->grammar
+     (smie-bnf->prec2 '()))))
+
+(defun tuareg-jbuild-smie-rules (kind token)
+  (cond
+   ((eq kind :close-all) '(column . 0))
+   ((and (eq kind :after) (equal token ")"))
+    (save-excursion
+      (goto-char (cadr (smie-indent--parent)))
+      (if (looking-at-p tuareg-jbuild-keywords-regex)
+          '(column . 0)
+        1)))
+   ((eq kind :before)
+    (if (smie-rule-parent-p "(")
+        (save-excursion
+          (goto-char (cadr (smie-indent--parent)))
+          (cond
+           ((looking-at-p tuareg-jbuild-keywords-regex) 1)
+           ((looking-at-p tuareg-jbuild-fields-regex)
+            (smie-rule-parent 0))
+           ((smie-rule-sibling-p) (cons 'column (current-column)))
+           (t (cons 'column (current-column)))))
+      '(column . 0)))
+   (t 1)))
+
+(defun verbose-tuareg-jbuild-smie-rules (kind token)
+  (let ((value (tuareg-jbuild-smie-rules kind token)))
+    (message
+     "%s '%s'; sibling-p:%s parent:%s hanging:%s = %s"
+     kind token
+     (ignore-errors (smie-rule-sibling-p))
+     (ignore-errors smie--parent)
+     (ignore-errors (smie-rule-hanging-p))
+     value)
+    value))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -231,24 +302,136 @@ characters \\([0-9]+\\)-\\([0-9]+\\): +\\([^\n]*\\)$"
   "Value of `flymake-err-line-patterns' for jbuild files.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                          Skeletons
+;; See Info node "Autotype".
+
+(define-skeleton tuareg-jbuild-insert-version-form
+  "Insert the jbuild version."
+  nil
+  "(jbuild_version 1" _ ")" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-library-form
+  "Insert a library stanza."
+  nil
+  "(library" > \n
+  "((name        " _ ")" > \n
+  "(public_name " _ ")" > \n
+  "(synopsis  \"" _ "\")" > \n
+  "(libraries (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-executable-form
+  "Insert an executable stanza."
+  nil
+  "(executable" > \n
+  "((name        " _ ")" > \n
+  "(public_name " _ ")" > \n
+  "(modules    (" _ "))" > \n
+  "(libraries  (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-executables-form
+  "Insert an executables stanza."
+  nil
+  "(executables" > \n
+  "((names        (" _ "))" > \n
+  "(public_names (" _ "))" > \n
+  "(libraries    (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-rule-form
+  "Insert a rule stanza."
+  nil
+  "(rule" > \n
+  "((targets (" _ "))" > \n
+  "(deps    (" _ "))" > \n
+  "(action  (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-ocamllex-form
+  "Insert an ocamllex stanza."
+  nil
+  "(ocamllex (" _ "))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-ocamlyacc-form
+  "Insert an ocamlyacc stanza."
+  nil
+  "(ocamlyacc (" _ "))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-menhir-form
+  "Insert a menhir stanza."
+  nil
+  "(menhir" > \n
+  "((modules (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-alias-form
+  "Insert an alias stanza."
+  nil
+  "(alias" > \n
+  "((name " _ ")" > \n
+  "(deps (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-install-form
+  "Insert an install stanza."
+  nil
+  "(install" > \n
+  "((section " _ ")" > \n
+  "(files (" _ "))))" > ?\n)
+
+(define-skeleton tuareg-jbuild-insert-copyfiles-form
+  "Insert a copy_files stanza."
+  nil
+  "(copy_files " _ ")" > ?\n)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar tuareg-jbuild-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c.v" 'tuareg-jbuild-insert-version-form)
+    (define-key map "\C-c.l" 'tuareg-jbuild-insert-library-form)
+    (define-key map "\C-c.e" 'tuareg-jbuild-insert-executable-form)
+    (define-key map "\C-c.x" 'tuareg-jbuild-insert-executables-form)
+    (define-key map "\C-c.r" 'tuareg-jbuild-insert-rule-form)
+    (define-key map "\C-c.p" 'tuareg-jbuild-insert-ocamllex-form)
+    (define-key map "\C-c.y" 'tuareg-jbuild-insert-ocamlyacc-form)
+    (define-key map "\C-c.m" 'tuareg-jbuild-insert-menhir-form)
+    (define-key map "\C-c.a" 'tuareg-jbuild-insert-alias-form)
+    (define-key map "\C-c.i" 'tuareg-jbuild-insert-install-form)
+    (define-key map "\C-c.c" 'tuareg-jbuild-insert-copyfiles-form)
+    map)
+  "Keymap used in Tuareg-jbuild mode.")
+
+(defun tuareg-jbuild-build-menu ()
+  (easy-menu-define
+    tuareg-jbuild-mode-menu  (list tuareg-jbuild-mode-map)
+    "Tuareg-jbuild mode menu."
+    '("Jbuild"
+      ("Stanzas"
+       ["version" tuareg-jbuild-insert-version-form t]
+       ["library" tuareg-jbuild-insert-library-form t]
+       ["executable" tuareg-jbuild-insert-executable-form t]
+       ["executables" tuareg-jbuild-insert-executables-form t]
+       ["rule" tuareg-jbuild-insert-rule-form t]
+       ["ocamllex" tuareg-jbuild-insert-ocamllex-form t]
+       ["ocamlyacc" tuareg-jbuild-insert-ocamlyacc-form t]
+       ["menhir" tuareg-jbuild-insert-menhir-form t]
+       ["alias" tuareg-jbuild-insert-alias-form t]
+       ["install" tuareg-jbuild-insert-install-form t]
+       ["copy_files" tuareg-jbuild-insert-copyfiles-form t]
+       )))
+  (easy-menu-add tuareg-jbuild-mode-menu))
 
 
 ;;;###autoload
-(define-derived-mode tuareg-jbuild-mode scheme-mode "Tuareg-jbuild"
+(define-derived-mode tuareg-jbuild-mode prog-mode "Tuareg-jbuild"
   "Major mode to edit jbuild files."
   (setq-local font-lock-defaults '(tuareg-jbuild-font-lock-keywords))
+  (setq-local comment-start ";")
+  (setq-local comment-end "")
   (setq indent-tabs-mode nil)
-  (setq-local lisp-indent-offset 1)
   (setq-local require-final-newline mode-require-final-newline)
   (push tuareg-jbuild--allowed-file-name-masks flymake-allowed-file-name-masks)
+  (smie-setup tuareg-jbuild-smie-grammar #'tuareg-jbuild-smie-rules)
   (setq-local flymake-err-line-patterns tuareg-jbuild--err-line-patterns)
   (when (and tuareg-jbuild-flymake buffer-file-name)
     (flymake-mode t))
-  (let ((fname (buffer-file-name)))
-    (when (and tuareg-jbuild-skeleton
-               (not (and fname (file-exists-p fname)))
-               (y-or-n-p "New file; fill with skeleton?"))
-      (save-excursion (insert tuareg-jbuild-skeleton))))
+  (tuareg-jbuild-build-menu)
   (run-mode-hooks 'tuareg-jbuild-mode-hook))
 
 
