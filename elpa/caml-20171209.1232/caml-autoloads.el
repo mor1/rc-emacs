@@ -3,7 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "camldebug" "camldebug.el" (23020 20309 0 0))
+;;;### (autoloads nil "camldebug" "camldebug.el" (23086 25206 571871
+;;;;;;  749000))
 ;;; Generated autoloads from camldebug.el
 
 (defvar camldebug-command-name "ocamldebug" "\
@@ -22,7 +23,7 @@ the camldebug commands `cd DIR' and `directory'.
 ;;;### (autoloads nil nil ("caml-compat.el" "caml-emacs.el" "caml-font-old.el"
 ;;;;;;  "caml-font.el" "caml-help.el" "caml-hilit.el" "caml-pkg.el"
 ;;;;;;  "caml-types.el" "caml-xemacs.el" "caml.el" "inf-caml.el")
-;;;;;;  (23020 20309 0 0))
+;;;;;;  (23086 25206 581264 609000))
 
 ;;;***
 
