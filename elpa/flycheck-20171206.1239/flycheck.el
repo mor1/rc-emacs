@@ -173,6 +173,7 @@ attention to case differences."
     coq
     css-csslint
     css-stylelint
+    cwl
     d-dmd
     dockerfile-hadolint
     elixir-dogma
@@ -199,7 +200,6 @@ attention to case differences."
     html-tidy
     javascript-eslint
     javascript-jshint
-    javascript-jscs
     javascript-standard
     json-jsonlint
     json-python-json
@@ -254,6 +254,7 @@ attention to case differences."
     slim-lint
     sql-sqlint
     systemd-analyze
+    tcl-nagelfar
     tex-chktex
     tex-lacheck
     texinfo
@@ -5525,15 +5526,26 @@ Wrapper around `xml-parse-region' which transforms the return
 value of this function into one compatible to
 `libxml-parse-xml-region' by simply returning the first element
 from the node list."
-  (car (xml-parse-region beg end)))
+  (ignore-errors (car (xml-parse-region beg end))))
 
-(defvar flycheck-xml-parser
-  (if (fboundp 'libxml-parse-xml-region)
-      'libxml-parse-xml-region 'flycheck-parse-xml-region)
-  "Parse an xml string from a region.
+(defun flycheck-parse-xml-region-with-fallback (beg end)
+  "Parse the xml region between BEG and END.
 
-Use libxml if Emacs is built with libxml support.  Otherwise fall
-back to `xml-parse-region', via `flycheck-parse-xml-region'.")
+Try parsing with libxml first; if that fails, revert to
+`flycheck-parse-xml-region'.  Failures can be caused by incorrect
+XML (see URL `https://github.com/flycheck/flycheck/issues/1298'),
+or on Windows by a missing libxml DLL with a libxml-enabled Emacs
+\(see URL `https://github.com/flycheck/flycheck/issues/1330')."
+  ;; FIXME use `libxml-available-p' when it gets implemented.
+  (or (and (fboundp 'libxml-parse-xml-region)
+           (libxml-parse-xml-region beg end))
+      (flycheck-parse-xml-region beg end)))
+
+(defvar flycheck-xml-parser 'flycheck-parse-xml-region-with-fallback
+  "Function used to parse an xml string from a region.
+
+The default uses libxml if available, and falls back to
+`flycheck-parse-xml-region' otherwise.")
 
 (defun flycheck-parse-xml-string (xml)
   "Parse an XML string.
@@ -6815,6 +6827,31 @@ See URL `http://stylelint.io/'."
   :error-parser flycheck-parse-stylelint
   :modes (css-mode))
 
+(flycheck-def-option-var flycheck-cwl-schema-path nil cwl
+  "A path for the schema file for Common Workflow Language.
+
+The value of this variable is a string that denotes a path for the schema file of
+Common Workflow Language."
+  :type 'string
+  :safe #'stringp)
+
+(flycheck-define-checker cwl
+  "A CWL syntax checker using Schema Salad validator.
+
+Requires Schema Salad 2.6.20171101113912 or newer.
+See URL `http://www.commonwl.org/v1.0/SchemaSalad.html'."
+  :command ("schema-salad-tool"
+            "--quiet"
+            "--print-oneline"
+            (eval flycheck-cwl-schema-path)
+            source-inplace)
+  :error-patterns
+  ((error line-start
+          (file-name) ":" line ":" column ":" (zero-or-more blank)
+          (message (one-or-more not-newline))
+          line-end))
+  :modes cwl-mode)
+
 (defconst flycheck-d-module-re
   (rx "module" (one-or-more (syntax whitespace))
       (group (one-or-more (not (syntax whitespace))))
@@ -7712,7 +7749,8 @@ See URL `http://haml.info'."
   :command ("haml" "-c" "--stdin")
   :standard-input t
   :error-patterns
-  ((error line-start "Syntax error on line " line ": " (message) line-end))
+  ((error line-start "Syntax error on line " line ": " (message) line-end)
+   (error line-start ":" line ": syntax error, " (message) line-end))
   :modes haml-mode)
 
 (flycheck-define-checker handlebars
@@ -8068,8 +8106,7 @@ See URL `http://www.jshint.com'."
   (lambda (errors)
     (flycheck-remove-error-file-names
      "stdin" (flycheck-dequalify-error-ids errors)))
-  :modes (js-mode js2-mode js3-mode rjsx-mode)
-  :next-checkers ((warning . javascript-jscs)))
+  :modes (js-mode js2-mode js3-mode rjsx-mode))
 
 (flycheck-def-option-var flycheck-eslint-rules-directories nil javascript-eslint
   "A list of directories with custom rules for ESLint.
@@ -8118,7 +8155,6 @@ See URL `http://eslint.org/'."
     errors)
   :enabled (lambda () (flycheck-eslint-config-exists-p))
   :modes (js-mode js-jsx-mode js2-mode js2-jsx-mode js3-mode rjsx-mode)
-  :next-checkers ((warning . javascript-jscs))
   :verify
   (lambda (_)
     (let* ((default-directory
@@ -8129,39 +8165,6 @@ See URL `http://eslint.org/'."
         :label "config file"
         :message (if have-config "found" "missing or incorrect")
         :face (if have-config 'success '(bold error)))))))
-
-(defun flycheck-parse-jscs (output checker buffer)
-  "Parse JSCS OUTPUT from CHECKER and BUFFER.
-
-Like `flycheck-parse-checkstyle', but catches errors about no
-configuration found and prevents to be reported as a suspicious
-error."
-  (if (string-match-p (rx string-start "No configuration found") output)
-      (let ((message "No JSCS configuration found.  Set `flycheck-jscsrc' for JSCS"))
-        (list (flycheck-error-new-at 1 nil 'warning message
-                                     :checker checker
-                                     :buffer buffer
-                                     :filename (buffer-file-name buffer))))
-    (flycheck-parse-checkstyle output checker buffer)))
-
-(flycheck-def-config-file-var flycheck-jscsrc javascript-jscs ".jscsrc"
-  :safe #'stringp
-  :package-version '(flycheck . "0.24"))
-
-(flycheck-define-checker javascript-jscs
-  "A Javascript style checker using JSCS.
-
-See URL `http://www.jscs.info'."
-  :command ("jscs" "--reporter=checkstyle"
-            (config-file "--config" flycheck-jscsrc)
-            "-")
-  :standard-input t
-  :error-parser flycheck-parse-jscs
-  :error-filter (lambda (errors)
-                  (flycheck-remove-error-ids
-                   (flycheck-sanitize-errors
-                    (flycheck-remove-error-file-names "input" errors))))
-  :modes (js-mode js-jsx-mode js2-mode js2-jsx-mode js3-mode rjsx-mode))
 
 (flycheck-define-checker javascript-standard
   "A Javascript code and style checker for the (Semi-)Standard Style.
@@ -9831,6 +9834,19 @@ See URL `https://www.freedesktop.org/software/systemd/man/systemd-analyze.html'.
 (flycheck-def-config-file-var flycheck-chktexrc tex-chktex ".chktexrc"
   :safe #'stringp)
 
+(flycheck-define-checker tcl-nagelfar
+  "An extensible tcl syntax checker
+
+See URL `http://nagelfar.sourceforge.net/'."
+  :command ("nagelfar" "-H" source)
+  :error-patterns
+  ;; foo.tcl: 29: E Wrong number of arguments (4) to "set"
+  ;; foo.tcl: 29: W Expr without braces
+  ((info    line-start (file-name) ": " line ": N " (message) line-end)
+   (warning line-start (file-name) ": " line ": W " (message) line-end)
+   (error   line-start (file-name) ": " line ": E " (message) line-end))
+  :modes tcl-mode)
+
 (flycheck-define-checker tex-chktex
   "A TeX and LaTeX syntax and style checker using chktex.
 
@@ -9989,7 +10005,8 @@ See URL `https://github.com/nodeca/js-yaml'."
           (or "JS-YAML" "YAMLException") ": "
           (message) " at line " line ", column " column ":"
           line-end))
-  :modes yaml-mode)
+  :modes yaml-mode
+  :next-checkers ((warning . cwl)))
 
 (flycheck-define-checker yaml-ruby
   "A YAML syntax checker using Ruby's YAML parser.
@@ -10007,7 +10024,8 @@ See URL `http://www.ruby-doc.org/stdlib-2.0.0/libdoc/yaml/rdoc/YAML.html'."
   :error-patterns
   ((error line-start "stdin:" (zero-or-more not-newline) ":" (message)
           "at line " line " column " column line-end))
-  :modes yaml-mode)
+  :modes yaml-mode
+  :next-checkers ((warning . cwl)))
 
 (flycheck-define-checker jsonnet
   "A Jsonnet syntax checker using the jsonnet binary.
