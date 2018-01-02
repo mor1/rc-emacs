@@ -3,7 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "bind-key" "bind-key.el" (22636 51194 0 0))
+;;;### (autoloads nil "bind-key" "bind-key.el" (23086 25207 765483
+;;;;;;  64000))
 ;;; Generated autoloads from bind-key.el
 
 (autoload 'bind-key "bind-key" "\
@@ -13,6 +14,13 @@ KEY-NAME may be a vector, in which case it is passed straight to
 `define-key'. Or it may be a string to be interpreted as
 spelled-out keystrokes, e.g., \"C-c C-z\". See documentation of
 `edmacro-mode' for details.
+
+COMMAND must be an interactive function or lambda form.
+
+KEYMAP, if present, should be a keymap and not a quoted symbol.
+For example:
+
+  (bind-key \"M-h\" #'some-interactive-function my-mode-map)
 
 If PREDICATE is non-nil, it is a form evaluated to determine when
 a key should be bound. It must return non-nil in such cases.
