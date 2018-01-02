@@ -38,6 +38,8 @@ library is made available as a separate package.  It also defines some
 additional functionality which makes it useful even for end-users, who
 don’t use Magit or another package which uses it internally.
 
+This manual is for With-Editor version 2.7.0 (v2.7.0-10-g93876b6+1).
+
      Copyright (C) 2015-2017 Jonas Bernoulli <jonas@bernoul.li>
 
      You can redistribute this document and/or modify it under the terms
@@ -62,6 +64,7 @@ Using the With-Editor package
 
 * Configuring With-Editor::
 * Using With-Editor commands::
+
 
 
 File: with-editor.info,  Node: Using the With-Editor package,  Next: Using With-Editor as a library,  Prev: Top,  Up: Top
@@ -314,11 +317,11 @@ Emacs and what is the output of ‘M-x with-editor-debug RET’.
 
 Tag Table:
 Node: Top771
-Node: Using the With-Editor package2462
-Node: Configuring With-Editor3048
-Node: Using With-Editor commands7445
-Node: Using With-Editor as a library10708
-Node: Debugging12403
+Node: Using the With-Editor package2533
+Node: Configuring With-Editor3119
+Node: Using With-Editor commands7516
+Node: Using With-Editor as a library10779
+Node: Debugging12474
 
 End Tag Table
 
