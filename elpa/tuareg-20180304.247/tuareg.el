@@ -900,7 +900,7 @@ Regexp match data 0 points to the chars."
          (regexp-opt kwd 'words))
       . font-lock-keyword-face)
      ;; with type: "with" treated as a governing keyword
-     (,(concat "\\<\\(\\(?:with\\|and\\) +type\\(?: +nonrec\\)\\>\\) *"
+     (,(concat "\\<\\(\\(?:with\\|and\\) +type\\(?: +nonrec\\)?\\>\\) *"
                "\\(" typeconstr "\\)?")
       (1 tuareg-font-lock-governing-face keep)
       (2 font-lock-type-face keep t))
@@ -2857,10 +2857,10 @@ error message as a string)."
   (let* ((return-value 0)
          (return-string
           (with-output-to-string
-	    (with-current-buffer standard-output
-	      (setq return-value
-		    (process-file shell-file-name nil t nil
-                                  shell-command-switch command))))))
+            (with-current-buffer standard-output
+              (setq return-value
+                    (process-file shell-file-name nil '(t nil)
+                                  nil shell-command-switch command))))))
     (if (= return-value 0) return-string nil)))
 
 (defun tuareg-opam-config-env (&optional switch)
