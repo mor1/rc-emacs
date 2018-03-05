@@ -112,6 +112,13 @@ otherwise requested."
   :type '(repeat symbol)
   :group 'use-package)
 
+(defcustom use-package-ignore-unknown-keywords nil
+  "If non-nil, issue warning instead of error when unknown
+keyword is encountered. The unknown keyword and its associated
+arguments will be ignored in the `use-package' expansion."
+  :type 'boolean
+  :group 'use-package)
+
 (defcustom use-package-verbose nil
   "Whether to report about loading and configuration details.
 If you customize this, then you should require the `use-package'
@@ -159,21 +166,30 @@ See also `use-package-defaults', which uses this value."
                     (not (plist-member args :defer))
                     (not (plist-member args :demand))))))
   "Default values for specified `use-package' keywords.
-Each entry in the alist is a list of three elements. The first
-element is the `use-package' keyword and the second is a form
-that can be evaluated to get the default value. The third element
-is a form that can be evaluated to determine whether or not to
-assign a default value; if it evaluates to nil, then the default
-value is not assigned even if the keyword is not present in the
-`use-package' form. This third element may also be a function, in
-which case it receives the name of the package (as a symbol) and
-a list of keywords (in normalized form). It should return nil or
-t according to whether defaulting should be attempted."
+Each entry in the alist is a list of three elements:
+The first element is the `use-package' keyword.
+
+The second is a form that can be evaluated to get the default
+value. It can also be a function that will receive the name of
+the use-package declaration and the keyword plist given to
+`use-package', in normalized form. The value it returns should
+also be in normalized form (which is sometimes *not* what one
+would normally write in a `use-package' declaration, so use
+caution).
+
+The third element is a form that can be evaluated to determine
+whether or not to assign a default value; if it evaluates to nil,
+then the default value is not assigned even if the keyword is not
+present in the `use-package' form. This third element may also be
+a function, in which case it receives the name of the package (as
+a symbol) and a list of keywords (in normalized form). It should
+return nil or non-nil depending on whether defaulting should be
+attempted."
   :type `(repeat
           (list (choice :tag "Keyword"
                         ,@(mapcar #'(lambda (k) (list 'const k))
                                   use-package-keywords))
-                (choice :tag "Default value" sexp)
+                (choice :tag "Default value" sexp function)
                 (choice :tag "Enable if non-nil" sexp function)))
   :group 'use-package)
 
@@ -495,7 +511,8 @@ This is in contrast to merely setting it to 0."
   "Given a pseudo-plist, normalize it to a regular plist.
 The normalized key/value pairs from input are added to PLIST,
 extending any keys already present."
-  (when input
+  (if (null input)
+      plist
     (let* ((keyword (car input))
            (xs (use-package-split-list #'keywordp (cdr input)))
            (args (car xs))
@@ -504,7 +521,8 @@ extending any keys already present."
             (intern-soft (concat "use-package-normalize/"
                                  (symbol-name keyword))))
            (arg (and (functionp normalizer)
-                     (funcall normalizer name keyword args))))
+                     (funcall normalizer name keyword args)))
+           (error-string (format "Unrecognized keyword: %s" keyword)))
       (if (memq keyword use-package-keywords)
           (progn
             (setq plist (use-package-normalize-plist
@@ -514,7 +532,12 @@ extending any keys already present."
                            (funcall merge-function keyword arg
                                     (plist-get plist keyword))
                          arg)))
-        (use-package-error (format "Unrecognized keyword: %s" keyword))))))
+        (if use-package-ignore-unknown-keywords
+            (progn
+              (display-warning 'use-package error-string)
+              (use-package-normalize-plist
+               name tail plist merge-function))
+          (use-package-error error-string))))))
 
 (defun use-package-unalias-keywords (name args)
   (setq args (cl-nsubstitute :if :when args))
@@ -550,6 +573,15 @@ extending any keys already present."
   (let* ((name-symbol (if (stringp name) (intern name) name))
          (name-string (symbol-name name-symbol)))
 
+    ;; The function `elisp--local-variables' inserts this unbound variable into
+    ;; macro forms to determine the locally bound variables for
+    ;; `elisp-completion-at-point'. It ends up throwing a lot of errors since it
+    ;; can occupy the position of a keyword (or look like a second argument to a
+    ;; keyword that takes one). Deleting it when it's at the top level should be
+    ;; harmless since there should be no locally bound variables to discover
+    ;; here anyway.
+    (setq args (delq 'elisp--witness--lisp args))
+
     ;; Reduce the set of keywords down to its most fundamental expression.
     (setq args (use-package-unalias-keywords name-symbol args))
 
@@ -564,7 +596,11 @@ extending any keys already present."
                   (funcall func name args)
                 (eval func)))
         (setq args (use-package-plist-maybe-put
-                    args (nth 0 spec) (eval (nth 1 spec))))))
+                    args (nth 0 spec)
+                    (let ((func (nth 1 spec)))
+                      (if (and func (functionp func))
+                          (funcall func name args)
+                        (eval func)))))))
 
     ;; Determine any autoloads implied by the keywords used.
     (let ((iargs args)
@@ -959,6 +995,9 @@ meaning:
                      (float-time (gethash :preface-secs hash 0))
                      (float-time (gethash :use-package-secs hash 0))))))
      use-package-statistics)
+    (goto-char (point-min))
+    (orgtbl-mode)
+    (org-table-align)
     (display-buffer (current-buffer))))
 
 (defun use-package-statistics-gather (keyword name after)
@@ -1338,7 +1377,7 @@ no keyword implies `:all'."
             (spec (nth 1 def)))
         (when (or (not face)
                   (not spec)
-                  (> (length arg) 2))
+                  (> (length def) 2))
           (use-package-error error-msg))))))
 
 (defun use-package-handler/:custom-face (name keyword args rest state)
@@ -1497,10 +1536,11 @@ this file.  Usage:
         (condition-case-unless-debug err
             (use-package-core name args)
           (error
-           (display-warning
-            'use-package
-            (format "Failed to parse package %s: %s"
-                    name (error-message-string err)) :error))))
+           (ignore
+            (display-warning
+             'use-package
+             (format "Failed to parse package %s: %s"
+                     name (error-message-string err)) :error)))))
       (when use-package-compute-statistics
         `((use-package-statistics-gather :use-package ',name t)))))))
 
