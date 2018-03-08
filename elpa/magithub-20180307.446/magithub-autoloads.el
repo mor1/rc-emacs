@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "magithub" "magithub.el" (23197 32740 729533
-;;;;;;  144000))
+;;;### (autoloads nil "magithub" "magithub.el" (23201 27838 277481
+;;;;;;  319000))
 ;;; Generated autoloads from magithub.el
  (autoload 'magithub-dispatch-popup "magithub" nil t)
 
@@ -12,8 +12,8 @@
 
 ;;;***
 
-;;;### (autoloads nil "magithub-ci" "magithub-ci.el" (23197 32740
-;;;;;;  738806 569000))
+;;;### (autoloads nil "magithub-ci" "magithub-ci.el" (23201 27838
+;;;;;;  288290 46000))
 ;;; Generated autoloads from magithub-ci.el
 
 (autoload 'magithub-maybe-insert-ci-status-header "magithub-ci" "\
@@ -23,8 +23,8 @@ If this is a GitHub repository, insert the CI status header.
 
 ;;;***
 
-;;;### (autoloads nil "magithub-comment" "magithub-comment.el" (23197
-;;;;;;  32740 732426 551000))
+;;;### (autoloads nil "magithub-comment" "magithub-comment.el" (23201
+;;;;;;  27838 280533 26000))
 ;;; Generated autoloads from magithub-comment.el
 
 (autoload 'magithub-comment-new "magithub-comment" "\
@@ -40,7 +40,7 @@ initial contents of the reply if there is no draft.
 ;;;***
 
 ;;;### (autoloads nil "magithub-completion" "magithub-completion.el"
-;;;;;;  (23197 32740 722308 785000))
+;;;;;;  (23201 27838 268434 828000))
 ;;; Generated autoloads from magithub-completion.el
 
 (autoload 'magithub-completion-complete-issues "magithub-completion" "\
@@ -64,8 +64,8 @@ Enable completion of info from magithub in the current buffer.
 
 ;;;***
 
-;;;### (autoloads nil "magithub-core" "magithub-core.el" (23197 32740
-;;;;;;  743164 398000))
+;;;### (autoloads nil "magithub-core" "magithub-core.el" (23201 27838
+;;;;;;  293233 343000))
 ;;; Generated autoloads from magithub-core.el
 
 (autoload 'magithub-feature-autoinject "magithub-core" "\
@@ -106,8 +106,8 @@ this function: `github-user', `github-issue', `github-label',
 
 ;;;***
 
-;;;### (autoloads nil "magithub-dash" "magithub-dash.el" (23197 32740
-;;;;;;  745006 912000))
+;;;### (autoloads nil "magithub-dash" "magithub-dash.el" (23201 27838
+;;;;;;  294928 515000))
 ;;; Generated autoloads from magithub-dash.el
 
 (autoload 'magithub-dashboard "magithub-dash" "\
@@ -118,7 +118,7 @@ View your GitHub dashboard.
 ;;;***
 
 ;;;### (autoloads nil "magithub-edit-mode" "magithub-edit-mode.el"
-;;;;;;  (23197 32740 718625 299000))
+;;;;;;  (23201 27838 266069 857000))
 ;;; Generated autoloads from magithub-edit-mode.el
 
 (autoload 'magithub-edit-mode "magithub-edit-mode" "\
@@ -128,8 +128,8 @@ Major mode for editing GitHub issues and pull requests.
 
 ;;;***
 
-;;;### (autoloads nil "magithub-issue" "magithub-issue.el" (23197
-;;;;;;  32740 747935 524000))
+;;;### (autoloads nil "magithub-issue" "magithub-issue.el" (23201
+;;;;;;  27838 297932 392000))
 ;;; Generated autoloads from magithub-issue.el
 
 (autoload 'magithub-issue--insert-issue-section "magithub-issue" "\
@@ -145,7 +145,7 @@ Insert GitHub pull requests if appropriate.
 ;;;***
 
 ;;;### (autoloads nil "magithub-issue-tricks" "magithub-issue-tricks.el"
-;;;;;;  (23197 32740 746518 776000))
+;;;;;;  (23201 27838 296415 732000))
 ;;; Generated autoloads from magithub-issue-tricks.el
 
 (autoload 'magithub-pull-request-merge "magithub-issue-tricks" "\
@@ -158,7 +158,7 @@ pull-request object, that object is selected by default.
 ;;;***
 
 ;;;### (autoloads nil "magithub-issue-view" "magithub-issue-view.el"
-;;;;;;  (23197 32740 735838 892000))
+;;;;;;  (23201 27838 284940 644000))
 ;;; Generated autoloads from magithub-issue-view.el
 
 (autoload 'magithub-issue-view "magithub-issue-view" "\
@@ -170,7 +170,7 @@ Return the new buffer.
 ;;;***
 
 ;;;### (autoloads nil "magithub-settings" "magithub-settings.el"
-;;;;;;  (23197 32740 740370 200000))
+;;;;;;  (23201 27838 289772 851000))
 ;;; Generated autoloads from magithub-settings.el
  (autoload 'magithub-settings-popup "magithub-settings" nil t)
 
@@ -179,7 +179,7 @@ Return the new buffer.
 ;;;### (autoloads nil nil ("magithub-faces.el" "magithub-issue-post.el"
 ;;;;;;  "magithub-label.el" "magithub-notification.el" "magithub-orgs.el"
 ;;;;;;  "magithub-pkg.el" "magithub-repo.el" "magithub-user.el")
-;;;;;;  (23197 32740 749639 513000))
+;;;;;;  (23201 27838 299413 985000))
 
 ;;;***
 
