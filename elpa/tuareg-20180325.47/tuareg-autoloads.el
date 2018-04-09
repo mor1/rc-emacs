@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "ocamldebug" "ocamldebug.el" (23197 32732 532087
-;;;;;;  454000))
+;;;### (autoloads nil "ocamldebug" "ocamldebug.el" (23242 44519 854452
+;;;;;;  671000))
 ;;; Generated autoloads from ocamldebug.el
 
 (autoload 'ocamldebug "ocamldebug" "\
@@ -19,7 +19,7 @@ the ocamldebug commands `cd DIR' and `directory'.
 
 ;;;***
 
-;;;### (autoloads nil "tuareg" "tuareg.el" (23197 32732 521231 418000))
+;;;### (autoloads nil "tuareg" "tuareg.el" (23242 44519 845858 914000))
 ;;; Generated autoloads from tuareg.el
 (add-to-list 'auto-mode-alist '("\\.ml[ip]?\\'" . tuareg-mode))
 (add-to-list 'auto-mode-alist '("\\.eliomi?\\'" . tuareg-mode))
@@ -82,8 +82,8 @@ Run an OCaml REPL process.  I/O via buffer `*OCaml*'.
 
 ;;;***
 
-;;;### (autoloads nil "tuareg-dune" "tuareg-dune.el" (23197 32732
-;;;;;;  522899 349000))
+;;;### (autoloads nil "tuareg-dune" "tuareg-dune.el" (23242 44519
+;;;;;;  847264 211000))
 ;;; Generated autoloads from tuareg-dune.el
 
 (autoload 'tuareg-dune-mode "tuareg-dune" "\
@@ -95,8 +95,8 @@ Major mode to edit dune files.
 
 ;;;***
 
-;;;### (autoloads nil "tuareg-menhir" "tuareg-menhir.el" (23197 32732
-;;;;;;  530690 201000))
+;;;### (autoloads nil "tuareg-menhir" "tuareg-menhir.el" (23242 44519
+;;;;;;  852838 401000))
 ;;; Generated autoloads from tuareg-menhir.el
 
 (add-to-list 'auto-mode-alist '("\\.mly\\'" . tuareg-menhir-mode))
@@ -108,8 +108,8 @@ Major mode to edit Menhir (and Ocamlyacc) files.
 
 ;;;***
 
-;;;### (autoloads nil "tuareg-opam" "tuareg-opam.el" (23197 32732
-;;;;;;  526030 961000))
+;;;### (autoloads nil "tuareg-opam" "tuareg-opam.el" (23242 44519
+;;;;;;  850217 13000))
 ;;; Generated autoloads from tuareg-opam.el
 
 (autoload 'tuareg-opam-mode "tuareg-opam" "\
@@ -121,8 +121,8 @@ Major mode to edit opam files.
 
 ;;;***
 
-;;;### (autoloads nil nil ("dot-emacs.el" "tuareg-light.el" "tuareg-pkg.el"
-;;;;;;  "tuareg-site-file.el") (23197 32732 529268 950000))
+;;;### (autoloads nil nil ("dot-emacs.el" "tuareg-pkg.el" "tuareg-site-file.el")
+;;;;;;  (23242 44519 851562 588000))
 
 ;;;***
 
