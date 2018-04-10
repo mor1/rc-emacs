@@ -348,8 +348,10 @@
 
 ;; go
 (use-package go-mode
-  :config (setq gofmt-command "goimports")
-  :hook ((before-save-hook . gofmt-before-save))
+  :config
+  (setq gofmt-command "goimports")
+  :hook ((before-save . gofmt-before-save))
+  :hook go-eldoc-setup
   )
 
 ;; json
@@ -658,6 +660,7 @@
  'text-mode-hook
  '(lambda ()
     (filladapt-mode t)
+    (flyspell-mode t)
     )
  )
 

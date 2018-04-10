@@ -23,10 +23,12 @@
  '(default-major-mode (quote text-mode) t)
  '(fci-rule-width 2)
  '(fill-column 80)
+ '(flyspell-delayed-commands (quote (org-self-insert-command)))
  '(frame-title-format "%b  %f" t)
  '(git-ps1-mode t)
  '(global-hl-line-mode t)
  '(global-visual-line-mode t)
+ '(go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode")
  '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
  '(highlight-symbol-colors
    (--map
@@ -123,7 +125,7 @@
  '(org-tags-match-list-sublevels t)
  '(package-selected-packages
    (quote
-    (mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen memolist magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed doom dockerfile-mode direnv diminish diff-hl d-mode csv-mode color-theme-sanityinc-solarized color-theme coffee-mode avy auto-package-update auctex aggressive-indent)))
+    (c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen memolist magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed doom dockerfile-mode direnv diminish diff-hl d-mode csv-mode color-theme-sanityinc-solarized color-theme coffee-mode avy auto-package-update auctex aggressive-indent)))
  '(paradox-github-token t)
  '(scroll-bar-mode nil)
  '(scroll-preserve-screen-position t)
@@ -151,4 +153,6 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(flyspell-duplicate ((t (:background "#9b5500"))))
+ '(flyspell-incorrect ((t (:background "#aa0000"))))
  '(whitespace-line ((t (:underline t)))))
