@@ -4,61 +4,29 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(ac-auto-show-menu 0.5)
- '(ac-trigger-key "C-TAB")
+ '(ac-trigger-key "C-.")
  '(auto-hscroll-mode nil)
  '(bibtex-autokey-titleword-separator ".")
  '(bibtex-autokey-year-title-separator ":")
  '(c-basic-offset 4)
- '(c-default-style
-   (quote
-    ((java-mode . "java")
-     (awk-mode . "awk")
-     (other . "linux"))))
  '(calendar-bahai-all-holidays-flag nil)
  '(calendar-christian-all-holidays-flag t)
  '(calendar-date-style (quote iso))
  '(calendar-mark-holidays-flag t)
- '(coffee-command "/usr/local/bin/coffee")
  '(coffee-tab-width 2)
  '(column-number-mode t)
  '(comment-auto-fill-only-comments t)
- '(compilation-message-face (quote default))
- '(cua-global-mark-cursor-color "#2aa198")
- '(cua-normal-cursor-color "#657b83")
- '(cua-overwrite-cursor-color "#b58900")
- '(cua-read-only-cursor-color "#859900")
  '(custom-enabled-themes (quote (sanityinc-solarized-dark)))
  '(custom-safe-themes
    (quote
-    ("d677ef584c6dfc0697901a44b885cc18e206f05114c8a3b7fde674fce6180879" "8aebf25556399b58091e533e455dd50a6a9cba958cc4ebb0aab175863c25b9a4" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
- '(default-input-method nil)
+    ("4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
  '(default-major-mode (quote text-mode) t)
- '(fci-handle-truncate-lines nil)
  '(fci-rule-width 2)
- '(file-coding-system-alist
-   (quote
-    (("\\.dz\\'" no-conversion . no-conversion)
-     ("\\.txz\\'" no-conversion . no-conversion)
-     ("\\.xz\\'" no-conversion . no-conversion)
-     ("\\.lzma\\'" no-conversion . no-conversion)
-     ("\\.lz\\'" no-conversion . no-conversion)
-     ("\\.g?z\\'" no-conversion . no-conversion)
-     ("\\.\\(?:tgz\\|svgz\\|sifz\\)\\'" no-conversion . no-conversion)
-     ("\\.tbz2?\\'" no-conversion . no-conversion)
-     ("\\.bz2\\'" no-conversion . no-conversion)
-     ("\\.Z\\'" no-conversion . no-conversion)
-     ("\\.elc\\'" . utf-8-emacs)
-     ("\\.el\\'" . prefer-utf-8)
-     ("\\.utf\\(-8\\)?\\'" . utf-8)
-     ("\\.xml\\'" . xml-find-file-coding-system)
-     ("\\(\\`\\|/\\)loaddefs.el\\'" raw-text . raw-text-unix)
-     ("\\.tar\\'" no-conversion . no-conversion)
-     ("\\.po[tx]?\\'\\|\\.po\\." . po-find-file-coding-system)
-     ("\\.\\(tex\\|ltx\\|dtx\\|drv\\)\\'" . latexenc-find-file-coding-system)
-     ("" . utf-8))))
  '(fill-column 80)
  '(frame-title-format "%b  %f" t)
- '(gc-cons-threshold 80000000)
+ '(git-ps1-mode t)
+ '(global-hl-line-mode t)
+ '(global-visual-line-mode t)
  '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
  '(highlight-symbol-colors
    (--map
@@ -77,6 +45,24 @@
      ("#F771AC" . 85)
      ("#eee8d5" . 100))))
  '(holiday-bahai-holidays nil)
+ '(holiday-general-holidays
+   (quote
+    ((holiday-fixed 1 1 "New Year's Day")
+     (holiday-new-year-bank-holiday)
+     (holiday-fixed 2 14 "Valentine's Day")
+     (holiday-fixed 3 17 "St. Patrick's Day")
+     (holiday-fixed 4 1 "April Fools' Day")
+     (holiday-easter-etc -21 "Mother's Day")
+     (holiday-easter-etc 1 "Easter Monday")
+     (holiday-float 5 1 1 "Early May Bank Holiday")
+     (holiday-float 5 1 -1 "Spring Bank Holiday")
+     (holiday-float 6 0 3 "Father's Day")
+     (holiday-float 8 1 -1 "Summer Bank Holiday")
+     (holiday-fixed 10 31 "Halloween")
+     (holiday-fixed 12 24 "Christmas Eve")
+     (holiday-fixed 12 26 "Boxing Day")
+     (holiday-christmas-bank-holidays)
+     (holiday-fixed 12 31 "New Year's Eve"))))
  '(holiday-hebrew-holidays nil)
  '(holiday-islamic-holidays nil)
  '(holiday-oriental-holidays nil)
@@ -95,22 +81,12 @@
  '(initial-frame-alist (quote ((top . 1) (left . 1) (width . 170) (height . 80))))
  '(interprogram-paste-function (quote x-selection-value) t)
  '(js-indent-level 2)
- '(linum-delay t)
  '(magit-diff-refine-hunk (quote all))
- '(magit-diff-use-overlays nil)
- '(magit-process-connection-type nil)
  '(magit-process-popup-time 5)
  '(magit-set-upstream-on-push t)
- '(magit-use-overlays nil)
  '(make-backup-files nil)
  '(menu-bar-mode nil)
  '(mouse-buffer-menu-mode-mult 1)
- '(mouse-wheel-follow-mouse t)
- '(mouse-wheel-progressive-speed t)
- '(mouse-wheel-scroll-amount (quote (5 ((control) . 1))))
- '(msb-max-file-menu-items 1)
- '(msb-max-menu-items 35)
- '(msb-mode t)
  '(mu4e-confirm-quit nil)
  '(mu4e-date-format-long "%FT%T%z")
  '(mu4e-headers-long-date-format "%F%FT%z")
@@ -123,15 +99,9 @@
     ("mort@cantab.net" "mort@live.co.uk" "mort@microsoft.com" "mort@sprintlabs.com" "mort@vipadia.com" "richard.mortier@cl.cam.ac.uk" "richard.mortier@gmail.com" "richard.mortier@hotmail.com" "richard.mortier@nottingham.ac.uk" "richard.mortier@unikernel.com" "rmm1002@cam.ac.uk" "rmm1002@hermes.cam.ac.uk" "rmm@cs.nott.ac.uk")))
  '(mu4e-view-show-addresses t)
  '(next-screen-context-lines 0)
- '(nobreak-char-display t t)
- '(notmuch-hello-sections
-   (quote
-    (notmuch-hello-insert-header notmuch-hello-insert-saved-searches notmuch-hello-insert-inbox notmuch-hello-insert-search notmuch-hello-insert-recent-searches notmuch-hello-insert-alltags notmuch-hello-insert-footer)))
  '(ns-alternate-modifier (quote none))
  '(ns-command-modifier (quote meta))
  '(ns-function-modifier (quote hyper))
- '(nxml-slash-auto-complete-flag t)
- '(ocp-indent-syntax (quote ("lwt" "cstruct")))
  '(org-agenda-files (quote ("~/me/todo/todo.org")))
  '(org-agenda-include-diary t)
  '(org-agenda-log-mode-items (quote (closed clock)))
@@ -153,29 +123,14 @@
  '(org-tags-match-list-sublevels t)
  '(package-selected-packages
    (quote
-    (magit magit-popup yasnippet yaml-mode web-mode web-completion-data vline vlf utop use-package unkillable-scratch unfill unbound tuareg syslog-mode smart-tab rainbow-mode rainbow-delimiters protobuf-mode popup pointback point-stack php-mode pcsv paradox on-screen names merlin memolist latex-preview-pane latex-pretty-symbols irony interleave gscholar-bibtex go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh flycheck fill-column-indicator elfeed e2ansi dockerfile-mode diff-hl diff-git d-mode company color-theme-sanityinc-solarized color-theme coffee-mode bbdb bash-completion avy auctex aggressive-indent)))
+    (mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen memolist magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed doom dockerfile-mode direnv diminish diff-hl d-mode csv-mode color-theme-sanityinc-solarized color-theme coffee-mode avy auto-package-update auctex aggressive-indent)))
  '(paradox-github-token t)
- '(remember-annotation-functions (quote (org-remember-annotation)))
- '(remember-handler-functions (quote (org-remember-handler)))
- '(safe-local-variable-values
-   (quote
-    ((TeX-master . "flick-eurosys16")
-     (TeX-master . "naasbox-sosp15")
-     (TeX-master . t)
-     (TeX-master . "propB"))))
  '(scroll-bar-mode nil)
- '(scroll-conservatively 100)
- '(scroll-error-top-bottom t)
  '(scroll-preserve-screen-position t)
- '(scroll-step 0)
- '(select-enable-clipboard t)
  '(sentence-end-double-space nil)
- '(sh-basic-offset 2)
- '(sh-indentation 2)
  '(show-paren-mode t)
  '(show-paren-style (quote expression))
  '(size-indication-mode t)
- '(smartrep-mode-line-active-bg (solarized-color-blend "#859900" "#eee8d5" 0.2))
  '(tab-width 4)
  '(term-default-bg-color "#fdf6e3")
  '(term-default-fg-color "#657b83")
@@ -185,32 +140,12 @@
  '(vc-follow-symlinks t)
  '(visible-bell t)
  '(visual-line-fringe-indicators (quote (right-triangle right-curly-arrow)))
- '(web-mode-attr-indent-offset 2)
  '(web-mode-code-indent-offset 2)
  '(web-mode-css-indent-offset 2)
  '(web-mode-markup-indent-offset 2)
  '(web-mode-sql-indent-offset 2)
- '(weechat-color-list
-   (quote
-    (unspecified "#fdf6e3" "#eee8d5" "#990A1B" "#dc322f" "#546E00" "#859900" "#7B6000" "#b58900" "#00629D" "#268bd2" "#93115C" "#d33682" "#00736F" "#2aa198" "#657b83" "#839496")))
- '(whitespace-style
-   (quote
-    (face trailing tabs lines space-before-tab newline empty tab-mark)))
- '(x-stretch-cursor t))
+ '(web-mode-tests-directory "/Users/mort/teaching/ia.os/www/tests/"))
 
-;; (custom-set-faces
-;;  ;; custom-set-faces was added by Custom.
-;;  ;; If you edit it by hand, you could mess it up, so be careful.
-;;  ;; Your init file should contain only one such instance.
-;;  ;; If there is more than one, they won't work right.
-;;  '(default ((t (:inherit nil :stipple nil :background "#042028" :foreground "lightslategrey" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 110 :width normal :foundry "apple" :family "Consolas")))))
-
-;; (with-temp-buffer
-;;   (insert
-;;    (shell-command-to-string "ocp-edit-mode emacs -load-global-config")
-;;    )
-;;   (eval-buffer)
-;;   )
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
