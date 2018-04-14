@@ -22,6 +22,7 @@
 ;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
 ;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
 
+;; ;; debugging:
 ;; (if init-file-debug
 ;;     (setq use-package-verbose t
 ;;           use-package-expand-minimally nil
@@ -49,11 +50,13 @@
 ;; theme switching
 (defun light () "light colour scheme"
        (interactive)
-       (color-theme-sanityinc-solarized-light))
+       (color-theme-sanityinc-solarized-light)
+       )
 
 (defun dark () "dark colour scheme"
        (interactive)
-       (color-theme-sanityinc-solarized-dark))
+       (color-theme-sanityinc-solarized-dark)
+       )
 
 ;; fonts
 (add-to-list 'default-frame-alist '(font . "Hack 10"))
@@ -74,7 +77,8 @@
       '(("marmalade" . "https://marmalade-repo.org/packages/")
         ("melpa" . "https://melpa.org/packages/")
         ("gnu" . "https://elpa.gnu.org/packages/")
-        ("org" . "http://orgmode.org/elpa/")))
+        ("org" . "http://orgmode.org/elpa/"))
+      )
 (package-initialize)
 
 (unless (package-installed-p 'use-package)
@@ -105,7 +109,8 @@
 (use-package exec-path-from-shell
   :ensure t
   :config
-  (exec-path-from-shell-initialize))
+  (exec-path-from-shell-initialize)
+  )
 
 ;; web-mode
 (use-package web-mode
@@ -122,10 +127,8 @@
          ("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :magic ("\\`==\\+==" . markdown-mode)
-  :init
-  (setq markdown-command "multimarkdown")
-  :hook
-  (markdown-mode . (lambda () (orgtbl-mode 1)))
+  :init (setq markdown-command "multimarkdown")
+  :hook (markdown-mode . (lambda () (orgtbl-mode 1)))
   )
 
 ;; makefile-mode
@@ -165,29 +168,24 @@
 
 ;; csv/tsv
 (use-package csv-mode
-  :mode
-  ("\\.tsv$")
-  :config
-  (setq indent-tabs-mode 't)
+  :mode ("\\.tsv$")
+  :config (setq indent-tabs-mode 't)
   )
 
 ;; sh/bash
 (use-package sh-script
-  :mode
-  ("bash_" . sh-mode)
+  :mode ("bash_" . sh-mode)
   )
 
 ;; css
 (use-package css-mode
-  :mode
-  ("\\.less$")
+  :mode ("\\.less$")
   )
 
 ;; save cursor position in file after close
 (use-package saveplace
   :unless noninteractive
-  :config
-  (save-place-mode 1)
+  :config (save-place-mode 1)
   )
 
 ;; ocaml TODO
@@ -221,7 +219,7 @@
 ;; ;; (push '("[i]?ocamlinit$" . tuareg-mode) auto-mode-alist)
 
 
-;; ;; lilypond
+;; lilypond TODO
 
 ;; (add-to-list 'load-path (expand-file-name "~/.emacs.d/lilypond-elisp"))
 ;; (autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
@@ -230,8 +228,7 @@
 
 ;; fill column indicator
 (use-package fill-column-indicator
-  :config
-  (add-hook 'prog-mode-hook 'fci-mode)
+  :config (add-hook 'prog-mode-hook 'fci-mode)
   )
 
 ;; visual fill column
@@ -321,8 +318,7 @@
 
 ;; ispell
 (use-package ispell
-  :config
-  (setq ispell-dictionary "british")
+  :config (setq ispell-dictionary "british")
   )
 
 ;; ;; prb ispell functions
@@ -348,8 +344,7 @@
 
 ;; go
 (use-package go-mode
-  :config
-  (setq gofmt-command "goimports")
+  :config (setq gofmt-command "goimports")
   :hook ((before-save . gofmt-before-save))
   :hook go-eldoc-setup
   )
@@ -388,11 +383,10 @@
       (when (<= m 3)
         (let ((d (calendar-day-of-week (list 1 1 y))))
           (cond ((= d 6)
-                 (list (list (list 1 3 y)
-                             "New Year's Day Bank Holiday")))
+                 (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
                 ((= d 0)
-                 (list (list (list 1 2 y)
-                             "New Year's Day Bank Holiday"))))))))
+                 (list (list (list 1 2 y) "New Year's Day Bank Holiday")))
+                )))))
 
   (defun holiday-christmas-bank-holidays ()
     (let ((m displayed-month)
@@ -401,16 +395,12 @@
       (when (>= m 10)
         (let ((d (calendar-day-of-week (list 12 25 y))))
           (cond ((= d 5)
-                 (list (list (list 12 28 y)
-                             "Boxing Day Bank Holiday")))
+                 (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
                 ((= d 6)
-                 (list (list (list 12 27 y)
-                             "Boxing Day Bank Holiday")
-                       (list (list 12 28 y)
-                             "Christmas Day Bank Holiday")))
+                 (list (list (list 12 27 y) "Boxing Day Bank Holiday")
+                       (list (list 12 28 y) "Christmas Day Bank Holiday")))
                 ((= d 0)
-                 (list (list (list 12 27 y)
-                             "Christmas Day Bank Holiday")))
+                 (list (list (list 12 27 y) "Christmas Day Bank Holiday")))
                 )))))
 
   :config
@@ -489,8 +479,7 @@
             (org-agenda-ndays 1)
             (org-agenda-overriding-header "Today's Priority #A tasks: "))
            )
-          ))
-  )
+          )))
 
 (use-package calendar
   :config
@@ -501,9 +490,7 @@
      ))
   )
 
-;; TODO: sort out fill modes
-
-
+;; auto-fill-mode TODO unless it turns out filladapt is enough
 ;; ;; ;; tweak auto-fill
 ;; ;; (setq paragraph-start "\f\\|[ \t]*$\\| *[-*+] +.+$"
 ;; ;;       paragraph-separate "$")
@@ -551,7 +538,8 @@
         (replace-match ""))
       (set-buffer-file-coding-system 'utf-8)
       (let ((require-final-newline t))
-        (save-buffer))))
+        (save-buffer))
+      ))
 
   (defun maybe-turn-on-whitespace ()
     (when
@@ -561,7 +549,6 @@
                                     newline empty space-before-tab tab-mark)
             )
       (whitespace-mode t)
-      ;; (whitespace-cleanup)
       ))
 
   :init
@@ -589,29 +576,10 @@
   )
 (global-set-key [remap goto-line] 'goto-line-with-feedback)
 
-(defun line-to-top-of-window ()
-  "Move line point is on to top of window"
-  (interactive)
-  (recenter 0)
-  )
-
-(defun line-to-bottom-of-window ()
-  "Move line point is on to bottom of window"
-  (interactive)
-  (recenter -1)
-  )
-
-(defun warp-to-top-of-window ()
-  "Move the point to top of window"
-  (interactive)
-  (move-to-window-line 0)
-  )
-
-(defun warp-to-bottom-of-window ()
-  "Move the point to bottom of window"
-  (interactive)
-  (move-to-window-line -1)
-  )
+(defun line-to-top-of-window ()    (interactive) (recenter 0))
+(defun line-to-bottom-of-window () (interactive) (recenter -1))
+(defun warp-to-top-of-window ()    (interactive) (move-to-window-line 0))
+(defun warp-to-bottom-of-window () (interactive) (move-to-window-line -1))
 
 (defun reread-dot-emacs ()
   "Re-read initialisation"
@@ -643,13 +611,8 @@
     (message "Aborted"))
   )
 
-(defun todo ()
-  (interactive)
-  (find-file "~/me/todo/todo.org"))
-
-(defun notes ()
-  (interactive)
-  (find-file "~/me/todo/notes.org"))
+(defun todo ()  (interactive) (find-file "~/me/todo/todo.org"))
+(defun notes () (interactive) (find-file "~/me/todo/notes.org"))
 
 ;;
 ;; mode hooks
@@ -754,4 +717,5 @@
            (float-time
             (time-subtract (current-time) emacs-start-time))))
       (message "Loading %s...done (%.3fs) [after-init]"
-               ,load-file-name elapsed))) t)
+               ,load-file-name elapsed)))
+ t)
