@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "indium-chrome" "indium-chrome.el" (23206 23711
-;;;;;;  220378 377000))
+;;;### (autoloads nil "indium-chrome" "indium-chrome.el" (23247 9324
+;;;;;;  47271 365000))
 ;;; Generated autoloads from indium-chrome.el
 
 (autoload 'indium-run-chrome "indium-chrome" "\
@@ -21,7 +21,7 @@ Open a connection to a v8 tab.
 ;;;***
 
 ;;;### (autoloads nil "indium-list-scripts" "indium-list-scripts.el"
-;;;;;;  (23206 23711 239103 26000))
+;;;;;;  (23247 9324 71137 408000))
 ;;; Generated autoloads from indium-list-scripts.el
 
 (autoload 'indium-list-scripts "indium-list-scripts" "\
@@ -31,8 +31,8 @@ Display a list of parsed scripts.
 
 ;;;***
 
-;;;### (autoloads nil "indium-nodejs" "indium-nodejs.el" (23206 23711
-;;;;;;  223372 567000))
+;;;### (autoloads nil "indium-nodejs" "indium-nodejs.el" (23247 9324
+;;;;;;  51765 500000))
 ;;; Generated autoloads from indium-nodejs.el
 
 (autoload 'indium-run-node "indium-nodejs" "\
@@ -68,8 +68,8 @@ Connect to a node process with a given URL.
 
 ;;;***
 
-;;;### (autoloads nil "indium-scratch" "indium-scratch.el" (23206
-;;;;;;  23711 237048 637000))
+;;;### (autoloads nil "indium-scratch" "indium-scratch.el" (23247
+;;;;;;  9324 68867 149000))
 ;;; Generated autoloads from indium-scratch.el
 
 (autoload 'indium-scratch "indium-scratch" "\
@@ -87,7 +87,7 @@ one first.
 ;;;;;;  "indium-inspector.el" "indium-interaction.el" "indium-pkg.el"
 ;;;;;;  "indium-render.el" "indium-repl.el" "indium-script.el" "indium-seq-fix.el"
 ;;;;;;  "indium-sourcemap.el" "indium-structs.el" "indium-v8.el"
-;;;;;;  "indium-workspace.el" "indium.el") (23206 23711 254489 363000))
+;;;;;;  "indium-workspace.el" "indium.el") (23247 9324 90532 862000))
 
 ;;;***
 
