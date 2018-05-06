@@ -16,21 +16,66 @@
 ;; time emacs startup; updated to new (current-time)
 ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
 
+;;; Code:
+
 (defconst emacs-start-time (current-time))
 
-;; evaluate locally if behind (eg) nottingham proxy
+(setq gc-cons-threshold 64000000)
+(add-hook 'after-init-hook
+          #'(lambda ()
+              (setq gc-cons-threshold 800000)) ; restore after startup
+          )
+
+;; ;; evaluate locally if behind (eg) nottingham proxy
 ;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
 ;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
 
-;; ;; debugging:
-;; (if init-file-debug
-;;     (setq use-package-verbose t
-;;           use-package-expand-minimally nil
-;;           use-package-compute-statistics t
-;;           debug-on-error t)
-;;   (setq use-package-verbose nil
-;;         use-package-expand-minimally t)
+;;
+;; package management
+;; per http://cachestocaches.com/2015/8/getting-started-use-package/
+;;
+
+(require 'package)
+(setq package-enable-at-startup nil
+      package-archives
+      '(("marmalade" . "https://marmalade-repo.org/packages/")
+        ("melpa" . "https://melpa.org/packages/")
+        ("gnu" . "https://elpa.gnu.org/packages/")
+        ("org" . "http://orgmode.org/elpa/"))
+      )
+(package-initialize)
+
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package)
+  )
+
+(eval-when-compile
+  (require 'use-package)
+  )
+(require 'diminish) ;; if you use :diminish
+(require 'bind-key) ;; if you use any :bind variant
+
+;; ;; auto-update packages
+;; (use-package auto-package-update
+;;   :config
+;;   (setq auto-package-update-delete-old-versions t)
+;;   (setq auto-package-update-hide-results t)
+;;   (auto-package-update-maybe)
 ;;   )
+
+;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
+(if init-file-debug
+    (progn
+      (message "DEBUGGING ON")
+      (setq use-package-verbose t
+            use-package-expand-minimally nil
+            use-package-compute-statistics t
+            debug-on-error t)
+      )
+  (setq use-package-verbose nil
+        use-package-expand-minimally t)
+  )
 
 ;; add homebrew site-lisp directories to the load-path
 (let ((default-directory
@@ -47,17 +92,6 @@
 (setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))
 (unless (server-running-p) (server-start))
 
-;; theme switching
-(defun light () "light colour scheme"
-       (interactive)
-       (color-theme-sanityinc-solarized-light)
-       )
-
-(defun dark () "dark colour scheme"
-       (interactive)
-       (color-theme-sanityinc-solarized-dark)
-       )
-
 ;; fonts
 (add-to-list 'default-frame-alist '(font . "Hack 10"))
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-fontset-auto2")
@@ -66,290 +100,111 @@
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
 
-;;
-;; package management
-;; per http://cachestocaches.com/2015/8/getting-started-use-package/
-;;
-
-(require 'package)
-(setq package-enable-at-startup nil)
-(setq package-archives
-      '(("marmalade" . "https://marmalade-repo.org/packages/")
-        ("melpa" . "https://melpa.org/packages/")
-        ("gnu" . "https://elpa.gnu.org/packages/")
-        ("org" . "http://orgmode.org/elpa/"))
+;; scrolling
+(setq scroll-conservatively 101
+      scroll-preserve-screen-position t
+      scroll-step 1
+      scroll-step 1
+      scroll-conservatively 10000
+      auto-window-vscroll nil
       )
-(package-initialize)
-
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
-
-(eval-when-compile
-  (require 'use-package))
-(require 'diminish)                ;; if you use :diminish
-(require 'bind-key)                ;; if you use any :bind variant
-
-(setq use-package-always-ensure t)
-(setq use-package-verbose t)
-
-;; ;; auto-update packages
-;; (use-package auto-package-update
-;;   :config
-;;   (setq auto-package-update-delete-old-versions t)
-;;   (setq auto-package-update-hide-results t)
-;;   (auto-package-update-maybe)
-;;   )
 
 ;;
 ;; packages
 ;;
 
-;; set exec path
-(use-package exec-path-from-shell
-  :ensure t
+(use-package adaptive-wrap
+  :hook (visual-line-mode . adaptive-wrap-prefix-mode)
+  )
+
+(use-package auto-compile
+  :init
+  (setq auto-compile-display-buffer nil
+        auto-compile-mode-line-counter t
+        )
+  (auto-compile-on-load-mode)
+  )
+
+(use-package calendar
+  :defer t
   :config
-  (exec-path-from-shell-initialize)
+  (setq calendar-bahai-all-holidays-flag nil
+        calendar-christian-all-holidays-flag t
+        calendar-date-style (quote iso)
+        calendar-mark-holidays-flag t
+        )
+  (calendar-set-date-style 'iso)
+  (defun insert-current-date (&optional omit-day-of-week-p)
+    (interactive "P*")
+    (insert
+     (calendar-date-string (calendar-current-date) t omit-day-of-week-p)
+     ))
   )
 
-;; web-mode
-(use-package web-mode
-  :mode (("\\.html$" . web-mode)
-         ("\\.tpl$" . web-mode)
-         )
-  :magic ("\\`<\\?xml" . web-mode)
+(use-package coffee-mode
+  :config
+  (setq coffee-tab-width 2
+        coffee-command "/usr/local/bin/coffee")
+  :hook (coffee-mode-hook . coffee-cos-mode)
   )
 
-;; markdown-mode
-(use-package markdown-mode
-  :commands (markdown-mode gfm-mode)
-  :mode (("README\\.md\\'" . gfm-mode)
-         ("\\.md\\'" . markdown-mode)
-         ("\\.markdown\\'" . markdown-mode))
-  :magic ("\\`==\\+==" . markdown-mode)
-  :init (setq markdown-command "multimarkdown")
-  :hook (markdown-mode . (lambda () (orgtbl-mode 1)))
+(use-package css-mode
+  :mode ("\\.less$")
   )
 
-;; makefile-mode
-(use-package make-mode
-  :mode (("sources$" . makefile-mode)
-         ("Makefile." . makefile-mode)
-         )
-  )
-
-;; eldoc
-(use-package eldoc
-  :diminish
-  :hook ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
-  )
-
-;; mu4e
-(require 'mu4e)
-(setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
-      mu4e-sent-folder   "/sent"               ;; folder for sent messages
-      mu4e-drafts-folder "/drafts"             ;; unfinished messages
-      mu4e-trash-folder  "/trash"              ;; trashed messages
-      mu4e-refile-folder "/archive"            ;; saved messages
-      )
-
-;; ;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
-;; ;;      mu4e-update-interval 300              ;; update every 5 minutes
-;; ;;      )
-
-;; ;; ;; tell message-mode how to send mail
-;; ;; (setq message-send-mail-function 'smtpmail-send-it)
-;; ;; ;; if our mail server lives at smtp.example.org; if you have a
-;; ;; ;; local mail-server, simply use 'localhost' here.
-;; ;; (setq smtpmail-smtp-server "smtp.example.org")
-;; ;; ;; don't save messages to Sent Messages, Gmail/IMAP takes care of this
-;; ;; (setq mu4e-sent-messages-behavior 'delete)
-;; )
-
-;; csv/tsv
 (use-package csv-mode
   :mode ("\\.tsv$")
   :config (setq indent-tabs-mode 't)
   )
 
-;; sh/bash
-(use-package sh-script
-  :mode ("bash_" . sh-mode)
+(use-package direnv
+  :config (direnv-mode)
   )
 
-;; css
-(use-package css-mode
-  :mode ("\\.less$")
+(use-package eldoc
+  :diminish
+  :hook ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
   )
 
-;; save cursor position in file after close
-(use-package saveplace
-  :unless noninteractive
-  :config (save-place-mode 1)
+(use-package exec-path-from-shell ;; set exec path
+  :config
+  (exec-path-from-shell-initialize)
   )
 
-;; ocaml TODO
-;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
-(require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
-;; ## end of OPAM user-setup addition for emacs / base ## keep this line
-;; ;; ;; ocaml
-;; (let ((opam-share (ignore-errors
-;;                     (car (process-lines "opam" "config" "var" "share")))))
-;;   (when (and opam-share (file-directory-p opam-share))
-;;     ;; Register Merlin
-;;     (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))
-;;     (autoload 'merlin-mode "merlin" nil t nil)
-;;     ;; Automatically start it in OCaml buffers
-;;     (add-hook 'tuareg-mode-hook 'merlin-mode t)
-;;     (add-hook 'caml-mode-hook 'merlin-mode t)
-;;     ;; Use opam switch to lookup ocamlmerlin binary
-;;     (setq merlin-command 'opam)
-;;     ))
-
-;; (add-hook 'tuareg-mode-hook
-;;           '(lambda ()
-;;              ;; (setq indent-line-function 'ocp-indent-line)
-;;              ;; (setq indent-region-function 'ocp-indent-region)
-;;              (setq merlin-use-auto-complete-mode 'easy)
-;;              (local-set-key (kbd "C-S-<up>") 'merlin-type-enclosing-go-up)
-;;              (local-set-key (kbd "C-S-<down>") 'merlin-type-enclosing-go-down)
-;;              ))
-;; ;; (push'("\\.ml[iylp]?" . tuareg-mode) auto-mode-alist)
-;; ;; (push '("\\.fs[ix]?" . tuareg-mode) auto-mode-alist)
-;; ;; (push '("[i]?ocamlinit$" . tuareg-mode) auto-mode-alist)
-
-
-;; lilypond TODO
-
-;; (add-to-list 'load-path (expand-file-name "~/.emacs.d/lilypond-elisp"))
-;; (autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
-;; (add-to-list 'auto-mode-alist '("\\.ly$" . LilyPond-mode))
-;; (add-to-list 'auto-mode-alist '("\\.ily$" . LilyPond-mode))
-
-;; fill column indicator
 (use-package fill-column-indicator
-  :config (add-hook 'prog-mode-hook 'fci-mode)
+  :hook (prog-mode-hook . fci-mode)
   )
 
-;; visual fill column
-(use-package visual-fill-column
-  :hook (text-mode . visual-fill-column-mode)
+;; flycheck -- on the fly checking
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode)
   )
 
-(use-package adaptive-wrap
-  :hook (visual-line-mode . adaptive-wrap-prefix-mode)
+;; flyspell -- on the fly spell checking
+(use-package flyspell
+  :commands (flyspell-prog-mode flyspell-mode)
+  :config
+  (setq ispell-dictionary "british")
+  :init
+  (add-hook 'text-mode-hook 'flyspell-mode)
+  (add-hook 'prog-mode-hook 'flyspell-prog-mode)
   )
 
-;; outline
-(use-package outline
-  :diminish outline-minor-mode
-  :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode)
+(use-package git-ps1-mode
+  :hook find-file-hook
   )
 
-;; latex TODO
-(use-package tex
-  :ensure auctex
-  :mode (("\\.tex$" . TeX-latex-mode)
-         ("\\.latex$" . TeX-latex-mode)
-         ("\\.bibtex$" . bibtex-mode)
+(use-package go-mode
+  :hook ((before-save . gofmt-before-save)
+         (go-mode-hook . go-eldoc-setup)
          )
   :config
-  (setq bibtex-dialect 'biblatex)
-  (setq TeX-auto-save t)
-  (setq TeX-parse-self t)
-  (setq-default TeX-master nil)
-  (setq reftex-plug-into-AUCTeX t)
-
-  ;;     ;; (add-hook 'LaTeX-mode-hook 'visual-line-mode)
-  ;;     ;; (add-hook 'LaTeX-mode-hook 'flyspell-mode)
-  ;;     ;; (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
-  ;;     ;; (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
-  ;; ;; (add-hook 'occur-mode-hook 'fm-start)
-  ;; ;; (add-hook 'compilation-mode-hook 'fm-start)
-
-  ;; (add-hook 'LaTeX-mode-hook
-  ;;           '(lambda ()
-  ;;              (auto-fill-mode 0)
-  ;;              (local-set-key (kbd "M-q") 'unfill-and-check)
-  ;;              (local-set-key (kbd "{") 'tex-insert-braces)
-  ;;              (local-set-key
-  ;;               (kbd "M-[") '(lambda () (interactive) (insert "{")))
-  ;;              (local-set-key
-  ;;               (kbd "M-]") '(lambda () (interactive) (insert "}")))
-  ;;              (local-set-key
-  ;;               (kbd "C-c m")
-  ;;               '(lambda () (interactive "*") (tex-enclose-word "\\emph{" "}")))
-  ;;              (local-set-key
-  ;;               (kbd "C-c C-m")
-  ;;               '(lambda () (interactive "*") (tex-enclose-word "\\emph{" "}")))
-  ;;              (local-set-key
-  ;;               (kbd "C-c b")
-  ;;               '(lambda () (interactive "*") (tex-enclose-word "{\\bf " "}")))
-  ;;              (local-set-key (kbd "%") 'match-paren)
-  ;;              ))
-
-  ;; ;; modified from swiftex.el
-  ;; (defun tex-enclose-word (before after)
-  ;;   (interactive "*Mbefore: \nMafter: ")
-  ;;   (let* ((oldpoint (point))
-  ;;          (start oldpoint)
-  ;;          (end oldpoint))
-
-  ;;     ;; get the start and end of the current word
-  ;;     (skip-syntax-backward "w")
-  ;;     (setq start (point))
-  ;;     (goto-char oldpoint)
-  ;;     (skip-syntax-forward "w")
-  ;;     (setq end (point))
-  ;;     (if (and (eq start oldpoint)
-  ;;              (eq end oldpoint))
-  ;;         ;; insert the command as nothing to enclose
-  ;;         (progn (insert before) (insert after) (backward-char))
-
-  ;;       ;; enclose the word with the command
-  ;;       (progn
-  ;;         (insert after)
-  ;;         (goto-char start)
-  ;;         (insert before)
-  ;;         (goto-char (+ oldpoint (length before)))
-  ;;         )
-  ;;       )))
+  (setq gofmt-command "goimports"
+        go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
+        )
   )
 
-;; ispell
-(use-package ispell
-  :config (setq ispell-dictionary "british")
-  )
-
-;; ;; prb ispell functions
-;; (defun ispell-check-paragraph ()
-;;   "Spell check each word in a paragraph"
-;;   (interactive "*")
-;;   (let ((ispell-check-only nil)
-;;         (ispell-quietly t)
-;;         )
-;;     (save-excursion
-;;       (forward-paragraph) (setq end (point))
-;;       (forward-paragraph -1) (setq start (point))
-;;       (ispell-region start end))
-;;     ))
-
-;; coffee
-(use-package coffee-mode
-  :config
-  (coffee-cos-mode t)
-  (setq coffee-tab-width 2)
-  (setq coffee-command "/usr/local/bin/coffee")
-  )
-
-;; go
-(use-package go-mode
-  :config (setq gofmt-command "goimports")
-  :hook ((before-save . gofmt-before-save))
-  :hook go-eldoc-setup
-  )
-
-;; json
 (use-package json-mode
   :mode "\\.json$"
   )
@@ -358,8 +213,97 @@
   :after json-mode
   )
 
-;; org-mode
+(use-package magit
+  :config
+  ;; full screen magit-status
+  (defadvice magit-status (around magit-fullscreen activate)
+    (window-configuration-to-register :magit-fullscreen)
+    ad-do-it
+    (delete-other-windows)
+    )
+  (defun magit-quit-session ()
+    "Restores the previous window configuration and kills the magit buffer"
+    (interactive)
+    (kill-buffer)
+    (jump-to-register :magit-fullscreen)
+    )
+  :bind (:map magit-status-mode-map ("q" . magit-quit-session))
+  :hook (magit-status-mode-hook . (lambda () (visual-line-mode 0)))
+  )
+
+(use-package make-mode
+  :mode (("sources$" . makefile-mode)
+         ("Makefile." . makefile-mode)
+         )
+  )
+
+(use-package markdown-mode
+  :commands (markdown-mode gfm-mode)
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :magic ("\\`==\\+==" . markdown-mode)
+  :init (setq markdown-command "multimarkdown")
+  ;; :hook (markdown-mode . (lambda () (orgtbl-mode 1)))
+  )
+
+(use-package mu4e
+  :config
+  (setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
+        mu4e-sent-folder   "/sent"               ;; folder for sent messages
+        mu4e-drafts-folder "/drafts"             ;; unfinished messages
+        mu4e-trash-folder  "/trash"              ;; trashed messages
+        mu4e-refile-folder "/archive"            ;; saved messages
+        )
+
+  ;; ;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
+  ;; ;;      mu4e-update-interval 300              ;; update every 5 minutes
+  ;; ;;      )
+
+  ;; ;; ;; tell message-mode how to send mail
+  ;; ;; (setq message-send-mail-function 'smtpmail-send-it)
+  ;; ;; ;; if our mail server lives at smtp.example.org; if you have a
+  ;; ;; ;; local mail-server, simply use 'localhost' here.
+  ;; ;; (setq smtpmail-smtp-server "smtp.example.org")
+  ;; ;; ;; don't save messages to Sent Messages, Gmail/IMAP takes care of this
+  ;; ;; (setq mu4e-sent-messages-behavior 'delete)
+  )
+
+;; ocaml
+;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
+(require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
+;; ## end of OPAM user-setup addition for emacs / base ## keep this line
+(use-package tuareg
+  :init
+  (let ((opam-share (ignore-errors
+                      (car (process-lines "opam" "config" "var" "share")))))
+    (when (and opam-share (file-directory-p opam-share))
+      ;; Register Merlin
+      (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))
+      (autoload 'merlin-mode "merlin" nil t nil)
+      ;; Use opam switch to lookup ocamlmerlin binary
+      (setq merlin-command 'opam)
+      ))
+  :hook ((tuareg-mode caml-mode) . merlin-mode)
+  :hook
+  (tuareg-mode .
+               (lambda ()
+                 (setq merlin-use-auto-complete-mode 'easy
+                       ;; indent-line-function 'ocp-indent-line
+                       ;; indent-region-function 'ocp-indent-region
+                       )
+                 ))
+  :bind (:map tuareg-mode-map
+              ("C-S-<up>" . merlin-type-enclosing-go-up)
+              ("C-S-<down>" . merlin-type-enclosing-go-down)
+              )
+  :mode (("\\.ml[iylp]?$" . tuareg-mode)
+         ("\\.fs[ix]?$" . tuareg-mode)
+         ("[i]?ocamlinit$" . tuareg-mode)
+         )
+  )
 (use-package org
+  :defer t
   :pin org
   :bind (:map org-mode-map
               ("C-c a"    . org-agenda)
@@ -479,39 +423,129 @@
             (org-agenda-ndays 1)
             (org-agenda-overriding-header "Today's Priority #A tasks: "))
            )
-          )))
-
-(use-package calendar
-  :config
-  (defun insert-current-date (&optional omit-day-of-week-p)
-    (interactive "P*")
-    (insert
-     (calendar-date-string (calendar-current-date) t omit-day-of-week-p)
-     ))
+          )
+        org-agenda-files (quote ("~/me/todo/todo.org"))
+        org-agenda-include-diary t
+        org-agenda-log-mode-items (quote (closed clock))
+        org-agenda-ndays 7
+        org-agenda-show-all-dates t
+        org-agenda-sorting-strategy
+        (quote
+         (time-up todo-state-down category-keep priority-down alpha-down))
+        org-agenda-start-on-weekday nil
+        org-deadline-warning-days 14
+        org-default-notes-file "~/me/todo/notes.org"
+        org-fast-tag-selection-single-key (quote expert)
+        org-remember-store-without-prompt t
+        org-remember-templates
+        (quote
+         ((116 "* %? %u" "~/me/todo/todo.org" "Tasks")
+          (110 "* %u %?" "~/me/todo/notes.org" "Notes")))
+        org-reverse-note-order t
+        org-tags-match-list-sublevels t
+        )
   )
 
-;; auto-fill-mode TODO unless it turns out filladapt is enough
-;; ;; ;; tweak auto-fill
-;; ;; (setq paragraph-start "\f\\|[ \t]*$\\| *[-*+] +.+$"
-;; ;;       paragraph-separate "$")
+(use-package outline
+  :diminish outline-minor-mode
+  :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode)
+  )
 
-;; magit mode
-(use-package magit
+(use-package paren
+  :config (setq show-paren-mode t
+                show-paren-style (quote expression)
+                )
+  :hook (find-file-hook . show-paren-mode)
+  )
+
+(use-package rainbow-mode
+  :hook prog-mode-hook
+  )
+
+(use-package saveplace ;; save cursor position in file after close
+  :unless noninteractive
+  :config (save-place-mode t)
+  )
+
+(use-package sh-script
+  :mode ("bash_" . sh-mode)
+  )
+
+(use-package subword ;; subword -- obey CamelCase etc
+  :defer t
+  :config (setq global-subword-mode t)
+  )
+
+(use-package tex
+  :ensure auctex
+  :mode (("\\.tex$" . TeX-latex-mode)
+         ("\\.latex$" . TeX-latex-mode)
+         ("\\.bibtex$" . bibtex-mode)
+         )
+  :hook ((LaTeX-mode-hook . LaTeX-math-mode)
+         (LaTeX-mode-hook . turn-on-reftex)
+         )
   :config
-  ;; full screen magit-status
-  (defadvice magit-status (around magit-fullscreen activate)
-    (window-configuration-to-register :magit-fullscreen)
-    ad-do-it
-    (delete-other-windows)
-    )
-  (defun magit-quit-session ()
-    "Restores the previous window configuration and kills the magit buffer"
-    (interactive)
-    (kill-buffer)
-    (jump-to-register :magit-fullscreen)
-    )
-  :bind (:map magit-status-mode-map ("q" . magit-quit-session))
-  :hook (magit-status-mode-hook . (lambda () (visual-line-mode 0)))
+  (setq bibtex-dialect 'biblatex
+        TeX-auto-save t
+        TeX-parse-self t
+        TeX-master t
+        reftex-plug-into-AUCTeX t)
+
+  ;; modified from swiftex.el
+  (defun tex-enclose-word (before after)
+    (interactive "*Mbefore: \nMafter: ")
+    (let* ((oldpoint (point))
+           (start oldpoint)
+           (end oldpoint))
+
+      ;; get the start and end of the current word
+      (skip-syntax-backward "w")
+      (setq start (point))
+      (goto-char oldpoint)
+      (skip-syntax-forward "w")
+      (setq end (point))
+      (if (and (eq start oldpoint)
+               (eq end oldpoint))
+          ;; insert the command as nothing to enclose
+          (progn (insert before) (insert after) (backward-char))
+
+        ;; enclose the word with the command
+        (progn
+          (insert after)
+          (goto-char start)
+          (insert before)
+          (goto-char (+ oldpoint (length before)))
+          )
+        )))
+
+  :bind (:map LaTeX-mode-map
+              ("{" . tex-insert-braces)
+              ( "M-[" . (lambda () (interactive) (insert "{")))
+              ( "M-]" . (lambda () (interactive) (insert "}")))
+              ( "C-c m" . (lambda () (interactive "*")
+                            (tex-enclose-word "\\emph{" "}")))
+              ( "C-c b" . (lambda () (interactive "*")
+                            (tex-enclose-word "{\\bf " "}")))
+              )
+  )
+
+(use-package web-mode
+  :mode (("\\.html$" . web-mode)
+         ("\\.tpl$" . web-mode)
+         )
+  :magic ("\\`<\\?xml" . web-mode)
+  )
+
+;; lilypond TODO
+
+;; (add-to-list 'load-path (expand-file-name "~/.emacs.d/lilypond-elisp"))
+;; (autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
+;; (add-to-list 'auto-mode-alist '("\\.ly$" . LilyPond-mode))
+;; (add-to-list 'auto-mode-alist '("\\.ily$" . LilyPond-mode))
+
+(use-package visual-fill-column
+  :hook (text-mode . visual-fill-column-mode)
   )
 
 ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
@@ -566,14 +600,15 @@
 
 ;; http://whattheemacsd.com/
 (defun goto-line-with-feedback ()
-  "Show line numbers temporarily, while prompting for the line number input"
+  "Show line numbers temporarily, while prompting for the line number input."
   (interactive)
   (unwind-protect
       (progn
         (linum-mode 1)
-        (goto-line (read-number "Goto line: ")))
-    (linum-mode -1))
-  )
+        (goto-line (read-number "Goto line: "))
+        )
+    (linum-mode -1)
+    ))
 (global-set-key [remap goto-line] 'goto-line-with-feedback)
 
 (defun line-to-top-of-window ()    (interactive) (recenter 0))
@@ -582,13 +617,13 @@
 (defun warp-to-bottom-of-window () (interactive) (move-to-window-line -1))
 
 (defun reread-dot-emacs ()
-  "Re-read initialisation"
+  "Re-read initialisation."
   (interactive)
   (load-file "~/.emacs.d/init.el")
   )
 
 (defun match-paren (arg)
-  "Go to the matching parenthesis if on parenthesis otherwise insert %."
+  "Go to matching parenthesis if one exists, otherwise insert ARG(=1) %s."
   (interactive "p")
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
         ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
@@ -596,15 +631,15 @@
   )
 
 (defun my-kill-emacs ()
-  "Confirm before save-buffers-kill-emacs"
+  "Confirm before 'save-buffers-kill-emacs'."
   (interactive)
-  (if (y-or-n-p "Really kill emacs? ")
+  (if (y-or-n-p "Really kill Emacs? ")
       (save-buffers-kill-emacs)
     (message "Aborted"))
   )
 
 (defun my-suspend-frame ()
-  "Confirm before suspend emacs"
+  "Confirm before suspend Emacs."
   (interactive)
   (if (y-or-n-p "Really minimise? ")
       (suspend-frame)
@@ -614,22 +649,38 @@
 (defun todo ()  (interactive) (find-file "~/me/todo/todo.org"))
 (defun notes () (interactive) (find-file "~/me/todo/notes.org"))
 
+;; theme switching
+(defun light () "Light colour scheme."
+       (interactive)
+       (color-theme-sanityinc-solarized-light)
+       )
+
+(defun dark () "Dark colour scheme."
+       (interactive)
+       (color-theme-sanityinc-solarized-dark)
+       )
+
 ;;
 ;; mode hooks
 ;;
 
 (require 'filladapt)                    ; not a package :(
-(add-hook
- 'text-mode-hook
- '(lambda ()
-    (filladapt-mode t)
-    (flyspell-mode t)
-    )
- )
+(add-hook 'text-mode-hook '(lambda () (filladapt-mode t)))
 
 ;;
 ;; keybindings
 ;;
+
+;; (when (on-osx-p)
+;;   (setq ns-alternate-modifier 'super
+;;         ns-command-modifier 'meta
+;;         ns-control-modifier 'control))
+
+;; (when window-system
+;;   (tooltip-mode -1)
+;;   (tool-bar-mode -1)
+;;   (menu-bar-mode -1)
+;;   (scroll-bar-mode -1))
 
 (bind-keys*
  ("%"          . match-paren)
@@ -638,7 +689,6 @@
  ("C-c ;"      . comment-region)
  ("C-c C-SPC"  . whitespace-cleanup)
  ("C-c C-g"    . goto-line)
- ("C-c C-q"    . indent-region)
  ("C-x C-c"    . my-kill-emacs)
  ("C-x C-d"    . insert-current-date)
  ("C-x C-z"    . my-suspend-frame)
