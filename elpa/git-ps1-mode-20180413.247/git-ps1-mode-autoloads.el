@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (22636 51185
-;;;;;;  0 0))
+;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (23251 45905
+;;;;;;  130541 157000))
 ;;; Generated autoloads from git-ps1-mode.el
 
 (defvar git-ps1-mode nil "\
