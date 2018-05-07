@@ -796,7 +796,7 @@
 	     ((:url . "https://github.com/michael-heerdegen/on-screen.el")
 	      (:keywords "convenience"))])
  (org .
-      [(9 1 12)
+      [(9 1 13)
        nil "Outline-based notes management and organizer" tar
        ((:keywords "outlines" "hypermedia" "calendar" "wp")
 	(:url . "http://elpa.gnu.org/packages/org.html"))])
@@ -812,7 +812,7 @@
 	    ((:keywords "convenience" "text" "org")
 	     (:url . "https://savannah.nongnu.org/projects/org-edna-el/"))])
  (orgalist .
-	   [(1 5)
+	   [(1 6)
 	    ((emacs
 	      (24 4)))
 	    "Manage Org-like lists in non-Org buffers" single
