@@ -472,7 +472,6 @@
   )
 
 (use-package subword ;; subword -- obey CamelCase etc
-  :defer t
   :config (setq global-subword-mode t)
   )
 
@@ -486,6 +485,7 @@
          (LaTeX-mode-hook . turn-on-reftex)
          )
   :config
+  (use-package latex)
   (setq bibtex-dialect 'biblatex
         TeX-auto-save t
         TeX-parse-self t
@@ -520,13 +520,13 @@
         )))
 
   :bind (:map LaTeX-mode-map
-              ("{" . tex-insert-braces)
+              ("{" . TeX-insert-braces)
               ( "M-[" . (lambda () (interactive) (insert "{")))
               ( "M-]" . (lambda () (interactive) (insert "}")))
               ( "C-c m" . (lambda () (interactive "*")
                             (tex-enclose-word "\\emph{" "}")))
               ( "C-c b" . (lambda () (interactive "*")
-                            (tex-enclose-word "{\\bf " "}")))
+                            (tex-enclose-word "\\textbf{" "}")))
               )
   )
 
