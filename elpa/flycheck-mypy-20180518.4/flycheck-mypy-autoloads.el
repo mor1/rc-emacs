@@ -3,8 +3,8 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil nil ("flycheck-mypy.el") (23251 45907 554724
-;;;;;;  907000))
+;;;### (autoloads nil nil ("flycheck-mypy.el") (23296 34839 639609
+;;;;;;  46000))
 
 ;;;***
 
