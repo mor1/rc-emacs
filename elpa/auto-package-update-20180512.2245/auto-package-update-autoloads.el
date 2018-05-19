@@ -4,7 +4,7 @@
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
 ;;;### (autoloads nil "auto-package-update" "auto-package-update.el"
-;;;;;;  (23242 44479 95724 611000))
+;;;;;;  (23296 34872 146621 275000))
 ;;; Generated autoloads from auto-package-update.el
 
 (autoload 'auto-package-update-now "auto-package-update" "\
