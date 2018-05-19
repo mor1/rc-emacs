@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "elfeed" "elfeed.el" (23197 32777 218259 655000))
+;;;### (autoloads nil "elfeed" "elfeed.el" (23296 34861 79844 503000))
 ;;; Generated autoloads from elfeed.el
 
 (autoload 'elfeed-update "elfeed" "\
@@ -30,8 +30,8 @@ Export the current feed listing to OPML-formatted FILE.
 
 ;;;***
 
-;;;### (autoloads nil "elfeed-link" "elfeed-link.el" (23197 32777
-;;;;;;  221565 537000))
+;;;### (autoloads nil "elfeed-link" "elfeed-link.el" (23296 34861
+;;;;;;  87358 364000))
 ;;; Generated autoloads from elfeed-link.el
 
 (autoload 'elfeed-link-store-link "elfeed-link" "\
@@ -56,8 +56,8 @@ search buffer or show a concrete entry.
 
 ;;;***
 
-;;;### (autoloads nil "elfeed-search" "elfeed-search.el" (23197 32777
-;;;;;;  230031 718000))
+;;;### (autoloads nil "elfeed-search" "elfeed-search.el" (23296 34861
+;;;;;;  104038 243000))
 ;;; Generated autoloads from elfeed-search.el
 
 (autoload 'elfeed-search-bookmark-handler "elfeed-search" "\
@@ -76,7 +76,7 @@ Restore the state of an elfeed-search buffer on desktop restore.
 
 ;;;### (autoloads nil nil ("elfeed-csv.el" "elfeed-curl.el" "elfeed-db.el"
 ;;;;;;  "elfeed-lib.el" "elfeed-log.el" "elfeed-pkg.el" "elfeed-show.el"
-;;;;;;  "xml-query.el") (23197 32777 233392 787000))
+;;;;;;  "xml-query.el") (23296 34861 112662 622000))
 
 ;;;***
 
