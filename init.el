@@ -566,9 +566,9 @@
 
 ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
 (use-package whitespace
-  :diminish (global-whitespace-mode
-             whitespace-mode
-             whitespace-newline-mode)
+  ;; :diminish (global-whitespace-mode
+  ;;            whitespace-mode
+  ;;            whitespace-newline-mode)
   :commands (whitespace-buffer
              whitespace-cleanup
              whitespace-mode
@@ -592,14 +592,18 @@
       ))
 
   (defun maybe-turn-on-whitespace ()
-    (when
-        (not (or (memq major-mode '(markdown-mode))
-                 (locate-dominating-file default-directory ".noclean")))
-      (setq whitespace-style '(face trailing tabs lines-tail
-                                    newline empty space-before-tab tab-mark)
-            )
-      (whitespace-mode t)
-      ))
+    (when (not (locate-dominating-file default-directory ".noclean"))
+      (progn
+        ;; (if (memq major-mode '(markdown-mode))
+        ;;     (setq whitespace-style '(face tabs lines-tail
+        ;;                                   newline empty space-before-tab tab-mark)
+        ;;           )
+        (setq whitespace-style '(face trailing tabs lines-tail
+                                      newline empty space-before-tab tab-mark)
+              )
+        ;; )
+        (whitespace-mode t)
+        )))
 
   :hook ((find-file . maybe-turn-on-whitespace)
          (prog-mode . whitespace-cleanup)
