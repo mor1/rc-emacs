@@ -37,13 +37,15 @@
          (Nset (concat "magithub-settings--set-" variable))
          (Nfmt (concat "magithub-settings--format-" variable)))
     (let ((Sset (intern Nset))
-          (Sfmt (intern Nfmt)))
+          (Sfmt (intern Nfmt))
+          (docstring (format "%s\n\nThis is the Git variable %S." docstring variable)))
       `(progn
          (defun ,Sset () ,docstring (interactive)
                 (magit--set-popup-variable ,variable ,choices ,default))
          (defun ,(intern Nfmt) () ,(format "See `%s'." Nset)
                 (magit--format-popup-variable:choices ,variable ,choices ,default))
-         (magit-define-popup-variable ',popup ,key ,variable ',Sset ',Sfmt)))))
+         (magit-define-popup-variable ',popup ,key ,variable ',Sset ',Sfmt)
+         ,variable))))
 
 (defun magithub-settings--value-or (variable default &optional accessor)
   (declare (indent 2))
@@ -61,31 +63,27 @@
   '("true" "false") "true")
 
 (defun magithub-enabled-p ()
+  "Returns non-nil if Magithub content is available."
   (magithub-settings--value-or "magithub.enabled" t
     #'magit-get-boolean))
 
-(magithub-settings--simple magithub-settings-popup ?c "cache"
-  "Controls the cache.
+(magithub-settings--simple magithub-settings-popup ?o "online"
+  "Controls whether Magithub is online or offline.
 
-- `always': The cache will not be used, but it will be updated
+- `true': requests are made to GitHub for missing data
+- `false': no requests are made to GitHub
 
-- `never': The cache is never used.  Data is always re-retrieved
-           when online.  When offline, there is simply no data.
+In both cases, when there is data in the cache, that data is
+used.  Refresh the buffer with a prefix argument to disregard the
+cache while refreshing: \\<magit-mode-map>\\[universal-argument] \\[magit-refresh]"
+  '("true" "false") "true")
 
-- `whenPresent': The cache is used if it exists.  If there is
-                 nothing cached, data is retrieved when online.
-                 When offline, there is simply no data."
-  '("always" "never" "whenPresent") "whenPresent")
+(defun magithub-online-p ()
+  "See `magithub-settings--set-magithub.online'.
+Returns the value as t or nil."
+  (magithub-settings--value-or "magithub.online" t
+    #'magit-get-boolean))
 
-(defvar magithub-settings-cache-behavior-override 'none)
-(defun magithub-settings-cache-behavior ()
-  (if (not (eq magithub-settings-cache-behavior-override 'none))
-      magithub-settings-cache-behavior-override
-    (pcase (magithub-settings--value-or "magithub.cache" "whenPresent")
-      ("always" t)
-      ("never" nil)
-      ("whenPresent" 'when-present)
-      (_ 'when-present))))
 
 (magithub-settings--simple magithub-settings-popup ?s "status.includeStatusHeader"
   "When true, the project status header is included in
