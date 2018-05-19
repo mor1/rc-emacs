@@ -3,7 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "org" "org.el" (23280 25460 830894 716000))
+;;;### (autoloads nil "org" "org.el" (23296 34679 881837 900000))
 ;;; Generated autoloads from org.el
 
 (autoload 'org-babel-do-load-languages "org" "\
@@ -225,8 +225,8 @@ Call the customize function with org as argument.
 
 ;;;***
 
-;;;### (autoloads nil "org-agenda" "org-agenda.el" (23280 25460 747512
-;;;;;;  738000))
+;;;### (autoloads nil "org-agenda" "org-agenda.el" (23296 34679 728542
+;;;;;;  592000))
 ;;; Generated autoloads from org-agenda.el
 
 (autoload 'org-toggle-sticky-agenda "org-agenda" "\
@@ -499,8 +499,8 @@ to override `appt-message-warning-time'.
 
 ;;;***
 
-;;;### (autoloads nil "org-capture" "org-capture.el" (23280 25460
-;;;;;;  756872 303000))
+;;;### (autoloads nil "org-capture" "org-capture.el" (23296 34679
+;;;;;;  745061 409000))
 ;;; Generated autoloads from org-capture.el
 
 (autoload 'org-capture-string "org-capture" "\
@@ -546,8 +546,8 @@ Set `org-capture-templates' to be similar to `org-remember-templates'.
 
 ;;;***
 
-;;;### (autoloads nil "org-colview" "org-colview.el" (23280 25460
-;;;;;;  761190 212000))
+;;;### (autoloads nil "org-colview" "org-colview.el" (23296 34679
+;;;;;;  749968 669000))
 ;;; Generated autoloads from org-colview.el
 
 (autoload 'org-columns-remove-overlays "org-colview" "\
@@ -615,8 +615,8 @@ Turn on or update column view in the agenda.
 
 ;;;***
 
-;;;### (autoloads nil "org-compat" "org-compat.el" (23280 25460 762666
-;;;;;;  537000))
+;;;### (autoloads nil "org-compat" "org-compat.el" (23296 34679 752522
+;;;;;;  52000))
 ;;; Generated autoloads from org-compat.el
 
 (autoload 'org-check-version "org-compat" "\
@@ -626,8 +626,8 @@ Try very hard to provide sensible version strings.
 
 ;;;***
 
-;;;### (autoloads nil "org-duration" "org-duration.el" (23280 25460
-;;;;;;  770579 690000))
+;;;### (autoloads nil "org-duration" "org-duration.el" (23296 34679
+;;;;;;  766293 855000))
 ;;; Generated autoloads from org-duration.el
 
 (autoload 'org-duration-set-regexps "org-duration" "\
@@ -681,8 +681,8 @@ with \"H:MM:SS\" format, return `h:mm:ss'.  Otherwise, return
 
 ;;;***
 
-;;;### (autoloads nil "org-lint" "org-lint.el" (23280 25460 796470
-;;;;;;  999000))
+;;;### (autoloads nil "org-lint" "org-lint.el" (23296 34679 816113
+;;;;;;  440000))
 ;;; Generated autoloads from org-lint.el
 
 (autoload 'org-lint "org-lint" "\
@@ -698,8 +698,8 @@ ARG can also be a list of checker names, as symbols, to run.
 
 ;;;***
 
-;;;### (autoloads nil "org-macs" "org-macs.el" (23280 25460 803477
-;;;;;;  894000))
+;;;### (autoloads nil "org-macs" "org-macs.el" (23296 34679 829860
+;;;;;;  242000))
 ;;; Generated autoloads from org-macs.el
 
 (autoload 'org-load-noerror-mustsuffix "org-macs" "\
@@ -709,8 +709,8 @@ Load FILE with optional arguments NOERROR and MUSTSUFFIX.
 
 ;;;***
 
-;;;### (autoloads nil "org-version" "org-version.el" (23280 25460
-;;;;;;  827416 246000))
+;;;### (autoloads nil "org-version" "org-version.el" (23296 34679
+;;;;;;  876621 724000))
 ;;; Generated autoloads from org-version.el
 
 (autoload 'org-release "org-version" "\
@@ -756,7 +756,7 @@ The location of ODT styles.")
 ;;;;;;  "org-timer.el" "org-w3m.el" "ox-ascii.el" "ox-beamer.el"
 ;;;;;;  "ox-html.el" "ox-icalendar.el" "ox-latex.el" "ox-man.el"
 ;;;;;;  "ox-md.el" "ox-odt.el" "ox-org.el" "ox-publish.el" "ox-texinfo.el"
-;;;;;;  "ox.el") (23280 25460 878020 115000))
+;;;;;;  "ox.el") (23296 34679 968358 601000))
 
 ;;;***
 
