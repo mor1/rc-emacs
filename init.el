@@ -144,8 +144,9 @@
 (use-package coffee-mode
   :config
   (setq coffee-tab-width 2
-        coffee-command "/usr/local/bin/coffee")
-  :hook (coffee-mode-hook . coffee-cos-mode)
+        ;; coffee-command "/usr/local/bin/coffee" ;; i containerised it...
+        )
+  :hook (coffee-mode . coffee-cos-mode)
   )
 
 (use-package css-mode
@@ -172,7 +173,7 @@
   )
 
 (use-package fill-column-indicator
-  :hook (prog-mode-hook . fci-mode)
+  :hook (prog-mode . fci-mode)
   )
 
 ;; flycheck -- on the fly checking
@@ -186,18 +187,22 @@
   :commands (flyspell-prog-mode flyspell-mode)
   :config
   (setq ispell-dictionary "british")
-  :init
-  (add-hook 'text-mode-hook 'flyspell-mode)
-  (add-hook 'prog-mode-hook 'flyspell-prog-mode)
+  :hook ((text-mode . flyspell-mode)
+         (prog-mode . flyspell-prog-mode)
+         )
+  ;; :init
+  ;; (add-hook 'text-mode-hook 'flyspell-mode)
+  ;; (add-hook 'prog-mode-hook 'flyspell-prog-mode)
   )
 
 (use-package git-ps1-mode
-  :hook find-file-hook
+  :hook find-file
+  ;; git-ps1-mode-ps1-file
   )
 
 (use-package go-mode
   :hook ((before-save . gofmt-before-save)
-         (go-mode-hook . go-eldoc-setup)
+         (go-mode . go-eldoc-setup)
          )
   :config
   (setq gofmt-command "goimports"
@@ -233,7 +238,7 @@
     (jump-to-register :magit-fullscreen)
     )
   :bind (:map magit-status-mode-map ("q" . magit-quit-session))
-  :hook (magit-status-mode-hook . (lambda () (visual-line-mode 0)))
+  :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
   )
 
 (use-package make-mode
@@ -352,6 +357,10 @@
                  (list (list (list 12 27 y) "Christmas Day Bank Holiday")))
                 )))))
 
+  ;; TODO make :bind?
+  ;; :bind (:map org-agenda-mode-map
+  ;;        ("C-x ." . org-agenda-reschedule-to-today)
+  ;;        )
   :config
   (add-hook
    'org-agenda-mode-hook
@@ -460,11 +469,11 @@
   :config (setq show-paren-mode t
                 show-paren-style (quote expression)
                 )
-  :hook (find-file-hook . show-paren-mode)
+  :hook (find-file . show-paren-mode)
   )
 
 (use-package rainbow-mode
-  :hook prog-mode-hook
+  :hook prog-mode
   )
 
 (use-package saveplace ;; save cursor position in file after close
@@ -486,8 +495,8 @@
          ("\\.latex$" . TeX-latex-mode)
          ("\\.bibtex$" . bibtex-mode)
          )
-  :hook ((LaTeX-mode-hook . LaTeX-math-mode)
-         (LaTeX-mode-hook . turn-on-reftex)
+  :hook ((LaTeX-mode . LaTeX-math-mode)
+         (LaTeX-mode . turn-on-reftex)
          )
   :config
   (use-package latex)
@@ -590,13 +599,13 @@
       (whitespace-mode t)
       ))
 
-  :init
-  (add-hook 'find-file-hook 'maybe-turn-on-whitespace t)
-  (add-hook 'prog-mode-hook 'whitespace-cleanup)
+  :hook ((find-file . maybe-turn-on-whitespace)
+         (prog-mode . whitespace-cleanup)
+         )
 
-  :config
-  (remove-hook 'find-file-hook 'whitespace-buffer)
-  (remove-hook 'kill-buffer-hook 'whitespace-buffer)
+  ;; :config
+  ;; (remove-hook 'find-file-hook 'whitespace-buffer)
+  ;; (remove-hook 'kill-buffer-hook 'whitespace-buffer)
   )
 
 ;;
