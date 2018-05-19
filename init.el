@@ -215,6 +215,11 @@
 
 (use-package magit
   :config
+  (setq magit-commit-arguments (quote ("--signoff"))
+        magit-diff-refine-hunk (quote all)
+        magit-process-popup-time 5
+        magit-set-upstream-on-push t
+        )
   ;; full screen magit-status
   (defadvice magit-status (around magit-fullscreen activate)
     (window-configuration-to-register :magit-fullscreen)
