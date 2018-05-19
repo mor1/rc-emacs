@@ -3,8 +3,8 @@
 
 ;; Copyright 2011-2018 François-Xavier Bois
 
-;; Version: 16.0.10
-;; Package-Version: 20180503.452
+;; Version: 16.0.11
+;; Package-Version: 20180511.153
 ;; Author: François-Xavier Bois <fxbois AT Google Mail Service>
 ;; Maintainer: François-Xavier Bois
 ;; Package-Requires: ((emacs "23.1"))
@@ -25,7 +25,7 @@
 
 ;;---- CONSTS ------------------------------------------------------------------
 
-(defconst web-mode-version "16.0.10"
+(defconst web-mode-version "16.0.11"
   "Web Mode version.")
 
 ;;---- GROUPS ------------------------------------------------------------------
@@ -2838,7 +2838,7 @@ another auto-completion with different ac-sources (e.g. ac-php)")
                   delim-close "}}"))
            ((looking-at-p "[[:alnum:]]+\\.[[:alpha:]]+")
             )
-           ((string= sub2 "@y")
+           ((looking-at-p "[[:alnum:]]+(")
             (setq closing-string ")"
                   delim-open "@"))
            ((string= sub1 "@")
@@ -4229,7 +4229,7 @@ another auto-completion with different ac-sources (e.g. ac-php)")
           (setq controls (append controls (list (cons 'close "ctrl")))))
          ((web-mode-block-starts-with "else\\_>" reg-beg)
           (setq controls (append controls (list (cons 'inside "ctrl")))))
-         ((web-mode-block-starts-with "\\(range\\|with\\|if\\)\\_>" reg-beg)
+         ((web-mode-block-starts-with "\\(range\\|with\\|if\\|define\\|block\\)\\_>" reg-beg)
           (setq controls (append controls (list (cons 'open "ctrl")))))
          )
         ) ;go
