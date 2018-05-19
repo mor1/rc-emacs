@@ -483,6 +483,8 @@
 
 (use-package sh-script
   :mode ("bash_" . sh-mode)
+  ;; :magic ("\\{{/* =% ssh %= */}}" . sh-mode)
+  :config (setq sh-basic-offset 2)
   )
 
 (use-package subword ;; subword -- obey CamelCase etc
