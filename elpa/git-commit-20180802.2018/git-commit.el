@@ -11,8 +11,8 @@
 ;;	Marius Vollmer <marius.vollmer@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "24.4") (dash "20170810") (with-editor "20180318"))
-;; Package-Version: 20180411.1649
+;; Package-Requires: ((emacs "25.1") (dash "20180413") (with-editor "20180414"))
+;; Package-Version: 20180802.2018
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -418,13 +418,15 @@ This is only used if Magit is available."
 
 (defvar git-commit-mode)
 
-;;;###autoload
-(defun git-commit-setup ()
+(defun git-commit-file-not-found ()
   ;; cygwin git will pass a cygwin path (/cygdrive/c/foo/.git/...),
   ;; try to handle this in window-nt Emacs.
   (--when-let
-      (and (eq system-type 'windows-nt)
-           (not (file-accessible-directory-p default-directory))
+      (and (or (string-match-p git-commit-filename-regexp buffer-file-name)
+               (if (boundp 'git-rebase-filename-regexp)
+                   (string-match-p git-rebase-filename-regexp buffer-file-name)))
+           (not (file-accessible-directory-p
+                 (file-name-directory buffer-file-name)))
            (if (require 'magit-git nil t)
                ;; Emacs prepends a "c:".
                (magit-expand-git-file-name (substring buffer-file-name 2))
@@ -434,7 +436,31 @@ This is only used if Magit is available."
                   (concat (match-string 2 buffer-file-name) ":/"
                           (match-string 3 buffer-file-name)))))
     (when (file-accessible-directory-p (file-name-directory it))
-      (find-alternate-file it)))
+      (let ((inhibit-read-only t))
+        (insert-file-contents it t)
+        t))))
+
+(when (eq system-type 'windows-nt)
+  (add-hook 'find-file-not-found-functions #'git-commit-file-not-found))
+
+;;;###autoload
+(defun git-commit-setup ()
+  ;; Pretend that git-commit-mode is a major-mode,
+  ;; so that directory-local settings can be used.
+  (let ((default-directory
+          (if (or (file-exists-p ".dir-locals.el")
+                  (not (fboundp 'magit-toplevel)))
+              default-directory
+            ;; When $GIT_DIR/.dir-locals.el doesn't exist,
+            ;; fallback to $GIT_WORK_TREE/.dir-locals.el,
+            ;; because the maintainer can use the latter
+            ;; to enforce conventions, while s/he has no
+            ;; control over the former.
+            (magit-toplevel))))
+    (let ((buffer-file-name nil)         ; trick hack-dir-local-variables
+          (major-mode 'git-commit-mode)) ; trick dir-locals-collect-variables
+      (hack-dir-local-variables)
+      (hack-local-variables-apply)))
   (when git-commit-major-mode
     (let ((auto-mode-alist (list (cons (concat "\\`"
                                                (regexp-quote buffer-file-name)
@@ -456,6 +482,9 @@ This is only used if Magit is available."
             'git-commit-save-message nil t)
   (add-hook 'with-editor-pre-cancel-hook
             'git-commit-save-message nil t)
+  (when (bound-and-true-p magit-wip-merge-branch)
+    (add-hook 'with-editor-post-finish-hook
+              'magit-wip-commit nil t))
   (setq with-editor-cancel-message
         'git-commit-cancel-message)
   (make-local-variable 'log-edit-comment-ring-index)
@@ -720,7 +749,7 @@ Added to `font-lock-extend-region-functions'."
      (0 'git-commit-pseudo-header))
     ;; Summary
     (eval . `(,(git-commit-summary-regexp)
-              (1 'git-commit-summary t)))
+              (1 'git-commit-summary)))
     ;; - Note (overrides summary)
     ("\\[.+?\\]"
      (0 'git-commit-note t))
@@ -793,7 +822,11 @@ Added to `font-lock-extend-region-functions'."
   (setq-local comment-end-skip "\n")
   (setq-local comment-use-syntax nil)
   (setq-local git-commit--branch-name-regexp
-              (if (featurep 'magit-git)
+              (if (and (featurep 'magit-git)
+                       ;; When using cygwin git, we may end up in a
+                       ;; non-existing directory, which would cause
+                       ;; any git calls to signal an error.
+                       (file-accessible-directory-p default-directory))
                   (progn
                     ;; Make sure the below functions are available.
                     (require 'magit)
@@ -845,5 +878,22 @@ Added to `font-lock-extend-region-functions'."
                                 (get-text-property pos 'face)))
            (buffer-string)))))))
 
+;;; Elisp Text Mode
+
+(define-derived-mode git-commit-elisp-text-mode text-mode "ElText"
+  "Major mode for editing commit messages of elisp projects.
+This is intended for use as `git-commit-major-mode' for projects
+that expect `symbols' to look like this.  I.e. like they look in
+Elisp doc-strings, including this one.  Unlike in doc-strings,
+\"strings\" also look different than the other text."
+  (setq font-lock-defaults '(git-commit-elisp-text-mode-keywords)))
+
+(defvar git-commit-elisp-text-mode-keywords
+  `((,(concat "[`‘]\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)"
+              lisp-mode-symbol-regexp "\\)['’]")
+     (1 font-lock-constant-face prepend))
+    ("\"[^\"]*\"" (0 font-lock-string-face prepend))))
+
+;;; _
 (provide 'git-commit)
 ;;; git-commit.el ends here
