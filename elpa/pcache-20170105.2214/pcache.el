@@ -4,7 +4,7 @@
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
-;; Package-Version: 20170105.1414
+;; Package-Version: 20170105.2214
 ;; Version: 0.4.2
 ;; Package-Requires: ((eieio "1.3"))
 
