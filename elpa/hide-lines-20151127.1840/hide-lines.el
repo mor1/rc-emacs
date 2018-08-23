@@ -5,7 +5,7 @@
 ;; Author: Mark Hulme-Jones <ture at plig cucumber dot net>
 ;; Maintainer: Joe Bloggs <vapniks@yahoo.com>
 ;; Version: 20130623.1701
-;; Package-Version: 20151127.1040
+;; Package-Version: 20151127.1840
 ;; Last-Updated: Fri Nov 27 18:44:36 2015
 ;;           By: Joe Bloggs
 ;; URL: https://github.com/vapniks/hide-lines
