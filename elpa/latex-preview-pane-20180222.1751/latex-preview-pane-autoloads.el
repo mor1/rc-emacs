@@ -1,10 +1,13 @@
 ;;; latex-preview-pane-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
 ;;;### (autoloads nil "latex-preview-pane" "latex-preview-pane.el"
-;;;;;;  (23197 32767 844953 22000))
+;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from latex-preview-pane.el
 
 (autoload 'latex-preview-pane-enable "latex-preview-pane" "\
@@ -44,10 +47,11 @@ Toggle Latex Preview Pane Mode.
 
 \(fn &optional ARG)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "latex-preview-pane" '("latex-p" "lpp/" "pdf-latex-command" "preview-orientation" "shell-escape-mode")))
+
 ;;;***
 
-;;;### (autoloads nil nil ("latex-preview-pane-pkg.el") (23197 32767
-;;;;;;  843136 673000))
+;;;### (autoloads nil nil ("latex-preview-pane-pkg.el") (0 0 0 0))
 
 ;;;***
 
@@ -55,5 +59,6 @@ Toggle Latex Preview Pane Mode.
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; latex-preview-pane-autoloads.el ends here
