@@ -1,10 +1,13 @@
 ;;; simple-call-tree-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "simple-call-tree" "simple-call-tree.el" (23197
-;;;;;;  32734 513582 438000))
+;;;### (autoloads nil "simple-call-tree" "simple-call-tree.el" (0
+;;;;;;  0 0 0))
 ;;; Generated autoloads from simple-call-tree.el
 
 (autoload 'simple-call-tree-display-buffer "simple-call-tree" "\
@@ -37,11 +40,14 @@ otherwise it will be narrowed around FUNC.
 
 \(fn FUNC &optional WIDE)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "simple-call-tree" '("simple-call-tree-" "while")))
+
 ;;;***
 
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; simple-call-tree-autoloads.el ends here
