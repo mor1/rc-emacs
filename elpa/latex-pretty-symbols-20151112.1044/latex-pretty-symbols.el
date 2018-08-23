@@ -6,7 +6,7 @@
 ;;         Pål Drange
 ;; Created: 10. July 2011
 ;; Version: 1.0
-;; Package-Version: 20151112.244
+;; Package-Version: 20151112.1044
 ;; Package-X-Original-Version: 20150409.240
 ;; Keywords: convenience, display
 ;; Url: https://bitbucket.org/mortiferus/latex-pretty-symbols.el
