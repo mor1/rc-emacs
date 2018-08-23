@@ -4,7 +4,7 @@
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; X-URL: https://github.com/purcell/unfill
-;; Package-Version: 20170722.1846
+;; Package-Version: 20170723.146
 ;; Package-X-Original-Version: 0
 ;; Keywords: utilities
 
