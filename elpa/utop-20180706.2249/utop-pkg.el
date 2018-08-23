@@ -1,0 +1,2 @@
+;;; -*- no-byte-compile: t -*-
+(define-package "utop" "20180706.2249" "Universal toplevel for OCaml" '((emacs "24")) :stars '(#("434" 0 3 (font-lock-face paradox-star-face))) :commit "74749bb720d744ef202a862ab26c6280c389f15e" :keywords '("ocaml" "languages") :authors '(("Jeremie Dimino" . "jeremie@dimino.org")) :maintainer '("Jeremie Dimino" . "jeremie@dimino.org") :url "https://github.com/diml/utop")
