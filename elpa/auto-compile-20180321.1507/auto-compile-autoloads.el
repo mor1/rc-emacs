@@ -1,10 +1,12 @@
 ;;; auto-compile-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "auto-compile" "auto-compile.el" (23251 33585
-;;;;;;  770849 13000))
+;;;### (autoloads nil "auto-compile" "auto-compile.el" (0 0 0 0))
 ;;; Generated autoloads from auto-compile.el
 
 (autoload 'auto-compile-mode "auto-compile" "\
@@ -115,11 +117,14 @@ Also see the related `auto-compile-on-save-mode'.
 
 \(fn &optional ARG)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "auto-compile" '("auto-compile-" "mode-line-" "turn-on-auto-compile-mode")))
+
 ;;;***
 
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; auto-compile-autoloads.el ends here
