@@ -5,9 +5,9 @@
 ;; Author: Sean Allred <code@seanallred.com>
 ;; Keywords: extensions, multimedia, tools
 ;; Homepage: https://github.com/vermiculus/ghub-plus
-;; Package-Requires: ((emacs "25") (ghub "1.2") (apiwrap "0.4"))
-;; Package-Version: 20180330.1738
-;; Package-X-Original-Version: 0.2.1
+;; Package-Requires: ((emacs "25") (ghub "2.0") (apiwrap "0.5"))
+;; Package-Version: 20180602.2245
+;; Package-X-Original-Version: 0.3
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -196,7 +196,7 @@ See `ghubp--catch'"
   `(ghubp-override-context unpaginate t ,@body))
 
 (defmacro ghubp-override-context (context new-value &rest body)
-  "Execute body while manually overriding CONTEXT with NEW-VALUE.
+  "Execute BODY while manually overriding CONTEXT with NEW-VALUE.
 NEW-VALUE takes precedence over anything that
 `ghubp-contextualize-function' provides for CONTEXT, but
 `ghubp-contextualize-function' is otherwise respected."
@@ -240,8 +240,8 @@ See URL `http://emacs.stackexchange.com/a/31050/2264'."
   (declare (obsolete 'ghubp-ratelimit "2017-10-17"))
   (alist-get 'remaining (ghubp-ratelimit)))
 
-(defun ghubp-ratelimit ()
-  "Get `/rate_limit.rate' using `ghub-response-headers'.
+(defun ghubp-ratelimit (&optional no-headers)
+  "Get `/rate_limit.rate'.
 Returns nil if the service is not rate-limited.  Otherwise,
 returns an alist with the following properties:
 
@@ -252,15 +252,25 @@ returns an alist with the following properties:
      number of requests remaining for this hour.
 
   `.reset'
-     time value of instant `.remaining' resets to `.limit'."
-  (when (and ghub-response-headers
-             (assoc-string "X-RateLimit-Limit" ghub-response-headers))
-    (let* ((headers (list "X-RateLimit-Limit" "X-RateLimit-Remaining" "X-RateLimit-Reset"))
-           (headers (mapcar (lambda (x) (string-to-number (ghubp-header x))) headers)))
-      `((limit     . ,(nth 0 headers))
-        (remaining . ,(nth 1 headers))
-        (reset     . ,(seconds-to-time
-                       (nth 2 headers)))))))
+     time value of instant `.remaining' resets to `.limit'.
+
+Unless NO-HEADERS is non-nil, tries to use response headers
+instead of actually hitting /rate_limit."
+  ;; todo: bug when headers are from other host
+  (if (and (not no-headers)
+           ghub-response-headers
+           (assoc-string "X-RateLimit-Limit" ghub-response-headers))
+      (let* ((headers (list "X-RateLimit-Limit" "X-RateLimit-Remaining" "X-RateLimit-Reset"))
+             (headers (mapcar (lambda (x) (string-to-number (ghubp-header x))) headers)))
+        `((limit     . ,(nth 0 headers))
+          (remaining . ,(nth 1 headers))
+          (reset     . ,(seconds-to-time
+                         (nth 2 headers)))))
+    (ghubp-catch _
+        (let-alist (ghubp-request 'get "/rate_limit" nil nil)
+          .resources.core)
+      ;; Enterprise returns 404 if rate limiting is disabled
+      (404 nil))))
 
 (defun ghubp--follow (method resource &optional params data)
   "Using METHOD, follow the RESOURCE link with PARAMS and DATA.
@@ -272,26 +282,32 @@ This method is intended for use with callbacks."
     (ghubp-request method (url-filename url) params data)))
 
 (defun ghubp-follow-get    (resource &optional params data)
-  "GET wrapper for `ghubp-follow'."
+  "GET wrapper for `ghubp-follow'.
+See that documentation for RESOURCE, PARAMS, and DATA."
   (ghubp--follow 'get    resource params data))
 (defun ghubp-follow-put    (resource &optional params data)
-  "PUT wrapper for `ghubp-follow'."
+  "PUT wrapper for `ghubp-follow'.
+See that documentation for RESOURCE, PARAMS, and DATA."
   (ghubp--follow 'put    resource params data))
 (defun ghubp-follow-head   (resource &optional params data)
-  "HEAD wrapper for `ghubp-follow'."
+  "HEAD wrapper for `ghubp-follow'.
+See that documentation for RESOURCE, PARAMS, and DATA."
   (ghubp--follow 'head   resource params data))
 (defun ghubp-follow-post   (resource &optional params data)
-  "POST wrapper for `ghubp-follow'."
+  "POST wrapper for `ghubp-follow'.
+See that documentation for RESOURCE, PARAMS, and DATA."
   (ghubp--follow 'post   resource params data))
 (defun ghubp-follow-patch  (resource &optional params data)
-  "PATCH wrapper for `ghubp-follow'."
+  "PATCH wrapper for `ghubp-follow'.
+See that documentation for RESOURCE, PARAMS, and DATA."
   (ghubp--follow 'patch  resource params data))
 (defun ghubp-follow-delete (resource &optional params data)
-  "DELETE wrapper for `ghubp-follow'."
+  "DELETE wrapper for `ghubp-follow'.
+See that documentation for RESOURCE, PARAMS, and DATA."
   (ghubp--follow 'delete resource params data))
 
 (defun ghubp-base-html-url ()
-  "Get the base HTML URL from `ghub-default-host'"
+  "Get the base HTML URL from `ghub-default-host'."
   (if-let ((host (car (ignore-errors
 			(process-lines "git" "config" "github.host")))))
       (and (string-match (rx bos (group (* any)) "/api/v3" eos) host)
@@ -307,7 +323,7 @@ This method is intended for use with callbacks."
   (ghub--username (ghub--host)))
 
 (defun ghubp-token (package)
-  "Exposes `ghub--token' in a friendly way."
+  "Exposes `ghub--token' for PACKAGE in a friendly way."
   (let* ((host (ghub--host))
          (user (ghub--username host)))
     (ghub--token host user package t)))
