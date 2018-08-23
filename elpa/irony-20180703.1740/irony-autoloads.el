@@ -1,9 +1,12 @@
 ;;; irony-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "irony" "irony.el" (23296 34834 724111 713000))
+;;;### (autoloads nil "irony" "irony.el" (0 0 0 0))
 ;;; Generated autoloads from irony.el
 
 (defvar irony-additional-clang-options nil "\
@@ -40,10 +43,11 @@ Get the type of symbol under cursor.
 
 \(fn)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony" '("irony-")))
+
 ;;;***
 
-;;;### (autoloads nil "irony-cdb" "irony-cdb.el" (23296 34833 986010
-;;;;;;  659000))
+;;;### (autoloads nil "irony-cdb" "irony-cdb.el" (0 0 0 0))
 ;;; Generated autoloads from irony-cdb.el
 
 (autoload 'irony-cdb-autosetup-compile-options "irony-cdb" "\
@@ -56,10 +60,12 @@ Get the type of symbol under cursor.
 
 \(fn)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb" '("irony-cdb-")))
+
 ;;;***
 
 ;;;### (autoloads nil "irony-cdb-clang-complete" "irony-cdb-clang-complete.el"
-;;;;;;  (23296 34834 716851 974000))
+;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from irony-cdb-clang-complete.el
 
 (autoload 'irony-cdb-clang-complete "irony-cdb-clang-complete" "\
@@ -67,10 +73,12 @@ Get the type of symbol under cursor.
 
 \(fn COMMAND &rest ARGS)" nil nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb-clang-complete" '("irony-cdb-clang-complete--")))
+
 ;;;***
 
-;;;### (autoloads nil "irony-cdb-json" "irony-cdb-json.el" (23296
-;;;;;;  34834 719159 276000))
+;;;### (autoloads nil "irony-cdb-json" "irony-cdb-json.el" (0 0 0
+;;;;;;  0))
 ;;; Generated autoloads from irony-cdb-json.el
 
 (autoload 'irony-cdb-json "irony-cdb-json" "\
@@ -108,10 +116,12 @@ Select CDB that is most recently modified.
 
 \(fn)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb-json" '("irony-cdb-json--")))
+
 ;;;***
 
 ;;;### (autoloads nil "irony-cdb-libclang" "irony-cdb-libclang.el"
-;;;;;;  (23296 34834 711246 907000))
+;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from irony-cdb-libclang.el
 
 (autoload 'irony-cdb-libclang "irony-cdb-libclang" "\
@@ -119,10 +129,12 @@ Select CDB that is most recently modified.
 
 \(fn COMMAND &rest ARGS)" nil nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb-libclang" '("irony-cdb-libclang--")))
+
 ;;;***
 
-;;;### (autoloads nil "irony-completion" "irony-completion.el" (23296
-;;;;;;  34833 990867 277000))
+;;;### (autoloads nil "irony-completion" "irony-completion.el" (0
+;;;;;;  0 0 0))
 ;;; Generated autoloads from irony-completion.el
 
 (autoload 'irony-completion-at-point "irony-completion" "\
@@ -130,10 +142,33 @@ Select CDB that is most recently modified.
 
 \(fn)" nil nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-completion" '("irony-")))
+
 ;;;***
 
-;;;### (autoloads nil nil ("irony-diagnostics.el" "irony-iotask.el"
-;;;;;;  "irony-pkg.el" "irony-snippet.el") (23296 34834 728556 455000))
+;;;### (autoloads nil "irony-diagnostics" "irony-diagnostics.el"
+;;;;;;  (0 0 0 0))
+;;; Generated autoloads from irony-diagnostics.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-diagnostics" '("irony-diagnostics-")))
+
+;;;***
+
+;;;### (autoloads nil "irony-iotask" "irony-iotask.el" (0 0 0 0))
+;;; Generated autoloads from irony-iotask.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-iotask" '("irony-iotask-")))
+
+;;;***
+
+;;;### (autoloads nil "irony-snippet" "irony-snippet.el" (0 0 0 0))
+;;; Generated autoloads from irony-snippet.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-snippet" '("irony-snippet-")))
+
+;;;***
+
+;;;### (autoloads nil nil ("irony-pkg.el") (0 0 0 0))
 
 ;;;***
 
@@ -141,5 +176,6 @@ Select CDB that is most recently modified.
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; irony-autoloads.el ends here
