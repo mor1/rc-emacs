@@ -1,10 +1,12 @@
 ;;; jekyll-modes-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "jekyll-modes" "jekyll-modes.el" (23123 27107
-;;;;;;  11469 788000))
+;;;### (autoloads nil "jekyll-modes" "jekyll-modes.el" (0 0 0 0))
 ;;; Generated autoloads from jekyll-modes.el
 
 (autoload 'liquid-tags-mode "jekyll-modes" "\
@@ -14,11 +16,14 @@ Major mode for Liquid Tags
  (autoload 'jekyll-markdown-mode "jekyll-modes")
  (autoload 'jekyll-html-mode "jekyll-modes")
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "jekyll-modes" '("jekyll" "liquid-tags-font-lock-keywords")))
+
 ;;;***
 
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; jekyll-modes-autoloads.el ends here
