@@ -1,10 +1,13 @@
 ;;; flycheck-css-colorguard-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
 ;;;### (autoloads nil "flycheck-css-colorguard" "flycheck-css-colorguard.el"
-;;;;;;  (23251 45909 537910 28000))
+;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from flycheck-css-colorguard.el
 
 (autoload 'flycheck-css-colorguard-setup "flycheck-css-colorguard" "\
@@ -19,5 +22,6 @@ Add `css-colorguard' to `flycheck-checkers'.
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; flycheck-css-colorguard-autoloads.el ends here

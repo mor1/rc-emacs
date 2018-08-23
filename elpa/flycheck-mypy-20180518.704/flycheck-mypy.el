@@ -5,7 +5,7 @@
 ;; Author: Lorenzo Bolla <lbolla@gmail.com>
 ;; Created: 14 Septermber 2015
 ;; Version: 1.0
-;; Package-Version: 20180518.4
+;; Package-Version: 20180518.704
 ;; Package-Requires: ((flycheck "0.18"))
 
 ;;; Commentary:
