@@ -1,10 +1,12 @@
 ;;; css-eldoc-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "css-eldoc" "css-eldoc.el" (23243 60721 89956
-;;;;;;  123000))
+;;;### (autoloads nil "css-eldoc" "css-eldoc.el" (0 0 0 0))
 ;;; Generated autoloads from css-eldoc.el
 
 (autoload 'css-eldoc-function "css-eldoc" "\
@@ -22,10 +24,12 @@ Disable css-eldoc.
 
 \(fn)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "css-eldoc" '("turn-on-css-eldoc")))
+
 ;;;***
 
 ;;;### (autoloads nil nil ("css-eldoc-hash-table.el" "css-eldoc-pkg.el")
-;;;;;;  (23243 60721 92593 764000))
+;;;;;;  (0 0 0 0))
 
 ;;;***
 
@@ -33,5 +37,6 @@ Disable css-eldoc.
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; css-eldoc-autoloads.el ends here
