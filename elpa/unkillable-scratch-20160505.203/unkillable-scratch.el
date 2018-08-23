@@ -5,7 +5,7 @@
 
 ;; Author: Eric Crosson <esc@ericcrosson.com>
 ;; Keywords: scratch
-;; Package-Version: 20160504.1903
+;; Package-Version: 20160505.203
 ;; Package-X-Original-Version: 0.1
 
 ;; This program is free software: you can redistribute it and/or modify
