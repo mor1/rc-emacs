@@ -113,6 +113,10 @@
 ;; packages
 ;;
 
+;; aggressive-indent
+;; (global-aggressive-indent-mode 1)
+;; (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
+
 (use-package adaptive-wrap
   :hook (visual-line-mode . adaptive-wrap-prefix-mode)
   )
@@ -199,6 +203,8 @@
   :hook find-file
   ;; git-ps1-mode-ps1-file
   )
+
+;; git-timemachine
 
 (use-package go-mode
   :hook ((before-save . gofmt-before-save)
@@ -460,6 +466,9 @@
         )
   )
 
+;; on-screen
+;; (on-screen-global-mode +1)
+
 (use-package outline
   :diminish outline-minor-mode
   :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode)
@@ -484,7 +493,9 @@
 (use-package sh-script
   :mode ("bash_" . sh-mode)
   ;; :magic ("\\{{/* =% ssh %= */}}" . sh-mode)
-  :config (setq sh-basic-offset 2)
+  :config (setq sh-basic-offset 2
+                sh-indentation 2
+                )
   )
 
 (use-package subword ;; subword -- obey CamelCase etc
