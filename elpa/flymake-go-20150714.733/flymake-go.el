@@ -3,7 +3,7 @@
 ;; Author: Michael Fellinger <michael@iron.io>
 ;;         Robert Zaremba <robert.marek.zaremba@wp.eu>
 ;; Version: 2013.03.14
-;; Package-Version: 20150714.33
+;; Package-Version: 20150714.733
 ;; Keywords: Go flymake
 ;; URL: https://github.com/robert-zaremba/flymake-go
 ;;
