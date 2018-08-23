@@ -1,10 +1,12 @@
 ;;; tuareg-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "ocamldebug" "ocamldebug.el" (23296 34668 605639
-;;;;;;  990000))
+;;;### (autoloads nil "ocamldebug" "ocamldebug.el" (0 0 0 0))
 ;;; Generated autoloads from ocamldebug.el
 
 (autoload 'ocamldebug "ocamldebug" "\
@@ -17,9 +19,11 @@ the ocamldebug commands `cd DIR' and `directory'.
 
 (defalias 'camldebug 'ocamldebug)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ocamldebug" '("ocamldebug-" "def-ocamldebug")))
+
 ;;;***
 
-;;;### (autoloads nil "tuareg" "tuareg.el" (23296 34668 594067 994000))
+;;;### (autoloads nil "tuareg" "tuareg.el" (0 0 0 0))
 ;;; Generated autoloads from tuareg.el
 (add-to-list 'auto-mode-alist '("\\.ml[ip]?\\'" . tuareg-mode))
 (add-to-list 'auto-mode-alist '("\\.eliomi?\\'" . tuareg-mode))
@@ -80,10 +84,11 @@ Run an OCaml REPL process.  I/O via buffer `*OCaml*'.
 
 (add-to-list 'interpreter-mode-alist '("ocaml" . tuareg-mode))
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg" '("tuareg-")))
+
 ;;;***
 
-;;;### (autoloads nil "tuareg-dune" "tuareg-dune.el" (23296 34668
-;;;;;;  595811 683000))
+;;;### (autoloads nil "tuareg-dune" "tuareg-dune.el" (0 0 0 0))
 ;;; Generated autoloads from tuareg-dune.el
 
 (autoload 'tuareg-dune-mode "tuareg-dune" "\
@@ -93,10 +98,11 @@ Major mode to edit dune files.
 
 (add-to-list 'auto-mode-alist '("\\(?:\\`\\|/\\)jbuild\\(?:\\.inc\\)?\\'" . tuareg-dune-mode))
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-dune" '("tuareg-dune-" "verbose-tuareg-dune-smie-rules")))
+
 ;;;***
 
-;;;### (autoloads nil "tuareg-menhir" "tuareg-menhir.el" (23296 34668
-;;;;;;  604010 842000))
+;;;### (autoloads nil "tuareg-menhir" "tuareg-menhir.el" (0 0 0 0))
 ;;; Generated autoloads from tuareg-menhir.el
 
 (add-to-list 'auto-mode-alist '("\\.mly\\'" . tuareg-menhir-mode))
@@ -106,10 +112,11 @@ Major mode to edit Menhir (and Ocamlyacc) files.
 
 \(fn)" t nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-menhir" '("tuareg-menhir-")))
+
 ;;;***
 
-;;;### (autoloads nil "tuareg-opam" "tuareg-opam.el" (23296 34668
-;;;;;;  600095 163000))
+;;;### (autoloads nil "tuareg-opam" "tuareg-opam.el" (0 0 0 0))
 ;;; Generated autoloads from tuareg-opam.el
 
 (autoload 'tuareg-opam-mode "tuareg-opam" "\
@@ -119,10 +126,20 @@ Major mode to edit opam files.
 
 (add-to-list 'auto-mode-alist '("[./]opam_?\\'" . tuareg-opam-mode))
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-opam" '("tuareg-opam-" "verbose-tuareg-opam-smie-rules")))
+
 ;;;***
 
-;;;### (autoloads nil nil ("dot-emacs.el" "tuareg-pkg.el" "tuareg-site-file.el")
-;;;;;;  (23296 34668 601691 551000))
+;;;### (autoloads nil "tuareg-site-file" "tuareg-site-file.el" (0
+;;;;;;  0 0 0))
+;;; Generated autoloads from tuareg-site-file.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-site-file" '("run-ocaml" "camldebug")))
+
+;;;***
+
+;;;### (autoloads nil nil ("dot-emacs.el" "tuareg-pkg.el") (0 0 0
+;;;;;;  0))
 
 ;;;***
 
@@ -130,5 +147,6 @@ Major mode to edit opam files.
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; tuareg-autoloads.el ends here
