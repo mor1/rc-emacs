@@ -1,10 +1,12 @@
 ;;; git-ps1-mode-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
-(add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
-;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (23251 45905
-;;;;;;  130541 157000))
+;;;### (autoloads nil "git-ps1-mode" "git-ps1-mode.el" (0 0 0 0))
 ;;; Generated autoloads from git-ps1-mode.el
 
 (defvar git-ps1-mode nil "\
@@ -31,11 +33,14 @@ This function returns nil if the output is not available for some reasons.
 
 \(fn &optional FORMAT DIR)" nil nil)
 
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "git-ps1-mode" '("git-ps1-mode-")))
+
 ;;;***
 
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
+;; coding: utf-8
 ;; End:
 ;;; git-ps1-mode-autoloads.el ends here
