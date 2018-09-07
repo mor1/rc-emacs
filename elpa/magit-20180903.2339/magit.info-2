@@ -1086,13 +1086,13 @@ A.2.6 Diffs contain control sequences
 This happens when you configure Git to always color diffs and/or all of
 its output.  The valid values for relevant Git variables ‘color.ui’ and
 ‘color.diff’ are ‘false’, ‘true’ and ‘always’, and the default is
-‘true’.  You should leave it that because then you get colorful output
-in terminals but git’s output is consumed by something else, then no
-colors are used.
+‘true’.  You should leave it that way because then you get colorful
+output in terminals by default but when git’s output is consumed by
+something else, then no color control sequences are used.
 
-   If you actually use some other tool which expects that requires that
-you force git to output control sequences (which is highly unlikely),
-then you can override these settings just for Magit by using:
+   If you actually use some other tool that requires setting ‘color.ui’
+and/or ‘color.diff’ to ‘always’ (which is highly unlikely), then you can
+override these settings just for Magit by using:
 
      (setq magit-git-global-arguments
            (nconc magit-git-global-arguments
@@ -1275,7 +1275,7 @@ issue.  Please include all relevant output when reporting an issue.
 ‘M-x magit-emacs-Q-command’     (‘magit-emacs-Q-command’)
 
      This command shows a debugging shell command in the echo area and
-     adds it to the kill ring.  Paste that command into a shell an run
+     adds it to the kill ring.  Paste that command into a shell and run
      it.
 
      This shell command starts ‘emacs’ with only ‘magit’ and its
@@ -1297,9 +1297,9 @@ issue.  Please include all relevant output when reporting an issue.
 ‘M-x with-editor-debug’     (‘with-editor-debug’)
 
      This command displays a buffer containing information about the
-     available and used ‘git’ executable(s), and can be useful when
-     investigating why Magit (or rather ‘with-editor’) cannot find an
-     appropriate ‘emacsclient’ executable.
+     available and used ‘~emacsclient’ executable(s), and can be useful
+     when investigating why Magit (or rather ‘with-editor’) cannot find
+     an appropriate ‘emacsclient’ executable.
 
      Also see *note (with-editor)Debugging::.
 
