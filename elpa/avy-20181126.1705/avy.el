@@ -4,7 +4,7 @@
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/avy
-;; Package-Version: 20180814.2121
+;; Package-Version: 20181126.1705
 ;; Version: 0.4.0
 ;; Package-Requires: ((emacs "24.1") (cl-lib "0.5"))
 ;; Keywords: point, location
@@ -245,6 +245,16 @@ When nil, punctuation chars will not be matched.
 Typically, these modes don't use the text representation."
   :type 'list)
 
+(defcustom avy-single-candidate-jump t
+  "In case there is only one candidate jumps directly to it."
+  :type 'boolean)
+
+(defcustom avy-del-last-char-by '(8 127)
+  "List of event types, i.e. key presses, that delete the last
+character read.  The default represents `C-h' and `DEL'.  See
+`event-convert-list'."
+  :type 'list)
+
 (defvar avy-ring (make-ring 20)
   "Hold the window and point history.")
 
@@ -450,9 +460,8 @@ KEYS is the path from the root of `avy-tree' to LEAF."
           ((mouse-event-p char)
            (signal 'user-error (list "Mouse event not handled" char)))
           (t
-           (signal 'user-error (list "No such candidate"
-                                     (if (characterp char) (string char) char)))
-           (throw 'done nil)))))
+           (message "No such candidate: %s, hit `C-g' to quit."
+                    (if (characterp char) (string char) char))))))
 
 (defvar avy-handler-function 'avy-handler-default
   "A function to call for a bad `read-key' in `avy-read'.")
@@ -471,7 +480,7 @@ Return nil if not a mouse event."
           (t (selected-window)))))
 
 (defun avy-read (tree display-fn cleanup-fn)
-  "Select a leaf from TREE using consecutive `read-char'.
+  "Select a leaf from TREE using consecutive `read-key'.
 
 DISPLAY-FN should take CHAR and LEAF and signify that LEAFs
 associated with CHAR will be selected if CHAR is pressed.  This is
@@ -747,7 +756,7 @@ Set `avy-style' according to COMMMAND as well."
   (let ((len (length candidates)))
     (cond ((= len 0)
            nil)
-          ((= len 1)
+          ((and (= len 1) avy-single-candidate-jump)
            (car candidates))
           (t
            (unwind-protect
@@ -1879,8 +1888,9 @@ newline."
 (defun avy--read-candidates (&optional re-builder)
   "Read as many chars as possible and return their occurrences.
 At least one char must be read, and then repeatedly one next char
-may be read if it is entered before `avy-timeout-seconds'.  `C-h'
-or `DEL' deletes the last char entered, and `RET' exits with the
+may be read if it is entered before `avy-timeout-seconds'.  Any
+key defined in `avy-del-last-char-by' (by default `C-h' and `DEL')
+deletes the last char entered, and `RET' exits with the
 currently read string immediately instead of waiting for another
 char for `avy-timeout-seconds'.
 The format of the result is the same as that of `avy--regex-candidates'.
@@ -1896,7 +1906,8 @@ Otherwise, the whole regex is highlighted."
          (progn
            (while (and (not break)
                        (setq char
-                             (read-char (format "char%s: "
+                             (read-char (format "%d  char%s: "
+                                                (length overlays)
                                                 (if (string= str "")
                                                     str
                                                   (format " (%s)" str)))
@@ -1914,10 +1925,13 @@ Otherwise, the whole regex is highlighted."
                     (setq break t)
                   (setq str (concat str (list ?\n)))))
                ;; Handle C-h, DEL
-               ((memq char '(8 127))
+               ((memq char avy-del-last-char-by)
                 (let ((l (length str)))
                   (when (>= l 1)
                     (setq str (substring str 0 (1- l))))))
+               ;; Handle ESC
+               ((= char 27)
+                (keyboard-quit))
                (t
                 (setq str (concat str (list char)))))
              ;; Highlight
@@ -1995,22 +2009,31 @@ The window scope is determined by `avy-all-windows' (ARG negates it)."
 (defvar org-reverse-note-order)
 (declare-function org-refile "org")
 (declare-function org-back-to-heading "org")
+(declare-function org-reveal "org")
+
+(defvar org-after-refile-insert-hook)
 
 (defun avy-org-refile-as-child ()
   "Refile current heading as first child of heading selected with `avy.'"
   ;; Inspired by `org-teleport': http://kitchingroup.cheme.cmu.edu/blog/2016/03/18/Org-teleport-headlines/
   (interactive)
-  (let ((rfloc (save-excursion
-                 (let* ((org-reverse-note-order t)
-                        (pos (avy-with avy-goto-line
-                               (avy--generic-jump (rx bol (1+ "*") (1+ space))
-                                                  nil avy-style)
-                               (point)))
-                        (filename (buffer-file-name (or (buffer-base-buffer (current-buffer))
-                                                        (current-buffer)))))
-                   (list nil filename nil pos)))))
-    ;; org-refile must be called outside of the excursion
-    (org-refile nil nil rfloc)))
+  (let* ((org-reverse-note-order t)
+         (marker (save-excursion
+                   (avy-with avy-goto-line
+                     (unless (eq 't (avy--generic-jump (rx bol (1+ "*") (1+ space))
+                                                       nil avy-style))
+                       ;; `avy--generic-jump' returns t when aborted with C-g.
+                       (point-marker)))))
+         (filename (buffer-file-name (or (buffer-base-buffer (marker-buffer marker))
+                                         (marker-buffer marker))))
+         (rfloc (list nil filename nil marker))
+         ;; Ensure the refiled heading is visible.
+         (org-after-refile-insert-hook (if (member 'org-reveal org-after-refile-insert-hook)
+                                           org-after-refile-insert-hook
+                                         (cons #'org-reveal org-after-refile-insert-hook))))
+    (when marker
+      ;; Only attempt refile if avy session was not aborted.
+      (org-refile nil nil rfloc))))
 
 (defun avy-org-goto-heading-timer (&optional arg)
   "Read one or many characters and jump to matching Org headings.
