@@ -43,6 +43,35 @@
   :group 'polymode)
 
 
+;;; emacs 25 compat
+
+(unless (fboundp 'assoc-delete-all)
+
+  (defun assoc-delete-all (key alist &optional test)
+    "Delete from ALIST all elements whose car is KEY.
+Compare keys with TEST.  Defaults to `equal'.
+Return the modified alist.
+Elements of ALIST that are not conses are ignored."
+    (unless test (setq test #'equal))
+    (while (and (consp (car alist))
+	            (funcall test (caar alist) key))
+      (setq alist (cdr alist)))
+    (let ((tail alist) tail-cdr)
+      (while (setq tail-cdr (cdr tail))
+        (if (and (consp (car tail-cdr))
+	             (funcall test (caar tail-cdr) key))
+	        (setcdr tail (cdr tail-cdr))
+	      (setq tail tail-cdr))))
+    alist)
+
+  (defun assq-delete-all (key alist)
+    "Delete from ALIST all elements whose car is `eq' to KEY.
+Return the modified alist.
+Elements of ALIST that are not conses are ignored."
+    (assoc-delete-all key alist #'eq)))
+
+
+
 ;;; Various Wrappers for Around Advice
 
 (defvar *span* nil)
@@ -94,7 +123,6 @@ Return new name (symbol). FUN is an unquoted name of a function."
              (min (max pos (car range))
                   (cdr range))))
     (apply orig-fun args)))
-
 
 (defun pm-override-output-cons (orig-fun &rest args)
   "Restrict returned (beg . end) of ORIG-FUN to fall into the current span.
@@ -199,8 +227,10 @@ changes."
 
 
 ;;; Editing
-(pm-around-advice 'fill-paragraph #'pm-execute-narrowed-to-span)
 
+
+;; (pm-around-advice 'fill-paragraph #'pm-execute-narrowed-to-span)
+;; (advice-remove 'fill-paragraph #'pm-execute-narrowed-to-span)
 
 ;; (defun polymode-with-save-excursion (orig-fun &rest args)
 ;;   "Execute ORIG-FUN surrounded with `save-excursion'.
@@ -232,6 +262,36 @@ changes."
 ;; 'pm-execute-inhibit-modification-hooks)
 
 
+;;; DESKTOP SAVE #194
+
+;; NB: desktop-save saves indirect buffers as base buffers but assumes that
+;; buffer names are the same. This would be ok if we hide implementation buffers
+;; as per #34.
+
+(defun polymode-fix-desktop-buffer-info (fn buffer)
+  "Save polymode buffers without mode prefix."
+  (let ((out (funcall fn buffer))
+        (base (buffer-base-buffer)))
+    (with-current-buffer buffer
+      (if (not (and polymode-mode base))
+          out
+        (when (car out)
+          (setf (car out) (buffer-name base)))
+        (setf (nth 2 out) (buffer-name base))
+        out))))
+
+(advice-add #'desktop-buffer-info :around #'polymode-fix-desktop-buffer-info)
+
+
+;;; MATLAB #199
+
+;; matlab-mode is an old non-standard mode which doesn't trigger
+;; `after-change-major-mode-hook`. As a result polymode cannot detect that
+;; font-lock-mode is on and sets the `poly-lock-allow-fontification` to nil.
+;; Explicitly trigger font-lock as a workaround.
+(add-hook 'matlab-mode-hook (lambda () (font-lock-mode t)))
+
+
 ;;; EVIL
 
 (declare-function evil-change-state "evil-core")
@@ -246,6 +306,13 @@ changes."
 
 (eval-after-load 'evil-core
   '(add-hook 'polymode-switch-buffer-hook 'polymode-switch-buffer-keep-evil-state-maybe))
+
+
+;;; YAS
+
+(with-eval-after-load "yasnippet"
+  (add-hook 'yas-before-expand-snippet-hook #'polymode-disable-post-command)
+  (add-hook 'yas-after-exit-snippet-hook #'polymode-enable-post-command))
 
 (provide 'polymode-compat)
 ;;; polymode-compat.el ends here

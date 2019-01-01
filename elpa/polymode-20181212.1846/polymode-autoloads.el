@@ -109,7 +109,7 @@ most frequently used slots are:
 ;;;;;;  0 0))
 ;;; Generated autoloads from polymode-compat.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-compat" '("pm-" "polymode-switch-buffer-keep-evil-state-maybe" "*span*")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-compat" '("pm-" "polymode-" "*span*")))
 
 ;;;***
 
@@ -179,6 +179,11 @@ Use `untrace-function' to untrace or `untrace-all' to untrace all
 currently traced functions.
 
 \(fn FN)" t nil)
+
+(autoload 'pm-debug-print-relevant-variables "polymode-debug" "\
+Print values of relevant hooks and other variables.
+
+\(fn)" t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-debug" '("pm-")))
 

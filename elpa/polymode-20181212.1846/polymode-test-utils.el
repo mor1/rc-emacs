@@ -25,10 +25,11 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-
+;;
 ;;; Commentary:
 ;;
-
+;; This file should be loaded only in tests.
+;;
 ;;; Code:
 
 (setq eieio-backward-compatibility nil)
@@ -38,7 +39,12 @@
 (eval-when-compile
   (require 'cl-lib))
 
-(setq ert-batch-backtrace-right-margin 130)
+;; (require 'font-lock)
+;; (global-font-lock-mode t)
+;; (add-hook 'after-change-major-mode-hook #'global-font-lock-mode-enable-in-buffers)
+;; (message "ACMH: %s  GFL:%s" after-change-major-mode-hook global-font-lock-mode)
+
+(setq ert-batch-backtrace-right-margin 200)
 (defvar pm-verbose (getenv "PM_VERBOSE"))
 
 (defvar pm-test-current-change-set nil)
@@ -121,18 +127,25 @@ MODE is a quoted symbol."
          ;; (flyspell-mode -1) ;; triggers "too much reentrancy" error
          (goto-char (point-min))
          ,pre-form
+         ;; need this to activate all chunks
          (font-lock-ensure)
          (goto-char (point-min))
          (save-excursion
-           (pm-map-over-spans
-            (lambda (_)
-              (setq font-lock-mode t)
-              ;; font-lock is not activated in batch mode
-              (poly-lock-mode t)
-              ;; redisplay is not triggered in batch and often it doesn't trigger
-              ;; fontification in X either (waf?)
-              (add-hook 'after-change-functions #'pm-test-invoke-fontification t t))
-            (point-min) (point-max)))
+           (let ((font-lock-mode t))
+             (pm-map-over-spans
+              (lambda (_)
+                (setq font-lock-mode t)
+                ;; This is not picked up because font-lock is nil on innermode
+                ;; initialization. Don't know how to fix this more elegantly.
+                ;; For now our tests are all with font-lock, so we are fine for
+                ;; now.
+                (setq-local poly-lock-allow-fontification t)
+                ;; font-lock is not activated in batch mode
+                (poly-lock-mode t)
+                ;; redisplay is not triggered in batch and often it doesn't trigger
+                ;; fontification in X either (waf?)
+                (add-hook 'after-change-functions #'pm-test-invoke-fontification t t))
+              (point-min) (point-max))))
          (font-lock-ensure)
          ,@body
          (current-buffer)))))
@@ -170,6 +183,8 @@ MODE is a quoted symbol."
                     (when pm-test-current-change-set
                       (list :change pm-test-current-change-set))
                     (list
+                     ;; :af poly-lock-allow-fontification
+                     ;; :fl font-lock-mode
                      :face face
                      :oface oface
                      :pos pos
@@ -332,6 +347,32 @@ points."
        (unwind-protect
            (pm-test--run-indentation-tests)
          (undo-boundary)))))
+
+(defmacro pm-test-file-indent (mode file-with-indent &optional file-no-indent)
+  `(pm-test-run-on-file ,mode ,(or file-no-indent file-with-indent)
+     (let ((indent-tabs-mode nil)
+           (right (with-current-buffer (find-file-noselect
+                                        ,(pm-test-get-file file-with-indent))
+                    (substring-no-properties (buffer-string))))
+           (inhibit-message t))
+       (unless ,file-no-indent
+         (goto-char 1)
+         (while (re-search-forward "^[ \t]+"  nil t)
+           (replace-match ""))
+         (goto-char 1))
+       (indent-region (point-min) (point-max))
+       (let ((new (substring-no-properties (buffer-string))))
+         (unless (string= right new)
+           (require 'pascal)
+           (let ((pos (1+ (pascal-string-diff right new))))
+             (ert-fail (list "Wrong indent" :pos pos
+                             :ref (with-temp-buffer
+                                    (insert right)
+                                    (goto-char pos)
+                                    (buffer-substring-no-properties (point-at-bol) (point-at-eol)))
+                             :new (progn
+                                    (goto-char pos)
+                                    (buffer-substring-no-properties (point-at-bol) (point-at-eol)))))))))))
 
 (provide 'polymode-test-utils)
 ;;; polymode-test.el ends here
