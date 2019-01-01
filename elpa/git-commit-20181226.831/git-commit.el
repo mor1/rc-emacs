@@ -11,8 +11,8 @@
 ;;	Marius Vollmer <marius.vollmer@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "25.1") (dash "20180413") (with-editor "20180414"))
-;; Package-Version: 20180802.2018
+;; Package-Requires: ((emacs "25.1") (dash "20180910") (with-editor "20181103"))
+;; Package-Version: 20181226.831
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -176,6 +176,7 @@ The major mode configured here is turned on by the minor mode
     git-commit-setup-changelog-support
     git-commit-turn-on-auto-fill
     git-commit-propertize-diff
+    bug-reference-mode
     with-editor-usage-message)
   "Hook run at the end of `git-commit-setup'."
   :group 'git-commit
@@ -188,6 +189,27 @@ The major mode configured here is turned on by the minor mode
              git-commit-propertize-diff
              bug-reference-mode
              with-editor-usage-message))
+
+(defcustom git-commit-post-finish-hook nil
+  "Hook run after the user finished writing a commit message.
+
+\\<with-editor-mode-map>\
+This hook is only run after pressing \\[with-editor-finish] in a buffer used
+to edit a commit message.  If a commit is created without the
+user typing a message into a buffer, then this hook is not run.
+
+This hook is not run until the new commit has been created.  If
+doing so takes Git longer than one second, then this hook isn't
+run at all.  For certain commands such as `magit-rebase-continue'
+this hook is never run because doing so would lead to a race
+condition.
+
+This hook is only run if `magit' is available.
+
+Also see `magit-post-commit-hook'."
+  :group 'git-commit
+  :type 'hook
+  :get (and (featurep 'magit-utils) 'magit-hook-custom-get))
 
 (defcustom git-commit-finish-query-functions
   '(git-commit-check-style-conventions)
@@ -277,10 +299,14 @@ already using it, then you probably shouldn't start doing so."
   "Face used for non-whitespace on the second line of commit messages."
   :group 'git-commit-faces)
 
-(defface git-commit-note
+(defface git-commit-keyword
   '((t :inherit font-lock-string-face))
-  "Face used for notes in commit messages."
+  "Face used for keywords in commit messages.
+In this context a \"keyword\" is text surrounded be brackets."
   :group 'git-commit-faces)
+
+(define-obsolete-face-alias 'git-commit-note
+  'git-commit-keyword "Git-Commit 2.91.0")
 
 (defface git-commit-pseudo-header
   '((t :inherit font-lock-string-face))
@@ -423,8 +449,9 @@ This is only used if Magit is available."
   ;; try to handle this in window-nt Emacs.
   (--when-let
       (and (or (string-match-p git-commit-filename-regexp buffer-file-name)
-               (if (boundp 'git-rebase-filename-regexp)
-                   (string-match-p git-rebase-filename-regexp buffer-file-name)))
+               (and (boundp 'git-rebase-filename-regexp)
+                    (string-match-p git-rebase-filename-regexp
+                                    buffer-file-name)))
            (not (file-accessible-directory-p
                  (file-name-directory buffer-file-name)))
            (if (require 'magit-git nil t)
@@ -447,6 +474,11 @@ This is only used if Magit is available."
 (defun git-commit-setup ()
   ;; Pretend that git-commit-mode is a major-mode,
   ;; so that directory-local settings can be used.
+  (when (fboundp 'magit-toplevel)
+    ;; `magit-toplevel' is autoloaded and defined in magit-git.el,
+    ;; That library declares this functions without loading
+    ;; magit-process.el, which defines it.
+    (require 'magit-process nil t))
   (let ((default-directory
           (if (or (file-exists-p ".dir-locals.el")
                   (not (fboundp 'magit-toplevel)))
@@ -456,7 +488,8 @@ This is only used if Magit is available."
             ;; because the maintainer can use the latter
             ;; to enforce conventions, while s/he has no
             ;; control over the former.
-            (magit-toplevel))))
+            (and (fboundp 'magit-toplevel) ; silence byte-compiler
+                 (magit-toplevel)))))
     (let ((buffer-file-name nil)         ; trick hack-dir-local-variables
           (major-mode 'git-commit-mode)) ; trick dir-locals-collect-variables
       (hack-dir-local-variables)
@@ -482,9 +515,20 @@ This is only used if Magit is available."
             'git-commit-save-message nil t)
   (add-hook 'with-editor-pre-cancel-hook
             'git-commit-save-message nil t)
-  (when (bound-and-true-p magit-wip-merge-branch)
+  (when (and (fboundp 'magit-rev-parse)
+             (not (memq last-command
+                        '(magit-sequencer-continue
+                          magit-sequencer-skip
+                          magit-am-continue
+                          magit-am-skip
+                          magit-rebase-continue
+                          magit-rebase-skip))))
     (add-hook 'with-editor-post-finish-hook
-              'magit-wip-commit nil t))
+              (apply-partially 'git-commit-run-post-finish-hook
+                               (magit-rev-parse "HEAD"))
+              nil t)
+    (when (fboundp 'magit-wip-maybe-add-commit-hook)
+      (magit-wip-maybe-add-commit-hook)))
   (setq with-editor-cancel-message
         'git-commit-cancel-message)
   (make-local-variable 'log-edit-comment-ring-index)
@@ -498,6 +542,21 @@ This is only used if Magit is available."
       (open-line 1)))
   (run-hooks 'git-commit-setup-hook)
   (set-buffer-modified-p nil))
+
+(defun git-commit-run-post-finish-hook (previous)
+  (when (and git-commit-post-finish-hook
+             (require 'magit nil t)
+             (fboundp 'magit-rev-parse))
+    (cl-block nil
+      (let ((break (time-add (current-time)
+                             (seconds-to-time 1))))
+        (while (equal (magit-rev-parse "HEAD") previous)
+          (if (time-less-p (current-time) break)
+              (sit-for 0.01)
+            (message "No commit created after 1 second.  Not running %s."
+                     'git-commit-post-finish-hook)
+            (cl-return))))
+      (run-hooks 'git-commit-post-finish-hook))))
 
 (define-minor-mode git-commit-mode
   "Auxiliary minor mode used when editing Git commit messages.
@@ -705,14 +764,30 @@ With a numeric prefix ARG, go forward ARG comments."
 
 ;;; Font-Lock
 
+(defvar-local git-commit-need-summary-line t
+  "Whether the text should have a heading that is separated from the body.
+
+For commit messages that is a convention that should not
+be violated.  For notes it is up to the user.  If you do
+not want to insist on an empty second line here, then use
+something like:
+
+  (add-hook \\='git-commit-setup-hook
+            (lambda ()
+              (when (equal (file-name-nondirectory (buffer-file-name))
+                           \"NOTES_EDITMSG\")
+                (setq git-commit-need-summary-line nil))))")
+
 (defun git-commit-summary-regexp ()
-  (concat
-   ;; Leading empty lines and comments
-   (format "\\`\\(?:^\\(?:\\s-*\\|%s.*\\)\n\\)*" comment-start)
-   ;; Summary line
-   (format "\\(.\\{0,%d\\}\\)\\(.*\\)" git-commit-summary-max-length)
-   ;; Non-empty non-comment second line
-   (format "\\(?:\n%s\\|\n\\(.+\\)\\)?" comment-start)))
+  (if git-commit-need-summary-line
+      (concat
+       ;; Leading empty lines and comments
+       (format "\\`\\(?:^\\(?:\\s-*\\|%s.*\\)\n\\)*" comment-start)
+       ;; Summary line
+       (format "\\(.\\{0,%d\\}\\)\\(.*\\)" git-commit-summary-max-length)
+       ;; Non-empty non-comment second line
+       (format "\\(?:\n%s\\|\n\\(.+\\)\\)?" comment-start))
+    "\\(EASTER\\) \\(EGG\\)"))
 
 (defun git-commit-extend-region-summary-line ()
   "Identify the multiline summary-regexp construct.
@@ -750,9 +825,9 @@ Added to `font-lock-extend-region-functions'."
     ;; Summary
     (eval . `(,(git-commit-summary-regexp)
               (1 'git-commit-summary)))
-    ;; - Note (overrides summary)
+    ;; - Keyword [aka "text in brackets"] (overrides summary)
     ("\\[.+?\\]"
-     (0 'git-commit-note t))
+     (0 'git-commit-keyword t))
     ;; - Non-empty second line (overrides summary and note)
     (eval . `(,(git-commit-summary-regexp)
               (2 'git-commit-overlong-summary t t)
@@ -847,7 +922,7 @@ Added to `font-lock-extend-region-functions'."
   (add-hook 'font-lock-extend-region-functions
             #'git-commit-extend-region-summary-line
             t t)
-  (font-lock-add-keywords nil git-commit-font-lock-keywords t))
+  (font-lock-add-keywords nil git-commit-font-lock-keywords))
 
 (defun git-commit-propertize-diff ()
   (require 'diff-mode)
@@ -889,8 +964,7 @@ Elisp doc-strings, including this one.  Unlike in doc-strings,
   (setq font-lock-defaults '(git-commit-elisp-text-mode-keywords)))
 
 (defvar git-commit-elisp-text-mode-keywords
-  `((,(concat "[`‘]\\(\\(?:\\sw\\|\\s_\\|\\\\.\\)"
-              lisp-mode-symbol-regexp "\\)['’]")
+  `((,(concat "[`‘]\\(" lisp-mode-symbol-regexp "\\)['’]")
      (1 font-lock-constant-face prepend))
     ("\"[^\"]*\"" (0 font-lock-string-face prepend))))
 
