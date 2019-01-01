@@ -1,4 +1,4 @@
-(define-package "color-theme-sanityinc-solarized" "20160430.203" "A version of Ethan Schoonover's Solarized themes" 'nil :keywords
+(define-package "color-theme-sanityinc-solarized" "20181021.2055" "A version of Ethan Schoonover's Solarized themes" 'nil :keywords
   '("themes")
   :authors
   '(("Steve Purcell" . "steve@sanityinc.com"))
