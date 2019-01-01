@@ -3,7 +3,7 @@
 ;; Copyright: (c) 2011, Jeremie Dimino <jeremie@dimino.org>
 ;; Author: Jeremie Dimino <jeremie@dimino.org>
 ;; URL: https://github.com/diml/utop
-;; Package-Version: 20180706.2249
+;; Package-Version: 20181010.2155
 ;; Licence: BSD3
 ;; Version: 1.11
 ;; Package-Requires: ((emacs "24"))
@@ -1232,7 +1232,8 @@ Special keys for utop:
   (pcase command
     ('interactive (company-begin-backend 'utop-company-backend))
     ('sorted t)
-    ('prefix (company-grab-symbol))
+    ('prefix (and (derived-mode-p 'utop-mode)
+                  (or (company-grab-symbol-cons "\\." 1) 'stop)))
     ('candidates
      (progn
        `(:async
