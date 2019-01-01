@@ -1,0 +1,2 @@
+;;; -*- no-byte-compile: t -*-
+(define-package "unkillable-scratch" "20181203.2321" "Disallow the \\*scratch\\* buffer from being killed" '((emacs "24")) :stars '(#("5" 0 1 (font-lock-face paradox-star-face))) :commit "d805ee0570c218559cd972788c2d7f77704282b9" :keywords '("convenience") :authors '(("Eric Crosson" . "eric.s.crosson@utexas.com")) :maintainer '("Eric Crosson" . "eric.s.crosson@utexas.com") :url "https://github.com/EricCrosson/unkillable-scratch")
