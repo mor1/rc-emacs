@@ -6,8 +6,8 @@
 ;; Keywords: extensions, multimedia, tools
 ;; Homepage: https://github.com/vermiculus/ghub-plus
 ;; Package-Requires: ((emacs "25") (ghub "2.0") (apiwrap "0.5"))
-;; Package-Version: 20180602.2245
-;; Package-X-Original-Version: 0.3
+;; Package-Version: 20181113.32
+;; Package-X-Original-Version: 0.4
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 
 (require 'url)
 (require 'cl-lib)
+(require 'subr-x)
 (require 'ghub)
 (require 'apiwrap)
 
@@ -134,20 +135,11 @@ where HTTP-CODE is an error code like 404.
 
 For use inside `:condition-case' endpoint configurations.
 
-See also `ghubp-catch' and `ghubp-catch*'.
-
-For now, care is taken to support older versions of Ghub."
-    (let (code handler form)
-      (dolist (pair handlers)
-        (setq code (car pair)
-              handler (cdr pair))
-        (push (cons (intern (format "ghub-%d" code)) handler) form))
-      (setcdr (last form)
-              `((ghub-http-error
-                 (pcase (cadr ,error-symbol)
-                   ,@handlers
-                   (_ (signal (car ,error-symbol) (cdr ,error-symbol)))))))
-      form))
+See also `ghubp-catch' and `ghubp-catch*'."
+    `((ghub-http-error
+       (pcase (cadr ,error-symbol)
+         ,@handlers
+         (_ (signal (car ,error-symbol) (cdr ,error-symbol)))))))
 
   (defmacro ghubp-catch* (&rest handlers)
     "Catch some Ghub signals with HANDLERS.
@@ -327,6 +319,11 @@ See that documentation for RESOURCE, PARAMS, and DATA."
   (let* ((host (ghub--host))
          (user (ghub--username host)))
     (ghub--token host user package t)))
+
+
+;;; Errors:
+(define-error 'ghubp-error "Ghub+ error" 'ghub-error)
+(define-error 'ghubp-error-review-is-active "This review is active" 'ghubp-error)
 
 
 ;;; Issues:
@@ -634,6 +631,12 @@ By default, Issue Comments are ordered by ascending ID."
 
 ;;; Pull Request Reviews:
 
+(defapiget-ghubp "/repos/:owner/:repo/collaborators"
+  "List collaborators.
+This call lists all the repo's collaborators."
+  "repos/collaborators/#list-collaborators"
+  (repo) "/repos/:repo.owner.login/:repo.name/collaborators")
+
 (defapiget-ghubp "/repos/:owner/:repo/pulls/:number/reviews"
   "List reviews on a pull request."
   "pulls/reviews/#list-reviews-on-a-pull-request"
@@ -647,7 +650,10 @@ By default, Issue Comments are ordered by ascending ID."
 (defapidelete-ghubp "/repos/:owner/:repo/pulls/:number/reviews/:id"
   "Delete a pending review."
   "pulls/reviews/#delete-a-pending-review"
-  (repo pull-request review) "/repos/:repo.owner.login/:repo.name/pulls/:pull-request.number/reviews/:review.id")
+  (repo pull-request review) "/repos/:repo.owner.login/:repo.name/pulls/:pull-request.number/reviews/:review.id"
+  :condition-case
+  (ghubp-catch*
+   (422 (signal 'ghubp-error-review-is-active nil))))
 
 (defapiget-ghubp "/repos/:owner/:repo/pulls/:number/reviews/:id/comments"
   "Get comments for a single review."
@@ -713,7 +719,10 @@ By default, Issue Comments are ordered by ascending ID."
 (defapipost-ghubp "/repos/:owner/:repo/pulls/:number/requested_reviewers"
   "Create a review request."
   "pulls/review_requests/#create-a-review-request"
-  (repo pull-request) "/repos/:repo.owner.login/:repo.name/pulls/:pull-request.number/requested_reviewers")
+  (repo pull-request) "/repos/:repo.owner.login/:repo.name/pulls/:pull-request.number/requested_reviewers"
+  :pre-process-data
+  (lambda (users)
+    `((reviewers . ,(ghubp-get-in-all '(login) users)))))
 
 (defapidelete-ghubp "/repos/:owner/:repo/pulls/:number/requested_reviewers"
   "Delete a review request."
@@ -836,7 +845,10 @@ organization."
 (defapiget-ghubp "/users/:username"
   "Get a single user."
   "users/#get-a-single-user"
-  (user) "/users/:user.login")
+  (user) "/users/:user.login"
+  :condition-case
+  (ghubp-catch*
+   (404 nil)))
 
 (defapiget-ghubp "/user"
   "Get the authenticated user."
