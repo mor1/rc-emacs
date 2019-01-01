@@ -63,6 +63,18 @@ Short cuts:
 
 ;;;***
 
+;;;### (autoloads nil "merlin-xref" "merlin-xref.el" (0 0 0 0))
+;;; Generated autoloads from merlin-xref.el
+
+(autoload 'merlin-xref-backend "merlin-xref" "\
+Merlin backend for Xref.
+
+\(fn)" nil nil)
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "merlin-xref" '("merlin-xref--line")))
+
+;;;***
+
 ;;;### (autoloads nil nil ("merlin-pkg.el") (0 0 0 0))
 
 ;;;***

@@ -392,7 +392,12 @@ containing fields file, line and col."
 line and col"
   (goto-char (point-min))
   (forward-line (1- (merlin-lookup 'line data 0)))
-  (forward-char (max 0 (merlin-lookup 'col data 0))))
+  ; caml gives us the byte offset of the column, which doesn't necessarily match
+  ; the character offset, so we can't just use "forward-char"
+  (let* ((bol-offset (position-bytes (point)))
+         (col-offset (max 0 (merlin-lookup 'col data 0)))
+         (target-off (+ bol-offset col-offset)))
+    (goto-char (byte-to-position target-off))))
 
 (defun merlin--point-of-pos (pos)
   "Return the buffer position corresponding to the merlin
@@ -466,7 +471,7 @@ return (LOC1 . LOC2)."
         (filename    (buffer-file-name (buffer-base-buffer))))
     ;; Update environment
     (dolist (binding (merlin-lookup 'env merlin-buffer-configuration))
-      (let* ((equal-pos (string-match "=" binding))
+      (let* ((equal-pos (string-match-p "=" binding))
              (prefix (if equal-pos
                        (substring binding 0 (1+ equal-pos))
                        binding))
@@ -501,7 +506,7 @@ return (LOC1 . LOC2)."
                  args))
     ;; Log last commands
     (setq merlin-debug-last-commands
-          (cons (cons (cons binary args) nil) merlin-debug-last-commands))
+          (cons (cons binary args) merlin-debug-last-commands))
     (let ((cdr (nthcdr 5 merlin-debug-last-commands)))
       (when cdr (setcdr cdr nil)))
     ;; Call merlin process
@@ -722,7 +727,7 @@ return (LOC1 . LOC2)."
 
 (defun merlin--error-warning-p (msg)
   "Tell if the message MSG is a warning."
-  (string-match "^Warning" msg))
+  (string-match-p "^Warning" msg))
 
 (defun merlin-error-reset ()
   "Clear error list."
@@ -874,15 +879,14 @@ prefix of `bar' is `'."
     (cons prefix suffix)))
 
 (defun merlin--completion-prepare-labels (labels suffix)
-  ; Remove non-matching entry, adjusting optional labels if needed
-  (setq labels (delete-if-not (lambda (x)
-                                (let ((name (cdr (assoc 'name x))))
-                                  (or (string-prefix-p suffix name)
-                                      (when (equal (aref name 0) ??)
-                                        (aset name 0 ?~)
-                                        (string-prefix-p suffix name)))))
-                              labels))
-  (mapcar (lambda (x) (append x '((kind . "Label") (info . nil)))) labels))
+  ;; Remove non-matching entry, adjusting optional labels if needed
+  (cl-loop for x in labels
+           for name = (cdr (assoc 'name x))
+           unless (or (string-prefix-p suffix name)
+                      (when (equal (aref name 0) ??)
+                        (aset name 0 ?~)
+                        (string-prefix-p suffix name)))
+           collect (append x '((kind . "Label") (info . nil)))))
 
 (defun merlin/complete (ident)
   "Return the data for completion of IDENT, i.e. a list of tuples of the form
@@ -922,8 +926,8 @@ prefix of `bar' is `'."
     ;; Concat results
     (let ((result (append labels entries)))
       (if expected-ty
-        (mapcar (lambda (x) (append x `((argument_type . ,expected-ty))))
-                result)
+          (cl-loop for x in result
+                   collect (append x `((argument_type . ,expected-ty))))
         result))))
 
 ;; FIXME: merlin shouldn't rely on editor to compute bounds
@@ -933,10 +937,11 @@ An ocaml atom is any string containing [a-z_0-9A-Z`.]."
   (save-excursion
     (skip-chars-backward "a-z0-9A-Z_'.")
     (skip-chars-backward "~?`" (1- (point)))
-    (if (or (looking-at "[~?`]?['a-z_0-9A-Z.]*['a-z_A-Z0-9]")
-            (looking-at "[~?`]"))
-        (cons (point) (match-end 0)) ; returns the bounds
-      nil))) ; no atom at point
+    (save-match-data
+      (if (or (looking-at "[~?`]?['a-z_0-9A-Z.]*['a-z_A-Z0-9]")
+              (looking-at "[~?`]"))
+          (cons (point) (match-end 0)) ; returns the bounds
+        nil)))) ; no atom at point
 
 (put 'ocaml-atom 'bounds-of-thing-at-point
      'bounds-of-ocaml-atom-at-point)
@@ -976,10 +981,11 @@ An ocaml atom is any string containing [a-z_0-9A-Z`.]."
 (defun merlin--is-short (text)
   (let ((count 0)
         (pos   0))
-    (while (and (<= count 8)
-                (string-match "\n" text pos))
-           (setq pos (match-end 0))
-           (setq count (1+ count)))
+    (save-match-data
+      (while (and (<= count 8)
+                  (string-match "\n" text pos))
+        (setq pos (match-end 0))
+        (setq count (1+ count))))
     (<= count 8)))
 
 (defvar merlin-types-buffer-map
@@ -1115,21 +1121,23 @@ If QUIET is non nil, then an overlay and the merlin types can be used."
   (let* ((merlin/verbosity-context t) ; increase verbosity level if necessary
          (position (merlin/unmake-point (point)))
          (verbosity (cdr-safe merlin--verbosity-cache))
-         (types (merlin/call "type-enclosing" "-position" position "-index" 0)))
+         (types (merlin/call "type-enclosing" "-position" position "-index" 0))
+         (types (ignore-errors
+                  (mapcar (lambda (obj)
+                            (let* ((tail (cdr (assoc 'tail obj)))
+                                   (tail (cond ((equal tail "position")
+                                                " (* tail position *)")
+                                               ((equal tail "call")
+                                                " (* tail call *)")
+                                               (t "")))
+                                   (type (cdr (assoc 'type obj))))
+                              (cons (if (stringp type) (concat type tail)
+                                      (list type position tail verbosity))
+                                    (merlin--make-bounds obj))))
+                          types)))
+         (types (delq nil types)))
     (when types
-      (setq merlin-enclosing-types
-            (mapcar (lambda (obj)
-                      (let* ((tail (cdr (assoc 'tail obj)))
-                             (tail (cond ((equal tail "position")
-                                          " (* tail position *)")
-                                         ((equal tail "call")
-                                          " (* tail call *)")
-                                         (t "")))
-                             (type (cdr (assoc 'type obj))))
-                        (cons (if (stringp type) (concat type tail)
-                                (list type position tail verbosity))
-                              (merlin--make-bounds obj))))
-                    types))
+      (setq merlin-enclosing-types types)
       (setq merlin-enclosing-offset -1)
       merlin-enclosing-types)))
 
@@ -1176,7 +1184,8 @@ If QUIET is non nil, then an overlay and the merlin types can be used."
                                  'merlin--type-enclosing-reset))))
 
 (defun merlin-type-enclosing ()
-  "Print the type of the expression under point (or of the region, if it exists)."
+  "Print the type of the expression under point (or of the region, if it exists).
+If called repeatedly, increase the verbosity of the type shown."
   (interactive)
   (if (region-active-p)
       (merlin--type-region)
@@ -1545,11 +1554,13 @@ Empty string defaults to jumping to all these."
            (switch-to-buffer-other-window (merlin--get-occ-buff)))
           (t nil))))
 
+(defun merlin--occurrences ()
+  (merlin/call "occurrences" "-identifier-at" (merlin/unmake-point (point))))
+
 (defun merlin-occurrences ()
   "List all occurrences of identifier under cursor in buffer."
   (interactive)
-  (let ((r (merlin/call "occurrences"
-                        "-identifier-at" (merlin/unmake-point (point)))))
+  (let ((r (merlin--occurrences)))
     (when r
       (if (listp r)
           (merlin-occurrences-list r)
@@ -1635,7 +1646,9 @@ Empty string defaults to jumping to all these."
   (unless merlin-buffer-configuration
     (setq merlin-buffer-configuration (merlin--configuration)))
   (let ((command (merlin-lookup 'command merlin-buffer-configuration)))
-    (unless command (setq command merlin-command))
+    (unless command
+      (setq command (if (functionp merlin-command) (funcall merlin-command)
+                      merlin-command)))
     (when (equal command 'opam)
       (with-temp-buffer
         (if (eq (call-process-shell-command
@@ -1763,7 +1776,7 @@ Short cuts:
   (if merlin-mode
     ;; When enabling merlin
     (progn
-      (when (member major-mode '(tuareg-mode caml-mode))
+      (when (member major-mode '(tuareg-mode caml-mode reason-mode))
 	(setq merlin-guessed-favorite-caml-mode major-mode))
       (if (merlin-can-handle-buffer)
           (merlin-setup)
