@@ -559,7 +559,7 @@ BODY, and HEADS are parameters to `defhydra'."
          (heads-w-col (cl-remove-if-not (lambda (heads) (hydra--head-property (nth 0 heads) :column)) sorted-heads))
          (heads-wo-col (cl-remove-if (lambda (heads) (hydra--head-property (nth 0 heads) :column)) sorted-heads)))
     (concat (when heads-w-col
-              (concat "\n" (hydra--hint-from-matrix body (hydra--generate-matrix heads-w-col))))
+              (hydra--hint-from-matrix body (hydra--generate-matrix heads-w-col)))
             (when heads-wo-col
               (hydra--hint-heads-wocol body (car heads-wo-col))))))
 
@@ -717,14 +717,20 @@ The expressions can be auto-expanded according to NAME."
                         (substring docstring (+ start offset 1 lspec varp))))))))
       (cond
         ((string= docstring "")
-         (substring rest 1))
+         rest)
         ((eq ?\n (aref docstring 0))
          `(concat (format ,(substring docstring 1) ,@(nreverse varlist))
                   ,rest))
         (t
          (let ((r `(replace-regexp-in-string
                     " +$" ""
-                    (concat ,docstring ": "
+                    (concat ,docstring
+                            ,(cond ((string-match-p "\\`\n" rest)
+                                    ":")
+                                   ((string-match-p "\n" rest)
+                                    ":\n")
+                                   (t
+                                    ": "))
                             (replace-regexp-in-string
                              "\\(%\\)" "\\1\\1" ,rest)))))
            (if (stringp rest)
