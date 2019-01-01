@@ -78,6 +78,7 @@
       (save-excursion
 	(goto-char (point-min))
 	(forward-char pos)
+	(back-to-indentation)
 	(indium-location-at-point)))))
 
 (defun indium-breakpoint-buffer (breakpoint)
@@ -97,6 +98,7 @@
 				   scope-chain))
 	       (:constructor indium-frame-from-alist
 			     (alist &aux
+                                    (id (map-elt alist 'id))
 				    (script-id (map-elt alist 'scriptId))
 				    (function-name (map-elt alist 'functionName))
 				    (location (indium-location-from-alist
@@ -104,6 +106,7 @@
 				    (scope-chain (seq-map #'indium-scope-from-alist
 							  (map-elt alist 'scopeChain)))))
 	       (:copier nil))
+  (id "" :type string)
   (function-name "" :type string)
   (script-id "" :type string)
   (location nil :type indium-location)

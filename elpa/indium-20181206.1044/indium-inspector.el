@@ -70,14 +70,15 @@
 
 (defun indium-inspector--split-properties (properties)
   "Split PROPERTIES into list where the first element is native properties and the second is the rest."
-  (seq-reduce (lambda (result property)
-                (push property
-                      (if (indium-property-native-p property)
-                          (car result)
-                        (cadr result)))
-                result)
-              properties
-              (list nil nil)))
+  (let ((split (seq-reduce (lambda (result property)
+                       (push property
+			     (if (indium-property-native-p property)
+				 (car result)
+                               (cadr result)))
+                       result)
+		     properties
+		     (list nil nil))))
+    (seq-map (lambda (list) (nreverse list)) split)))
 
 (defun indium-inspector-pop ()
   "Go back in the history to the last object inspected."
@@ -94,11 +95,14 @@ DIRECTION can be either `next' or `previous'."
   (let* ((delta (pcase direction
                   (`next 1)
                   (`previous -1)))
+         (limit-check (pcase direction
+                        (`next #'eobp)
+                        (`previous #'bobp)))
          (reference (save-excursion
                       (forward-line delta)
                       (when (eq direction 'previous)
                         (end-of-line))
-                      (while (and (not (eobp))
+                      (while (and (not (funcall limit-check))
                                   (not (get-text-property (point) 'indium-reference)))
                         (forward-char delta))
                       (when (get-text-property (point) 'indium-reference)

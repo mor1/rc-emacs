@@ -159,24 +159,26 @@ Once the client is connected, run the hook `indium-client-connected-hook'."
                       (lambda (&rest _)
 			(run-hooks 'indium-client-connected-hook))))
 
-(defun indium-client-evaluate (expression &optional callback)
-  "Evaluate EXPRESSION.
+(defun indium-client-evaluate (expression &optional frame callback)
+  "Evaluate EXPRESSION in the context of FRAME.
 
 When non-nil, evaluate CALLBACK with the result."
   (indium-client-send
    `((type . "runtime")
      (payload . ((action . "evaluate")
-		 (expression . ,expression))))
+		 (expression . ,expression)
+                 (frameId . ,(when frame (indium-frame-id frame))))))
    (lambda (obj)
      (when callback
        (funcall callback (indium-remote-object-from-alist obj))))))
 
-(defun indium-client-get-completion (expression &optional callback)
-  "Request the list of completion for EXPRESSION.
+(defun indium-client-get-completion (expression &optional frame callback)
+  "Request the list of completion for EXPRESSION in the context of FRAME.
 When non-nil, evaluate CALLBACK with the result."
   (indium-client-send `((type . "runtime")
 			(payload . ((action . "getCompletion")
-                                    (expression . ,expression))))
+                                    (expression . ,expression)
+				    (frameId . ,(when frame (indium-frame-id frame))))))
                       callback))
 
 (defun indium-client-get-properties (id &optional callback)
@@ -206,12 +208,14 @@ When non-nil, evaluate CALLBACK with the result."
   (let* ((id (indium-breakpoint-id breakpoint))
 	 (location (indium-breakpoint-location breakpoint))
 	 (file (indium-location-file location))
-	 (line (indium-location-line location)))
+	 (line (indium-location-line location))
+	 (column (indium-location-column location)))
     (indium-client-send `((type . "runtime")
 			  (payload . ((action . "addBreakpoint")
 				      (id . ,id)
-				      (file . ,file)
-				      (line . ,line)))))))
+				      (file . ,(indium-client--convert-path file))
+				      (line . ,line)
+				      (column . ,column)))))))
 
 (defun indium-client-remove-breakpoint (breakpoint)
   "Request the removal of BREAKPOINT."
@@ -245,7 +249,8 @@ When non-nil, evaluate CALLBACK with the result."
   (indium-client-send
    `((type . "runtime")
      (payload . ((action . "continueToLocation")
-		 (location . ((file . ,(indium-location-file location))
+		 (location . ((file . ,(indium-client--convert-path
+					(indium-location-file location)))
 			      (line . ,(indium-location-line location))
 			      (column . ,(indium-location-column location)))))))))
 
@@ -433,6 +438,13 @@ PAYLOAD is an alist with the details of the notification."
       ("resumed"
        (run-hooks 'indium-client-debugger-resumed-hook))
       (_ (message "Indium notification %s" payload)))))
+
+(defun indium-client--convert-path (path)
+  "Convert PATH to a system path that the server component understands."
+  (when (eq system-type 'windows-nt)
+    (setq path (replace-regexp-in-string "/" "\\" path nil t))
+    (setq path (replace-regexp-in-string "^\\([a-z]\\):" #'capitalize path)))
+  path)
 
 (defvar indium-client--id 0)
 (defun indium-client--next-id ()
