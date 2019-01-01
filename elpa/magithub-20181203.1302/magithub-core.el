@@ -59,6 +59,10 @@ If SUBMODE is supplied, specifically check for that mode in
   (and (listp magithub-debug-mode)
        (memq submode magithub-debug-mode)))
 
+(defun magithub-message (fmt &rest args)
+  "Print a message."
+  (message "magithub: %s" (apply #'format fmt args)))
+
 (defun magithub-debug-message (fmt &rest args)
   "Print a debug message.
 Respects `magithub-debug-mode' and `debug-on-error'."
@@ -74,7 +78,11 @@ Intended as around-advice for `ghub-requst'."
   (magithub-debug-message "ghub-request%S" args)
   (unless (magithub-debug-mode 'dry-api)
     (apply oldfun args)))
-(advice-add #'ghub-request :around #'magithub-debug--ghub-request-wrapper)
+
+(defun magithub-instrument ()
+  "Instrument Magithub for debugging."
+  (interactive)
+  (advice-add #'ghub-request :around #'magithub-debug--ghub-request-wrapper))
 
 (defcustom magithub-dir
   (expand-file-name "magithub" user-emacs-directory)
@@ -341,8 +349,9 @@ Pings the API a maximum of once every ten seconds."
                                ;; (i.e. GHE), try using /meta which
                                ;; should (hopefully) always work.  See
                                ;; also issue #107.
-                               (or (ghubp-ratelimit)
-                                   (ghub-get "/meta" nil :auth 'magithub))
+                               (magithub-request
+                                (or (ghubp-ratelimit)
+                                    (ghubp-request 'get "/meta" nil nil)))
 
                                api-status (and response t)))
 
@@ -385,8 +394,6 @@ See `magithub--api-offline-reason'."
     (message "Magithub is now offline: %s"
              magithub--api-offline-reason)
     (setq magithub--api-offline-reason nil)))
-
-(defalias 'magithub-api-rate-limit #'ghubp-ratelimit)
 
 ;;; Repository parsing
 
@@ -600,10 +607,12 @@ If there's only one remote available, optionally return it without prompting."
 (defconst magithub-feature-list
   ;; features must only return nil if they fail to install
   `((pull-request-merge . ,(lambda ()
-                             (magit-define-popup-action 'magit-am-popup
-                               ?P "Apply patches from pull request"
-                               #'magithub-pull-request-merge)
-                             t))
+                             (require 'magit-popup nil t)
+                             (when (boundp 'magit-am-popup)
+                               (magit-define-popup-action 'magit-am-popup
+                                 ?P "Apply patches from pull request"
+                                 #'magithub-pull-request-merge)
+                               t)))
 
     (commit-browse . ,(lambda ()
                         (define-key magit-commit-section-map "w"
@@ -780,8 +789,20 @@ See also `format-time-string'."
 
 (defun magithub--parse-time-string (iso8601)
   "Parse ISO8601 into a time value.
-ISO8601 is expected to not have a TZ component."
-  (parse-iso8601-time-string (concat iso8601 "+00:00")))
+ISO8601 is expected to not have a TZ component.
+
+We first use a crude parsing and if it fails we fall back to a more
+general purpose function.  This is done to speed up parsing time."
+  (if (string-match "^\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)T\\([0-9]+\\):\\([0-9]+\\):\\([0-9]+\\)Z$" iso8601)
+    (encode-time
+     (string-to-number (match-string 6 iso8601))
+     (string-to-number (match-string 5 iso8601))
+     (string-to-number (match-string 4 iso8601))
+     (string-to-number (match-string 3 iso8601))
+     (string-to-number (match-string 2 iso8601))
+     (string-to-number (match-string 1 iso8601))
+     t)
+    (parse-iso8601-time-string (concat iso8601 "+00:00"))))
 
 (defun magithub--format-time (time)
   "Format TIME according to `magithub-datetime-format'.
