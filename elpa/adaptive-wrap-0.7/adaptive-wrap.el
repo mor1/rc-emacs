@@ -4,7 +4,7 @@
 
 ;; Author: Stephen Berman <stephen.berman@gmx.net>
 ;;         Stefan Monnier <monnier@iro.umontreal.ca>
-;; Version: 0.5.2
+;; Version: 0.7
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -59,11 +59,20 @@ extra indent = 2
   :group 'visual-line)
 (make-variable-buffer-local 'adaptive-wrap-extra-indent)
 
-(defun adaptive-wrap-fill-context-prefix (beg en)
+(defun adaptive-wrap-fill-context-prefix (beg end)
   "Like `fill-context-prefix', but with length adjusted by `adaptive-wrap-extra-indent'."
-  ;; Note: fill-context-prefix may return nil; See:
-  ;; http://article.gmane.org/gmane.emacs.devel/156285
-  (let* ((fcp (or (fill-context-prefix beg en) ""))
+  (let* ((fcp
+          ;; `fill-context-prefix' ignores prefixes that look like paragraph
+          ;; starts, in order to avoid inadvertently creating a new paragraph
+          ;; while filling, but here we're only dealing with single-line
+          ;; "paragraphs" and we don't actually modify the buffer, so this
+          ;; restriction doesn't make much sense (and is positively harmful in
+          ;; taskpaper-mode where paragraph-start matches everything).
+          (or (let ((paragraph-start "\\`\\'a"))
+                    (fill-context-prefix beg end))
+                  ;; Note: fill-context-prefix may return nil; See:
+                  ;; http://article.gmane.org/gmane.emacs.devel/156285
+                  ""))
          (fcp-len (string-width fcp))
          (fill-char (if (< 0 fcp-len)
                         (string-to-char (substring fcp -1))
@@ -94,19 +103,27 @@ extra indent = 2
   (setq beg (point))
   (while (< (point) end)
     (let ((lbp (point)))
-      (put-text-property (point)
-                         (progn (search-forward "\n" end 'move) (point))
-                         'wrap-prefix
-			 (let ((pfx (adaptive-wrap-fill-context-prefix
-				     lbp (point))))
-			   ;; Remove any `wrap-prefix' property that
-			   ;; might have been added earlier.
-			   ;; Otherwise, we end up with a string
-			   ;; containing a `wrap-prefix' string
-			   ;; containing a `wrap-prefix' string ...
-			   (remove-text-properties
-			    0 (length pfx) '(wrap-prefix) pfx)
-			   pfx))))
+      (put-text-property
+       (point) (progn (search-forward "\n" end 'move) (point))
+       'wrap-prefix
+       (let ((pfx (adaptive-wrap-fill-context-prefix
+		   lbp (point))))
+	 ;; Remove any `wrap-prefix' property that
+	 ;; might have been added earlier.
+	 ;; Otherwise, we end up with a string
+	 ;; containing a `wrap-prefix' string
+	 ;; containing a `wrap-prefix' string ...
+	 (remove-text-properties
+	  0 (length pfx) '(wrap-prefix) pfx)
+         (let ((dp (get-text-property 0 'display pfx)))
+           (when (and dp (eq dp (get-text-property (1- lbp) 'display)))
+             ;; There's a `display' property which covers not just the
+             ;; prefix but also the previous newline.  So it's not just making
+             ;; the prefix more pretty and could interfere or even defeat our
+             ;; efforts (e.g. it comes from `visual-fill-mode').
+             (remove-text-properties
+	      0 (length pfx) '(display) pfx)))
+	 pfx))))
   `(jit-lock-bounds ,beg . ,end))
 
 ;;;###autoload
@@ -140,6 +157,21 @@ extra indent = 2
 
 ;;;; ChangeLog:
 
+;; 2018-10-16  Stefan Monnier  <monnier@iro.umontreal.ca>
+;; 
+;; 	* adaptive-wrap.el (adaptive-wrap-fill-context-prefix): Ignore
+;; 	paragraph-start
+;; 
+;; 	(and rename 'en' to 'end'). Reported by Dmitry Safronov
+;; 	<saf.dmitry@gmail.com>
+;; 
+;; 2018-10-15  Stefan Monnier  <monnier@iro.umontreal.ca>
+;; 
+;; 	* adaptive-wrap/adaptive-wrap.el: Fix interaction with visual-fill
+;; 
+;; 	(adaptive-wrap-prefix-function): Remove problematic 'display' properties 
+;; 	as well.
+;; 
 ;; 2018-03-12  Stefan Monnier  <monnier@iro.umontreal.ca>
 ;; 
 ;; 	* adaptive-wrap/adaptive-wrap.el: Fix use without font-lock
