@@ -100,6 +100,11 @@
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-fontset-auto2")
 ;; (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
 
+;; input method
+(setq default-input-method "TeX")
+(set-language-environment "utf-8")
+(prefer-coding-system 'utf-8)
+
 ;; scrolling
 (setq scroll-conservatively 101
       scroll-preserve-screen-position t
@@ -318,6 +323,8 @@
          ("[i]?ocamlinit$" . tuareg-mode)
          )
   )
+
+;; org-mode
 (use-package org
   :defer t
   :pin org
@@ -444,23 +451,21 @@
             (org-agenda-overriding-header "Today's Priority #A tasks: "))
            )
           )
+
         org-agenda-files (quote ("~/me/todo/todo.org"))
         org-agenda-include-diary t
         org-agenda-log-mode-items (quote (closed clock))
         org-agenda-ndays 7
         org-agenda-show-all-dates t
-        org-agenda-sorting-strategy
-        (quote
-         (time-up todo-state-down category-keep priority-down alpha-down))
+        org-agenda-sorting-strategy (quote (time-up todo-state-down category-keep priority-down alpha-down))
         org-agenda-start-on-weekday nil
         org-deadline-warning-days 14
         org-default-notes-file "~/me/todo/notes.org"
         org-fast-tag-selection-single-key (quote expert)
         org-remember-store-without-prompt t
-        org-remember-templates
-        (quote
-         ((116 "* %? %u" "~/me/todo/todo.org" "Tasks")
-          (110 "* %u %?" "~/me/todo/notes.org" "Notes")))
+        org-remember-templates (quote ((116 "* %? %u" "~/me/todo/todo.org" "Tasks")
+                                       (110 "* %u %?" "~/me/todo/notes.org" "Notes"))
+                                      )
         org-reverse-note-order t
         org-tags-match-list-sublevels t
         )
@@ -491,7 +496,10 @@
   )
 
 (use-package sh-script
-  :mode ("bash_" . sh-mode)
+  :mode (("bash_" . sh-mode)
+         ("APKBUILD$" . sh-mode)
+         )
+
   ;; :magic ("\\{{/* =% ssh %= */}}" . sh-mode)
   :config (setq sh-basic-offset 2
                 sh-indentation 2
