@@ -5,7 +5,7 @@
 ;; Author: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; Maintainer: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; URL: https://gitlab.com/Ambrevar/mu4e-conversation
-;; Package-Version: 20181218.813
+;; Package-Version: 20190107.821
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: mail, convenience, mu4e
@@ -1050,7 +1050,10 @@ call of this function."
     (save-window-excursion
       (mu4e-conversation--open-draft msg)
       (condition-case nil
-          (message-send-and-exit)
+          ;; Force-kill DRAFT-BUF on succcess since it's an implementation
+          ;; detail in mu4e-conversation and the composition area is in BUF.
+          (let ((message-kill-buffer-on-exit t))
+            (message-send-and-exit))
         ;; Stay in draft buffer and widen in case we failed during header check.
         (error (setq draft-buf (current-buffer))
                (widen))))
