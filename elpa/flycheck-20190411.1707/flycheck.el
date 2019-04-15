@@ -173,6 +173,7 @@ attention to case differences."
     coq
     css-csslint
     css-stylelint
+    cuda-nvcc
     cwl
     d-dmd
     dockerfile-hadolint
@@ -190,6 +191,7 @@ attention to case differences."
     go-errcheck
     go-unconvert
     go-megacheck
+    go-staticcheck
     groovy
     haml
     handlebars
@@ -262,6 +264,7 @@ attention to case differences."
     tex-chktex
     tex-lacheck
     texinfo
+    textlint
     typescript-tslint
     verilog-verilator
     vhdl-ghdl
@@ -691,6 +694,17 @@ using \\[flycheck-error-list-reset-filter]."
   :type 'flycheck-minimum-level
   :safe #'flycheck-error-level-p
   :package-version '(flycheck . "0.24"))
+
+(defcustom flycheck-relevant-error-other-file-minimum-level 'error
+  "The minimum level of errors from other files to display in this buffer.
+
+If set to an error level, only display errors from other files
+whose error level is at least as severe as this one.  If nil,
+display all errors from other files."
+  :group 'flycheck
+  :type 'flycheck-minimum-level
+  :safe #'flycheck-error-level-p
+  :package-version '(flycheck . "32"))
 
 (defcustom flycheck-completing-read-function #'completing-read
   "Function to read from minibuffer with completion.
@@ -3367,7 +3381,9 @@ Return ERRORS, modified in-place."
     (and file-name
          (or (null buffer-file-name)
              (not (flycheck-same-files-p buffer-file-name file-name)))
-         (eq 'error (flycheck-error-level err)))))
+         (<= (flycheck-error-level-severity
+              flycheck-relevant-error-other-file-minimum-level)
+             (flycheck-error-level-severity (flycheck-error-level err))))))
 
 (defun flycheck-relevant-error-p (err)
   "Determine whether ERR is relevant for the current buffer.
@@ -4024,7 +4040,8 @@ instead.  With non-nil RESET, search from `point-min', otherwise
 search from the current point.
 
 Return the position of the next or previous error, or nil if
-there is none."
+there is none.  If N is zero, return `point', or `point-min' if
+RESET is non-nil."
   (let ((n (or n 1))
         (pos (if reset (point-min) (point))))
     (if (>= n 0)
@@ -5956,6 +5973,35 @@ about Reek."
            errors))))
     (nreverse errors)))
 
+(defun flycheck-parse-go-staticcheck (output checker buffer)
+  "Parse staticheck warnings from JSON OUTPUT.
+
+CHECKER and BUFFER denote the CHECKER that returned OUTPUT and
+the BUFFER that was checked respectively.
+
+See URL `https://staticcheck.io/docs/formatters' for more
+information about staticheck."
+  (let ((errors nil))
+    (dolist (msg (flycheck-parse-json output))
+      (let-alist msg
+        (push
+         (flycheck-error-new-at
+          .location.line
+          .location.column
+          (pcase .severity
+            (`"error"   'error)
+            (`"warning" 'warning)
+            (`"ignored" 'info)
+            ;; Default to warning for unknown .severity
+            (_          'warning))
+          .message
+          :id .code
+          :checker checker
+          :buffer buffer
+          :filename .location.file)
+         errors)))
+    (nreverse errors)))
+
 (defun flycheck-parse-tslint (output checker buffer)
   "Parse TSLint errors from JSON OUTPUT.
 
@@ -6592,10 +6638,7 @@ See URL `http://clang.llvm.org/'."
             "-")
   :standard-input t
   :error-patterns
-  ((error line-start
-          (message "In file included from") " " (or "<stdin>" (file-name))
-          ":" line ":" line-end)
-   (info line-start (or "<stdin>" (file-name)) ":" line ":" column
+  ((info line-start (or "<stdin>" (file-name)) ":" line ":" column
          ": note: " (optional (message)) line-end)
    (warning line-start (or "<stdin>" (file-name)) ":" line ":" column
             ": warning: " (optional (message)) line-end)
@@ -6610,7 +6653,7 @@ See URL `http://clang.llvm.org/'."
         ;; them past our error filtering
         (setf (flycheck-error-message err)
               (or (flycheck-error-message err) "no message")))
-      (flycheck-fold-include-levels errors "In file included from")))
+      errors))
   :modes (c-mode c++-mode)
   :next-checkers ((warning . c/c++-cppcheck)))
 
@@ -6752,20 +6795,13 @@ Requires GCC 4.4 or newer.  See URL `https://gcc.gnu.org/'."
             "-")
   :standard-input t
   :error-patterns
-  ((error line-start
-          (message "In file included from") " " (or "<stdin>" (file-name))
-          ":" line ":" column ":" line-end)
-   (info line-start (or "<stdin>" (file-name)) ":" line ":" column
+  ((info line-start (or "<stdin>" (file-name)) ":" line ":" column
          ": note: " (message) line-end)
    (warning line-start (or "<stdin>" (file-name)) ":" line ":" column
             ": warning: " (message (one-or-more (not (any "\n["))))
             (optional "[" (id (one-or-more not-newline)) "]") line-end)
    (error line-start (or "<stdin>" (file-name)) ":" line ":" column
           ": " (or "fatal error" "error") ": " (message) line-end))
-  :error-filter
-  (lambda (errors)
-    (flycheck-fold-include-levels (flycheck-sanitize-errors errors)
-                                  "In file included from"))
   :modes (c-mode c++-mode)
   :next-checkers ((warning . c/c++-cppcheck)))
 
@@ -7102,6 +7138,59 @@ See URL `http://stylelint.io/'."
   :standard-input t
   :error-parser flycheck-parse-stylelint
   :modes (css-mode))
+
+(flycheck-def-option-var flycheck-cuda-language-standard nil cuda-nvcc
+  "Our CUDA Language Standard."
+  :type '(choice (const :tag "Default standard" nil)
+                 (string :tag "Language standard"))
+  :safe #'stringp
+  :package-version '(flycheck . "32"))
+(make-variable-buffer-local 'flycheck-cuda-language-standard)
+
+(flycheck-def-option-var flycheck-cuda-includes nil cuda-nvcc
+  "Our include directories to pass to nvcc."
+  :type '(repeat (file :tag "Include file"))
+  :safe #'flycheck-string-list-p
+  :package-version '(flycheck . "32"))
+
+(flycheck-def-option-var flycheck-cuda-definitions nil cuda-nvcc
+  "Additional preprocessor definitions for nvcc.
+A list of strings to pass to cuda, a la flycheck-clang"
+  :type '(repeat (string :tag "Definitions"))
+  :safe #'flycheck-string-list-p
+  :package-version '(flycheck . "32"))
+
+(flycheck-def-option-var flycheck-cuda-include-path nil cuda-nvcc
+  "A list of include directories for nvcc."
+  :type '(repeat (directory :tag "Include directory"))
+  :safe #'flycheck-string-list-p
+  :package-version '(flycheck . "32"))
+
+(flycheck-define-checker cuda-nvcc
+  "A CUDA C/C++ syntax checker using nvcc.
+
+See URL `https://developer.nvidia.com/cuda-llvm-compiler'."
+  :command ("nvcc"
+            "-c" ;; Compile Only
+            (option "-std=" flycheck-cuda-language-standard concat)
+            (option-list "-include" flycheck-cuda-includes)
+            (option-list "-D" flycheck-cuda-definitions concat)
+            (option-list "-I" flycheck-cuda-include-path)
+            source)
+  :error-patterns
+  ((error line-start
+          (message "In file included from")
+          " " (or "<stdin>" (file-name))
+          ":" line ":" line-end)
+   (error line-start (or "<stdin>" (file-name))
+          "(" line "): error: " (message) line-end)
+   (error line-start (or "<stdin>" (file-name))
+          ":" line ":" column
+          ": fatal error: " (optional (message)) line-end)
+   (warning line-start (or "<stdin>" (file-name))
+            "(" line "): warning: " (message) line-end))
+  :modes cuda-mode)
+
 
 (flycheck-def-option-var flycheck-cwl-schema-path nil cwl
   "A path for the schema file for Common Workflow Language.
@@ -7712,6 +7801,7 @@ See URL `https://golang.org/cmd/gofmt/'."
                   (warning . go-build) (warning . go-test)
                   (warning . go-errcheck)
                   (warning . go-unconvert)
+                  (warning . go-staticcheck)
                   (warning . go-megacheck)))
 
 (flycheck-define-checker go-golint
@@ -7727,7 +7817,7 @@ See URL `https://github.com/golang/lint'."
                   go-build go-test go-errcheck go-unconvert go-megacheck))
 
 (flycheck-def-option-var flycheck-go-vet-print-functions nil go-vet
-  "A list of print-like functions for `go tool vet'.
+  "A list of print-like functions for `go vet'.
 
 Go vet will check these functions for format string problems and
 issues, such as a mismatch between the number of formats used,
@@ -7743,18 +7833,6 @@ take an io.Writer as their first argument, like Fprintf,
                  (string :tag "function"))
   :safe #'flycheck-string-list-p)
 
-(flycheck-def-option-var flycheck-go-vet-shadow nil go-vet
-  "Whether to check for shadowed variables with `go tool vet'.
-
-When non-nil check for shadowed variables.  When `strict' check
-more strictly, which can very noisy.  When nil do not check for
-shadowed variables.
-
-This option requires Go 1.6 or newer."
-  :type '(choice (const :tag "Do not check for shadowed variables" nil)
-                 (const :tag "Check for shadowed variables" t)
-                 (const :tag "Strictly check for shadowed variables" strict)))
-
 (flycheck-def-option-var flycheck-go-megacheck-disabled-checkers nil
                          go-megacheck
   "A list of checkers to disable when running `megacheck'.
@@ -7769,29 +7847,23 @@ enabled. "
   :safe #'flycheck-string-list-p)
 
 (flycheck-define-checker go-vet
-  "A Go syntax checker using the `go tool vet' command.
+  "A Go syntax checker using the `go vet' command.
 
 See URL `https://golang.org/cmd/go/' and URL
 `https://golang.org/cmd/vet/'."
-  :command ("go" "tool" "vet" "-all"
-            (option "-printfuncs=" flycheck-go-vet-print-functions concat
+  :command ("go" "vet"
+            (option "-printf.funcs=" flycheck-go-vet-print-functions concat
                     flycheck-option-comma-separated-list)
-            (option-flag "-shadow" flycheck-go-vet-shadow)
-            (option-list "-tags=" flycheck-go-build-tags concat)
-            (eval (when (eq flycheck-go-vet-shadow 'strict) "-shadowstrict"))
             source)
   :error-patterns
   ((warning line-start (file-name) ":" line ": " (message) line-end))
   :modes go-mode
-  ;; We must explicitly check whether the "vet" tool is available
-  :predicate (lambda ()
-               (let ((go (flycheck-checker-executable 'go-vet)))
-                 (member "vet" (ignore-errors (process-lines go "tool")))))
   :next-checkers (go-build
                   go-test
                   ;; Fall back if `go build' or `go test' can be used
                   go-errcheck
                   go-unconvert
+                  go-staticcheck
                   go-megacheck)
   :verify (lambda (_)
             (let* ((go (flycheck-checker-executable 'go-vet))
@@ -7812,13 +7884,26 @@ while syntax checking."
   :safe #'booleanp
   :package-version '(flycheck . "0.25"))
 
-(flycheck-def-option-var flycheck-go-build-tags nil go-build
+(flycheck-def-option-var flycheck-go-build-tags nil
+                         (go-build go-test go-errcheck
+                                   go-megacheck go-staticcheck)
   "A list of tags for `go build'.
 
 Each item is a string with a tag to be given to `go build'."
   :type '(repeat (string :tag "Tag"))
   :safe #'flycheck-string-list-p
   :package-version '(flycheck . "0.25"))
+
+
+(flycheck-def-option-var flycheck-go-version nil go-staticcheck
+  "The version of go that should be targeted by `staticcheck'.
+
+Should be a string representing a version, like 1.6 or 1.11.4.
+See `https://staticcheck.io/docs/#targeting-go-versions' for
+details."
+  :type 'string
+  :safe #'stringp
+  :package-version '(flycheck . "0.32"))
 
 (flycheck-define-checker go-build
   "A Go syntax and type checker using the `go build' command.
@@ -7858,6 +7943,7 @@ Requires Go 1.6 or newer.  See URL `https://golang.org/cmd/go'."
                     (not (string-suffix-p "_test.go" (buffer-file-name)))))
   :next-checkers ((warning . go-errcheck)
                   (warning . go-unconvert)
+                  (warning . go-staticcheck)
                   (warning . go-megacheck)))
 
 (flycheck-define-checker go-test
@@ -7880,6 +7966,7 @@ Requires Go 1.6 or newer.  See URL `https://golang.org/cmd/go'."
                   (string-suffix-p "_test.go" (buffer-file-name))))
   :next-checkers ((warning . go-errcheck)
                   (warning . go-unconvert)
+                  (warning . go-staticcheck)
                   (warning . go-megacheck)))
 
 (flycheck-define-checker go-errcheck
@@ -7909,6 +7996,7 @@ See URL `https://github.com/kisielk/errcheck'."
   :modes go-mode
   :predicate (lambda () (flycheck-buffer-saved-p))
   :next-checkers ((warning . go-unconvert)
+                  (warning . go-staticcheck)
                   (warning . go-megacheck)))
 
 (flycheck-define-checker go-unconvert
@@ -7938,6 +8026,23 @@ Requires Go 1.6 or newer. See URL
             ".")
   :error-patterns
   ((warning line-start (file-name) ":" line ":" column ": " (message) line-end))
+  :modes go-mode)
+
+(flycheck-define-checker go-staticcheck
+  "A Go checker that performs static analysis and linting using
+the `staticcheck' command. `staticcheck' is the successor to
+`megacheck'; while the latter isn't fully deprecated yet, it's
+recommended to migrate to `staticcheck'.
+
+`staticcheck' is explicitly fully compatible with \"the last two
+versions of go\". `staticheck' can target earlier versions (with
+limited features) if `flycheck-go-version' is set. See URL
+`https://staticcheck.io/'."
+  :command ("staticcheck" "-f" "json"
+            (option-list "-tags" flycheck-go-build-tags concat)
+            (option "-go" flycheck-go-version))
+
+  :error-parser flycheck-parse-go-staticcheck
   :modes go-mode)
 
 (flycheck-define-checker groovy
@@ -8419,7 +8524,8 @@ See URL `https://eslint.org/'."
   :standard-input t
   :error-parser flycheck-parse-eslint
   :enabled (lambda () (flycheck-eslint-config-exists-p))
-  :modes (js-mode js-jsx-mode js2-mode js2-jsx-mode js3-mode rjsx-mode)
+  :modes (js-mode js-jsx-mode js2-mode js2-jsx-mode js3-mode rjsx-mode
+                  typescript-mode)
   :working-directory flycheck-eslint--find-working-directory
   :verify
   (lambda (_)
@@ -8676,6 +8782,16 @@ the `--severity' option to Perl Critic."
   :safe #'integerp
   :package-version '(flycheck . "0.18"))
 
+(flycheck-def-option-var flycheck-perlcritic-theme nil perl-perlcritic
+  "The theme expression for Perl Critic.
+
+The value of this variable is passed as the `--theme' option to
+`Perl::Critic'.  See the documentation of `Perl::Critic' for
+details."
+  :type '(string :tag "Theme expression")
+  :safe #'stringp
+  :package-version '(flycheck . "32-csv"))
+
 (flycheck-def-config-file-var flycheck-perlcriticrc perl-perlcritic
                               ".perlcriticrc"
   :safe #'stringp
@@ -8688,7 +8804,8 @@ See URL `https://metacpan.org/pod/Perl::Critic'."
   :command ("perlcritic" "--no-color" "--verbose" "%f/%l/%c/%s/%p/%m (%e)\n"
             (config-file "--profile" flycheck-perlcriticrc)
             (option "--severity" flycheck-perlcritic-severity nil
-                    flycheck-option-int))
+                    flycheck-option-int)
+            (option "--theme" flycheck-perlcritic-theme))
   :standard-input t
   :error-patterns
   ((info line-start
@@ -8832,7 +8949,7 @@ See URL `http://proselint.com/'."
   :command ("proselint" "--json" "-")
   :standard-input t
   :error-parser flycheck-proselint-parse-errors
-  :modes (text-mode markdown-mode gfm-mode message-mode))
+  :modes (text-mode markdown-mode gfm-mode message-mode org-mode))
 
 (flycheck-define-checker protobuf-protoc
   "A protobuf syntax checker using the protoc compiler.
@@ -9197,10 +9314,10 @@ See URL `http://mypy-lang.org/'."
             (option "--cache-dir" flycheck-python-mypy-cache-dir)
             source-original)
   :error-patterns
-  ((error line-start (file-name) ":" line ":" column ": error:" (message)
-          line-end)
-   (warning line-start (file-name) ":" line ":" column  ": warning:" (message)
-            line-end))
+  ((error line-start (file-name) ":" line (optional ":" column)
+          ": error:" (message) line-end)
+   (warning line-start (file-name) ":" line (optional ":" column)
+            ": warning:" (message) line-end))
   :modes python-mode
   ;; Ensure the file is saved, to work around
   ;; https://github.com/python/mypy/issues/4746.
@@ -9483,7 +9600,8 @@ information about nix-linter."
   "Nix checker using nix-linter.
 
 See URL `https://github.com/Synthetica9/nix-linter'."
-  :command ("nix-linter" "--json-stream" source)
+  :command ("nix-linter" "--json-stream" "-")
+  :standard-input t
   :error-parser flycheck-parse-nix-linter
   :modes nix-mode)
 
@@ -10516,6 +10634,64 @@ See URL `http://www.gnu.org/software/texinfo/'."
           line-end))
   :modes texinfo-mode)
 
+(flycheck-def-config-file-var flycheck-textlint-config
+    textlint "textlintrc.json"
+  :safe #'stringp)
+
+;; This needs to be set because textlint plugins are installed seperately,
+;; and there is no way to check their installation status -- textlint simply
+;; prints a backtrace.
+(flycheck-def-option-var flycheck-textlint-plugin-alist
+    '((markdown-mode . "@textlint/markdown")
+      (gfm-mode . "@textlint/markdown")
+      (t . "@textlint/text"))
+    textlint
+  "An alist mapping major modes to textlint plugins.
+
+Each item is a cons cell `(MAJOR-MODE . PLUGIN)', where MAJOR-MODE is a mode
+`flycheck-textlint' supports and PLUGIN is a textlint plugin. As a catch-all,
+when MAJOR-MODE is t, that PLUGIN will be used for any supported mode that
+isn't specified.
+
+See URL `https://npms.io/search?q=textlint-plugin' for all textlint plugins
+published on NPM."
+  :type '(repeat (choice (cons symbol string)
+                         (cons (const t) string))))
+
+(flycheck-define-checker textlint
+  "A text prose linter using textlint.
+
+See URL `https://textlint.github.io/'."
+  :command ("textlint"
+            (config-file "--config" flycheck-textlint-config)
+            "--format" "json"
+            ;; get the first matching plugin from plugin-alist
+            "--plugin"
+            (eval (cdr
+                   (-first
+                    (lambda (pair)
+                      (let ((mode (car pair)))
+                        (or (and (booleanp mode) mode) ; mode is t
+                            (derived-mode-p mode))))
+                    flycheck-textlint-plugin-alist)))
+            source)
+  ;; textlint seems to say that its json output is compatible with ESLint.
+  ;; https://textlint.github.io/docs/formatter.html
+  :error-parser flycheck-parse-eslint
+  ;; textlint can support different formats with textlint plugins, but
+  ;; only text and markdown formats are installed by default. Ask the
+  ;; user to add mode->plugin mappings manually in
+  ;; `flycheck-textlint-plugin-alist'.
+  :modes
+  (text-mode markdown-mode gfm-mode message-mode adoc-mode
+             mhtml-mode latex-mode org-mode rst-mode)
+  :enabled
+  (lambda () (or (eq major-mode 'markdown-mode)
+                 (eq major-mode 'gfm-mode)
+                 (eq major-mode 'text-mode)
+                 (memq major-mode
+                       (mapcar #'car flycheck-textlint-plugin-alist)))))
+
 (flycheck-def-config-file-var flycheck-typescript-tslint-config
     typescript-tslint "tslint.json"
   :safe #'stringp
@@ -10593,7 +10769,7 @@ pass the language standard via the `--std' option."
 (make-variable-buffer-local 'flycheck-ghdl-language-standard)
 
 (flycheck-def-option-var flycheck-ghdl-workdir nil vhdl-ghdl
-  "The directory to use for the file library
+  "The directory to use for the file library.
 
 The value of this variable is either a string with the directory
 to use for the file library, or nil, to use the default value.
@@ -10604,6 +10780,21 @@ When non-nil, pass the directory via the `--workdir' option."
   :package-version '(flycheck . "32"))
 (make-variable-buffer-local 'flycheck-ghdl-workdir)
 
+(flycheck-def-option-var flycheck-ghdl-ieee-library nil vhdl-ghdl
+  "The standard to use for the IEEE library.
+
+The value of this variable is either a string denoting an ieee library
+standard, or nil, to use the default standard.  When non-nil,
+pass the ieee library standard via the `--ieee' option."
+  :type '(choice (const :tag "Default standard" nil)
+                 (const :tag "No IEEE Library" "none")
+                 (const :tag "IEEE standard" "standard")
+                 (const :tag "Synopsys standard" "synopsys")
+                 (const :tag "Mentor standard" "mentor"))
+  :safe #'stringp
+  :package-version '(flycheck . "32"))
+(make-variable-buffer-local 'flycheck-ghdl-ieee-library)
+
 (flycheck-define-checker vhdl-ghdl
   "A VHDL syntax checker using GHDL.
 
@@ -10612,6 +10803,7 @@ See URL `https://github.com/ghdl/ghdl'."
             "-s" ; only do the syntax checking
             (option "--std=" flycheck-ghdl-language-standard concat)
             (option "--workdir=" flycheck-ghdl-workdir concat)
+            (option "--ieee=" flycheck-ghdl-ieee-library concat)
             source)
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": " (message) line-end))
