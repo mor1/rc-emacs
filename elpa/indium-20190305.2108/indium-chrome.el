@@ -57,8 +57,12 @@
 
 (defcustom indium-chrome-use-temporary-profile
   t
-  "When non-nil, each invocation of the browser uses a new temporary profile."
+  "When non-nil, each invocation of the browser uses a temporary profile.
+The temporary profile can be set with `indium-chrome-data-dir'."
   :type '(boolean))
+
+(defvar indium-chrome-data-dir (make-temp-file nil t)
+  "Chrome profile directory used by Indium.")
 
 (defun indium-launch-chrome (conf)
   "Start chrome/chromium with remote debugging enabled based on CONF settings."
@@ -76,7 +80,7 @@
   (list (indium-chrome--find-executable)
 	(format "--remote-debugging-port=%s" port)
 	(if indium-chrome-use-temporary-profile
-	    (format "--user-data-dir=%s" (make-temp-file nil t))
+	    (format "--user-data-dir=%s" indium-chrome-data-dir)
 	  "")
 	url))
 
