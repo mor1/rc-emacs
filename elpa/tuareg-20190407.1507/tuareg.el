@@ -301,7 +301,7 @@ Valid names are `browse-url', `browse-url-firefox', etc."
     ("Read only input" . 'tuareg-interactive-read-only-input))
   "*List of menu-configurable Tuareg options.")
 
-(defvar tuareg-interactive-program "ocaml"
+(defvar tuareg-interactive-program "ocaml -nopromptcont"
   "*Default program name for invoking an OCaml REPL (aka toplevel) from Emacs.")
 ;; Could be interesting to have this variable buffer-local
 ;;   (e.g., ocaml vs. metaocaml buffers)
@@ -798,7 +798,14 @@ for the interactive mode."
   (setq
    tuareg-font-lock-keywords
    `(("^#[0-9]+ *\\(?:\"[^\"]+\"\\)?" 0 tuareg-font-lock-line-number-face t)
-     ,@(if interactive-p
+     ;; cppo
+     (,(concat "^ *#" (regexp-opt '("define" "undef" "if" "ifdef" "ifndef"
+				    "else" "elif" "endif" "include"
+				    "warning" "error" "ext" "endext")
+				  'symbols))
+      . font-lock-preprocessor-face)
+      ;; Directives
+      ,@(if interactive-p
            `((,(concat "^# +\\(#" lid "\\)")
               1 tuareg-font-lock-interactive-directive-face)
              (,(concat "^ *\\(#" lid "\\)")
@@ -820,17 +827,11 @@ for the interactive mode."
 					"fun" "function" "match"))
 	       "\\|;\\)\\(" maybe-infix-attr "\\)")
       1 tuareg-font-lock-infix-extension-node-face)
-     ;; cppo
-     (,(concat "^ *#" (regexp-opt '("define" "undef" "if" "ifdef" "ifndef"
-				    "else" "elif" "endif" "include"
-				    "warning" "error" "ext" "endext")
-				  'words))
-      . font-lock-preprocessor-face)
      ("\\<\\(false\\|true\\)\\>" . font-lock-constant-face)
      (,(regexp-opt '("true" "false" "__LOC__" "__FILE__" "__LINE__"
                      "__MODULE__" "__POS__" "__LOC_OF__" "__LINE_OF__"
                      "__POS_OF__")
-                   'words)
+                   'symbols)
       . font-lock-constant-face)
      ;; "type" to introduce a local abstract type considered a keyword
      (,(concat "( *\\(type\\) +\\(" lid " *\\)+)")
@@ -858,7 +859,7 @@ for the interactive mode."
                      "method" "external" "val" "open"
                      "initializer" "let" "rec" "nonrec"
                      "object" "and" "begin" "end")
-                   'words)
+                   'symbols)
       . tuareg-font-lock-governing-face)
      ,@(if (tuareg-editing-ls3)
            `((,(concat "\\<\\(let[ \t]+" let-ls3 "\\)\\>")
@@ -869,7 +870,7 @@ for the interactive mode."
          (if (tuareg-editing-ls3)
              (progn (push "reset" kwd)  (push "merge" kwd)
                     (push "emit" kwd)  (push "period" kwd)))
-         (regexp-opt kwd 'words))
+         (regexp-opt kwd 'symbols))
       . font-lock-keyword-face)
      ;; with type: "with" treated as a governing keyword
      (,(concat "\\<\\(\\(?:with\\|and\\) +type\\(?: +nonrec\\)?\\>\\) *"
@@ -901,7 +902,7 @@ for the interactive mode."
                "\\|virtual\\(?: +private\\)?\\)\\>\\)?")
       1 tuareg-font-lock-governing-face keep t)
      ;; Other uses of "with", "mutable", "private", "virtual"
-     (,(regexp-opt '("of" "with" "mutable" "private" "virtual") 'words)
+     (,(regexp-opt '("of" "with" "mutable" "private" "virtual") 'symbols)
       . font-lock-keyword-face)
      ;;; labels
      (,(concat "\\([?~]" lid "\\)" tuareg--whitespace-re ":[^:>=]")
@@ -921,7 +922,7 @@ for the interactive mode."
 		     "Failure" "Not_found" "Out_of_memory" "Stack_overflow"
 		     "Sys_error" "End_of_file" "Division_by_zero"
 		     "Sys_blocked_io" "Undefined_recursive_module")
-                   'words)
+                   'symbols)
       . font-lock-builtin-face)
      ;; module paths A.B.
      (,(concat module-path "\\.") . tuareg-font-lock-module-face)
@@ -936,7 +937,7 @@ for the interactive mode."
                 "not" "lnot" "mod" "fby" "pre" "last" "at")
             '("asr" "asl" "lsr" "lsl" "or" "lor" "land"
               "lxor" "not" "lnot" "mod"))
-          'words))
+          'symbols))
       . tuareg-font-lock-operator-face)
      ;;; (expr: t) and (expr :> t)
      ;;; If `t' is longer then one word, require a space before.  Not only
@@ -2446,8 +2447,7 @@ Short cuts for interactions with the REPL:
     (tuareg--common-mode-setup)
     (tuareg--install-font-lock)
 
-    (if (functionp 'tuareg-imenu-create-index)
-        (setq-local imenu-create-index-function #'tuareg-imenu-create-index))
+    (setq imenu-create-index-function #'tuareg-imenu-create-index)
     (run-mode-hooks 'tuareg-load-hook)))
 
 (defconst tuareg-starters-syms
@@ -2518,11 +2518,11 @@ characters \\([0-9]+\\)-\\([0-9]+\\)"
   "Regular expression matching the error messages produced by ocamlc/ocamlopt.")
 
 (when (boundp 'compilation-error-regexp-alist-alist)
-    (add-to-list 'compilation-error-regexp-alist-alist
-                 `(ocaml ,tuareg--error-regexp 1 2 (3 . 4))))
+  (push `(ocaml ,tuareg--error-regexp 1 2 (3 . 4))
+        compilation-error-regexp-alist-alist))
 
 (when (boundp 'compilation-error-regexp-alist)
-  (add-to-list 'compilation-error-regexp-alist 'ocaml)
+  (push 'ocaml compilation-error-regexp-alist)
 
   (eval-after-load 'caml
     ;; caml-mode also changes `compilation-error-regexp-alist' with a
@@ -2530,7 +2530,7 @@ characters \\([0-9]+\\)-\\([0-9]+\\)"
     #'(lambda()
         (setq compilation-error-regexp-alist
               (delete 'ocaml compilation-error-regexp-alist))
-        (add-to-list 'compilation-error-regexp-alist 'ocaml))))
+        (push 'ocaml compilation-error-regexp-alist))))
 
 
 ;; Wrapper around next-error.
@@ -3054,6 +3054,8 @@ it is the first position of the buffer)."
 (defun tuareg-eval-phrase ()
   "Eval the surrounding OCaml phrase (or block) in the OCaml REPL."
   (interactive)
+  (let ((ppss (syntax-ppss)))
+    (if (nth 4 ppss) (goto-char (nth 8 ppss))))
   (let* ((pos (tuareg--after-double-colon))
          (pos (if pos pos (point)))
          (phrase (tuareg-discover-phrase pos)))
@@ -3328,9 +3330,20 @@ Short cuts for interaction within the REPL:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;			    Imenu support
 
-(when (let (abbrevs-changed)            ;Workaround for tuareg#146
-        (require 'caml nil t))
-  (defalias 'tuareg-imenu-create-index 'caml-create-index-function))
+(defun tuareg-imenu-create-index ()
+  "Create an index alist for OCaml files using `merlin-imenu' or `caml-mode'.
+See `imenu-create-index-function'."
+  (cond
+   ((require 'merlin-imenu nil t)
+    (merlin-imenu-create-index))
+   ((let (abbrevs-changed)            ;Workaround for tuareg#146
+      (require 'caml nil t))
+    (caml-create-index-function))
+   (t
+    (message "Install Merlin or caml-mode.")
+    ;; Cannot return the empty list `nil' because imenu will issue its
+    ;; own warning.
+    '(("Install Merlin or caml-mode" . 0)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      Related files & modes
@@ -3342,8 +3355,8 @@ Short cuts for interaction within the REPL:
 (when (require 'speedbar nil t)
   (speedbar-add-supported-extension
    '(".ml" ".mli" ".mll" ".mly" ".mlp" ".ls"))
-  (add-to-list 'speedbar-obj-alist '("\\.mli$" . ".cmi"))
-  (add-to-list 'speedbar-obj-alist '("\\.ml$"  . ".cmo")))
+  (push '("\\.mli$" . ".cmi") speedbar-obj-alist)
+  (push '("\\.ml$"  . ".cmo") speedbar-obj-alist))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             Hooks and Exit

@@ -41,7 +41,7 @@
 ;;                       Syntax highlighting
 
 (defface tuareg-opam-error-face
-  '((t (:foreground "yellow" :background "red" :bold t)))
+  '((t (:inherit error)))
   "Face for constructs considered as errors (e.g. deprecated constructs)."
   :group 'tuareg-opam)
 
@@ -51,23 +51,25 @@
 (defconst tuareg-opam-keywords
   '("opam-version" "name" "version" "maintainer" "authors"
     "license" "homepage" "doc" "bug-reports" "dev-repo"
-    "tags" "patches" "substs" "build" "install"
-    "build-doc" "remove" "depends" "depopts" "conflicts"
+    "tags" "patches" "substs" "build" "install" "run-test"
+    "remove" "depends" "depopts" "conflicts" "conflict-class"
     "depexts" "messages" "post-messages" "available"
-    "flags")
+    "flags" "features" "synopsis" "description" "url" "setenv"
+    "build-env" "extra-files" "pin-depends")
   "Kewords in OPAM files.")
 
 (defconst tuareg-opam-keywords-regex
   (regexp-opt tuareg-opam-keywords 'symbols))
 
 (defconst tuareg-opam-variables-regex
-  (regexp-opt '("user" "group" "make" "os" "root" "prefix" "lib"
+  (regexp-opt '("user" "group" "make" "root" "prefix" "lib"
                 "bin" "sbin" "doc" "stublibs" "toplevel" "man"
                 "share" "etc"
                 "name" "pinned"
+                "arch" "os" "os-distribution" "os-version" "os-family"
                 "ocaml-version" "opam-version" "compiler" "preinstalled"
                 "switch" "jobs" "ocaml-native" "ocaml-native-tools"
-                "ocaml-native-dynlink" "arch")
+                "ocaml-native-dynlink")
               'symbols)
   "Variables declared in OPAM.")
 
@@ -78,15 +80,24 @@
               'symbols)
   "Package variables in OPAM.")
 
+(defconst tuareg-opam-scopes-regex
+  (regexp-opt '("build" "with-test" "with-doc"
+                "pinned"
+                "true" "false")
+              'words)
+  "Package scopes")
+
 (defconst tuareg-opam-deprecated-regex
-  (eval-when-compile (regexp-opt '("build-test") 'symbols)))
+  (eval-when-compile (regexp-opt '("build-test" "build-doc") 'symbols)))
 
 (defvar tuareg-opam-font-lock-keywords
   `((,tuareg-opam-deprecated-regex . tuareg-opam-error-face)
-    (,(concat tuareg-opam-keywords-regex ":")
+    (,(concat "^" tuareg-opam-keywords-regex ":")
      1 font-lock-keyword-face)
-    (,(regexp-opt '("build" "test" "doc" "pinned" "true" "false") 'words)
-     . font-lock-constant-face)
+    ("^\\(extra-source\\)\\_>" 1 font-lock-keyword-face)
+    (,(concat "^\\(x-[[:alnum:]]+\\):")
+     1 font-lock-keyword-face)
+    (,tuareg-opam-scopes-regex . font-lock-constant-face)
     (,tuareg-opam-variables-regex . font-lock-variable-name-face)
     (,(concat "%{" tuareg-opam-variables-regex "}%")
      (1 font-lock-variable-name-face t))
@@ -201,7 +212,7 @@ characters \\([0-9]+\\)-\\([0-9]+\\): +\\([^\n]*\\)$"
 (define-skeleton tuareg-opam-insert-opam-form
   "Insert a minimal opam file."
   nil
-  "opam-version: \"1.2\"" > \n
+  "opam-version: \"2.0\"" > \n
   "maintainer: \"" _ "\"" > \n
   "authors: [" _ "]" > \n
   "tags: [" _ "]" > \n
@@ -211,12 +222,20 @@ characters \\([0-9]+\\)-\\([0-9]+\\): +\\([^\n]*\\)$"
   "bug-reports: \"" _ "\"" > \n
   "doc: \"" _ "\"" > \n
   "build: [" > \n
-  "[ \"dune\" \"subst\" ] {pinned}" > \n
-  "[ \"dune\" \"build\" \"-p\" name \"-j\" jobs \"--profile\" \"release\" ]" > \n
+  "[\"dune\" \"subst\"] {pinned}" > \n
+  "[\"dune\" \"build\" \"-p\" name \"-j\" jobs]" > \n
+  "[\"dune\" \"build\" \"@doc\"] {with-doc}" > \n
+  "]" > \n
+  "run-test: [" > \n
+  "[\"dune\" \"runtest\" \"-p\" name \"-j\" jobs] {with-test}" > \n
   "]" > \n
   "depends: [" > \n
+  "\"ocaml\" {>= \"4.02\"}" > \n
   "\"dune\" {build}" > \n
-  "]" > ?\n)
+  "]" > \n
+  "synopsis: \"\"" > \n
+  "description: \"\"\"" > \n
+  "\"\"\"" > ?\n)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
