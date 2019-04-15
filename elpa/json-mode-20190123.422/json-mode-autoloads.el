@@ -35,6 +35,8 @@ Major mode for editing JSON files
 
 \(fn)" t nil)
 
+(add-to-list 'magic-fallback-mode-alist '("^[{[]$" . json-mode))
+
 (autoload 'json-mode-show-path "json-mode" "\
 Print the path to the node at point to the minibuffer, and yank to the kill ring.
 
