@@ -1,4 +1,4 @@
-(define-package "merlin" "20190110.1029" "Mode for Merlin, an assistant for OCaml." 'nil :keywords
+(define-package "merlin" "20190323.930" "Mode for Merlin, an assistant for OCaml." 'nil :keywords
   '("ocaml" "languages")
   :authors
   '(("Frédéric Bour <frederic.bour(_)lakaban.net>"))

@@ -70,6 +70,15 @@
   "Report absence of .merlin or errors in .merlin in the lighter."
   :group 'merlin :type 'boolean)
 
+(defcustom merlin-client-log-function nil
+  "The function takes four arguments:
+   - the path to the merlin binary
+   - the name of the command
+   - the total time spent in the server (or -1 if that information is not available)
+   - the resulting state (\"return\", \"failure\" or \"interrupted\")
+Its return value is ignored."
+  :group 'merlin :type 'symbol)
+
 (defcustom merlin-configuration-function nil
   "The function takes no argument and returns the configuration for the current
 buffer, in a form suitable for `merlin-buffer-configuration'."
@@ -388,36 +397,46 @@ containing fields file, line and col."
 ;; Position management
 
 (defun merlin--goto-point (data)
-  "Go to the point indicated by `DATA' which must be an assoc list with fields
-line and col"
-  (goto-char (point-min))
-  (forward-line (1- (merlin-lookup 'line data 0)))
-  ; caml gives us the byte offset of the column, which doesn't necessarily match
-  ; the character offset, so we can't just use "forward-char"
-  (let* ((bol-offset (position-bytes (point)))
-         (col-offset (max 0 (merlin-lookup 'col data 0)))
-         (target-off (+ bol-offset col-offset)))
-    (goto-char (byte-to-position target-off))))
+  "Go to the point indicated by DATA which must be an assoc list with fields
+line and col. If narrowing is in effect, widen if DATA is outside the visible region."
+  (let ((line-num (merlin-lookup 'line data 0))
+        (col-byte-offset (merlin-lookup 'col data 0))
+        (target-pos (merlin--point-of-pos data)))
+    ;; If our target position is outside the narrowed region, we'll
+    ;; have to widen.
+    (when (or (< target-pos (point-min))
+              (> target-pos (point-max)))
+      (widen))
+    (goto-char target-pos)))
 
-(defun merlin--point-of-pos (pos)
-  "Return the buffer position corresponding to the merlin
-position POS."
-  (save-excursion
-    (merlin--goto-point pos)
-    (point)))
+(defun merlin--point-of-pos (data)
+  "Transform DATA (a remote merlin position) into a point.
+DATA must be an assoc list with fields line and col."
+  (let ((line-num (merlin-lookup 'line data 0))
+        (col-byte-offset (merlin-lookup 'col data 0)))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (goto-char (point-min))
+        (forward-line (1- line-num))
+        ;; Find the target position, converting the byte position to a
+        ;; character offset.
+        (let* ((bol-offset (position-bytes (point)))
+               (col-offset (max 0 col-byte-offset))
+               (target-off (+ bol-offset col-offset)))
+          (byte-to-position target-off))))))
 
 (defun merlin/make-point (data)
   "Transform DATA (a remote merlin position) into a point."
-  (save-excursion
-    (merlin--goto-point data)
-    (point)))
+  (merlin--point-of-pos data))
 
 (defun merlin/unmake-point (point)
   "Destruct POINT to line / col."
   (save-excursion
-    (goto-char point)
-    (beginning-of-line)
-    (format "%d:%d" (line-number-at-pos) (- point (point)))))
+   (save-restriction
+     (widen)
+     (goto-char point)
+     (format "%d:%d" (line-number-at-pos) (current-column)))))
 
 (defun merlin--make-bounds (data)
   "From a remote merlin object DATA {\"start\": LOC1; \"end\": LOC2},
@@ -440,9 +459,11 @@ return (LOC1 . LOC2)."
     (with-temp-buffer
       (let ((ob (current-buffer)))
         (with-current-buffer ib
-          (let ((default-directory wd))
-            (apply 'call-process-region (point-min) (point-max) path nil
-                   (list ob tmp) nil args))))
+          (save-restriction
+            (widen)
+            (let ((default-directory wd))
+              (apply 'call-process-region (point-min) (point-max) path nil
+                     (list ob tmp) nil args)))))
       (setq result (buffer-string))
       (merlin-debug "# stdout\n%s" result)
       (when tmp
@@ -512,17 +533,29 @@ return (LOC1 . LOC2)."
     ;; Call merlin process
     (setcdr (car merlin-debug-last-commands) (merlin--call-process binary args))))
 
+(defun merlin-client-logger (binary cmd timing result)
+  (when merlin-client-log-function
+    (funcall merlin-client-log-function binary cmd timing result)))
+
 (defun merlin/call (command &rest args)
   "Execute a command and parse output: return an sexp on success or throw an error"
   (let ((result (merlin--call-merlin command args)))
     (condition-case err
         (setq result (car (read-from-string result)))
       (error
+        (merlin-client-logger
+          (merlin-command) command -1 "failure")
         (error "merlin: error %s trying to parse answer: %s"
-               err result)))
-    (let ((notifications (cdr-safe (assoc 'notifications result)))
-          (class (cdr-safe (assoc 'class result)))
-          (value (cdr-safe (assoc 'value result))))
+               err result))
+      (quit
+        (merlin-client-logger
+          (merlin-command) command -1 "interrupted")))
+    (let* ((notifications (cdr-safe (assoc 'notifications result)))
+           (timing (cdr-safe (assoc 'timing result)))
+           (total (cdr-safe (assoc 'total timing)))
+           (class (cdr-safe (assoc 'class result)))
+           (value (cdr-safe (assoc 'value result))))
+      (merlin-client-logger (merlin-command) command total class)
       (dolist (notification notifications)
         (message "(merlin) %s" notification))
       (cond ((string-equal class "return") value)
@@ -734,10 +767,6 @@ return (LOC1 . LOC2)."
   (interactive)
   (setq merlin-erroneous-buffer nil)
   (remove-overlays nil nil 'merlin-kind 'error))
-
-(defun merlin--overlay (overlay)
-  "Returns non-nil if OVERLAY is managed by merlin."
-  (if overlay (overlay-get overlay 'merlin-kind) nil))
 
 (defun merlin--overlay-pending-error (overlay)
   "Returns non-nil if OVERLAY is about a pending error."
@@ -956,11 +985,10 @@ An ocaml atom is any string containing [a-z_0-9A-Z`.]."
 ;; POLARITY SEARCH ;;
 ;;;;;;;;;;;;;;;;;;;;;
 
-(defun merlin--search (query &optional point)
-  (unless point (setq point (point)))
+(defun merlin--search (query)
   (merlin/call "search-by-polarity"
                "-query" query
-               "-position" (merlin/unmake-point point)))
+               "-position" (merlin/unmake-point (point))))
 
 (defun merlin-search (query)
   (interactive "sSearch pattern: ")
@@ -1482,7 +1510,7 @@ Empty string defaults to jumping to all these."
         (occ-buff (merlin--get-occ-buff))
         (positions
          (mapcar (lambda (pos)
-                   (merlin--goto-point (assoc 'start pos))
+                   (merlin--point-of-pos (assoc 'start pos))
                    (cons (cons 'marker (point-marker)) pos))
                  lst)))
     (with-current-buffer occ-buff
@@ -1505,11 +1533,9 @@ Empty string defaults to jumping to all these."
                  (end (assoc 'end pos))
                  (line (cdr (assoc 'line start)))
                  (start-buf-pos (with-current-buffer src-buff
-                                  (merlin--goto-point start)
-                                  (point)))
+                                  (merlin--point-of-pos start)))
                  (end-buf-pos (with-current-buffer src-buff
-                                (merlin--goto-point end)
-                                (point)))
+                                (merlin--point-of-pos end)))
                  (prefix-length 8)
                  (start-offset (+ prefix-length
                                   (cdr (assoc 'col start))))
@@ -1645,21 +1671,43 @@ Empty string defaults to jumping to all these."
   "Return or update path of ocamlmerlin binary selected by configuration"
   (unless merlin-buffer-configuration
     (setq merlin-buffer-configuration (merlin--configuration)))
+
   (let ((command (merlin-lookup 'command merlin-buffer-configuration)))
     (unless command
-      (setq command (if (functionp merlin-command) (funcall merlin-command)
-                      merlin-command)))
-    (when (equal command 'opam)
-      (with-temp-buffer
-        (if (eq (call-process-shell-command
-                 "opam config var bin" nil (current-buffer) nil) 0)
-            (progn
-              (setq command (concat
-                             (replace-regexp-in-string "\n$" "" (buffer-string))
-                             "/ocamlmerlin"))
-              (push (cons 'command command) merlin-buffer-configuration))
-          (message "merlin-command: opam config failed (%S)" (buffer-string))
-          (setq command "ocamlmerlin"))))
+      (setq
+       command
+       (cond
+        ((functionp merlin-command) (funcall merlin-command))
+        ((stringp merlin-command) merlin-command)
+        ((equal merlin-command 'opam)
+         (with-temp-buffer
+           (if (eq (call-process-shell-command
+                    "opam config var bin" nil (current-buffer) nil) 0)
+               (let ((bin-path
+                      (replace-regexp-in-string "\n$" "" (buffer-string))))
+                 ;; the opam bin dir needs to be on the path, so if merlin
+                 ;; calls out to sub binaries (e.g. ocamlmerlin-reason), the
+                 ;; correct version is used rather than the version that
+                 ;; happens to be on the path
+
+                 ;; this was originally done via `opam exec' but that doesnt
+                 ;; work for opam 1, and added a performance hit
+                 (setq merlin-opam-bin-path (list (concat "PATH=" bin-path)))
+                 (concat bin-path "/ocamlmerlin"))
+
+             ;; best effort if opam is not available, lookup for the binary in
+             ;; the existing env
+             (progn
+               (message "merlin-command: opam config failed (%S)"
+                        (buffer-string))
+               "ocamlmerlin"))))))
+
+      ;; cache command in merlin-buffer configuration to avoid having to shell
+      ;; out to `opam` each time.
+      (push (cons 'command command) merlin-buffer-configuration)
+      (when (boundp 'merlin-opam-bin-path)
+        (push (cons 'env merlin-opam-bin-path) merlin-buffer-configuration)))
+
     command))
 
 ;;;;;;;;;;;;;;;;
@@ -1733,19 +1781,21 @@ Empty string defaults to jumping to all these."
 
 (defun merlin-lighter ()
   "Return the lighter for merlin which indicates the status of merlin process."
-  (let (messages)
+  (let (messages
+        (num-errors (length merlin-erroneous-buffer)))
     (when merlin-report-errors-in-lighter
       (cond ((not merlin--project-cache) nil)
             ((cdr-safe merlin--project-cache)
-             (add-to-list 'messages "check config!"))
+             (push "check config!" messages))
             ((not (car-safe merlin--project-cache))
-             (add-to-list 'messages "no .merlin"))))
-    (when merlin-erroneous-buffer
-      (add-to-list 'messages "errors in buffer"))
+             (push "no .merlin" messages))))
+    (unless (zerop num-errors)
+      (push (format "%d error%s" num-errors (if (> num-errors 1) "s" ""))
+            messages))
     (when (and merlin-show-instance-in-lighter
                (merlin-lookup 'name merlin-buffer-configuration))
-      (add-to-list 'messages
-                   (merlin-lookup 'name merlin-buffer-configuration)))
+      (push (merlin-lookup 'name merlin-buffer-configuration)
+            messages))
     (if messages
         (concat " Merlin (" (mapconcat 'identity messages ",") ")")
       " Merlin")))
