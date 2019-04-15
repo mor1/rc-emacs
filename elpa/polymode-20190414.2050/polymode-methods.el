@@ -61,30 +61,36 @@ Ran by the polymode mode function."
             pm/type nil)
       (pm--common-setup)
       ;; Initialize innermodes
-      (let* ((inner-syms (delete-dups
-                          (delq :inherit
-                                (apply #'append
-                                       (pm--collect-parent-slots
-                                        config 'innermodes
-                                        (lambda (obj) (memq :inherit (eieio-oref obj 'innermodes)))))))))
-        (oset config -innermodes
-              (mapcar (lambda (sub-name)
-                        (clone (symbol-value sub-name)))
-                      inner-syms)))
+      (pm--initialize-innermodes config)
       ;; FIXME: must go into polymode-compat.el
       (add-hook 'flyspell-incorrect-hook
                 'pm--flyspel-dont-highlight-in-chunkmodes nil t))
     (pm--run-init-hooks hostmode 'host 'polymode-init-host-hook)))
 
+(defun pm--initialize-innermodes (config)
+  (let ((inner-syms (delete-dups
+                     (delq :inherit
+                           (apply #'append
+                                  (pm--collect-parent-slots
+                                   config 'innermodes
+                                   (lambda (obj)
+                                     (memq :inherit
+                                           (eieio-oref obj 'innermodes)))))))))
+    (oset config -innermodes
+          (mapcar (lambda (sub-name)
+                    (clone (symbol-value sub-name)))
+                  inner-syms))))
+
 (cl-defmethod pm-initialize ((chunkmode pm-inner-chunkmode) &optional type mode)
   "Initialization of chunkmode (indirect) buffers."
   ;; run in chunkmode indirect buffer
   (setq mode (or mode (pm--get-innermode-mode chunkmode type)))
-  (let ((pm-initialization-in-progress t)
-        (new-name  (generate-new-buffer-name
-                    (format "%s[%s]" (buffer-name (pm-base-buffer))
-                            (replace-regexp-in-string "poly-\\|-mode" ""
-                                                      (symbol-name mode))))))
+  (let* ((pm-initialization-in-progress t)
+         (post-fix (replace-regexp-in-string "poly-\\|-mode" "" (symbol-name mode)))
+         (new-name  (generate-new-buffer-name
+                     (format "%s[%s]" (buffer-name (pm-base-buffer))
+                             (or (cdr (assoc post-fix polymode-mode-abbrev-aliases))
+                                 post-fix)))))
     (rename-buffer new-name)
     (pm--mode-setup mode)
     (pm--move-vars '(pm/polymode buffer-file-coding-system) (pm-base-buffer))
@@ -120,10 +126,11 @@ Ran by the polymode mode function."
             (poly-lock-allow-fontification nil))
         ;; run-mode-hooks needs buffer-file-name
         (when base
-          (pm--move-vars pm-move-vars-from-base base (current-buffer)))
+          (pm--move-vars polymode-move-these-vars-from-base-buffer base (current-buffer)))
         (condition-case-unless-debug err
             (funcall mode)
-          (error (message "Polymode error (pm--mode-setup '%s): %s" mode (error-message-string err))))))
+          (error (message "Polymode error (pm--mode-setup '%s): %s"
+                          mode (error-message-string err))))))
     (setq polymode-mode t)
     (current-buffer)))
 
@@ -147,22 +154,6 @@ initialized. Return the buffer."
                   indent-region-function))
     (setq-local indent-region-function #'pm-indent-region)
 
-    ;; SYNTAX
-    ;; Ideally this should be called in some hook to avoid minor-modes messing
-    ;; it up Setting even if syntax-propertize-function is nil to have more
-    ;; control over syntax-propertize--done.
-    (unless (eq syntax-propertize-function #'polymode-syntax-propertize)
-      (setq-local pm--syntax-propertize-function-original syntax-propertize-function)
-      (setq-local syntax-propertize-function #'polymode-syntax-propertize))
-
-    (with-no-warnings
-      ;; [OBSOLETE as of 25.1 but we still protect it]
-      (pm-around-advice syntax-begin-function 'pm-override-output-position))
-
-    ;; flush ppss in all buffers and hook checks
-    (add-hook 'before-change-functions 'polymode-before-change-setup t t)
-    (setq-local syntax-ppss-wide (cons nil nil))
-
     ;; FILL
     (setq-local pm--fill-forward-paragraph-original fill-forward-paragraph-function)
     (setq-local fill-forward-paragraph-function #'polymode-fill-forward-paragraph)
@@ -174,15 +165,37 @@ initialized. Return the buffer."
 
     ;; FONT LOCK (see poly-lock.el)
     (setq-local font-lock-function 'poly-lock-mode)
-    ;; Font lock is initialized in `after-change-major-mode-hook' by means of
-    ;; `run-mode-hooks' and poly-lock won't get installed if polymode is
-    ;; installed as minor mode or interactively. We add font/poly-lock in all
-    ;; buffers because this is how inner buffers are installed, but
-    ;; `poly-lock-allow-fontification' is intended for buffers which don't want
-    ;; font-lock.
+    ;; Font lock is a globalized minor mode and is thus initialized in
+    ;; `after-change-major-mode-hook' within `run-mode-hooks'. As a result
+    ;; poly-lock won't get installed if polymode is installed as a minor mode or
+    ;; interactively. We add font/poly-lock in all buffers (because this is how
+    ;; inner buffers are installed) but use `poly-lock-allow-fontification' to
+    ;; disallow fontification in buffers which don't want font-lock (aka those
+    ;; buffers where `turn-on-font-lock-if-desired' doesn't activate font-lock).
+    (turn-on-font-lock-if-desired) ; <- need this for the sake of poly-minor-modes
+    ;; FIXME: can poly-lock-mode be used here instead?
     (setq-local poly-lock-allow-fontification font-lock-mode)
+    ;; Make sure to re-install with our font-lock-function as
+    ;; `turn-on-font-lock-if-desired' from above might actually not call it.
     (font-lock-mode t)
     (font-lock-flush)
+
+    ;; SYNTAX (must be done after font-lock for after-change order)
+    ;; Ideally this should be called in some hook to avoid minor-modes messing
+    ;; it up. Setting it up even if syntax-propertize-function is nil to have
+    ;; more control over syntax-propertize--done.
+    (with-no-warnings
+      ;; [OBSOLETE as of 25.1 but we still protect it]
+      (pm-around-advice syntax-begin-function 'pm-override-output-position))
+    (unless (eq syntax-propertize-function #'polymode-syntax-propertize)
+      (setq-local pm--syntax-propertize-function-original syntax-propertize-function)
+      (setq-local syntax-propertize-function #'polymode-syntax-propertize))
+    (setq-local syntax-ppss-wide (cons nil nil))
+    ;; Flush ppss in all buffers. Must be done in first after-change (see
+    ;; https://lists.gnu.org/archive/html/emacs-devel/2019-03/msg00500.html)
+    ;; TODO: Consider just advising syntax-ppss-flush-cache once the above is
+    ;; fixed in emacs.
+    (add-hook 'after-change-functions 'polymode-flush-syntax-ppss-cache nil t)
 
     (current-buffer)))
 
@@ -213,14 +226,16 @@ Create and initialize the buffer if does not exist yet.")
       (let ((new-buff (pm--get-innermode-buffer-create chunkmode type)))
         (pm--set-innermode-buffer chunkmode type new-buff)))))
 
-(defun pm--get-innermode-buffer-create (chunkmode type)
+(defun pm--get-innermode-buffer-create (chunkmode type &optional force-new)
   (let ((mode (pm--get-innermode-mode chunkmode type)))
     (or
-     ;; 1. look through existent buffer list
-     (cl-loop for bf in (eieio-oref pm/polymode '-buffers)
-              when (and (buffer-live-p bf)
-                        (eq mode (buffer-local-value 'major-mode bf)))
-              return bf)
+     ;; 1. search through the existing buffer list
+     (unless force-new
+       (cl-loop for bf in (eieio-oref pm/polymode '-buffers)
+                when (let ((out (and (buffer-live-p bf)
+                                     (eq mode (buffer-local-value 'major-mode bf)))))
+                       out)
+                return bf))
      ;; 2. create new
      (with-current-buffer (pm-base-buffer)
        (let* ((new-name (generate-new-buffer-name (buffer-name)))
@@ -228,6 +243,19 @@ Create and initialize the buffer if does not exist yet.")
          (with-current-buffer new-buffer
            (pm-initialize chunkmode type mode))
          new-buffer)))))
+
+(defun pm-get-buffer-of-mode (mode)
+  (let ((mode (pm--true-mode-symbol mode)))
+    (or
+     ;; 1. search through the existing buffer list
+     (cl-loop for bf in (eieio-oref pm/polymode '-buffers)
+              when (and (buffer-live-p bf)
+                        (eq mode (buffer-local-value 'major-mode bf)))
+              return bf)
+     ;; 2. create new if body mode matched
+     (cl-loop for imode in (eieio-oref pm/polymode '-innermodes)
+              when (eq mode (eieio-oref imode 'mode))
+              return (pm--get-innermode-buffer-create imode 'body 'force)))))
 
 (defun pm--set-innermode-buffer (obj type buff)
   "Assign BUFF to OBJ's slot(s) corresponding to TYPE."
@@ -294,13 +322,15 @@ in this case."
 ;; fixme: cache somehow?
 (defun pm--get-auto-span (span)
   (let* ((proto (nth 3 span))
-         (type (car span)))
+         (type (car span))
+         (sbeg (nth 1 span)))
     (save-excursion
-      (goto-char (nth 1 span))
+      (goto-char sbeg)
       (unless (eq type 'head)
         (goto-char (nth 2 span)) ; fixme: add multiline matchers to micro-optimize this
         (let ((matcher (pm-fun-matcher (eieio-oref proto 'head-matcher))))
-          (goto-char (car (funcall matcher -1)))))
+          ;; can be multiple incomplete spans within a span
+          (while (< sbeg (goto-char (car (funcall matcher -1)))))))
       (let* ((str (let ((matcher (eieio-oref proto 'mode-matcher)))
                     (when (stringp matcher)
                       (setq matcher (cons matcher 0)))
@@ -309,9 +339,10 @@ in this case."
                             (match-string-no-properties (cdr matcher)))
                            ((functionp matcher)
                             (funcall matcher)))))
-             (mode (pm-get-mode-symbol-from-name str (eieio-oref proto 'mode))))
+             (mode (pm-get-mode-symbol-from-name str (eieio-oref proto 'fallback-mode))))
         (if (eq mode 'host)
-            span
+            (progn (setf (nth 3 span) (oref pm/polymode -hostmode))
+                   span)
           ;; chunkname:MODE serves as ID (e.g. `markdown-fenced-code:emacs-lisp-mode`).
           ;; Head/tail/body indirect buffers are shared across chunkmodes and span
           ;; types.
@@ -351,13 +382,13 @@ in this case."
   "Used as `indent-line-function' for modes with tab indent."
   ;; adapted from indent-according-to-mode
   (let ((column (save-excursion
-		          (beginning-of-line)
-		          (if (bobp) 0
+                  (beginning-of-line)
+                  (if (bobp) 0
                     (beginning-of-line 0)
                     (if (looking-at "[ \t]*$") 0 (current-indentation))))))
-	(if (<= (current-column) (current-indentation))
-	    (indent-line-to column)
-	  (save-excursion (indent-line-to column)))))
+    (if (<= (current-column) (current-indentation))
+        (indent-line-to column)
+      (save-excursion (indent-line-to column)))))
 
 (defun pm--indent-raw (span fn-sym &rest args)
   ;; fixme: do save-excursion instead of this?
@@ -376,11 +407,11 @@ in this case."
     (goto-char point)))
 
 (defun pm--indent-line-raw (span)
-  (pm--indent-raw span #'pm--indent-line-function-original)
+  (pm--indent-raw span 'pm--indent-line-function-original)
   (pm--reindent-with+-indent span (point-at-bol) (point-at-eol)))
 
 (defun pm--indent-region-raw (span beg end)
-  (pm--indent-raw span #'pm--indent-region-function-original beg end)
+  (pm--indent-raw span 'pm--indent-region-function-original beg end)
   (pm--reindent-with+-indent span beg end))
 
 (defun pm-indent-region (beg end)
@@ -426,7 +457,7 @@ Value of `indent-line-function' in polymode buffers."
 Protect and call original indentation function associated with
 the chunkmode.")
 
-(cl-defmethod pm-indent-line ((chunkmode pm-chunkmode) span)
+(cl-defmethod pm-indent-line ((_chunkmode pm-chunkmode) span)
   (let ((pos (point))
         (delta))
     (back-to-indentation)
@@ -447,7 +478,7 @@ the chunkmode.")
     (when (and delta (> delta 0))
       (goto-char (+ (point) delta)))))
 
-(cl-defmethod pm-indent-line ((chunkmode pm-inner-chunkmode) span)
+(cl-defmethod pm-indent-line ((_chunkmode pm-inner-chunkmode) span)
   "Indent line in inner chunkmodes.
 When point is at the beginning of head or tail, use parent chunk
 to indent."
@@ -591,8 +622,6 @@ to indent."
          (or (eieio-oref chunkmode 'tail-adjust-face)
              (eieio-oref chunkmode 'head-adjust-face)))
         (t (eieio-oref chunkmode 'adjust-face))))
-
-(provide 'polymode-methods)
 
 (provide 'polymode-methods)
 

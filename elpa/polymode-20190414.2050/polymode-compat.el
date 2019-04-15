@@ -228,9 +228,13 @@ changes."
 
 ;;; Editing
 
-
 ;; (pm-around-advice 'fill-paragraph #'pm-execute-narrowed-to-span)
 ;; (advice-remove 'fill-paragraph #'pm-execute-narrowed-to-span)
+
+
+;; Synchronization of points does not work always as expected because some low
+;; level functions move indirect buffers' points when operate in the base
+;; buffer. See comment in `polymode-with-current-base-buffer'.
 
 ;; (defun polymode-with-save-excursion (orig-fun &rest args)
 ;;   "Execute ORIG-FUN surrounded with `save-excursion'.
@@ -242,9 +246,6 @@ changes."
 ;;       (save-excursion
 ;;         (apply orig-fun args))
 ;;     (apply orig-fun args)))
-
-;; We are synchronizing point in pre-command-hook so the following hack is no
-;; longer needed. Leaving here as a reference for the time being.
 ;;
 ;; `save-buffer` misbehaves because after each replacement modification hooks
 ;; are triggered and poly buffer is switched in unpredictable fashion (#93).
@@ -280,7 +281,9 @@ changes."
         (setf (nth 2 out) (buffer-name base))
         out))))
 
-(advice-add #'desktop-buffer-info :around #'polymode-fix-desktop-buffer-info)
+(declare-function desktop-buffer-info "desktop")
+(with-eval-after-load "desktop"
+  (advice-add #'desktop-buffer-info :around #'polymode-fix-desktop-buffer-info))
 
 
 ;;; MATLAB #199
@@ -305,7 +308,25 @@ changes."
           (evil-change-state old-state))))))
 
 (eval-after-load 'evil-core
-  '(add-hook 'polymode-switch-buffer-hook 'polymode-switch-buffer-keep-evil-state-maybe))
+  '(add-hook 'polymode-after-switch-buffer-hook 'polymode-switch-buffer-keep-evil-state-maybe))
+
+
+;;; HL line
+
+(defvar hl-line-mode)
+(defvar global-hl-line-mode)
+(declare-function hl-line-unhighlight "hl-line")
+(declare-function global-hl-line-unhighlight "hl-line")
+(add-to-list 'polymode-move-these-minor-modes-from-old-buffer 'hl-line-mode)
+(defun polymode-switch-buffer-hl-unhighlight (old-buffer _new-buffer)
+  (with-current-buffer old-buffer
+    ;; We are moving hl-line-mode already
+    (when hl-line-mode
+      (hl-line-unhighlight))
+    (when global-hl-line-mode
+      (global-hl-line-unhighlight))))
+(eval-after-load 'hl-line
+  '(add-hook 'polymode-after-switch-buffer-hook 'polymode-switch-buffer-hl-unhighlight))
 
 
 ;;; YAS

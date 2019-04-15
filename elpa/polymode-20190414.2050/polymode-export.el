@@ -38,7 +38,7 @@
   "Polymode Exporters"
   :group 'polymode)
 
-(defcustom polymode-exporter-output-file-format "%s[exported]"
+(defcustom polymode-exporter-output-file-format "%s-exported"
   "Format of the exported files.
 %s is substituted with the current file name sans extension."
   :group 'polymode-export
@@ -149,9 +149,10 @@
     :type (or symbol function)
     :documentation
     "Function to process the commmand. Must take 3 arguments
-     COMMAND, FROM-ID and TO-ID. COMMAND is the 4th argument
-     of :from spec with all the formats substituted. FROM-ID is
-     the id of requested :from spec, TO-ID is the id of the :to
+     COMMAND, FROM-ID and TO-ID and return an output file name or
+     a list of output file names. COMMAND is the 4th argument of
+     :from spec with all the formats substituted. FROM-ID is the
+     id of requested :from spec, TO-ID is the id of the :to
      spec."))
   "Root exporter class.")
 
@@ -161,10 +162,12 @@
     :initform nil
     :type (or symbol function)
     :documentation
-    "Callback function to be called by :function. There is no
-     default callback. Callback must return the output file
-     name."))
-  "Class to represent asynchronous exporters.")
+    "Callback function to be called by function in :function
+     slot. Callback must return an output file name or a list of
+     output file-names. There is no default callback."))
+  "Class to represent asynchronous exporters.
+:function slot must be a function with 4 arguments COMMAND,
+CALLBACK, FROM-ID and TO-ID.")
 
 (defclass pm-shell-exporter (pm-exporter)
   ((function
@@ -352,11 +355,12 @@ If NO-ASK-IF-1 is non-nil, don't ask if there is only one exporter."
     (error "No pm/polymode object found. Not in polymode buffer?"))
   (let* ((weavers (delete-dups (pm--oref-with-parents pm/polymode :weavers)))
          (exporters (pm--abrev-names
+                     "pm-exporter/\\|-exporter"
                      (cl-delete-if-not
                       (lambda (el)
                         (or (pm--matched-selectors el :from)
-                            ;; FIXME: this abomination
-                            ;; match weaver to exporter
+                            ;; FIXME: rewrite this abomination
+                            ;; Match weaver to the exporter.
                             (cl-loop for weaver in weavers
                                      if (cl-loop for w in (eieio-oref (symbol-value weaver) 'from-to)
                                                  ;; weaver input extension matches the filename
@@ -366,8 +370,7 @@ If NO-ASK-IF-1 is non-nil, don't ask if there is only one exporter."
                                                                  when (pm--selector-match el (concat "dummy." (nth 2 w)))
                                                                  return t))
                                      return t)))
-                      (delete-dups (pm--oref-with-parents pm/polymode :exporters)))
-                     "pm-exporter/"))
+                      (delete-dups (pm--oref-with-parents pm/polymode :exporters)))))
          (sel (if exporters
                   (if (and no-ask-if-1 (= (length exporters) 1))
                       (car exporters)
@@ -390,7 +393,8 @@ for each polymode in CONFIGS."
 
 
 ;;; GLOBAL EXPORTERS
-(defcustom pm-exporter/pandoc
+(define-obsolete-variable-alias 'pm-exporter/pandoc 'poly-pandoc-exporter "v0.2")
+(defcustom poly-pandoc-exporter
   (pm-shell-exporter
    :name "pandoc"
    :from

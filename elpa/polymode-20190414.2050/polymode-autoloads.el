@@ -30,9 +30,9 @@ Standard hook MODE-hook is run at the end of the initialization
 of each polymode buffer (both indirect and base buffers).
 
 This macro also defines the MODE-map keymap from the :keymap
-argument and PARENT-map (see below) and pm-poly/[MODE-NAME]
-custom variable which holds a `pm-polymode' configuration object
-for this polymode.
+argument and PARENT-map (see below) and poly-[MODE-NAME]-polymode
+variable which holds an object of class `pm-polymode' which holds
+the entire configuration for this polymode.
 
 PARENT is either the polymode configuration object or a polymode
 mode (there is 1-to-1 correspondence between config
@@ -93,7 +93,7 @@ most frequently used slots are:
 ;;;### (autoloads nil "polymode-base" "polymode-base.el" (0 0 0 0))
 ;;; Generated autoloads from polymode-base.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-base" '("pm-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-base" '("poly-")))
 
 ;;;***
 
@@ -118,9 +118,46 @@ most frequently used slots are:
 
 (defvar-local polymode-default-inner-mode nil "\
 Inner mode for chunks with unspecified modes.
-Intended to be used as local variable in polymode buffers.")
+Intended to be used as local variable in polymode buffers. A
+special value 'host means use the host mode.")
 
 (put 'polymode-default-inner-mode 'safe-local-variable 'symbolp)
+
+(autoload 'define-hostmode "polymode-core" "\
+Define a hostmode with name NAME.
+Optional PARENT is a name of a hostmode to be derived (cloned)
+from. If missing, the optional documentation string DOC is
+generated automatically. KEY-ARGS is a list of key-value pairs.
+See the documentation of the class `pm-host-chunkmode' for
+possible values.
+
+\(fn NAME &optional PARENT DOC &rest KEY-ARGS)" nil t)
+
+(function-put 'define-hostmode 'doc-string-elt '3)
+
+(autoload 'define-innermode "polymode-core" "\
+Ddefine an innermode with name NAME.
+Optional PARENT is a name of a innermode to be derived (cloned)
+from. If missing the optional documentation string DOC is
+generated automatically. KEY-ARGS is a list of key-value pairs.
+See the documentation of the class `pm-inner-chunkmode' for
+possible values.
+
+\(fn NAME &optional PARENT DOC &rest KEY-ARGS)" nil t)
+
+(function-put 'define-innermode 'doc-string-elt '3)
+
+(autoload 'define-auto-innermode "polymode-core" "\
+Ddefine an auto innermode with name NAME.
+Optional PARENT is a name of an auto innermode to be
+derived (cloned) from. If missing the optional documentation
+string DOC is generated automatically. KEY-ARGS is a list of
+key-value pairs. See the documentation of the class
+`pm-inner-auto-chunkmode' for possible values.
+
+\(fn NAME &optional PARENT DOC &rest KEY-ARGS)" nil t)
+
+(function-put 'define-auto-innermode 'doc-string-elt '3)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-core" '("polymode-" "*span*")))
 
@@ -193,7 +230,7 @@ Print values of relevant hooks and other variables.
 ;;;;;;  0 0))
 ;;; Generated autoloads from polymode-export.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-export" '("polymode-" "pm-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "polymode-export" '("pm-" "poly")))
 
 ;;;***
 

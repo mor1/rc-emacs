@@ -56,11 +56,6 @@
     :custom string
     :documentation
     "Name of the object used to for display and info.")
-   (-id
-    :initform 0
-    :type number
-    :documentation
-    "[Internal] Numeric id to track objects. Every object has an id.")
    (-props
     :initform '()
     :type list
@@ -74,12 +69,37 @@ into this list."))
   (eieio-oref obj 'name))
 
 (cl-defmethod clone ((obj pm-root) &rest params)
-  (let ((old-name (eieio-oref obj 'name))
-        (new-obj (apply #'cl-call-next-method obj params)))
+  (let ((new-obj (cl-call-next-method obj)))
+    ;; Emacs bug: clone method for eieio-instance-inheritor instantiates all
+    ;; slots for cloned objects. We want them unbound to allow for the healthy
+    ;; inheritance.
+    (pm--complete-clonned-object new-obj obj params)))
+
+(defun pm--complete-clonned-object (new-obj old-obj params)
+  (let ((old-name (eieio-oref old-obj 'name)))
     (when (equal old-name (eieio-oref new-obj 'name))
       (let ((new-name (concat old-name ":")))
-        (eieio-oset new-obj 'name new-name)))
-    new-obj))
+        (eieio-oset new-obj 'name new-name))))
+  (dolist (descriptor (eieio-class-slots (eieio-object-class old-obj)))
+    (let ((slot (eieio-slot-descriptor-name descriptor)))
+      (unless (memq slot '(parent-instance name))
+        (slot-makeunbound new-obj slot))))
+  (when params
+    (shared-initialize new-obj params))
+  new-obj)
+
+(defun pm--safe-clone (end-class obj &rest params)
+  "Clone to an object of END-CLASS.
+If END-CLASS is same as class of OBJ then just call `clone'.
+Otherwise do a bit more work by setting extra slots of the
+end-class. PARAMS are passed to clone or constructor functions."
+  (if (eq end-class (eieio-object-class obj))
+      (apply #'clone obj params)
+    (let ((new-obj (pm--complete-clonned-object
+                    (apply end-class params)
+                    obj params)))
+      (eieio-oset new-obj 'parent-instance obj)
+      new-obj)))
 
 (defclass pm-polymode (pm-root)
   ((hostmode
@@ -152,9 +172,23 @@ NEW-BUFFER.")
     "A list of elements of the form (KEY . BINDING).
 This slot is reserved for building hierarchies through cloning
 and should not be used in `define-polymode'.")
+   (keep-in-mode
+    :initarg :keep-in-mode
+    :initform nil
+    :type symbol
+    :custom symbol
+    :documentation
+    ;; NB: Using major-modes instead of innermode symbols for the sake of
+    ;; simplicity of the implementation and to allow for auto-modes.
+    "Major mode to keep in when polymode switches implementation buffers.
+When a special symbol 'host, keep in hostmode. The buffer with
+this major mode must be installed by one of the innermodes or the
+hostmode. If multiple innermodes installed buffers of this mode,
+the first buffer is used.")
 
    (-minor-mode
     :initform 'polymode-minor-mode
+    :initarg -minor-mode
     :type symbol
     :documentation
     "[Internal] Symbol pointing to minor-mode function.")
@@ -182,10 +216,6 @@ and should not be used in `define-polymode'.")
 Each polymode buffer holds a local variable `pm/polymode'
 instantiated from this class or a subclass of this class.")
 
-(defvar pm--polymode-slots
-  (mapcar #'cl--slot-descriptor-name
-          (eieio-class-slots 'pm-polymode)))
-
 (defclass pm-chunkmode (pm-root)
   ((mode
     :initarg :mode
@@ -194,15 +224,33 @@ instantiated from this class or a subclass of this class.")
     :custom symbol
     :documentation
     "Emacs major mode for the chunk's body.
-When nil the value of `polymode-default-inner-mode' is used when set;
-otherwise `poly-fallback-mode' is used. A special value 'host
-means to use the host mode as a fallback in the body of this
-chunk.")
+If :mode slot is nil (anonymous chunkmodes), use the value of
+`polymode-default-inner-mode' is when set, or use the value of
+the slot :fallback-mode. A special value 'host means to use the
+host mode (useful auto-chunkmodes only).")
+   (fallback-mode
+    :initarg :fallback-mode
+    :initform 'poly-fallback-mode
+    :type symbol
+    :custom symbol
+    :documentation
+    "Mode to use when mode lookup fails for various reasons. Can
+    take a special value 'host. Note that, when set,
+    `polymode-default-inner-mode' takes precedence over this
+    value.")
+   (allow-nested
+    :initarg :allow-nested
+    :initform t
+    :type symbol
+    :custom symbol
+    :documentation
+    "Non-nil if other inner-modes are allowed to nest within this
+inner-mode.")
    (indent-offset
     :initarg :indent-offset
     :initform 2
-    :type (or integer symbol)
-    :custom (or integer symbol)
+    :type (or number symbol)
+    :custom (choice number symbol)
     :documentation
     "Indentation offset for this mode.
 Currently this is only used in +indent and -indent cookies which
@@ -253,15 +301,15 @@ the trailing white spaces if any.")
     "Whether to narrow to span when calling `syntax-propertize-function'.")
    (adjust-face
     :initarg :adjust-face
-    :initform '()
+    :initform nil
     :type (or number face list)
     :custom (choice number face sexp)
     :documentation
     "Fontification adjustment for the body of the chunk.
 It should be either, nil, number, face or a list of text
-properties as in `put-text-property' specification. If nil no
-highlighting occurs. If a face, use that face. If a number, it is
-a percentage by which to lighten/darken the default chunk
+properties as in `put-text-property' specification. If nil or 0
+no highlighting occurs. If a face, use that face. If a number, it
+is a percentage by which to lighten/darken the default chunk
 background. If positive - lighten the background on dark themes
 and darken on light thems. If negative - darken in dark thems and
 lighten in light thems.")
@@ -288,6 +336,17 @@ Each function is run with two arguments, OLD-BUFFER and
 NEW-BUFFER. In contrast to identically named slot in
 `pm-polymode' class, these functions are run only when NEW-BUFFER
 is of this chunkmode.")
+   (keep-in-mode
+    :initarg :keep-in-mode
+    :initform nil
+    :type symbol
+    :custom symbol
+    :documentation
+    "Major mode to keep in when polymode switches implementation buffers.
+When a special symbol 'host, keep in hostmode. The buffer with
+this major mode must be installed by one of the innermodes or the
+hostmode. If multiple innermodes installed buffers of this mode,
+the first buffer is used.")
 
    (-buffer
     :type (or null buffer)
@@ -297,7 +356,10 @@ Please note that by default :protect-xyz slots are nil in
 hostmodes and t in innermodes.")
 
 (defclass pm-host-chunkmode (pm-chunkmode)
-  ()
+  ((allow-nested
+    ;; currently ignored in code as it doesn't make sense to not allow
+    ;; innermodes in hosts
+    :initform 'always))
   "This chunkmode doesn't know how to compute spans and takes
 over all the other space not claimed by other chunkmodes in the
 buffer.")
@@ -315,7 +377,7 @@ buffer.")
     :type boolean
     :custom boolean
     :documentation
-    "Non-nil if this chunk can nest within other inner modes.
+    "Non-nil if this inner-mode can nest within other inner-modes.
 All chunks can nest within the host-mode.")
    (can-overlap
     :initarg :can-overlap
@@ -335,14 +397,13 @@ See noweb for an example.")
 If set to 'host or 'body use host or body's mode respectively.")
    (tail-mode
     :initarg :tail-mode
-    :initform nil
+    :initform 'poly-head-tail-mode
     :type symbol
     :custom (choice (const nil :tag "From Head")
                     function)
     :documentation
     "Chunk's tail mode.
-If set to 'host or 'body use host or body's mode respectively. If
-nil, pick the mode from :head-mode slot.")
+If set to 'host or 'body use host or body's mode respectively.")
    (head-matcher
     :initarg :head-matcher
     :type (or string cons function)
@@ -350,10 +411,12 @@ nil, pick the mode from :head-mode slot.")
     :documentation
     "A regexp, a cons (REGEXP . SUB-MATCH) or a function.
 When a function, the matcher must accept one argument that can
-take either values 1 (forwards search) or -1 (backward search).
-This function must return either nil (no match) or a (cons BEG
-END) representing the span of the head or tail respectively. See
-the code of `pm-fun-matcher' for a simple example.")
+take either values 1 (forwards search) or -1 (backward search)
+and behave similarly to how search is performed by
+`re-search-forward' function. This function must return either
+nil (no match) or a (cons BEG END) representing the span of the
+head or tail respectively. See the code of `pm-fun-matcher' for a
+simple example.")
    (tail-matcher
     :initarg :tail-matcher
     :type (or string cons function)

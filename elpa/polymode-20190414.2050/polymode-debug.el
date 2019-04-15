@@ -153,6 +153,15 @@ With NO-CACHE prefix, don't use cached values of the span."
       ;; (move-overlay pm--highlight-overlay (nth 1 span) (nth 2 span) (current-buffer))
       (pm-debug-flick-region (nth 1 span) (nth 2 span)))))
 
+(defun pm-debug-report-points (&optional where)
+  (when polymode-mode
+    (let* ((bufs (eieio-oref pm/polymode '-buffers))
+           (poses (mapcar (lambda (b)
+                            (format "%s:%d" b (with-current-buffer b (point))))
+                          bufs)))
+      (message "<%s> cb:%s %s" (or where "") (current-buffer) poses)))
+  nil)
+
 
 ;;; TOGGLING
 
@@ -169,11 +178,19 @@ With NO-CACHE prefix, don't use cached values of the span."
   (if poly-lock-allow-fontification
       (progn
         (message "fontificaiton disabled")
-        (setq poly-lock-allow-fontification nil
-              font-lock-mode nil))
+        (dolist (b (buffer-list))
+          (with-current-buffer b
+            (when polymode-mode
+              (setq poly-lock-allow-fontification nil
+                    font-lock-mode nil
+                    fontification-functions nil)))))
     (message "fontificaiton enabled")
-    (setq poly-lock-allow-fontification t
-          font-lock-mode t)))
+    (dolist (b (buffer-list))
+      (with-current-buffer b
+        (when polymode-mode
+          (setq poly-lock-allow-fontification t
+                font-lock-mode t
+                fontification-functions '(poly-lock-function)))))))
 
 (defun pm-debug-toggle-after-change ()
   "Allow or disallow polymode actions in `after-change-functions'."
@@ -224,6 +241,7 @@ With NO-CACHE prefix, don't use cached values of the span."
   "Fontify current buffer."
   (interactive)
   (let ((poly-lock-allow-fontification t))
+    (font-lock-unfontify-buffer)
     (poly-lock-flush (point-min) (point-max))
     (poly-lock-fontify-now (point-min) (point-max))))
 
@@ -238,29 +256,40 @@ With NO-CACHE prefix, don't use cached values of the span."
         pm--mode-setup))
     ;; core hooks
     (1 (polymode-post-command-select-buffer
-        polymode-before-change-setup
-        polymode-after-kill-fixes))
+        polymode-after-kill-fixes
+        ;; this one indicates the start of a sequence
+        poly-lock-after-change))
     ;; advises
     (2 (pm-override-output-cons
         pm-around-advice
         polymode-with-current-base-buffer))
     ;; font-lock
-    (3 (poly-lock-function
-        poly-lock-fontify-now
-        poly-lock-flush
-        jit-lock-fontify-now
-        jit-lock--run-functions
+    (3 (font-lock-default-fontify-region
+        font-lock-fontify-keywords-region
         font-lock-fontify-region
-        font-lock-default-fontify-region
-        ;; poly-lock-adjust-span-face
-        poly-lock-after-change
+        font-lock-fontify-syntactically-region
+        font-lock-unfontify-region
+        jit-lock--run-functions
+        jit-lock-fontify-now
+        poly-lock--after-change-internal
+        poly-lock--extend-region
         poly-lock--extend-region-span
-        poly-lock--extend-region))
+        poly-lock-after-change
+        poly-lock-flush
+        poly-lock-fontify-now
+        poly-lock-function))
     ;; syntax
     (4 (pm--call-syntax-propertize-original
         polymode-syntax-propertize
         polymode-restrict-syntax-propertize-extension
-        pm--reset-ppss-cache))))
+        pm-flush-syntax-ppss-cache
+        pm--reset-ppss-cache))
+    ;; core functions
+    (5 (pm-select-buffer
+        pm-map-over-spans
+        pm--intersect-spans
+        pm--cached-span))
+    ))
 
 (defvar pm--do-trace nil)
 ;;;###autoload
@@ -293,7 +322,7 @@ currently traced functions."
      (let ((advice (trace-make-advice
                     fn buff 'background #'pm-trace--tracing-context)))
        (lambda (body &rest args)
-         (when (eq fn 'polymode-before-change-setup)
+         (when (eq fn 'polymode-flush-syntax-ppss-cache)
            (with-current-buffer buff
              (save-excursion
                (goto-char (point-max))
@@ -350,9 +379,8 @@ currently traced functions."
 ;;; RELEVANT VARIABLES
 
 (defvar pm-debug-relevant-variables
-  '(
-    :change (before-change-functions
-             after-change-functions)
+  `(:change
+    (before-change-functions after-change-functions)
     :command (pre-command-hook
               post-command-hook)
     :font-lock (fontification-functions
@@ -364,7 +392,8 @@ currently traced functions."
                 font-lock-unfontify-region-function
                 font-lock-unfontify-buffer-function
                 jit-lock-after-change-extend-region-functions
-                jit-lock-functions)
+                jit-lock-functions
+                poly-lock-defer-after-change)
     ;; If any of these are reset by host mode it can create issues with
     ;; font-lock and syntax (e.g. scala-mode in #195)
     :search (parse-sexp-lookup-properties
@@ -378,7 +407,10 @@ currently traced functions."
              before-revert-hook
              after-revert-hook)
     :save (after-save-hook
-           before-save-hook)
+           before-save-hook
+           write-contents-functions
+           local-write-file-hooks
+           write-file-functions)
     :syntax (syntax-propertize-function
              syntax-propertize-extend-region-functions
              pm--syntax-propertize-function-original)))
@@ -406,9 +438,10 @@ currently traced functions."
     (display-buffer buff)))
 
 (defun pm-debug-diff-local-vars (&optional buffer1 buffer2)
+  "Print differences between local variables in BUFFER1 and BUFFER2."
   (interactive)
-  (let* ((buffer1 (read-buffer "Buffer1: " (buffer-name (current-buffer))))
-         (buffer2 (read-buffer "Buffer2: " (buffer-name (nth 2 (buffer-list)))))
+  (let* ((buffer1 (or buffer1 (read-buffer "Buffer1: " (buffer-name (current-buffer)))))
+         (buffer2 (or buffer2 (read-buffer "Buffer2: " (buffer-name (nth 2 (buffer-list))))))
          (vars1 (buffer-local-variables (get-buffer buffer1)))
          (vars2 (buffer-local-variables (get-buffer buffer2)))
          (all-keys (delete-dups (append (mapcar #'car vars1)
