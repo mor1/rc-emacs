@@ -1,0 +1,2 @@
+;;; -*- no-byte-compile: t -*-
+(define-package "mu4e-conversation" "20190305.1636" "Show a complete thread in a single buffer" '((emacs "25.1")) :stars '("") :commit "fc3c9d3aca3cfae87001f95d505fab4fed597df0" :keywords '("mail" "convenience" "mu4e") :authors '(("Pierre Neidhardt" . "mail@ambrevar.xyz")) :maintainer '("Pierre Neidhardt" . "mail@ambrevar.xyz") :url "https://gitlab.com/Ambrevar/mu4e-conversation")
