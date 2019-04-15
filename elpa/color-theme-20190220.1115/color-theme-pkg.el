@@ -1,4 +1,4 @@
-(define-package "color-theme" "20080305.834" "install color themes" 'nil :keywords
+(define-package "color-theme" "20190220.1115" "An OBSOLETE color-theme implementation" 'nil :keywords
   '("faces")
   :authors
   '(("Jonadab the Unsightly One" . "jonadab@bright.net"))
