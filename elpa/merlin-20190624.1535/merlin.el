@@ -233,6 +233,8 @@ The association list can contain the following optional keys:
 ;; Internal variables ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defvar merlin-opam-bin-path nil)
+
 ;; If user did not specify its merlin-favourite-caml-mode, try to guess it from
 ;; the buffer being edited
 (defvar merlin-guessed-favorite-caml-mode nil)
@@ -436,7 +438,9 @@ DATA must be an assoc list with fields line and col."
    (save-restriction
      (widen)
      (goto-char point)
-     (format "%d:%d" (line-number-at-pos) (current-column)))))
+     (format "%d:%d" (line-number-at-pos)
+             (- (position-bytes (point))
+                (position-bytes (line-beginning-position)))))))
 
 (defun merlin--make-bounds (data)
   "From a remote merlin object DATA {\"start\": LOC1; \"end\": LOC2},
@@ -527,7 +531,7 @@ return (LOC1 . LOC2)."
                  args))
     ;; Log last commands
     (setq merlin-debug-last-commands
-          (cons (cons binary args) merlin-debug-last-commands))
+          (cons (cons (cons binary args) nil) merlin-debug-last-commands))
     (let ((cdr (nthcdr 5 merlin-debug-last-commands)))
       (when cdr (setcdr cdr nil)))
     ;; Call merlin process
@@ -552,10 +556,9 @@ return (LOC1 . LOC2)."
           (merlin-command) command -1 "interrupted")))
     (let* ((notifications (cdr-safe (assoc 'notifications result)))
            (timing (cdr-safe (assoc 'timing result)))
-           (total (cdr-safe (assoc 'total timing)))
            (class (cdr-safe (assoc 'class result)))
            (value (cdr-safe (assoc 'value result))))
-      (merlin-client-logger (merlin-command) command total class)
+      (merlin-client-logger (merlin-command) command timing class)
       (dolist (notification notifications)
         (message "(merlin) %s" notification))
       (cond ((string-equal class "return") value)
@@ -1065,7 +1068,7 @@ An ocaml atom is any string containing [a-z_0-9A-Z`.]."
     ))
 
 (defun merlin--type-display (bounds type &optional quiet)
-  "Display the type TYPE of the expression occuring at BOUNDS.
+  "Display the type TYPE of the expression occurring at BOUNDS.
 If QUIET is non nil, then an overlay and the merlin types can be used."
   (if (not type)
       (unless quiet (message "<no information>"))
@@ -1299,7 +1302,7 @@ strictly within, or nil if there is no such element."
 
 (defun merlin--project-get ()
   "Returns a pair of two string lists (dot_merlins . failures) with a list of
-.merlins file loaded and a list of error messages, if any error occured during
+.merlins file loaded and a list of error messages, if any error occurred during
 loading"
   (let ((ret (merlin/call "check-configuration")))
     (setq merlin--project-cache
@@ -1690,7 +1693,7 @@ Empty string defaults to jumping to all these."
                  ;; correct version is used rather than the version that
                  ;; happens to be on the path
 
-                 ;; this was originally done via `opam exec' but that doesnt
+                 ;; this was originally done via `opam exec' but that does not
                  ;; work for opam 1, and added a performance hit
                  (setq merlin-opam-bin-path (list (concat "PATH=" bin-path)))
                  (concat bin-path "/ocamlmerlin"))
@@ -1705,7 +1708,7 @@ Empty string defaults to jumping to all these."
       ;; cache command in merlin-buffer configuration to avoid having to shell
       ;; out to `opam` each time.
       (push (cons 'command command) merlin-buffer-configuration)
-      (when (boundp 'merlin-opam-bin-path)
+      (when merlin-opam-bin-path
         (push (cons 'env merlin-opam-bin-path) merlin-buffer-configuration)))
 
     command))

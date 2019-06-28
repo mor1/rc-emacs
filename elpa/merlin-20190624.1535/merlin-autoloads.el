@@ -45,7 +45,7 @@ Short cuts:
 
 \(fn COMMAND &optional ARG &rest IGNORED)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "merlin-company" '("merlin-company--")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "merlin-company" '("merlin-company-")))
 
 ;;;***
 
