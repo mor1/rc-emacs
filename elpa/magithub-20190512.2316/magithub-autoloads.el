@@ -10,7 +10,7 @@
 ;;; Generated autoloads from magithub.el
  (autoload 'magithub-dispatch-popup "magithub" nil t)
 
-(eval-after-load 'magit '(progn (require 'magit-popup) (when (boundp 'magit-dispatch-popup) (magit-define-popup-action 'magit-dispatch-popup 72 "Magithub" #'magithub-dispatch-popup 33)) (define-key magit-status-mode-map "H" #'magithub-dispatch-popup)))
+(eval-after-load 'magit '(progn (require 'transient) (when (functionp 'magit-am) (transient-append-suffix 'magit-dispatch "C-h m" '("H" "Magithub" magithub-dispatch-popup))) (define-key magit-status-mode-map "H" #'magithub-dispatch-popup)))
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub" '("magithub-")))
 
