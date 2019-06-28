@@ -4916,26 +4916,32 @@ same column as TABLE-CELL, or nil."
 		      (plist-put info :table-cell-width-cache table)
 		      table)))
 	 (width-vector (or (gethash table cache)
-			   (puthash table (make-vector columns 'empty) cache)))
-	 (value (aref width-vector column)))
-    (if (not (eq value 'empty)) value
-      (let (cookie-width)
-	(dolist (row (org-element-contents table)
-		     (aset width-vector column cookie-width))
-	  (when (org-export-table-row-is-special-p row info)
-	    ;; In a special row, try to find a width cookie at COLUMN.
-	    (let* ((value (org-element-contents
-			   (elt (org-element-contents row) column)))
-		   (cookie (car value)))
-	      ;; The following checks avoid expanding unnecessarily
-	      ;; the cell with `org-export-data'.
-	      (when (and value
-			 (not (cdr value))
-			 (stringp cookie)
-			 (string-match "\\`<[lrc]?\\([0-9]+\\)?>\\'" cookie)
-			 (match-string 1 cookie))
-		(setq cookie-width
-		      (string-to-number (match-string 1 cookie)))))))))))
+			   (puthash table (make-vector columns 'empty) cache))))
+    ;; Table rows may not have the same number of cells.  Extend
+    ;; WIDTH-VECTOR appropriately if we encounter a row larger than
+    ;; expected.
+    (when (>= column (length width-vector))
+      (setq width-vector
+	    (vconcat width-vector
+		     (make-list (- (1+ column) (length width-vector))
+				'empty)))
+      (puthash table width-vector cache))
+    (pcase (aref width-vector column)
+      (`empty
+       (catch 'found
+	 (dolist (row (org-element-contents table))
+	   (when (org-export-table-row-is-special-p row info)
+	     ;; In a special row, try to find a width cookie at
+	     ;; COLUMN.  The following checks avoid expanding
+	     ;; unnecessarily the cell with `org-export-data'.
+	     (pcase (org-element-contents
+		     (elt (org-element-contents row) column))
+	       (`(,(and (pred stringp) cookie))
+		(when (string-match "\\`<[lrc]?\\([0-9]+\\)>\\'" cookie)
+		  (let ((w (string-to-number (match-string 1 cookie))))
+		    (throw 'found (aset width-vector column w))))))))
+	 (aset width-vector column nil)))
+      (value value))))
 
 (defun org-export-table-cell-alignment (table-cell info)
   "Return TABLE-CELL contents alignment.
@@ -4960,6 +4966,15 @@ Possible values are `left', `right' and `center'."
 		      table)))
 	 (align-vector (or (gethash table cache)
 			   (puthash table (make-vector columns nil) cache))))
+    ;; Table rows may not have the same number of cells.  Extend
+    ;; ALIGN-VECTOR appropriately if we encounter a row larger than
+    ;; expected.
+    (when (>= column (length align-vector))
+      (setq align-vector
+	    (vconcat align-vector
+		     (make-list (- (1+ column) (length align-vector))
+				nil)))
+      (puthash table align-vector cache))
     (or (aref align-vector column)
 	(let ((number-cells 0)
 	      (total-cells 0)
