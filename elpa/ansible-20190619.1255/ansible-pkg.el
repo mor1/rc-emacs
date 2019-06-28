@@ -1,4 +1,4 @@
-(define-package "ansible" "20180813.114" "Ansible minor mode"
+(define-package "ansible" "20190619.1255" "Ansible minor mode"
   '((s "1.9.0")
     (f "0.16.2"))
   :authors
