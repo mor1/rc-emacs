@@ -2,7 +2,7 @@
 ;;
 ;; Author: Vitalie Spinu
 ;; Maintainer: Vitalie Spinu
-;; Copyright (C) 2013-2018, Vitalie Spinu
+;; Copyright (C) 2013-2019, Vitalie Spinu
 ;; Version: 0.1
 ;; URL: https://github.com/vitoshka/polymode
 ;; Keywords: emacs
@@ -22,9 +22,7 @@
 ;; General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with this program; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
-;; Floor, Boston, MA 02110-1301, USA.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -231,7 +229,6 @@ changes."
 ;; (pm-around-advice 'fill-paragraph #'pm-execute-narrowed-to-span)
 ;; (advice-remove 'fill-paragraph #'pm-execute-narrowed-to-span)
 
-
 ;; Synchronization of points does not work always as expected because some low
 ;; level functions move indirect buffers' points when operate in the base
 ;; buffer. See comment in `polymode-with-current-base-buffer'.
@@ -262,6 +259,24 @@ changes."
 ;; following is probably not necessary. (pm-around-advice 'perform-replace
 ;; 'pm-execute-inhibit-modification-hooks)
 
+;; No longer needed. See comment at pm-switch-to-buffer.
+;; (defun polymode-newline-remove-hook-in-orig-buffer (fn &rest args)
+;;   "`newline' temporary sets `post-self-insert-hook' and removes it in wrong buffer.
+;; This ARGS are passed to `newline'."
+;;   (if polymode-mode
+;;       (let* ((cbuf (current-buffer))
+;;              (old-hook (buffer-local-value 'post-self-insert-hook cbuf)))
+;;         (prog1 (apply fn args)
+;;           (unless (eq cbuf (current-buffer))
+;;             (unless (eq old-hook (buffer-local-value 'post-self-insert-hook cbuf))
+;;               (with-current-buffer cbuf
+;;                 (if old-hook
+;;                     (setq post-self-insert-hook old-hook)
+;;                   (kill-local-variable 'post-self-insert-hook)))))))
+;;     (apply fn args)))
+
+;; (pm-around-advice 'newline #'polymode-newline-remove-hook-in-orig-buffer)
+
 
 ;;; DESKTOP SAVE #194
 
@@ -287,7 +302,6 @@ changes."
 
 
 ;;; MATLAB #199
-
 ;; matlab-mode is an old non-standard mode which doesn't trigger
 ;; `after-change-major-mode-hook`. As a result polymode cannot detect that
 ;; font-lock-mode is on and sets the `poly-lock-allow-fontification` to nil.
@@ -295,8 +309,20 @@ changes."
 (add-hook 'matlab-mode-hook (lambda () (font-lock-mode t)))
 
 
-;;; EVIL
+;;; Undo Tree (#230)
+;; Not clear why this fix works, or even why the problem occurs.
+(declare-function make-undo-tree "undo-tree")
+(defun polymode-init-undo-tree-maybe ()
+  (when (and (boundp 'undo-tree-mode)
+             undo-tree-mode
+             (null buffer-undo-tree))
+    (setq buffer-undo-tree (make-undo-tree))))
 
+(eval-after-load 'undo-tree
+  '(add-hook 'polymode-init-inner-hook 'polymode-init-undo-tree-maybe))
+
+
+;;; EVIL
 (declare-function evil-change-state "evil-core")
 (defun polymode-switch-buffer-keep-evil-state-maybe (old-buffer new-buffer)
   (when (and (boundp 'evil-state)
@@ -312,7 +338,6 @@ changes."
 
 
 ;;; HL line
-
 (defvar hl-line-mode)
 (defvar global-hl-line-mode)
 (declare-function hl-line-unhighlight "hl-line")

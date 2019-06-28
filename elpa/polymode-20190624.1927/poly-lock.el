@@ -1,6 +1,6 @@
 ;;; poly-lock.el --- Font lock sub-system for polymode -*- lexical-binding: t -*-
 ;;
-;; Copyright (C) 2013-2018, Vitalie Spinu
+;; Copyright (C) 2013-2019, Vitalie Spinu
 ;; Author: Vitalie Spinu
 ;; URL: https://github.com/vspinu/polymode
 ;;
@@ -19,9 +19,8 @@
 ;; General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with this program; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
-;; Floor, Boston, MA 02110-1301, USA.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
+;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -88,12 +87,18 @@ Preserves the `buffer-modified-p' state of the current buffer."
        (with-silent-modifications
          ,@body))))
 
+;; FIXME: Can this hack be avoided if poly-lock is registered in
+;; `font-lock-support-mode'?
 (defun poly-lock-no-jit-lock-in-polymode-buffers (fun arg)
   "Don't activate FUN in `polymode' buffers.
 When not in polymode buffers apply FUN to ARG."
-  (unless (or polymode-mode pm/polymode)
+  (unless polymode-mode
     (funcall fun arg)))
 (pm-around-advice 'jit-lock-mode #'poly-lock-no-jit-lock-in-polymode-buffers)
+;; see the comment in pm--mode-setup for these
+(pm-around-advice 'font-lock-fontify-region #'polymode-inhibit-during-initialization)
+(pm-around-advice 'font-lock-fontify-buffer #'polymode-inhibit-during-initialization)
+(pm-around-advice 'font-lock-ensure #'polymode-inhibit-during-initialization)
 
 (defun poly-lock-mode (arg)
   "This is the value of `font-lock-function' in all polymode buffers.
@@ -179,7 +184,7 @@ Fontifies chunk-by chunk within the region BEG END."
   (unless (or poly-lock-fontification-in-progress
               pm-initialization-in-progress)
     (let* ((font-lock-dont-widen t)
-           ;; For now we fontify entire chunks at ones. This simplicity is
+           ;; For now we fontify entire chunks at once. This simplicity is
            ;; warranted in multi-mode use cases.
            (font-lock-extend-region-functions nil)
            ;; Fontification in one buffer can trigger fontification in another
@@ -197,21 +202,28 @@ Fontifies chunk-by chunk within the region BEG END."
                             (eieio-oref pm/chunkmode 'protect-font-lock))
                           ;; HACK: Some inner modes use syntax-table text
                           ;; property. If there is, for example, a comment
-                          ;; syntax somewhere in the innermode havoc is spelled
+                          ;; syntax somewhere in the body span, havoc is spelled
                           ;; in font-lock-fontify-syntactically-region which
                           ;; calls parse-partial-sexp. For example fortran block
                           ;; in ../poly-markdown/tests/input/markdown.md. We do
                           ;; our best and protect the host in such cases.
                           (/= (next-single-property-change beg 'syntax-table nil end)
-                              end)))
-           ;; extend to the next span boundary
-           (end (let ((end-range (pm-innermost-range end)))
-                  (if (< (car end-range) end)
-                      (cdr end-range)
-                    end))))
+                              end))))
       (save-restriction
         (widen)
         (save-excursion
+
+          ;; TEMPORARY HACK: extend to the next span boundary in code blocks
+          ;; (needed because re-display fontifies by small regions)
+          (let ((end-span (pm-innermost-span end)))
+            (if (car end-span)
+                (when (< (nth 1 end-span) end)
+                  (setq end (nth 2 end-span)))
+              ;; in host extend to paragraphs as in poly-lock--extend-region
+              (goto-char end)
+              (when (search-forward "\n\n" nil t)
+                (setq end (min (1- (point)) (nth 2 end-span))))))
+
           ;; Fontify the whole region in host first. It's ok for modes like
           ;; markdown, org and slim which understand inner mode chunks.
           (unless protect-host
@@ -223,11 +235,11 @@ Fontifies chunk-by chunk within the region BEG END."
                   (with-buffer-prepared-for-poly-lock
                    (when poly-lock-allow-fontification
                      (put-text-property beg end 'fontified nil) ; just in case
+                     ;; (message "jlrf-host:%d-%d %s" beg end major-mode)
                      (condition-case-unless-debug err
                          ;; NB: Some modes fontify beyond the limits (org-mode).
                          ;; We need a reliably way to detect the actual limit of
-                         ;; the fontification. For now marking with
-                         ;; :pm-fontified-as property.
+                         ;; the fontification.
                          (save-restriction
                            (widen)
                            (jit-lock--run-functions beg end))
@@ -250,6 +262,7 @@ Fontifies chunk-by chunk within the region BEG END."
                       (let ((new-beg (max sbeg beg))
                             (new-end (min send end)))
                         (put-text-property new-beg new-end 'fontified nil)
+                        ;; (message "jlrf:%d-%d %s" new-beg new-end major-mode)
                         (condition-case-unless-debug err
                             (if (eieio-oref pm/chunkmode 'protect-font-lock)
                                 (pm-with-narrowed-to-span span
@@ -268,8 +281,7 @@ Fontifies chunk-by chunk within the region BEG END."
 
 (defun poly-lock-flush (&optional beg end)
   "Force refontification of the region BEG..END.
-END is extended to the next chunk separator. This function is
-placed in `font-lock-flush-function''"
+This function is placed in `font-lock-flush-function''"
   (unless poly-lock-fontification-in-progress
     (let ((beg (or beg (point-min)))
           (end (or end (point-max))))
@@ -363,13 +375,32 @@ Assumes widen buffer. Sets `jit-lock-start' and `jit-lock-end'."
     ;; always include body of the head
     (when (and (eq (car end-span) 'head)
                (< jit-lock-end (point-max)))
-      (setq end-span (pm-innermost-span jit-lock-end))
-      (setq jit-lock-end (nth 2 end-span)))
+      (setq end-span (pm-innermost-span jit-lock-end)
+            jit-lock-end (nth 2 end-span)))
 
     ;; always include tail
     (when (and (eq (car end-span) 'body)
                (< jit-lock-end (point-max)))
-      (setq jit-lock-end (nth 2 (pm-innermost-span jit-lock-end))))
+      (setq jit-lock-end (nth 2 (pm-innermost-span jit-lock-end))
+            end-span (pm-innermost-span jit-lock-end)))
+
+    ;; Temporary hack for large host mode chunks - narrow to empty lines
+    (when (> (* 2 poly-lock-chunk-size)
+             (- jit-lock-end jit-lock-start))
+
+      (when (eq (car beg-span) nil)
+        (let ((tbeg (min beg (nth 2 beg-span))))
+          (when (> (- tbeg jit-lock-start) poly-lock-chunk-size)
+            (goto-char (- tbeg poly-lock-chunk-size))
+            (when (search-backward "\n\n" nil t)
+              (setq jit-lock-start (max jit-lock-start (1+ (point))))))))
+
+      (when (eq (car end-span) nil)
+        (let ((tend (max end (nth 1 end-span))))
+          (when (> (- jit-lock-end tend) poly-lock-chunk-size)
+            (goto-char (+ tend poly-lock-chunk-size))
+            (when (search-forward "\n\n" nil t)
+              (setq jit-lock-end (min jit-lock-end (1- (point)))))))))
 
     (cons jit-lock-start jit-lock-end)))
 

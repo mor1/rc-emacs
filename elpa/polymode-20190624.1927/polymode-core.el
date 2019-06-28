@@ -1,6 +1,6 @@
 ;; polymode-core.el --- Core initialization and utilities for polymode -*- lexical-binding: t -*-
 ;;
-;; Copyright (C) 2013-2018, Vitalie Spinu
+;; Copyright (C) 2013-2019, Vitalie Spinu
 ;; Author: Vitalie Spinu
 ;; URL: https://github.com/vspinu/polymode
 ;;
@@ -19,9 +19,7 @@
 ;; General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with this program; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
-;; Floor, Boston, MA 02110-1301, USA.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -34,6 +32,7 @@
 (require 'color)
 (require 'polymode-classes)
 (require 'format-spec)
+(require 'subr-x)
 (eval-when-compile
   (require 'cl-lib)
   (require 'derived))
@@ -42,6 +41,7 @@
 ;;; ESSENTIAL DECLARATIONS
 (defvar *span* nil)
 (defvar-local pm/polymode nil)
+(put 'pm/polymode 'permanent-local t)
 (defvar-local pm/chunkmode nil)
 (defvar-local pm/current nil) ;; fixme: unused
 (defvar-local pm/type nil) ;; fixme: remove this
@@ -99,6 +99,9 @@
 ;; correctly during the initialization in the call-next-method. This is
 ;; particularly relevant to font-lock setup and user hooks.
 (defvar pm-initialization-in-progress nil)
+
+(defvar pm-hide-implementation-buffers t)
+(defvar-local pm--core-buffer-name nil)
 
 
 ;;; CUSTOM
@@ -416,63 +419,58 @@ the front)."
                (= (nth 2 bspan) send)))
          (= end send)))))))
 
-(defun pm--intersect-spans (config &optional pos)
+(defun pm--intersect-spans (thespan span)
+  ;; ASSUMPTION: first thespan should be of the form (nil MIN MAX HOSTMODE)
+  (when span
+    (let ((allow-nested (eieio-oref (nth 3 span) 'allow-nested))
+          (is-host (null (car span))))
+      (cond
+       ;; 1. nil means host and it can be an intersection of spans returned
+       ;; by two neighboring inner chunkmodes. When `allow-nested` is
+       ;; 'always the innermode essentially behaves like the host-mode.
+       ((or is-host (eq allow-nested 'always))
+        ;; when span is already an inner span, new host spans are irrelevant
+        (unless (car thespan)
+          (setq thespan
+                (list (unless is-host (car span))
+                      (max (nth 1 span) (nth 1 thespan))
+                      (min (nth 2 span) (nth 2 thespan))
+                      (nth 3 (if is-host thespan span))))))
+       ;; 2. Inner span
+       ((and (>= (nth 1 span) (nth 1 thespan))
+             (<= (nth 2 span) (nth 2 thespan)))
+        ;; Accepted only nested spans. In case of crossing (incorrect spans),
+        ;; first span wins.
+        (when (or (null (car thespan))
+                  (eieio-oref (nth 3 span) 'can-nest))
+          (setq thespan span)))
+       ;; 3. Outer span; overwrite previous span if nesting is not allowed.
+       ;; This case is very hard because it can result in big invalid span
+       ;; when a head occurs within a inner-chunk. For example $ for inline
+       ;; latex can occur within R or python. The hard way to fix this would
+       ;; require non-local information (e.g. checking if outer span's
+       ;; extremities are within a host span) and still might not be the full
+       ;; proof solution. Instead, make use of 'allow-nested property.
+       ((and (eq allow-nested t)
+             (car thespan)              ; span is an inner span
+             (not (eieio-oref (nth 3 thespan) 'can-nest))
+             (pm--outspan-p span thespan))
+        (setq thespan span)))))
+  thespan)
+
+(defun pm--get-intersected-span (config &optional pos)
   ;; fixme: host should be last, to take advantage of the chunkmodes computation?
   (let* ((start (point-min))
          (end (point-max))
          (pos (or pos (point)))
          (hostmode (oref config -hostmode))
          (chunkmodes (cons hostmode (oref config -innermodes)))
-         (thespan (list nil start end hostmode))
-         span)
+         (thespan (list nil start end hostmode)))
     (dolist (cm chunkmodes)
       ;; Optimization opportunity: this searches till the end of buffer but the
-      ;; outermost pm-get-span caller has computed a few span already so we can
+      ;; outermost pm-get-span caller has computed a few spans already so we can
       ;; pass limits or narrow to pre-computed span.
-      (when (setq span (pm-get-span cm pos))
-        (let ((allow-nested (eieio-oref (nth 3 span) 'allow-nested))
-              (is-body (null (car span))))
-          (cond
-           ;; 1. nil means host and it can be an intersection of spans returned
-           ;; by two neighboring inner chunkmodes. When `allow-nested` is
-           ;; 'always the innermode essentially behaves like the host-mode.
-           ((or is-body
-                (eq allow-nested 'always))
-            ;; when span is already an inner span, new host spans are irrelevant
-            (unless (car thespan)
-              (setq start (max (nth 1 span)
-                               (nth 1 thespan))
-                    end (min (nth 2 span)
-                             (nth 2 thespan)))
-              (unless is-body
-                (setq thespan span))
-              (setcar (cdr thespan) start)
-              (setcar (cddr thespan) end)))
-           ;; 2. Inner span
-           ((or (> (nth 1 span) start)
-                (< (nth 2 span) end))
-            ;; NB: no check if boundaries of two inner spans crossing; assume
-            ;; correct matchers. In case of crossing, if 'can-nest is t then later
-            ;; chunkmode wins otherwise the former one.
-            (when (or (null (car thespan))
-                      (eieio-oref (nth 3 span) 'can-nest))
-              (setq thespan span
-                    start (nth 1 span)
-                    end (nth 2 span))))
-           ;; 3. Outer span; overwrite previous span if nesting is not allowed.
-           ;; This case is very hard because it can result in big invalid span
-           ;; when a head occurs within a inner-chunk. For example $ for inline
-           ;; latex can occur within R or python. The hard way to fix this would
-           ;; require non-local information (e.g. checking if outer span's
-           ;; extremities are within a host span) and still might not be the full
-           ;; proof solution. Instead, make use of 'allow-nested property.
-           ((and (eq allow-nested t)
-                 (car thespan) ; span is an inner span
-                 (not (eieio-oref (nth 3 thespan) 'can-nest))
-                 (pm--outspan-p span thespan))
-            (setq thespan span
-                  start (nth 1 span)
-                  end (nth 2 span)))))))
+      (setq thespan (pm--intersect-spans thespan (pm-get-span cm pos))))
 
     (unless (and (<= start end) (<= pos end) (>= pos start))
       (error "Bad polymode selection: span:%s pos:%s"
@@ -502,14 +500,14 @@ the front)."
     (save-excursion
       (save-restriction
         (widen)
-        (let ((span (pm--intersect-spans config pos)))
+        (let ((span (pm--get-intersected-span config pos)))
           (if (= omax pos)
               (when (and (= omax (nth 1 span))
                          (> omax omin))
                 ;; When pos == point-max and it's beg of span, return the
                 ;; previous span. This occurs because the computation of
-                ;; pm--intersect-spans is done on a widened buffer.
-                (setq span (pm--intersect-spans config (1- pos))))
+                ;; pm--get-intersected-span is done on a widened buffer.
+                (setq span (pm--get-intersected-span config (1- pos))))
             (when (= pos (nth 2 span))
               (error "Span ends at %d in (pm--inermost-span %d) %s"
                      pos pos (pm-format-span span))))
@@ -632,17 +630,29 @@ forward."
 
 (defun pm-make-text-property-matcher (property &optional accessor)
   "Return a head or tail matcher for PROPERTY with ACCESSOR.
-ACCESSOR is a function which is applied to the PROPERTY's value
-to retrieve the position of the head in the buffer. It should
-return either a number in which case head has 0 length, a cons of
-the form (BEG . END), or a list (BEG END). When ACCESSOR is
-missing the head span is the region covered by the same value of
-PROPERTY. ACCESSOR is called at the beginning of the PROPERTY
-region."
+ACCESSOR is either a function or a keyword. When a function it is
+applied to the PROPERTY's value to retrieve the position of the
+head in the buffer. It should return either a number in which
+case head has 0 length, a cons of the form (BEG . END), or a
+list (BEG END). ACCESSOR is called at the beginning of the
+PROPERTY region. When ACCESSOR is nil the head span is the region
+covered by the same value of PROPERTY. When ACCESSOR is a keyword
+the property is searched as when ACCESSOR is nil but is adapted
+according to the keyword. Currently :inc-end means increment the
+END of the span, when :dec-beg, decrement the beginning of the
+span."
   (lambda (ahead)
-    (pm--get-property-nearby property accessor ahead)))
+    (if (keywordp accessor)
+        (let ((loc (pm--get-property-nearby property nil ahead)))
+          (when loc
+            (cond
+             ((eq accessor :inc-end) (setcdr loc (1+ (cdr loc))))
+             ((eq accessor :dec-beg) (setcar loc (1- (cdr loc))))
+             (t (error "Invalid ACCESSOR keyword")))
+            loc))
+      (pm--get-property-nearby property accessor ahead))))
 
-(defun pm--span-at-point (head-matcher tail-matcher &optional pos can-overlap)
+(defun pm--span-at-point (head-matcher tail-matcher &optional pos can-overlap do-chunk)
   "Span detector with head and tail matchers.
 HEAD-MATCHER and TAIL-MATCHER is as in :head-matcher slot of
 `pm-inner-chunkmode' object. POS defaults to (point). When
@@ -654,7 +664,10 @@ is one of the following symbols:
           tail-matcher and ‘point-max’
   body  - pos is between head-matcher and tail-matcher (exclusively)
   head  - head span
-  tail  - tail span"
+  tail  - tail span
+
+Non-nil DO-CHUNK makes this function return a list of the
+form (TYPE HEAD-START HEAD-END TAIL-START TAIL-END)."
   (setq pos (or pos (point)))
   (save-restriction
     (widen)
@@ -669,10 +682,12 @@ is one of the following symbols:
                     (and at-max (= (cdr head1) pos)))
                 ;;      -----|
                 ;; host)[head)           ; can occur with sub-head == 0 only
-                (list 'head (car head1) (cdr head1))
+                (if do-chunk
+                    (pm--find-tail-from-head pos head1 head-matcher tail-matcher can-overlap 'head)
+                  (list 'head (car head1) (cdr head1)))
               ;;            ------------------------
               ;; host)[head)[body)[tail)[host)[head)[body)
-              (pm--find-tail-from-head pos head1 head-matcher tail-matcher can-overlap))
+              (pm--find-tail-from-head pos head1 head-matcher tail-matcher can-overlap do-chunk))
           ;; ----------
           ;; host)[head)[body)[tail)[host
           (goto-char (point-min))
@@ -681,19 +696,23 @@ is one of the following symbols:
                 (if (< pos (car head2))
                     ;; ----
                     ;; host)[head)[body)[tail)[host
-                    (list nil (point-min) (car head2))
+                    (if do-chunk
+                        (list nil (point-min) (point-min) (car head2) (car head2))
+                      (list nil (point-min) (car head2)))
                   (if (< pos (cdr head2))
                       ;;      -----
                       ;; host)[head)[body)[tail)[host
-                      (list 'head (car head2) (cdr head2))
+                      (if do-chunk
+                          (pm--find-tail-from-head pos head2 head-matcher tail-matcher can-overlap 'head)
+                        (list 'head (car head2) (cdr head2)))
                     ;;            -----------------
                     ;; host)[head)[body)[tail)[host
-                    (pm--find-tail-from-head pos head2 head-matcher tail-matcher can-overlap)))
+                    (pm--find-tail-from-head pos head2 head-matcher tail-matcher can-overlap do-chunk)))
               ;; no span found
               nil)))))))
 
 ;; fixme: find a simpler way with recursion where head-matcher and tail-matcher could be reversed
-(defun pm--find-tail-from-head (pos head head-matcher tail-matcher can-overlap)
+(defun pm--find-tail-from-head (pos head head-matcher tail-matcher can-overlap do-chunk)
   (goto-char (cdr head))
   (let ((tail (funcall tail-matcher 1))
         (at-max (= pos (point-max)))
@@ -711,12 +730,21 @@ is one of the following symbols:
         (if (< pos (car tail))
             ;;            -----
             ;; host)[head)[body)[tail)[host)[head)
-            (list 'body (cdr head) (car tail))
+            (if do-chunk
+                (list (if (eq do-chunk t) 'body do-chunk)
+                      (car head) (cdr head) (car tail) (cdr tail))
+              (list 'body (cdr head) (car tail)))
           (if (or (< pos (cdr tail))
                   (and at-max (= pos (cdr tail))))
               ;;                  -----
               ;; host)[head)[body)[tail)[host)[head)
-              (list type (car tail) (cdr tail))
+              (if do-chunk
+                  (if (eq type 'tail)
+                      (list (if (eq do-chunk t) 'tail do-chunk)
+                            (car head) (cdr head) (car tail) (cdr tail))
+                    ;; can-overlap case
+                    (pm--find-tail-from-head pos tail head-matcher tail-matcher can-overlap do-chunk))
+                (list type (car tail) (cdr tail)))
             (goto-char (cdr tail))
             ;;                        -----------
             ;; host)[head)[body)[tail)[host)[head)
@@ -735,21 +763,65 @@ is one of the following symbols:
                   (if (< pos (car match))
                       ;;                        -----
                       ;; host)[head)[body)[tail)[host)[head)
-                      (list nil (cdr tail) (car match))
+                      (if do-chunk
+                          (list nil (cdr tail) (cdr tail) (car match) (car match))
+                        (list nil (cdr tail) (car match)))
                     (if (or (< pos (cdr match))
                             (and at-max (= pos (cdr match))))
                         ;;                              -----
                         ;; host)[head)[body)[tail)[host)[head)[body
-                        (list type (car match) (cdr match))
+                        (if do-chunk
+                            (if (eq type 'tail)
+                                ;; can-overlap case
+                                (list (if (eq do-chunk t) 'tail do-chunk)
+                                      (car head) (cdr head) (car match) (cdr match))
+                              (pm--find-tail-from-head pos match head-matcher tail-matcher can-overlap 'head))
+                          (list type (car match) (cdr match)))
                       ;;                                    ----
                       ;; host)[head)[body)[tail)[host)[head)[body
-                      (pm--find-tail-from-head pos match head-matcher tail-matcher can-overlap)))
+                      (pm--find-tail-from-head pos match head-matcher tail-matcher can-overlap do-chunk)))
                 ;;                        -----
                 ;; host)[head)[body)[tail)[host)
-                (list nil (cdr tail) (point-max))))))
+                (if do-chunk
+                    (list nil (cdr tail) (cdr tail) (point-max) (point-max))
+                  (list nil (cdr tail) (point-max)))))))
       ;;            -----
       ;; host)[head)[body)
-      (list 'body (cdr head) (point-max)))))
+      (if do-chunk
+          (list (if (eq do-chunk t) 'body do-chunk) (cdr head) (cdr head) (point-max) (point-max))
+        (list 'body (cdr head) (point-max))))))
+
+(defun pm--next-chunk (head-matcher tail-matcher &optional pos can-overlap)
+  "Forward only span detector.
+For HEAD-MATCHER, TAIL-MATCHER, POS and CAN-OVERLAP see
+`pm--span-at-point'. Return a list of the form (HEAD-START
+HEAD-END TAIL-START TAIL-END). Can return nil if there are no
+forward spans from pos."
+  (setq pos (or pos (point)))
+  (save-restriction
+    (widen)
+    (save-excursion
+      (goto-char pos)
+      (let ((parse-sexp-lookup-properties nil)
+            (case-fold-search t)
+            (head-matcher (pm-fun-matcher head-matcher))
+            (tail-matcher (pm-fun-matcher tail-matcher))
+            (head nil))
+        ;; start from bol !! ASSUMPTION !!
+        (forward-line 0)
+        (setq head (funcall head-matcher 1))
+        (while (and head (< (car head) pos))
+          (setq head (funcall head-matcher 1)))
+        (when head
+          (goto-char (cdr head))
+          (let ((tail (or (funcall tail-matcher 1)
+                          (cons (point-max) (point-max)))))
+            (when can-overlap
+              (goto-char (cdr head))
+              (when-let ((hbeg (car (funcall head-matcher 1))))
+                (when (< hbeg (car tail))
+                  (setq tail (cons hbeg hbeg)))))
+            (list (car head) (cdr head) (car tail) (cdr tail))))))))
 
 (defun pm-goto-span-of-type (type N)
   "Skip to N - 1 spans of TYPE and stop at the start of a span of TYPE.
@@ -846,6 +918,8 @@ Parents' hooks are run first."
 (define-obsolete-variable-alias 'pm-move-vars-from-base 'polymode-move-these-vars-from-base-buffer "v0.1.6")
 (defvar polymode-move-these-vars-from-base-buffer
   '(buffer-file-name
+    ;; ideally this one should be merged across all buffers
+    buffer-display-table
     outline-regexp
     outline-level
     polymode-default-inner-mode
@@ -863,6 +937,7 @@ Parents' hooks are run first."
     buffer-undo-tree
     display-line-numbers
     face-remapping-alist
+    isearch-mode ; this seems to be enough to avoid isearch glitching
     line-move-visual
     overwrite-mode
     selective-display
@@ -882,18 +957,31 @@ Parents' hooks are run first."
     writeroom-mode)
   "List of minor modes to move from the old buffer.")
 
+(defun pm-own-buffer-p (&optional buffer)
+  "Return t if BUFFER is owned by polymode.
+Owning a buffer means that the BUFFER is either the base buffer
+or an indirect implementation buffer. If nil, the buffer was
+created outside of polymode with `clone-indirect-buffer'."
+  (when pm/polymode
+    (memq (or buffer (current-buffer))
+          (eieio-oref pm/polymode '-buffers))))
+
 (defun pm-select-buffer (span &optional visibly)
   "Select the buffer associated with SPAN.
 Install a new indirect buffer if it is not already installed.
 Chunkmode's class should define `pm-get-buffer-create' method. If
 VISIBLY is non-nil perform extra adjustment for \"visual\" buffer
 switch."
-  (let ((buffer (pm-span-buffer span)))
+  (let ((buffer (pm-span-buffer span))
+        (own (pm-own-buffer-p))
+        (cbuf (current-buffer)))
+    ;; FIXME: investigate why this one is still needed.
+    ;; polymode-syntax-propertize should have taken care of it.
     (with-current-buffer buffer
       (pm--reset-ppss-cache span))
-    (when visibly
+    (when (and own visibly)
       ;; always sync to avoid issues with tooling working in different buffers
-      (pm--synchronize-points (current-buffer))
+      (pm--synchronize-points cbuf)
       (let ((mode (or (eieio-oref (nth 3 span) 'keep-in-mode)
                       (eieio-oref pm/polymode 'keep-in-mode))))
         (setq buffer (cond
@@ -904,18 +992,20 @@ switch."
                                 ;; be installed yet and there is no way install it
                                 ;; from here
                                 buffer))))))
-    ;; (message "setting buffer %d-%d [%s]" (nth 1 span) (nth 2 span) (current-buffer))
+    ;; (message "setting buffer %d-%d [%s]" (nth 1 span) (nth 2 span) cbuf)
     ;; no further action if BUFFER is already the current buffer
-    (unless (eq buffer (current-buffer))
-      (when visibly
-        (run-hook-with-args 'polymode-before-switch-buffer-hook (current-buffer) buffer))
+    (unless (eq buffer cbuf)
+      (when (and own visibly)
+        (run-hook-with-args 'polymode-before-switch-buffer-hook
+                            cbuf buffer))
       (pm--move-vars polymode-move-these-vars-from-base-buffer
                      (pm-base-buffer) buffer)
       (pm--move-vars polymode-move-these-vars-from-old-buffer
-                     (current-buffer) buffer)
+                     cbuf buffer)
       (if visibly
-          ;; slow, visual selection
-          (pm--select-existing-buffer-visibly buffer)
+          ;; Slow, visual selection. Don't perform in foreign indirect buffers.
+          (when own
+            (pm--select-existing-buffer-visibly buffer))
         (set-buffer buffer)))))
 
 (defvar text-scale-mode)
@@ -927,6 +1017,9 @@ switch."
         (visible (pos-visible-in-window-p))
         (ractive (region-active-p))
         (mkt (mark t)))
+
+    (when pm-hide-implementation-buffers
+      (rename-buffer (generate-new-buffer-name (concat " " pm--core-buffer-name))))
 
     (setq pm/current nil)
 
@@ -948,6 +1041,11 @@ switch."
         (deactivate-mark)
       (set-mark mkt)
       (activate-mark))
+
+    (when pm-hide-implementation-buffers
+      (rename-buffer
+       (generate-new-buffer-name
+        (replace-regexp-in-string "^ +" "" pm--core-buffer-name))))
 
     ;; avoid display jumps
     (goto-char point)
@@ -996,6 +1094,15 @@ comprehensive alternative."
                 pos-or-span)))
     (pm-select-buffer span)))
 
+;; NB: Polymode functions used in emacs utilities should not switch buffers
+;; under any circumstances. Switching should happen only in post-command. For
+;; example `pm-indent-line-dispatcher' used to switch buffers, but it was called
+;; from electric-indent-post-self-insert-function in post-self-insert-hook which
+;; was triggered by self-insert-command called from `newline'. `newline' sets a
+;; temporary local post-self-insert-hook and makes the assumption that buffer
+;; stays the same. It was moved away from original buffer by polymode's
+;; indentation dispatcher its post-self-insert-hook hanged permanently in the
+;; old buffer (#226).
 (defun pm-switch-to-buffer (&optional pos-or-span)
   "Bring the appropriate polymode buffer to front.
 POS-OR-SPAN can be either a position in a buffer or a span. All
@@ -1006,6 +1113,100 @@ transport) are performed."
                   (pm-innermost-span pos-or-span)
                 pos-or-span)))
     (pm-select-buffer span 'visibly)))
+
+(defun pm-map-over-modes (fn beg end)
+  (when (< beg end)
+    (save-restriction
+      (widen)
+      (let* ((hostmode (eieio-oref pm/polymode '-hostmode))
+             (pos beg)
+             (ttype 'dummy)
+             span nspan nttype)
+        (when (< (point-min) beg)
+          (setq span (pm-innermost-span beg)
+                beg (nth 1 span)
+                pos (nth 2 span)
+                ttype (pm-true-span-type span))
+          (while (and (memq (car span) '(head body))
+                      (< pos end))
+            (setq nspan (pm-innermost-span (nth 2 span))
+                  nttype (pm-true-span-type nspan))
+            (if (eq ttype nttype)
+                (setq pos (nth 2 nspan))
+              (with-current-buffer (pm-span-buffer span)
+                (funcall fn beg pos))
+              (setq beg (nth 1 nspan)
+                    pos (nth 2 nspan)))
+            (setq span nspan
+                  ttype nttype)))
+        (when (< pos end)
+          (let ((ichunks (cl-loop for im in (eieio-oref pm/polymode '-innermodes)
+                                  collect (cons im nil)))
+                (tichunks nil)
+                (spans nil))
+            (while (< pos end)
+              ;; 1. recompute outdated chunks
+              (setq tichunks nil)
+              (dolist (ichunk ichunks)
+                (if (and (cdr ichunk)
+                         (< pos (nth 5 ichunk)))
+                    (push ichunk tichunks)
+                  (let ((nchunk (pm-next-chunk (car ichunk) pos)))
+                    (when nchunk
+                      (push (cons (car ichunk) nchunk) tichunks)))))
+              (setq ichunks (reverse tichunks))
+              ;; 2. Compute all (next) spans
+              (setq spans nil)
+              (dolist (ichunk ichunks)
+                (let ((chunk (cdr ichunk)))
+                  (let ((span (cond
+                               ((< pos (nth 1 chunk)) (list nil pos (nth 1 chunk) (car chunk)))
+                               ((< pos (nth 2 chunk)) (list 'head (nth 1 chunk) (nth 2 chunk) (car chunk)))
+                               ((< pos (nth 3 chunk)) (list 'body (nth 2 chunk) (nth 3 chunk) (car chunk)))
+                               ((< pos (nth 4 chunk)) (list 'tail (nth 3 chunk) (nth 4 chunk) (car chunk))))))
+                    (push span spans))))
+              (setq spans (nreverse spans))
+              ;; 3. Intersect
+              (setq nspan (list nil pos (point-max) hostmode))
+              (dolist (s spans)
+                (setq nspan (pm--intersect-spans nspan s)))
+              ;; (setq pm--span-counter (1+ pm--span-counter)) ;; for debugging
+              (pm-cache-span nspan)
+              (setq nttype (pm-true-span-type nspan))
+              ;; 4. funcall on region if type changed
+              (unless (eq ttype nttype)
+                (when span
+                  (with-current-buffer (pm-span-buffer span)
+                    (funcall fn beg pos)))
+                (setq ttype nttype
+                      beg (nth 1 nspan)))
+              (setq span nspan
+                    pos (nth 2 nspan)))))
+        (with-current-buffer (pm-span-buffer span)
+          (funcall fn beg pos))))))
+
+;; ;; do not delete: speed and consistency checks
+;; (defvar pm--span-counter 0)
+;; (defvar pm--mode-counter 0)
+;; (defun pm-debug-map-over-modes-test (&optional beg end)
+;;   (interactive)
+;;   (setq pm--span-counter 0)
+;;   (setq pm--mode-counter 0)
+;;   (pm-map-over-modes
+;;    (lambda (beg end)
+;;      (setq pm--mode-counter (1+ pm--mode-counter)))
+;;    (or beg (point-min))
+;;    (or end (point-max)))
+;;   (cons pm--span-counter pm--mode-counter))
+;; (defun pm-debug-map-over-spans-test (&optional beg end)
+;;   (interactive)
+;;   (setq pm--span-counter 0)
+;;   (pm-map-over-spans
+;;    (lambda (span)
+;;      (setq pm--span-counter (1+ pm--span-counter)))
+;;    (or beg (point-min))
+;;    (or end (point-max)))
+;;   pm--span-counter)
 
 (defun pm-map-over-spans (fun &optional beg end count backwardp visibly no-cache)
   "For all spans between BEG and END, execute FUN.
@@ -1048,29 +1249,6 @@ behavior."
                      (< pos end))
                    (< nr count)
                    (pm-innermost-span pos no-cache)))))))
-
-(defun pm-map-over-modes (fun &optional beg end)
-  "Execute FUN on regions of the same `major-mode' between BEG and END.
-FUN is a function of 2 arguments beginning and end of region and
-with the mode's buffer current. Point is at the beginning of the
-region. Buffer is *not* narrowed to the region."
-  (setq beg (or beg (point-min))
-        end (if end
-                (min end (point-max))
-              (point-max)))
-  (save-restriction
-    (widen)
-    (let ((span (pm-innermost-span beg))
-          (end1))
-      ;; ensure that :pm-mode property is correct
-      (while (< (nth 2 span) end)
-        (setq span (pm-innermost-span (nth 2 span))))
-      (while (< beg end)
-        (setq end1 (next-single-property-change beg :pm-mode nil (point-max)))
-        (goto-char beg)
-        (pm-set-buffer beg)
-        (funcall fun beg end1)
-        (setq beg end1)))))
 
 (defun pm-narrow-to-span (&optional span)
   "Narrow to current SPAN."
@@ -1140,13 +1318,15 @@ This funciton is placed in local `post-command-hook'."
 (defvar-local pm--killed nil)
 (defun polymode-after-kill-fixes ()
   "Various fixes for polymode indirect buffers."
-  (when pm/polymode
+  (when (pm-own-buffer-p)
     (let ((base (pm-base-buffer)))
       (set-buffer-modified-p nil)
-      ;; Prevent various tools like `find-file' to re-find this file. We use
-      ;; buffer-list instead of `-buffers' slot here because on some occasions
-      ;; there are other indirect buffers (e.g. switch from polymode to other
-      ;; mode and then back , or when user creates an indirect buffer manually).
+      ;; Prevent various tools like `find-file' to re-find this file.
+      ;;
+      ;; We use buffer-list instead of `-buffers' slot here because on some
+      ;; occasions there are other indirect buffers (e.g. switch from polymode
+      ;; to other mode and then back, or when user or a tool (e.g. org-capture)
+      ;; creates an indirect buffer manually).
       (dolist (b (buffer-list))
         (when (and (buffer-live-p b)
                    (eq (buffer-base-buffer b) base))
@@ -1155,6 +1335,41 @@ This funciton is placed in local `post-command-hook'."
             (setq buffer-file-name nil)
             (setq buffer-file-number nil)
             (setq buffer-file-truename nil)))))))
+
+(defun pm-turn-polymode-off (&optional new-mode)
+  "Remove all polymode indirect buffers and install NEW-MODE if any.
+NEW-MODE can be t in which case mode is picked from the
+`pm/polymode' object."
+  (when pm/polymode
+    (let* ((base (pm-base-buffer))
+           (mmode (buffer-local-value 'major-mode base))
+           (kill-buffer-hook (delete 'polymode-after-kill-fixes (copy-sequence kill-buffer-hook))))
+      ;; remove only our own indirect buffers
+      (dolist (b (eieio-oref pm/polymode '-buffers))
+        (unless (eq b base)
+          (kill-buffer b)))
+      (with-current-buffer base
+        (setq pm/polymode nil)
+        (when new-mode
+          (if (eq new-mode t)
+              (funcall mmode)
+            (funcall new-mode)))))))
+
+(defun polymode-after-change-major-mode-cleanup ()
+  "Remove all polymode implementation buffers on mode change."
+  ;; pm/polymode is permanent local. Nil polymode-mode means that the user
+  ;; called another mode on top of polymode.
+  (when (and pm/polymode (not polymode-mode))
+    ;; if another mode was called from an innermode, it was installed in a wrong place
+    (let* ((base (pm-base-buffer))
+           (mmode (unless (eq base (current-buffer))
+                    major-mode)))
+      (unless (eq base (current-buffer))
+        (when (eq (window-buffer) (current-buffer))
+          (switch-to-buffer base)))
+      (pm-turn-polymode-off mmode))))
+
+(add-hook 'after-change-major-mode-hook #'polymode-after-change-major-mode-cleanup)
 
 
 ;;; CORE ADVICE
@@ -1167,6 +1382,11 @@ If FUN is a list, apply ADVICE to each element of it."
         ((and (symbolp fun)
               (not (advice-member-p advice fun)))
          (advice-add fun :around advice))))
+
+(defun polymode-inhibit-during-initialization (orig-fun &rest args)
+  "Don't run ORIG-FUN (with ARGS) during polymode setup."
+  (unless pm-initialization-in-progress
+    (apply orig-fun args)))
 
 (defun polymode-with-current-base-buffer (orig-fun &rest args)
   "Switch to base buffer and apply ORIG-FUN to ARGS.
@@ -1195,7 +1415,7 @@ Used in advises."
             (pm--synchronize-points base))))
     (apply orig-fun args)))
 
-(pm-around-advice #'kill-buffer #'polymode-with-current-base-buffer)
+;; (pm-around-advice #'kill-buffer #'polymode-with-current-base-buffer)
 (pm-around-advice #'find-alternate-file #'polymode-with-current-base-buffer)
 (pm-around-advice #'write-file #'polymode-with-current-base-buffer)
 (pm-around-advice #'basic-save-buffer #'polymode-with-current-base-buffer)
@@ -1239,39 +1459,90 @@ ARG is the same as in `forward-paragraph'"
               ;; (backtrace)
               (error-message-string err)))))
 
-;; called from syntax-propertize and thus at the beginning of syntax-ppss
-(defun polymode-syntax-propertize (start end)
-  ;; fixme: not entirely sure if this is really needed
-  (dolist (b (oref pm/polymode -buffers))
-    (when (buffer-live-p b)
-      (with-current-buffer b
-        ;; `setq' doesn't have an effect because the var is let bound; `set' works
-        (set 'syntax-propertize--done end))))
+(defun polymode-syntax-propertize-extend-region-in-host (start end)
+  (let ((base (pm-base-buffer))
+        (min (point-min))
+        (max (point-max)))
+    (when base
+      (with-current-buffer base
+        (save-restriction
+          (narrow-to-region min max)
+          ;; Relevant part from syntax-propertize
+          (let ((funs syntax-propertize-extend-region-functions)
+                (extended nil))
+            (while funs
+              (let* ((syntax-propertize--done most-positive-fixnum)
+                     (fn (pop funs))
+                     (new (unless (eq fn 'syntax-propertize-wholelines)
+                            (funcall fn start end))))
+                (when (and new
+                           (or (< (car new) start)
+                               (> (cdr new) end)))
+                  (setq extended t
+                        start (car new)
+                        end (cdr new))
+                  ;; If there's been a change, we should go through the list again
+                  ;; since this new position may warrant a different answer from
+                  ;; one of the funs we've already seen.
+                  (unless (eq funs (cdr syntax-propertize-extend-region-functions))
+                    (setq funs syntax-propertize-extend-region-functions)))))
+            (when extended (cons start end))))))))
 
+;; used for hard debugging of syntax properties in batch mode
+(defun pm--syntax-after (pos)
+  (let ((syntax (syntax-after pos)))
+    (with-temp-buffer
+      (internal-describe-syntax-value syntax)
+      (buffer-string))))
+
+;; called from syntax-propertize and thus at the beginning of syntax-ppss
+(defun polymode-syntax-propertize (beg end)
+  ;; (message "SP:%d-%d" beg end)
   (unless pm-initialization-in-progress
     (save-restriction
       (widen)
       (save-excursion
+
         ;; some modes don't save data in their syntax propertize functions
         (save-match-data
-          (let ((protect-host (with-current-buffer (pm-base-buffer)
+          (let ((real-end end)
+                (base (pm-base-buffer))
+                (protect-host (with-current-buffer (pm-base-buffer)
                                 (eieio-oref pm/chunkmode 'protect-syntax))))
+
             ;; 1. host if no protection
             (unless protect-host
-              (with-current-buffer (pm-base-buffer)
+              (with-current-buffer base
+                (set 'syntax-propertize--done end)
+                ;; (message "sp:%s:%d-%d" major-mode beg end)
                 (when pm--syntax-propertize-function-original
-                  (pm--call-syntax-propertize-original start end))))
+                  ;; For syntax matchers the host mode syntax prioritization
+                  ;; should be smart enough to install relevant elements around
+                  ;; end for the followup map-over-modes to work correctly.
+                  (pm--call-syntax-propertize-original beg end))))
+
             ;; 2. all others
-            (pm-map-over-spans
-             (lambda (span)
-               (when (and pm--syntax-propertize-function-original
-                          (or (pm-true-span-type span)
-                              protect-host))
-                 (let ((pos0 (max (nth 1 span) start))
-                       (pos1 (min (nth 2 span) end)))
-                   (if (eieio-oref (nth 3 span) 'protect-syntax)
-                       (pm--call-syntax-propertize-original pos0 pos1)))))
-             start end)))))))
+            (let ((last-ppss nil))
+              (pm-map-over-modes
+               (lambda (mbeg mend)
+                 ;; Cannot set this earlier because some buffers might not be
+                 ;; created when this function is called. One major reason to
+                 ;; set this here is to avoid recurring into syntax-propertize
+                 ;; when propertize functions call syntax-ppss. `setq' doesn't
+                 ;; have an effect because the var is let bound but `set'
+                 ;; works.
+                 (set 'syntax-propertize--done (max end mend))
+                 ;; (message "sp:%s:%d-%d" major-mode (max beg mbeg) mend)
+                 (if (eq base (current-buffer))
+                     (when protect-host
+                       (pm--reset-ppss-cache-0 mbeg last-ppss)
+                       (when pm--syntax-propertize-function-original
+                         (pm--call-syntax-propertize-original (max beg mbeg) mend))
+                       (setq last-ppss (syntax-ppss mend)))
+                   (pm--reset-ppss-cache-0 mbeg)
+                   (when pm--syntax-propertize-function-original
+                     (pm--call-syntax-propertize-original (max beg mbeg) mend))))
+               beg end))))))))
 
 (defvar syntax-ppss-wide)
 (defvar syntax-ppss-last)
@@ -1292,31 +1563,36 @@ ARG is the same as in `forward-paragraph'"
                         (not (= pos (point-min))))
               (let ((prev-span (pm-innermost-span (1- pos))))
                 (if (null (car prev-span))
-                    (setq new-ppss (cons sbeg (syntax-ppss (1- pos))))
+                    (setq new-ppss (syntax-ppss pos))
                   (setq pos (nth 1 prev-span)))))))))
-    (unless new-ppss
-      (setq new-ppss (list sbeg 0 nil sbeg nil nil nil 0 nil nil nil nil)))
-    ;; in emacs 26 there are two caches syntax-ppss-wide and
-    ;; syntax-ppss-narrow. The latter is reset automatically each time a
-    ;; different narrowing is in place so we don't deal with it for now.
-    (let ((cache (if pm--emacs>26
-                     (cdr syntax-ppss-wide)
-                   syntax-ppss-cache)))
-      (while (and cache (>= (caar cache) sbeg))
-        (setq cache (cdr cache)))
-      (setq cache (cons new-ppss cache))
-      (if pm--emacs>26
-          (setq syntax-ppss-wide (cons new-ppss cache))
-        (setq syntax-ppss-cache cache)
-        (setq syntax-ppss-last new-ppss)))
-    new-ppss))
+    (pm--reset-ppss-cache-0 sbeg new-ppss)))
+
+(defun pm--reset-ppss-cache-0 (pos &optional new-ppss)
+  (unless new-ppss
+    (setq new-ppss (list 0 nil pos nil nil nil 0 nil nil nil nil)))
+  ;; in emacs 26 there are two caches syntax-ppss-wide and
+  ;; syntax-ppss-narrow. The latter is reset automatically each time a
+  ;; different narrowing is in place so we don't deal with it for now.
+  (let ((cache (if pm--emacs>26
+                   (cdr syntax-ppss-wide)
+                 syntax-ppss-cache)))
+    (while (and cache (>= (caar cache) pos))
+      (setq cache (cdr cache)))
+    (setq cache (cons (cons pos new-ppss) cache))
+    (if pm--emacs>26
+        ;; syntax-ppss involves an aggressive cache cleaning; protect for one
+        ;; such cleaning by double entry
+        (setq syntax-ppss-wide (cons (car cache) cache))
+      (setq syntax-ppss-cache cache)
+      (setq syntax-ppss-last (cons pos new-ppss))))
+  new-ppss)
 
 
-(defun polymode-reset-ppss-cache (&optional pos)
-  "Reset `syntax-ppss' cache to POS in polymode buffers.
-Used in :before advice of `syntax-ppss'."
-  (when polymode-mode
-    (pm--reset-ppss-cache (pm-innermost-span pos))))
+;; (defun polymode-reset-ppss-cache (&optional pos)
+;;   "Reset `syntax-ppss' cache to POS in polymode buffers.
+;; Used in :before advice of `syntax-ppss'."
+;;   (when polymode-mode
+;;     (pm--reset-ppss-cache (pm-innermost-span pos))))
 
 ;; (advice-add #'syntax-ppss :before #'polymode-reset-ppss-cache)
 ;; (unless pm--emacs>26
@@ -1392,7 +1668,7 @@ for \"cycling\" commands."
 (defun pm--get-existing-mode (mode fallback)
   "Return MODE symbol if it's defined and is a valid function.
 If so, return it, otherwise check in turn
-`polymode-default-inner-mode', FALBACK and ultimately
+`polymode-default-inner-mode', the FALLBACK and ultimately
 `poly-fallback-mode'."
   (pm--true-mode-symbol
    (cond ((fboundp mode) mode)
@@ -1413,7 +1689,7 @@ If so, return it, otherwise check in turn
    (eieio-oref chunkmode 'fallback-mode)))
 
 ;; Used in auto innermode detection only and can return symbol 'host as that's
-;; needed in pm--get-auto-span.
+;; needed in pm--get-auto-chunkmode.
 (defun pm-get-mode-symbol-from-name (name &optional fallback)
   "Guess and return mode function from short NAME.
 Return FALLBACK if non-nil, otherwise the value of
@@ -1491,14 +1767,16 @@ Elements of LIST can be either strings or symbols."
                     str-nm)))
           list))
 
+(defun pm--object-value (obj)
+  (cond
+   ((functionp obj)
+    (funcall obj))
+   ((symbolp obj)
+    (symbol-value obj))
+   (t obj)))
+
 (defun pm--oref-value (object slot)
-  (let ((val (eieio-oref object slot)))
-    (cond
-     ((functionp val)
-      (funcall val))
-     ((symbolp val)
-      (symbol-value val))
-     (t val))))
+  (pm--object-value (eieio-oref object slot)))
 
 (defun pm--prop-put (key val &optional object)
   (oset (or object pm/polymode) -props

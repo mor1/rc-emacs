@@ -1,6 +1,6 @@
 ;;; polymode-classes.el --- Core polymode classes -*- lexical-binding: t -*-
 ;;
-;; Copyright (C) 2013-2018, Vitalie Spinu
+;; Copyright (C) 2013-2019, Vitalie Spinu
 ;; Author: Vitalie Spinu
 ;; URL: https://github.com/vspinu/polymode
 ;;
@@ -19,9 +19,7 @@
 ;; General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with this program; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
-;; Floor, Boston, MA 02110-1301, USA.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -371,6 +369,16 @@ buffer.")
     :initform t)
    (protect-indent
     :initform t)
+   (body-indent-offset
+    :initarg :body-indent-offset
+    :initform 0
+    :type (or number symbol function)
+    :custom (choice number symbol)
+    :documentation
+    "Indentation offset of the body span relative to the head.
+Can be a number, symbol holding a number or a function. When a
+function, it is called with no arguments at the beginning of the
+body span.")
    (can-nest
     :initarg :can-nest
     :initform nil
