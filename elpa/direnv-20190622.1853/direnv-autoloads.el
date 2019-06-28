@@ -23,8 +23,8 @@ When FORCE-SUMMARY is non-nil or when called interactively, show a summary messa
 
 \(fn &optional DIRECTORY FORCE-SUMMARY)" t nil)
 
-(autoload 'direnv-edit "direnv" "\
-Edit the .envrc associated with the current directory.
+(autoload 'direnv-allow "direnv" "\
+Run ‘direnv allow’ and update the environment afterwards.
 
 \(fn)" t nil)
 
