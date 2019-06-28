@@ -5,7 +5,7 @@
 ;; Author: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; Maintainer: Pierre Neidhardt <mail@ambrevar.xyz>
 ;; URL: https://gitlab.com/Ambrevar/mu4e-conversation
-;; Package-Version: 20190305.1636
+;; Package-Version: 20190609.812
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: mail, convenience, mu4e
@@ -592,7 +592,7 @@ If PRINT-FUNCTION is nil, use `mu4e-conversation-print-function'."
                   'mu4e-conversation-print-linear)
           ;; In linear view, it makes more sense to sort messages chronologically.
           (let ((filter (lambda (seq)
-                          (sort (copy-seq seq)
+                          (sort (copy-sequence seq)
                                 (lambda (msg1 msg2)
                                   (time-less-p (mu4e-message-field msg1 :date)
                                                (mu4e-message-field msg2 :date)))))))
