@@ -94,9 +94,13 @@
  '(ns-alternate-modifier (quote none))
  '(ns-command-modifier (quote meta))
  '(ns-function-modifier (quote hyper))
+ '(org-agenda-files
+   (quote
+    ("/Users/mort/me/todo/todo.org" "/Users/mort/Dropbox/people/family.org/birthdays.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2019.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2020.org" "/Users/mort/Dropbox/people/family.org/david.org" "/Users/mort/Dropbox/people/family.org/eleanor.org" "/Users/mort/Dropbox/people/family.org/family.org" "/Users/mort/Dropbox/people/family.org/foodplans.org" "/Users/mort/Dropbox/people/family.org/holidays.org" "/Users/mort/Dropbox/people/family.org/homejournal.org" "/Users/mort/Dropbox/people/family.org/housework.org" "/Users/mort/Dropbox/people/family.org/packinglists.org" "/Users/mort/Dropbox/people/family.org/william.org")))
+ '(org-clock-continuously t)
  '(package-selected-packages
    (quote
-    (mu4e-conversation mu4e-query-fragments ialign merlin-eldoc ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv diminish csv-mode color-theme-sanityinc-solarized color-theme coffee-mode avy auto-package-update auctex aggressive-indent)))
+    (outshine mu4e-conversation mu4e-query-fragments ialign merlin-eldoc ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv diminish csv-mode color-theme-sanityinc-solarized color-theme coffee-mode avy auto-package-update auctex aggressive-indent)))
  '(paradox-github-token t)
  '(require-final-newline (quote visit-save))
  '(scroll-bar-mode nil)
@@ -123,6 +127,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(default ((t (:inherit nil :stipple nil :background "#001010" :foreground "gray69" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 100 :width normal :foundry "nil" :family "Hack"))))
+ '(ediff-current-diff-C ((t (:background "yellow1"))))
  '(flyspell-duplicate ((t (:background "#9b5500"))))
  '(flyspell-incorrect ((t (:background "#aa0000"))))
+ '(smerge-base ((t (:background "lavender"))))
  '(whitespace-line ((t (:underline t)))))

@@ -94,11 +94,11 @@
 
 ;; fonts
 (add-to-list 'default-frame-alist '(font . "Hack 10"))
-;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-fontset-auto2")
-;; (set-frame-font "-*-Hack-normal-normal-normal-*-14-*-*-*-m-0-fontset-auto2")
-;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-fontset-auto2")
-;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-fontset-auto2")
-;; (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-fontset-auto2")
+;;; (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-iso10646-1")
+;;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-iso10646-1")
+;;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-iso10646-1")
+;;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-iso10646-1")
+;;; (set-frame-font "-*-Hack-normal-normal-normal-*-24-*-*-*-m-0-iso10646-1")
 
 ;; input method
 (setq default-input-method "TeX")
@@ -169,6 +169,10 @@
 
 (use-package direnv
   :config (direnv-mode)
+  )
+
+(use-package dockerfile-mode
+  :mode "Dockerfile"
   )
 
 (use-package eldoc
@@ -452,7 +456,9 @@
            )
           )
 
-        org-agenda-files (quote ("~/me/todo/todo.org"))
+        org-agenda-files (append (directory-files-recursively "~/me/todo/todo.org$")
+                                 (directory-files-recursively "~/Dropbox/people/family.org/" "\.org$")
+                                 )
         org-agenda-include-diary t
         org-agenda-log-mode-items (quote (closed clock))
         org-agenda-ndays 7
@@ -469,6 +475,38 @@
         org-reverse-note-order t
         org-tags-match-list-sublevels t
         )
+
+
+  ;; some Easter related helpers
+
+  (defun da-easter (year)
+    "Calculate the date for Easter Sunday in YEAR. Returns the date in the
+Gregorian calendar, ie (MM DD YY) format."
+    (let* ((century (1+ (/ year 100)))
+           (shifted-epact (% (+ 14 (* 11 (% year 19))
+                                (- (/ (* 3 century) 4))
+                                (/ (+ 5 (* 8 century)) 25)
+                                (* 30 century))
+                             30))
+           (adjusted-epact (if (or (= shifted-epact 0)
+                                   (and (= shifted-epact 1)
+                                        (< 10 (% year 19))))
+                               (1+ shifted-epact)
+                             shifted-epact))
+           (paschal-moon (- (calendar-absolute-from-gregorian
+                             (list 4 19 year))
+                            adjusted-epact)))
+      (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
+
+
+  (defun da-easter-gregorian (year)
+    (calendar-gregorian-from-absolute (da-easter year)))
+
+  (defun calendar-days-from-easter ()
+    "When used in a diary sexp, this function will calculate how many days
+are between the current date (DATE) and Easter Sunday."
+    (- (calendar-absolute-from-gregorian date)
+       (da-easter (calendar-extract-year date))))
   )
 
 ;; on-screen
@@ -563,6 +601,10 @@
               ( "C-c b" . (lambda () (interactive "*")
                             (tex-enclose-word "\\textbf{" "}")))
               )
+  )
+
+(use-package lisp-mode
+  :mode "dune"
   )
 
 (use-package web-mode
