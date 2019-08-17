@@ -295,9 +295,9 @@ overridden with the ‘root’ (or the ‘webRoot’ alias) option:
        ]
      }
 
-Custom script path overrides can be set with ‘scriptPathOverrides’.  See
-*note Overriding script paths: 14. for more information on script paths
-and debugging.
+Custom script path overrides can be set with
+‘scriptPathRegexpOverrides’.  See *note Overriding script paths: 14. for
+more information on script paths and debugging.
 
 Custom sourcemap path overrides can be set with
 ‘sourceMapPathOverrides’.  See *note Using sourcemaps: 15. for more
@@ -699,14 +699,14 @@ File: Indium.info,  Node: Overriding script paths,  Prev: Overriding sourcemap p
 ...............................
 
 If your application’s script URLs don’t correspond directly to where
-their source code is located, you can use ‘scriptPathOverrides’ to tell
-Indium where to find the sources.  It maps regular expressions to
+their source code is located, you can use ‘scriptPathRegexpOverrides’ to
+tell Indium where to find the sources.  It maps regular expressions to
 Javascript substitution strings.
 
 For example, if your project root is ‘/home/user/projects/foo/’, and the
 source code for ‘http://localhost:3000/js/app.js/1234567890’ is at
 ‘/home/user/projects/foo/private/js/app.js’, you might set
-‘scriptPathOverrides’ to:
+‘scriptPathRegexpOverrides’ to:
 
      {
        "(/js/.*\\.js)/[0-9]+": "private$1"
@@ -931,128 +931,128 @@ Ref: setup general-configuration6743
 Ref: 126743
 Ref: setup id16743
 Ref: 136743
-Node: Chrome/Chromium configuration options7655
-Ref: setup chrome-chromium-configuration-options7818
-Ref: 167818
-Ref: setup chrome-configuration7818
-Ref: 117818
-Node: NodeJS configuration options8378
-Ref: setup nodejs-configuration8535
-Ref: 108535
-Ref: setup nodejs-configuration-options8535
-Ref: 178535
-Node: Starting Indium9238
-Ref: setup id29377
-Ref: 189377
-Ref: setup starting-indium9377
-Ref: 199377
-Node: NodeJS requirements9782
-Ref: setup nodejs-requirements9921
-Ref: 69921
-Ref: setup id39921
-Ref: 1a9921
-Ref: NodeJS requirements-Footnote-110604
-Ref: NodeJS requirements-Footnote-210646
-Node: Chrome/Chromium requirements10702
-Ref: setup chrome-requirements10817
-Ref: 510817
-Ref: setup chrome-chromium-requirements10817
-Ref: 1b10817
-Node: The REPL11578
-Ref: repl the-repl11705
-Ref: 1c11705
-Ref: repl repl11705
-Ref: 1d11705
-Ref: repl doc11705
-Ref: 1e11705
-Node: Starting a REPL11811
-Ref: repl starting-a-repl11894
-Ref: 1f11894
-Node: Using the REPL12369
-Ref: repl using-the-repl12486
-Ref: 2112486
-Node: Keybindings12593
-Ref: repl keybindings12697
-Ref: 2212697
-Node: Reconnecting from the REPL buffer13703
-Ref: repl reconnecting-from-the-repl-buffer13807
-Ref: 2313807
-Node: Code evaluation & context14166
-Ref: repl code-evaluation-context14259
-Ref: 2414259
-Node: Interaction in JS buffers14593
-Ref: code-evaluation interaction14719
-Ref: 2514719
-Ref: code-evaluation doc14719
-Ref: 2614719
-Ref: code-evaluation interaction-in-js-buffers14719
-Ref: 2714719
-Node: Evaluating and inspecting15301
-Ref: code-evaluation evaluating-and-inspecting15425
-Ref: 2815425
-Node: Switching to the REPL buffer15994
-Ref: code-evaluation switching-to-the-repl-buffer16158
-Ref: 2916158
-Node: Adding and removing breakpoints16372
-Ref: code-evaluation adding-and-removing-breakpoints16502
-Ref: 2a16502
-Node: The stepping debugger17786
-Ref: debugger doc17917
-Ref: 2c17917
-Ref: debugger debugger17917
-Ref: 2b17917
-Ref: debugger the-stepping-debugger17917
-Ref: 2d17917
-Node: Using sourcemaps18025
-Ref: debugger sourcemaps18127
-Ref: 1518127
-Ref: debugger using-sourcemaps18127
-Ref: 2e18127
-Node: Overriding sourcemap paths18822
-Ref: debugger webpack18933
-Ref: 2f18933
-Ref: debugger overriding-sourcemap-paths18933
-Ref: 3018933
-Node: Overriding script paths19661
-Ref: debugger scriptpaths19772
-Ref: 1419772
-Ref: debugger overriding-script-paths19772
-Ref: 3119772
-Node: Blackboxing scripts20510
-Ref: debugger blackboxing-scripts20612
-Ref: 3220612
-Node: The inspector20867
-Ref: inspector the-inspector20988
-Ref: 3320988
-Ref: inspector inspector20988
-Ref: 2020988
-Ref: inspector doc20988
-Ref: 3420988
-Node: Using the inspector21560
-Ref: inspector using-the-inspector21629
-Ref: 3521629
-Node: Troubleshooting22532
-Ref: troubleshooting doc22623
-Ref: 3622623
-Ref: troubleshooting troubleshooting22623
-Ref: 3722623
-Node: General advice before reporting issues23034
-Ref: troubleshooting general-advice-before-reporting-issues23166
-Ref: 3823166
-Ref: General advice before reporting issues-Footnote-123845
-Node: The Indium server doesn’t start23900
-Ref: troubleshooting the-indium-server-doesn-t-start24085
-Ref: 3924085
-Ref: The Indium server doesn’t start-Footnote-124706
-Node: Breakpoints are not set not using sourcemaps24755
-Ref: troubleshooting breakpoints-are-not-set-not-using-sourcemaps24956
-Ref: 3a24956
-Node: Breakpoints and debugging do not work using sourcemaps25617
-Ref: troubleshooting breakpoints-and-debugging-do-not-work-using-sourcemaps25776
-Ref: 3b25776
-Node: Indices and tables26242
-Ref: index indices-and-tables26326
-Ref: 3c26326
+Node: Chrome/Chromium configuration options7661
+Ref: setup chrome-chromium-configuration-options7824
+Ref: 167824
+Ref: setup chrome-configuration7824
+Ref: 117824
+Node: NodeJS configuration options8384
+Ref: setup nodejs-configuration8541
+Ref: 108541
+Ref: setup nodejs-configuration-options8541
+Ref: 178541
+Node: Starting Indium9244
+Ref: setup id29383
+Ref: 189383
+Ref: setup starting-indium9383
+Ref: 199383
+Node: NodeJS requirements9788
+Ref: setup nodejs-requirements9927
+Ref: 69927
+Ref: setup id39927
+Ref: 1a9927
+Ref: NodeJS requirements-Footnote-110610
+Ref: NodeJS requirements-Footnote-210652
+Node: Chrome/Chromium requirements10708
+Ref: setup chrome-requirements10823
+Ref: 510823
+Ref: setup chrome-chromium-requirements10823
+Ref: 1b10823
+Node: The REPL11584
+Ref: repl the-repl11711
+Ref: 1c11711
+Ref: repl repl11711
+Ref: 1d11711
+Ref: repl doc11711
+Ref: 1e11711
+Node: Starting a REPL11817
+Ref: repl starting-a-repl11900
+Ref: 1f11900
+Node: Using the REPL12375
+Ref: repl using-the-repl12492
+Ref: 2112492
+Node: Keybindings12599
+Ref: repl keybindings12703
+Ref: 2212703
+Node: Reconnecting from the REPL buffer13709
+Ref: repl reconnecting-from-the-repl-buffer13813
+Ref: 2313813
+Node: Code evaluation & context14172
+Ref: repl code-evaluation-context14265
+Ref: 2414265
+Node: Interaction in JS buffers14599
+Ref: code-evaluation interaction14725
+Ref: 2514725
+Ref: code-evaluation doc14725
+Ref: 2614725
+Ref: code-evaluation interaction-in-js-buffers14725
+Ref: 2714725
+Node: Evaluating and inspecting15307
+Ref: code-evaluation evaluating-and-inspecting15431
+Ref: 2815431
+Node: Switching to the REPL buffer16000
+Ref: code-evaluation switching-to-the-repl-buffer16164
+Ref: 2916164
+Node: Adding and removing breakpoints16378
+Ref: code-evaluation adding-and-removing-breakpoints16508
+Ref: 2a16508
+Node: The stepping debugger17792
+Ref: debugger doc17923
+Ref: 2c17923
+Ref: debugger debugger17923
+Ref: 2b17923
+Ref: debugger the-stepping-debugger17923
+Ref: 2d17923
+Node: Using sourcemaps18031
+Ref: debugger sourcemaps18133
+Ref: 1518133
+Ref: debugger using-sourcemaps18133
+Ref: 2e18133
+Node: Overriding sourcemap paths18828
+Ref: debugger webpack18939
+Ref: 2f18939
+Ref: debugger overriding-sourcemap-paths18939
+Ref: 3018939
+Node: Overriding script paths19667
+Ref: debugger scriptpaths19778
+Ref: 1419778
+Ref: debugger overriding-script-paths19778
+Ref: 3119778
+Node: Blackboxing scripts20528
+Ref: debugger blackboxing-scripts20630
+Ref: 3220630
+Node: The inspector20885
+Ref: inspector the-inspector21006
+Ref: 3321006
+Ref: inspector inspector21006
+Ref: 2021006
+Ref: inspector doc21006
+Ref: 3421006
+Node: Using the inspector21578
+Ref: inspector using-the-inspector21647
+Ref: 3521647
+Node: Troubleshooting22550
+Ref: troubleshooting doc22641
+Ref: 3622641
+Ref: troubleshooting troubleshooting22641
+Ref: 3722641
+Node: General advice before reporting issues23052
+Ref: troubleshooting general-advice-before-reporting-issues23184
+Ref: 3823184
+Ref: General advice before reporting issues-Footnote-123863
+Node: The Indium server doesn’t start23918
+Ref: troubleshooting the-indium-server-doesn-t-start24103
+Ref: 3924103
+Ref: The Indium server doesn’t start-Footnote-124724
+Node: Breakpoints are not set not using sourcemaps24773
+Ref: troubleshooting breakpoints-are-not-set-not-using-sourcemaps24974
+Ref: 3a24974
+Node: Breakpoints and debugging do not work using sourcemaps25635
+Ref: troubleshooting breakpoints-and-debugging-do-not-work-using-sourcemaps25794
+Ref: 3b25794
+Node: Indices and tables26260
+Ref: index indices-and-tables26344
+Ref: 3c26344
 
 End Tag Table
 
