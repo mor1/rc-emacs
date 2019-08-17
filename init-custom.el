@@ -11,10 +11,9 @@
  '(c-basic-offset 4)
  '(column-number-mode t)
  '(comment-auto-fill-only-comments t)
- '(custom-enabled-themes (quote (sanityinc-solarized-dark)))
  '(custom-safe-themes
    (quote
-    ("4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
+    ("0598c6a29e13e7112cfbc2f523e31927ab7dce56ebb2016b567e1eff6dc1fd4f" "a8245b7cc985a0610d71f9852e9f2767ad1b852c2bdea6f4aadc12cce9c4d6d0" "d91ef4e714f05fff2070da7ca452980999f5361209e679ee988e3c432df24347" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
  '(default-major-mode (quote text-mode) t)
  '(direnv-mode t nil (direnv))
  '(fci-rule-width 2)
@@ -25,20 +24,20 @@
  '(highlight-changes-colors (quote ("#d33682" "#6c71c4")))
  '(highlight-symbol-colors
    (--map
-    (solarized-color-blend it "#fdf6e3" 0.25)
+    (solarized-color-blend it "#002b36" 0.25)
     (quote
      ("#b58900" "#2aa198" "#dc322f" "#6c71c4" "#859900" "#cb4b16" "#268bd2"))))
- '(highlight-symbol-foreground-color "#586e75")
+ '(highlight-symbol-foreground-color "#93a1a1")
  '(highlight-tail-colors
    (quote
-    (("#eee8d5" . 0)
-     ("#B4C342" . 20)
-     ("#69CABF" . 30)
-     ("#69B7F0" . 50)
-     ("#DEB542" . 60)
-     ("#F2804F" . 70)
-     ("#F771AC" . 85)
-     ("#eee8d5" . 100))))
+    (("#073642" . 0)
+     ("#546E00" . 20)
+     ("#00736F" . 30)
+     ("#00629D" . 50)
+     ("#7B6000" . 60)
+     ("#8B2C02" . 70)
+     ("#93115C" . 85)
+     ("#073642" . 100))))
  '(holiday-bahai-holidays nil)
  '(holiday-general-holidays
    (quote
@@ -100,16 +99,20 @@
  '(org-clock-continuously t)
  '(package-selected-packages
    (quote
-    (outshine mu4e-conversation mu4e-query-fragments ialign merlin-eldoc ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv diminish csv-mode color-theme-sanityinc-solarized color-theme coffee-mode avy auto-package-update auctex aggressive-indent)))
+    (solarized-theme outshine mu4e-conversation mu4e-query-fragments ialign merlin-eldoc ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv diminish csv-mode coffee-mode avy auto-package-update auctex aggressive-indent)))
  '(paradox-github-token t)
  '(require-final-newline (quote visit-save))
  '(scroll-bar-mode nil)
  '(sentence-end-double-space nil)
  '(show-paren-mode t)
  '(size-indication-mode t)
+ '(solarized-distinct-fringe-background t)
+ '(solarized-scale-org-headlines nil)
+ '(solarized-scale-outline-headlines nil)
+ '(solarized-use-variable-pitch nil)
  '(tab-width 4)
- '(term-default-bg-color "#fdf6e3")
- '(term-default-fg-color "#657b83")
+ '(term-default-bg-color "#002b36")
+ '(term-default-fg-color "#839496")
  '(tool-bar-mode nil)
  '(uniquify-buffer-name-style (quote post-forward-angle-brackets) nil (uniquify))
  '(unkillable-scratch t)
@@ -127,9 +130,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:inherit nil :stipple nil :background "#001010" :foreground "gray69" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 100 :width normal :foundry "nil" :family "Hack"))))
  '(ediff-current-diff-C ((t (:background "yellow1"))))
- '(flyspell-duplicate ((t (:background "#9b5500"))))
- '(flyspell-incorrect ((t (:background "#aa0000"))))
+ '(flyspell-duplicate ((t (:underline (:color "#b58900" :style wave)))))
+ '(flyspell-incorrect ((t (:background "#aa0000" :foreground "gray75" :underline (:color "#dc322f" :style wave)))))
  '(smerge-base ((t (:background "lavender"))))
- '(whitespace-line ((t (:underline t)))))
+ '(whitespace-line ((t (:underline t))))
+ '(whitespace-tab ((t (:foreground "burlywood3" :inverse-video t)))))

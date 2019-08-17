@@ -733,12 +733,12 @@ are between the current date (DATE) and Easter Sunday."
 ;; theme switching
 (defun light () "Light colour scheme."
        (interactive)
-       (color-theme-sanityinc-solarized-light)
+       (load-theme 'solarized-light t)
        )
 
 (defun dark () "Dark colour scheme."
        (interactive)
-       (color-theme-sanityinc-solarized-dark)
+       (load-theme 'solarized-dark t)
        )
 
 ;;
