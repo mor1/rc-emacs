@@ -223,6 +223,7 @@ attention to case differences."
     processing
     proselint
     protobuf-protoc
+    protobuf-prototool
     pug
     puppet-parser
     puppet-lint
@@ -1190,17 +1191,23 @@ to a number and return it.  Otherwise return nil."
   (and (listp obj) (seq-every-p #'symbolp obj)))
 
 (defun flycheck-same-files-p (file-a file-b)
-  "Determine whether FILE-A and FILE-B refer to the same file."
-  (let ((file-a (expand-file-name file-a))
-        (file-b (expand-file-name file-b)))
-    ;; We must resolve symbolic links here, since some syntax checker always
-    ;; output canonical file names with all symbolic links resolved.  However,
-    ;; we still do a simple path compassion first, to avoid the comparatively
-    ;; expensive file system call if possible.  See
-    ;; https://github.com/flycheck/flycheck/issues/561
-    (or (string= (directory-file-name file-a) (directory-file-name file-b))
-        (string= (directory-file-name (file-truename file-a))
-                 (directory-file-name (file-truename file-b))))))
+  "Determine whether FILE-A and FILE-B refer to the same file.
+
+Files are the same if (in the order checked):
+
+- They have the same path.  Or,
+- They have the same inode and filesystem numbers, not following symlink.  Or,
+- After chasing symlinks, they result in the same path.
+
+This should work even on w32, where Emacs uses file index to
+emulate inode (see fstat() in emacs/src/w32.c)."
+  (or (string= file-a file-b)
+      (let ((attrs-a (file-attributes file-a))
+            (attrs-b (file-attributes file-b)))
+        (and attrs-a attrs-b  ;; Make sure both file-a and file-b exist.
+             (equal (nth 10 attrs-a) (nth 10 attrs-b))    ;; inode
+             (equal (nth 11 attrs-a) (nth 11 attrs-b))))  ;; filesystem
+      (string= (file-chase-links file-a) (file-chase-links file-b))))
 
 (defvar-local flycheck-temporaries nil
   "Temporary files and directories created by Flycheck.")
@@ -8621,8 +8628,10 @@ for more information about the custom directories."
 (defun flycheck-eslint-config-exists-p ()
   "Whether there is a valid eslint config for the current buffer."
   (let* ((executable (flycheck-find-checker-executable 'javascript-eslint))
-         (exitcode (and executable (call-process executable nil nil nil
-                                                 "--print-config" "."))))
+         (exitcode (and executable
+                        (call-process executable nil nil nil
+                                      "--print-config" (or buffer-file-name
+                                                           "index.js")))))
     (eq exitcode 0)))
 
 (defun flycheck-parse-eslint (output checker buffer)
@@ -9121,12 +9130,23 @@ See URL `http://proselint.com/'."
   :error-parser flycheck-proselint-parse-errors
   :modes (text-mode markdown-mode gfm-mode message-mode org-mode))
 
+(flycheck-def-option-var flycheck-protoc-import-path nil protobuf-protoc
+  "A list of directories to resolve import directives.
+
+The value of this variable is a list of strings, where each
+string is a directory to add to the import path.  Relative paths
+are relative to the file being checked."
+  :type '(repeat (directory :tag "Import directory"))
+  :safe #'flycheck-string-list-p
+  :package-version '(flycheck . "32"))
+
 (flycheck-define-checker protobuf-protoc
   "A protobuf syntax checker using the protoc compiler.
 
 See URL `https://developers.google.com/protocol-buffers/'."
   :command ("protoc" "--error_format" "gcc"
             (eval (concat "--java_out=" (flycheck-temp-dir-system)))
+            (option-list "--proto_path=" flycheck-protoc-import-path concat)
             ;; Add the file directory of protobuf path to resolve import
             ;; directives
             (eval (concat "--proto_path="
@@ -9142,6 +9162,22 @@ See URL `https://developers.google.com/protocol-buffers/'."
           column ":" line-end))
   :modes protobuf-mode
   :predicate (lambda () (buffer-file-name)))
+
+(defun flycheck-prototool-project-root (&optional _checker)
+  "Return the nearest directory holding the prototool.yaml configuration."
+  (and buffer-file-name
+       (locate-dominating-file buffer-file-name "prototool.yaml")))
+
+(flycheck-define-checker protobuf-prototool
+  "A protobuf syntax checker using prototool.
+
+See URL `https://github.com/uber/prototool'."
+  :command ("prototool" "lint" source-original)
+  :error-patterns
+  ((warning line-start (file-name) ":" line ":" column ":" (message) line-end))
+  :modes protobuf-mode
+  :enabled flycheck-prototool-project-root
+  :predicate flycheck-buffer-saved-p)
 
 (flycheck-define-checker pug
   "A Pug syntax checker using the pug compiler.
@@ -9280,7 +9316,7 @@ Return nil if CHECKER's executable is not a Python REPL.
 Otherwise, return a list starting with -c (-m is not enough
 because it adds the current directory to Python's path)."
   (when (flycheck-python-needs-module-p checker)
-    `("-c" ,(concat "import sys,runpy;sys.path.pop(0);"
+    `("-c" ,(concat "import sys;sys.path.pop(0);import runpy;"
                     (format "runpy.run_module(%S)" module-name)))))
 
 (flycheck-def-config-file-var flycheck-flake8rc python-flake8 ".flake8rc"
@@ -10780,6 +10816,16 @@ See URL `https://www.terraform.io/docs/commands/fmt.html'."
   :next-checkers ((warning . terraform-tflint))
   :modes terraform-mode)
 
+(flycheck-def-option-var flycheck-tflint-variable-files nil terraform-tflint
+  "A list of files to resolve terraform variables.
+
+The value of this variable is a list of strings, where each
+string is a file to add to the terraform variables files.
+Relative files are relative to the file being checked."
+  :type '(repeat (directory :tag "Variable file"))
+  :safe #'flycheck-string-list-p
+  :package-version '(flycheck . "32"))
+
 (defun flycheck-parse-tflint-linter (output checker buffer)
   "Parse tflint warnings from JSON OUTPUT.
 
@@ -10809,8 +10855,11 @@ information about tflint."
   "A Terraform checker using tflint.
 
 See URL `https://github.com/wata727/tflint'."
-  :command ("tflint" "--error-with-issues" "--format=json" source)
+  :command ("tflint" "--format=json"
+            (option-list "--var-file=" flycheck-tflint-variable-files concat)
+            source-original)
   :error-parser flycheck-parse-tflint-linter
+  :predicate flycheck-buffer-saved-p
   :modes terraform-mode)
 
 (flycheck-define-checker tex-chktex
