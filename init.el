@@ -92,14 +92,6 @@
 (setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))
 (unless (server-running-p) (server-start))
 
-;; fonts
-(add-to-list 'default-frame-alist '(font . "Hack 10"))
-;;; (set-frame-font "-*-Hack-normal-normal-normal-*-10-*-*-*-m-0-iso10646-1")
-;;; (set-frame-font "-*-Hack-normal-normal-normal-*-11-*-*-*-m-0-iso10646-1")
-;;; (set-frame-font "-*-Hack-normal-normal-normal-*-12-*-*-*-m-0-iso10646-1")
-;;; (set-frame-font "-*-Hack-normal-normal-normal-*-16-*-*-*-m-0-iso10646-1")
-;;; (set-frame-font "-*-Hack-normal-normal-normal-*-24-*-*-*-m-0-iso10646-1")
-
 ;; input method
 (setq default-input-method "TeX")
 (set-language-environment "utf-8")
