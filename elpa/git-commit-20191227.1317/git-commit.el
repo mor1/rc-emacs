@@ -11,8 +11,8 @@
 ;;	Marius Vollmer <marius.vollmer@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "25.1") (dash "20180910") (with-editor "20181103"))
-;; Package-Version: 20190717.29
+;; Package-Requires: ((emacs "25.1") (dash "20180910") (transient "20190812") (with-editor "20181103"))
+;; Package-Version: 20191227.1317
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -91,7 +91,7 @@
 ;;   C-c C-r  Insert a Reviewed-by header.
 ;;   C-c C-o  Insert a Cc header.
 ;;   C-c C-p  Insert a Reported-by header.
-;;   C-c M-s  Insert a Suggested-by header.
+;;   C-c C-i  Insert a Suggested-by header.
 
 ;; When Git requests a commit message from the user, it does so by
 ;; having her edit a file which initially contains some comments,
@@ -119,9 +119,12 @@
 (require 'magit-utils nil t)
 (require 'ring)
 (require 'server)
+(require 'transient)
 (require 'with-editor)
 
-(eval-when-compile (require 'recentf))
+(eval-when-compile
+  (require 'recentf)
+  (require 'subr-x))
 
 ;;;; Declarations
 
@@ -130,7 +133,11 @@
 (defvar font-lock-beg)
 (defvar font-lock-end)
 
+(declare-function magit-completing-read "magit-utils"
+                  (prompt collection &optional predicate require-match
+                          initial-input hist def fallback))
 (declare-function magit-expand-git-file-name "magit-git" (filename))
+(declare-function magit-git-lines "magit-git" (&rest args))
 (declare-function magit-list-local-branch-names "magit-git" ())
 (declare-function magit-list-remote-branch-names "magit-git"
                   (&optional remote relative))
@@ -270,7 +277,8 @@ already using it, then you probably shouldn't start doing so."
 
 (defcustom git-commit-known-pseudo-headers
   '("Signed-off-by" "Acked-by" "Modified-by" "Cc"
-    "Suggested-by" "Reported-by" "Tested-by" "Reviewed-by")
+    "Suggested-by" "Reported-by" "Tested-by" "Reviewed-by"
+    "Co-authored-by")
   "A list of Git pseudo headers to be highlighted."
   :group 'git-commit
   :safe (lambda (val) (and (listp val) (-all-p 'stringp val)))
@@ -365,18 +373,10 @@ This is only used if Magit is available."
            (define-key map (kbd "C-M-k") 'git-commit-next-message))
           (t
            (define-key map (kbd "M-p") 'git-commit-prev-message)
-           (define-key map (kbd "M-n") 'git-commit-next-message)
-           ;; Old bindings to avoid confusion
-           (define-key map (kbd "C-c C-x a") 'git-commit-ack)
-           (define-key map (kbd "C-c C-x i") 'git-commit-suggested)
-           (define-key map (kbd "C-c C-x m") 'git-commit-modified)
-           (define-key map (kbd "C-c C-x o") 'git-commit-cc)
-           (define-key map (kbd "C-c C-x p") 'git-commit-reported)
-           (define-key map (kbd "C-c C-x r") 'git-commit-review)
-           (define-key map (kbd "C-c C-x s") 'git-commit-signoff)
-           (define-key map (kbd "C-c C-x t") 'git-commit-test)))
+           (define-key map (kbd "M-n") 'git-commit-next-message)))
+    (define-key map (kbd "C-c C-i") 'git-commit-insert-pseudo-header)
     (define-key map (kbd "C-c C-a") 'git-commit-ack)
-    (define-key map (kbd "C-c C-i") 'git-commit-suggested)
+    (define-key map (kbd "C-c M-i") 'git-commit-suggested)
     (define-key map (kbd "C-c C-m") 'git-commit-modified)
     (define-key map (kbd "C-c C-o") 'git-commit-cc)
     (define-key map (kbd "C-c C-p") 'git-commit-reported)
@@ -412,6 +412,8 @@ This is only used if Magit is available."
      :help "Insert a 'Reported-by' header"]
     ["Suggested" git-commit-suggested t
      :help "Insert a 'Suggested-by' header"]
+    ["Co-authored-by" git-commit-co-authored t
+     :help "Insert a 'Co-authored-by' header"]
     "-"
     ["Save" git-commit-save-message t]
     ["Cancel" with-editor-cancel t]
@@ -671,9 +673,10 @@ With a numeric prefix ARG, go forward ARG comments."
 (defun git-commit-save-message ()
   "Save current message to `log-edit-comment-ring'."
   (interactive)
-  (--when-let (git-commit-buffer-message)
-    (unless (ring-member log-edit-comment-ring it)
-      (ring-insert log-edit-comment-ring it))))
+  (when-let ((message (git-commit-buffer-message)))
+    (when-let ((index (ring-member log-edit-comment-ring message)))
+      (ring-remove log-edit-comment-ring index))
+    (ring-insert log-edit-comment-ring message)))
 
 (defun git-commit-buffer-message ()
   (let ((flush (concat "^" comment-start))
@@ -697,6 +700,20 @@ With a numeric prefix ARG, go forward ARG comments."
       str)))
 
 ;;; Headers
+
+(define-transient-command git-commit-insert-pseudo-header ()
+  "Insert a commit message pseudo header."
+  [["Insert ... by yourself"
+    ("a"   "Ack"         git-commit-ack)
+    ("m"   "Modified"    git-commit-modified)
+    ("r"   "Reviewed"    git-commit-review)
+    ("s"   "Signed-off"  git-commit-signoff)
+    ("t"   "Tested"      git-commit-test)]
+   ["Insert ... by someone"
+    ("C-c" "Cc"          git-commit-cc)
+    ("C-r" "Reported"    git-commit-reported)
+    ("C-i" "Suggested"   git-commit-suggested)
+    ("C-a" "Co-authored" git-commit-co-authored)]])
 
 (defun git-commit-ack (name mail)
   "Insert a header acknowledging that you have looked at the commit."
@@ -725,18 +742,23 @@ With a numeric prefix ARG, go forward ARG comments."
 
 (defun git-commit-cc (name mail)
   "Insert a header mentioning someone who might be interested."
-  (interactive (git-commit-read-ident))
+  (interactive (git-commit-read-ident "Cc"))
   (git-commit-insert-header "Cc" name mail))
 
 (defun git-commit-reported (name mail)
   "Insert a header mentioning the person who reported the issue."
-  (interactive (git-commit-read-ident))
+  (interactive (git-commit-read-ident "Reported-by"))
   (git-commit-insert-header "Reported-by" name mail))
 
 (defun git-commit-suggested (name mail)
   "Insert a header mentioning the person who suggested the change."
-  (interactive (git-commit-read-ident))
+  (interactive (git-commit-read-ident "Suggested-by"))
   (git-commit-insert-header "Suggested-by" name mail))
+
+(defun git-commit-co-authored (name mail)
+  "Insert a header mentioning the person who co-authored the commit."
+  (interactive (git-commit-read-ident "Co-authored-by"))
+  (git-commit-insert-header "Co-authored-by" name mail))
 
 (defun git-commit-self-ident ()
   (list (or (getenv "GIT_AUTHOR_NAME")
@@ -750,9 +772,21 @@ With a numeric prefix ARG, go forward ARG comments."
             (ignore-errors (car (process-lines "git" "config" "user.email")))
             (read-string "Email: "))))
 
-(defun git-commit-read-ident ()
-  (list (read-string "Name: ")
-        (read-string "Email: ")))
+(defun git-commit-read-ident (prompt)
+  (if (require 'magit-git nil t)
+      (let ((str (magit-completing-read
+                  prompt
+                  (sort (delete-dups
+                         (magit-git-lines "log" "-n9999" "--format=%aN <%ae>"))
+                        'string<)
+                  nil nil nil 'git-commit-read-ident-history)))
+        (save-match-data
+          (if (string-match "\\`\\([^<]+\\) *<\\([^>]+\\)>\\'" str)
+              (list (string-trim (match-string 1 str))
+                    (string-trim (match-string 2 str)))
+            (user-error "Invalid input"))))
+    (list (read-string "Name: ")
+          (read-string "Email: "))))
 
 (defun git-commit-insert-header (header name email)
   (setq header (format "%s: %s <%s>" header name email))
