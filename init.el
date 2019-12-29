@@ -126,6 +126,14 @@
   (auto-compile-on-load-mode)
   )
 
+(use-package cc-mode
+  :defer t
+  :config
+  (setq c-basic-offset 4
+        c-default-style "linux"
+        )
+  )
+
 (use-package calendar
   :defer t
   :config
@@ -721,6 +729,36 @@ are between the current date (DATE) and Easter Sunday."
 
 (defun todo ()  (interactive) (find-file "~/me/todo/todo.org"))
 (defun notes () (interactive) (find-file "~/me/todo/notes.org"))
+
+(use-package solarized-theme
+  :ensure
+  :init
+  (progn
+    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
+    (defvar theme-current my-color-themes)
+    (defvar color-theme-is-global nil) ; Initialization
+
+    (defun my-theme-set-default ()
+      (interactive)
+      (setq theme-current my-color-themes)
+      (load-theme (car theme-current) t))
+
+    (defun my-describe-theme () ; Show the current theme
+      (interactive)
+      (message "%s" (car theme-current)))
+
+    (defun my-theme-cycle ()
+      (interactive)
+      (setq theme-current (cdr theme-current))
+      (if (null theme-current)
+          (setq theme-current my-color-themes))
+      (load-theme (car theme-current) t)
+      (message "%S" (car theme-current)))
+    )
+
+  :bind
+  ("C-c t" . my-theme-cycle)
+  )
 
 ;; theme switching
 (defun light () "Light colour scheme."
