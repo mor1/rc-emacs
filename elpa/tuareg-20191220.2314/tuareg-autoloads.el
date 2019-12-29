@@ -124,9 +124,14 @@ Major mode to edit opam files.
 
 \(fn)" t nil)
 
+(autoload 'tuareg-opam-update-env "tuareg-opam" "\
+Update the environment to follow current OPAM switch configuration.
+
+\(fn SWITCH)" t nil)
+
 (add-to-list 'auto-mode-alist '("[./]opam_?\\'" . tuareg-opam-mode))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-opam" '("tuareg-opam-" "verbose-tuareg-opam-smie-rules")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-opam" '("tuareg-" "verbose-tuareg-opam-smie-rules")))
 
 ;;;***
 
