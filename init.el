@@ -38,9 +38,9 @@
 (require 'package)
 (setq package-enable-at-startup nil
       package-archives
-      '(("marmalade" . "https://marmalade-repo.org/packages/")
+      '(
         ("melpa" . "https://melpa.org/packages/")
-        ("gnu" . "https://elpa.gnu.org/packages/")
+        ("gnu" . "http://elpa.gnu.org/packages/")
         ("org" . "http://orgmode.org/elpa/"))
       )
 (package-initialize)
