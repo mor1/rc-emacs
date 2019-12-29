@@ -5,8 +5,8 @@
 ;;          João Távora <joaotavora@gmail.com>,
 ;;          Noam Postavsky <npostavs@gmail.com>
 ;; Maintainer: Noam Postavsky <npostavs@gmail.com>
-;; Version: 0.13.0
-;; Package-Version: 20190724.1204
+;; Version: 0.14.0
+;; Package-Version: 20191222.2206
 ;; X-URL: http://github.com/joaotavora/yasnippet
 ;; Keywords: convenience, emulation
 ;; URL: http://github.com/joaotavora/yasnippet
@@ -161,7 +161,7 @@
 
 (defconst yas-installed-snippets-dir (expand-file-name "snippets" yas--loaddir))
 (make-obsolete-variable 'yas-installed-snippets-dir "\
-Yasnippet no longer comes with installed snippets" "0.13")
+Yasnippet no longer comes with installed snippets" "0.14")
 
 (defconst yas--default-user-snippets-dir
   (expand-file-name "snippets" user-emacs-directory))
@@ -387,7 +387,7 @@ It must be set to nil before loading yasnippet to take effect."
 ;; Only two faces, and one of them shouldn't even be used...
 ;;
 (defface yas-field-highlight-face
-  '((t (:inherit 'region)))
+  '((t (:inherit region)))
   "The face used to highlight the currently active field of a snippet")
 
 (defface yas--field-debug-face
@@ -580,7 +580,7 @@ can be useful."
 
 ;;; Internal variables
 
-(defconst yas--version "0.13.0")
+(defconst yas--version "0.14.0")
 
 (defvar yas--menu-table (make-hash-table)
   "A hash table of MAJOR-MODE symbols to menu keymaps.")
@@ -1400,6 +1400,9 @@ conditions to filter out potential expansions."
                                 (push (cons name template) acc))
                             namehash))
                (yas--table-hash table))
+      (maphash #'(lambda (uuid template)
+                   (push (cons uuid template) acc))
+               (yas--table-uuidhash table))
       (yas--filter-templates-by-condition acc))))
 
 (defun yas--templates-for-key-at-point ()
@@ -4728,7 +4731,14 @@ When multiple expressions are found, only the last one counts."
   ;;
   (save-excursion
     (while (re-search-forward yas--field-regexp nil t)
-      (let* ((real-match-end-0 (yas--scan-sexps (1+ (match-beginning 0)) 1))
+      (let* ((brace-scan (yas--scan-sexps (1+ (match-beginning 0)) 1))
+             ;; if the `brace-scan' didn't reach a brace, we have a
+             ;; snippet with invalid escaping, probably a closing
+             ;; brace escaped with two backslashes (github#979). But
+             ;; be lenient, because we can.
+             (real-match-end-0 (if (eq ?} (char-before brace-scan))
+                                   brace-scan
+                                 (point)))
              (number (and (match-string-no-properties 1)
                           (string-to-number (match-string-no-properties 1))))
              (brand-new-field (and real-match-end-0
