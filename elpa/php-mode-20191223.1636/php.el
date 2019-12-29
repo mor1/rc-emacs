@@ -4,10 +4,10 @@
 
 ;; Author: USAMI Kenta <tadsan@zonu.me>
 ;; Created: 5 Dec 2018
-;; Version: 1.21.4
+;; Version: 1.22.2
 ;; Keywords: languages, php
 ;; Homepage: https://github.com/emacs-php/php-mode
-;; Package-Requires: ((emacs "24.3") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "24.3"))
 ;; License: GPL-3.0-or-later
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -159,8 +159,13 @@ it is the character that will terminate the string, or t if the string should be
   (and (boundp 'poly-php-html-mode)
        (symbol-value 'poly-php-html-mode)))
 
-(defun php-create-regexp-for-method (visibility)
-  "Make a regular expression for methods with the given VISIBILITY.
+(defconst php-beginning-of-defun-regexp
+  "^\\s-*\\(?:\\(?:abstract\\|final\\|private\\|protected\\|public\\|static\\)\\s-+\\)*function\\s-+&?\\(\\(\\sw\\|\\s_\\)+\\)\\s-*("
+  "Regular expression for a PHP function.")
+
+(eval-when-compile
+  (defun php-create-regexp-for-method (&optional visibility)
+    "Make a regular expression for methods with the given VISIBILITY.
 
 VISIBILITY must be a string that names the visibility for a PHP
 method, e.g. 'public'.  The parameter VISIBILITY can itself also
@@ -170,67 +175,81 @@ The regular expression this function returns will check for other
 keywords that can appear in method signatures, e.g. 'final' and
 'static'.  The regular expression will have one capture group
 which will be the name of the method."
-  (concat
-   ;; Initial space with possible 'abstract' or 'final' keywords
-   "^\\s-*\\(?:\\(?:abstract\\|final\\)\\s-+\\)?"
-   ;; 'static' keyword may come either before or after visibility
-   "\\(?:" visibility "\\(?:\\s-+static\\)?\\|\\(?:static\\s-+\\)?" visibility "\\)\\s-+"
-   ;; Make sure 'function' comes next with some space after
-   "function\\s-+"
-   ;; Capture the name as the first group and the regexp and make sure
-   ;; by the end we see the opening parenthesis for the parameters.
-   "\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*("))
+    (when (stringp visibility)
+      (setq visibility (list visibility)))
+    (rx-to-string `(: line-start
+                      (* (syntax whitespace))
+                      ,@(if visibility
+                            `((* (or "abstract" "final" "static")
+                                 (+ (syntax whitespace)))
+                              (or ,@visibility)
+                              (+ (syntax whitespace))
+                              (* (or "abstract" "final" "static")
+                                 (+ (syntax whitespace))))
+                          '((* (* (or "abstract" "final" "static"
+                                      "private" "protected" "public")
+                                  (+ (syntax whitespace))))))
+                      "function"
+                      (+ (syntax whitespace))
+                      (? "&" (* (syntax whitespace)))
+                      (group (+ (or (syntax word) (syntax symbol))))
+                      (* (syntax whitespace))
+                      "(")))
 
-(defun php-create-regexp-for-classlike (type)
-  "Accepts a `TYPE' of a 'classlike' object as a string, such as
+  (defun php-create-regexp-for-classlike (type)
+    "Accepts a `TYPE' of a 'classlike' object as a string, such as
 'class' or 'interface', and returns a regexp as a string which
 can be used to match against definitions for that classlike."
-  (concat
-   ;; First see if 'abstract' or 'final' appear, although really these
-   ;; are not valid for all values of `type' that the function
-   ;; accepts.
-   "^\\s-*\\(?:\\(?:abstract\\|final\\)\\s-+\\)?"
-   ;; The classlike type
-   type
-   ;; Its name, which is the first captured group in the regexp.  We
-   ;; allow backslashes in the name to handle namespaces, but again
-   ;; this is not necessarily correct for all values of `type'.
-   "\\s-+\\(\\(?:\\sw\\|\\\\\\|\\s_\\)+\\)"))
+    (concat
+     ;; First see if 'abstract' or 'final' appear, although really these
+     ;; are not valid for all values of `type' that the function
+     ;; accepts.
+     "^\\s-*\\(?:\\(?:abstract\\|final\\)\\s-+\\)?"
+     ;; The classlike type
+     type
+     ;; Its name, which is the first captured group in the regexp.  We
+     ;; allow backslashes in the name to handle namespaces, but again
+     ;; this is not necessarily correct for all values of `type'.
+     "\\s-+\\(\\(?:\\sw\\|\\\\\\|\\s_\\)+\\)")))
 
-(defvar php-imenu-generic-expression
-  `(("Namespaces"
-    ,(php-create-regexp-for-classlike "namespace") 1)
-   ("Classes"
-    ,(php-create-regexp-for-classlike "class") 1)
-   ("Interfaces"
-    ,(php-create-regexp-for-classlike "interface") 1)
-   ("Traits"
-    ,(php-create-regexp-for-classlike "trait") 1)
-   ("All Methods"
-    ,(php-create-regexp-for-method "\\(?:\\sw\\|\\s_\\)+") 1)
-   ("Private Methods"
-    ,(php-create-regexp-for-method "private") 1)
-   ("Protected Methods"
-    ,(php-create-regexp-for-method "protected")  1)
-   ("Public Methods"
-    ,(php-create-regexp-for-method "public") 1)
-   ("Anonymous Functions"
-    "\\<\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*=\\s-*function\\s-*(" 1)
-   ("Named Functions"
-    "^\\s-*function\\s-+\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*(" 1))
+(defconst php-imenu-generic-expression
+  (eval-when-compile
+    `(("Namespaces"
+       ,(php-create-regexp-for-classlike "namespace") 1)
+      ("Classes"
+       ,(php-create-regexp-for-classlike "class") 1)
+      ("Interfaces"
+       ,(php-create-regexp-for-classlike "interface") 1)
+      ("Traits"
+       ,(php-create-regexp-for-classlike "trait") 1)
+      ("All Methods"
+       ,(php-create-regexp-for-method) 1)
+      ("Private Methods"
+       ,(php-create-regexp-for-method '("private")) 1)
+      ("Protected Methods"
+       ,(php-create-regexp-for-method '("protected"))  1)
+      ("Public Methods"
+       ,(php-create-regexp-for-method '("public")) 1)
+      ("Anonymous Functions"
+       "\\<\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*=\\s-*f\\(unctio\\)?n\\s-*(" 1)
+      ("Named Functions"
+       "^\\s-*function\\s-+\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*(" 1)))
   "Imenu generic expression for PHP Mode.  See `imenu-generic-expression'.")
 
-(defvar php--re-namespace-pattern
-  (php-create-regexp-for-classlike "namespace"))
+(defconst php--re-namespace-pattern
+  (eval-when-compile
+    (php-create-regexp-for-classlike "namespace")))
 
-(defvar php--re-classlike-pattern
-  (php-create-regexp-for-classlike (regexp-opt '("class" "interface" "trait"))))
+(defconst php--re-classlike-pattern
+  (eval-when-compile
+    (php-create-regexp-for-classlike (regexp-opt '("class" "interface" "trait")))))
 
 (defun php-get-current-element (re-pattern)
   "Return backward matched element by RE-PATTERN."
   (save-excursion
-    (when (re-search-backward re-pattern nil t)
-      (match-string-no-properties 1))))
+    (save-match-data
+      (when (re-search-backward re-pattern nil t)
+        (match-string-no-properties 1)))))
 
 ;;; Provide support for Flymake so that users can see warnings and
 ;;; errors in real-time as they write code.
@@ -245,7 +264,7 @@ Look at the `php-executable' variable instead of the constant \"php\" command."
                             'flymake-php-init)))))
     (list php-executable (cdr init))))
 
-(defconst php-re-detect-html-tag
+(defconst php-re-detect-html-tag-aggressive
   (eval-when-compile
     (rx (or (: string-start (* (in space))
                "<!"
@@ -257,13 +276,38 @@ Look at the `php-executable' variable instead of the constant \"php\" command."
                       (* (in space)) (+ (in alpha "-")) (* (in space)) ">"))
                (: "<" (* (in space)) (+ (in alpha "-")) (* (in space)) ">"))))))
 
+(defconst php-re-detect-html-tag-default
+  (eval-when-compile
+    (rx (or (: string-start (* (in space))
+               "<!"
+               (or "DOCTYPE" "doctype")
+               (+ (in space))
+               (or "HTML" "html"))
+            (: line-start
+               (: "<" (* (in space)) (+ (in alpha "-")) (* (in space)) ">"))))))
+
+(defcustom php-re-detect-html-tag 'php-re-detect-html-tag-default
+  "Regexp pattern variable-name of HTML detection."
+  :group 'php
+  :tag "PHP Re Detect HTML Tag"
+  :type '(choice (const :tag "Default pattern" 'php-re-detect-html-tag-default)
+                 (const :tag "Aggressive pattern" 'php-re-detect-html-tag-aggressive)
+                 (variable :tag "Variable name of RegExp pattern")))
+
+(defsubst php-re-detect-html-tag ()
+  "Return RegExp pattern for HTML detection."
+  (if (symbolp php-re-detect-html-tag)
+      (symbol-value php-re-detect-html-tag)
+    php-re-detect-html-tag))
+
 (defun php-buffer-has-html-tag ()
   "Return position of HTML tag or NIL in current buffer."
   (save-excursion
     (save-restriction
       (widen)
       (goto-char (point-min))
-      (re-search-forward php-re-detect-html-tag nil t))))
+      (save-match-data
+        (re-search-forward (php-re-detect-html-tag) nil t)))))
 
 (defun php-derivation-major-mode ()
   "Return major mode for PHP file by file-name and its content."
@@ -310,6 +354,17 @@ Look at the `php-executable' variable instead of the constant \"php\" command."
       (insert (concat matched php-namespace-suffix-when-insert)))))
 
 ;;;###autoload
+(defun php-copyit-fqsen ()
+  "Copy/kill class/method FQSEN."
+  (interactive)
+  (let ((namespace (or (php-get-current-element php--re-namespace-pattern) ""))
+        (class     (or (php-get-current-element php--re-classlike-pattern) ""))
+        (namedfunc (php-get-current-element php-beginning-of-defun-regexp)))
+    (kill-new (concat (if (string= namespace "") "" namespace)
+                      (if (string= class "") "" (concat "\\" class "::"))
+                      (if (string= namedfunc "") "" (concat namedfunc "()"))))))
+
+;;;###autoload
 (defun php-run-builtin-web-server (router-or-dir hostname port &optional document-root)
   "Run PHP Built-in web server.
 
@@ -338,9 +393,8 @@ When `DOCUMENT-ROOT' is NIL, the document root is obtained from `ROUTER-OR-DIR'.
                (if (file-directory-p router-or-dir)
                    router-or-dir
                  (directory-file-name router-or-dir))))
-         (pattern (rx-form `(: bos ,(getenv "HOME"))))
-         (short-dirname (replace-regexp-in-string pattern "~" default-directory))
-         (short-filename (replace-regexp-in-string pattern "~" router-or-dir))
+         (short-dirname (abbreviate-file-name default-directory))
+         (short-filename (abbreviate-file-name router-or-dir))
          (buf-name (format "php -S %s:%s -t %s %s"
                            hostname
                            port
@@ -358,6 +412,42 @@ When `DOCUMENT-ROOT' is NIL, the document root is obtained from `ROUTER-OR-DIR'.
     (funcall
      (if (called-interactively-p 'interactive) #'display-buffer #'get-buffer)
      (format "*%s*" buf-name))))
+
+(defun php-ini ()
+  "Get `php --ini' output buffer."
+  (interactive)
+  (let ((buffer (get-buffer-create " *php --ini*")))
+    (with-current-buffer buffer
+      (view-mode -1)
+      (read-only-mode -1)
+      (erase-buffer)
+      (shell-command (concat php-executable " --ini") buffer)
+      (view-mode +1))
+    (if (called-interactively-p 'interactive)
+        (pop-to-buffer buffer)
+      buffer)))
+
+;;;###autoload
+(defun php-find-system-php-ini-file (&optional file)
+  "Find php.ini FILE by `php --ini'."
+  (interactive
+   (list
+    (let* ((default-directory (expand-file-name "~"))
+           (buffer (php-ini))
+           (path (with-current-buffer buffer
+                   (goto-char (point-min))
+                   (save-match-data
+                     (when (re-search-forward ": \\(.+?\\)$" nil nil)
+                       (match-string 1))))))
+      (when (or (null path) (not (file-directory-p path)))
+        (when (called-interactively-p 'interactive)
+          (pop-to-buffer buffer))
+        (user-error "Failed get path to PHP ini files directory"))
+      (read-file-name "Find php.ini file: "
+                      (concat (expand-file-name path) "/")
+                      nil nil nil
+                      #'file-exists-p))))
+  (find-file file))
 
 (provide 'php)
 ;;; php.el ends here

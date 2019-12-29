@@ -26,6 +26,11 @@ Insert current namespace if cursor in namespace context.
 
 \(fn)" t nil)
 
+(autoload 'php-copyit-fqsen "php" "\
+Copy/kill class/method FQSEN.
+
+\(fn)" t nil)
+
 (autoload 'php-run-builtin-web-server "php" "\
 Run PHP Built-in web server.
 
@@ -37,6 +42,11 @@ Run PHP Built-in web server.
 When `DOCUMENT-ROOT' is NIL, the document root is obtained from `ROUTER-OR-DIR'.
 
 \(fn ROUTER-OR-DIR HOSTNAME PORT &optional DOCUMENT-ROOT)" t nil)
+
+(autoload 'php-find-system-php-ini-file "php" "\
+Find php.ini FILE by `php --ini'.
+
+\(fn &optional FILE)" t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "php" '("php-")))
 
@@ -101,6 +111,10 @@ STRING
       of the root directory, not the marker.")
 
 (put 'php-project-root 'safe-local-variable #'(lambda (v) (or (stringp v) (assq v php-project-available-root-files))))
+
+(defvar-local php-project-etags-file nil)
+
+(put 'php-project-etags-file 'safe-local-variable #'(lambda (v) (or (functionp v) (eq v t) (php-project--eval-bootstrap-scripts v))))
 
 (defvar-local php-project-bootstrap-scripts nil "\
 List of path to bootstrap php script file.
@@ -181,6 +195,14 @@ Return path to current PHP project.
 \(fn)" nil nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "php-project" '("php-project-")))
+
+;;;***
+
+;;;### (autoloads nil "php-util-buffer" "php-util-buffer.el" (0 0
+;;;;;;  0 0))
+;;; Generated autoloads from php-util-buffer.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "php-util-buffer" '("php-util-buffer-")))
 
 ;;;***
 
