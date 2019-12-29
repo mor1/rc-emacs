@@ -79,10 +79,15 @@ attention to case differences."
                                     string start-pos nil ignore-case)))))))
 
 (defgroup company nil
-  "Extensible inline text completion mechanism"
+  "Extensible inline text completion mechanism."
   :group 'abbrev
   :group 'convenience
   :group 'matching)
+
+(defgroup company-faces nil
+  "Faces used by Company."
+  :group 'company
+  :group 'faces)
 
 (defface company-tooltip
   '((default :foreground "black")
@@ -179,6 +184,10 @@ attention to case differences."
   '((((background dark)) (:foreground "firebrick1"))
     (((background light)) (:background "firebrick4")))
   "Face used for the common part of completions in the echo area.")
+
+;; Too lazy to re-add :group to all defcustoms down below.
+(setcdr (assoc load-file-name custom-current-group-alist)
+        'company)
 
 (defun company-frontends-set (variable value)
   ;; Uniquify.
@@ -415,7 +424,8 @@ non-prefix completion.
 anything not offered as a candidate.  Please don't use that value in normal
 backends.  The default value nil gives the user that choice with
 `company-require-match'.  Return value `never' overrides that option the
-other way around.
+other way around (using that value will indicate that the returned set of
+completions is often incomplete, so this behavior will not be useful).
 
 `init': Called once for each buffer. The backend can check for external
 programs and files and load any required libraries.  Raising an error here
@@ -553,7 +563,7 @@ This can also be a function."
 (defcustom company-auto-complete-chars '(?\  ?\) ?.)
   "Determines which characters trigger auto-completion.
 See `company-auto-complete'.  If this is a string, each string character
-tiggers auto-completion.  If it is a list of syntax description characters (see
+triggers auto-completion.  If it is a list of syntax description characters (see
 `modify-syntax-entry'), all characters with that syntax auto-complete.
 
 This can also be a function, which is called with the new input and should
@@ -822,7 +832,7 @@ means that `company-mode' is always turned on except in `message-mode' buffers."
 
 (defvar company-emulation-alist '((t . nil)))
 
-(defsubst company-enable-overriding-keymap (keymap)
+(defun company-enable-overriding-keymap (keymap)
   (company-uninstall-map)
   (setq company-my-keymap keymap))
 
@@ -1618,8 +1628,11 @@ prefix match (same case) will be prioritized."
         (cl-return c)))))
 
 (defun company--perform ()
-  (or (and company-candidates (company--continue))
-      (and (company--should-complete) (company--begin-new)))
+  (cond
+   (company-candidates
+    (company--continue))
+   ((company--should-complete)
+    (company--begin-new)))
   (if (not company-candidates)
       (setq company-backend nil)
     (setq company-point (point)
@@ -2271,7 +2284,8 @@ character, stripping the modifiers.  That character must be a digit."
     (erase-buffer)
     (when string
       (save-excursion
-        (insert string)))
+        (insert string)
+        (visual-line-mode)))
     (current-buffer)))
 
 (defvar company--electric-saved-window-configuration nil)
@@ -2540,6 +2554,7 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
                        right)))
     (setq width (+ width margin (length right)))
 
+    ;; TODO: Use add-face-text-property in Emacs 24.4
     (font-lock-append-text-property 0 width 'mouse-face
                                     'company-tooltip-mouse
                                     line)
@@ -2722,7 +2737,6 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
     (let ((str (concat (when nl " \n")
                        (mapconcat 'identity (nreverse new) "\n")
                        "\n")))
-      (font-lock-append-text-property 0 (length str) 'face 'default str)
       (when nl (put-text-property 0 1 'cursor t str))
       str)))
 
@@ -2933,6 +2947,7 @@ Returns a negative number if the tooltip should be displayed above point."
           (overlay-put ov 'display disp)
         (overlay-put ov 'after-string disp)
         (overlay-put ov 'invisible t))
+      (overlay-put ov 'face 'default)
       (overlay-put ov 'window (selected-window)))))
 
 (defun company-pseudo-tooltip-guard ()
@@ -3037,7 +3052,7 @@ Delay is determined by `company-tooltip-idle-delay'."
                             pto
                             (char-before pos)
                             (eq pos (overlay-start pto)))))
-      ;; Try to accomodate for the pseudo-tooltip overlay,
+      ;; Try to accommodate for the pseudo-tooltip overlay,
       ;; which may start at the same position if it's at eol.
       (when ptf-workaround
         (cl-decf beg)
