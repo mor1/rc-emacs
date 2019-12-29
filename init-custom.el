@@ -14,6 +14,7 @@
  '(custom-safe-themes
    (quote
     ("0598c6a29e13e7112cfbc2f523e31927ab7dce56ebb2016b567e1eff6dc1fd4f" "a8245b7cc985a0610d71f9852e9f2767ad1b852c2bdea6f4aadc12cce9c4d6d0" "d91ef4e714f05fff2070da7ca452980999f5361209e679ee988e3c432df24347" "4cf3221feff536e2b3385209e9b9dc4c2e0818a69a1cdb4b522756bcdf4e00a4" "4aee8551b53a43a883cb0b7f3255d6859d766b6c5e14bcb01bed572fcbef4328" default)))
+ '(default-frame-alist (quote ((vertical-scroll-bars))))
  '(default-major-mode (quote text-mode) t)
  '(direnv-mode t nil (direnv))
  '(fci-rule-width 2)
@@ -95,13 +96,14 @@
  '(ns-function-modifier (quote hyper))
  '(org-agenda-files
    (quote
-    ("/Users/mort/me/todo/todo.org" "/Users/mort/Dropbox/people/family.org/birthdays.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2019.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2020.org" "/Users/mort/Dropbox/people/family.org/david.org" "/Users/mort/Dropbox/people/family.org/eleanor.org" "/Users/mort/Dropbox/people/family.org/family.org" "/Users/mort/Dropbox/people/family.org/foodplans.org" "/Users/mort/Dropbox/people/family.org/holidays.org" "/Users/mort/Dropbox/people/family.org/homejournal.org" "/Users/mort/Dropbox/people/family.org/housework.org" "/Users/mort/Dropbox/people/family.org/packinglists.org" "/Users/mort/Dropbox/people/family.org/william.org")))
+    ("/Users/mort/me/todo/todo.org" "/Users/mort/Dropbox/people/family.org/birthdays.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2019.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2020.org" "/Users/mort/Dropbox/people/family.org/david.org" "/Users/mort/Dropbox/people/family.org/eleanor.org" "/Users/mort/Dropbox/people/family.org/family.org" "/Users/mort/Dropbox/people/family.org/foodplans.org" "/Users/mort/Dropbox/people/family.org/holidaychecklist.org" "/Users/mort/Dropbox/people/family.org/holidays.org" "/Users/mort/Dropbox/people/family.org/homejournal.org" "/Users/mort/Dropbox/people/family.org/housework.org" "/Users/mort/Dropbox/people/family.org/packinglists.org" "/Users/mort/Dropbox/people/family.org/recipes.org" "/Users/mort/Dropbox/people/family.org/william.org")))
  '(org-clock-continuously t)
  '(package-selected-packages
    (quote
-    (solarized-theme outshine mu4e-conversation mu4e-query-fragments ialign merlin-eldoc ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv diminish csv-mode coffee-mode avy auto-package-update auctex aggressive-indent)))
+    (lua-mode balanced-windows solarized-theme outshine mu4e-conversation mu4e-query-fragments ialign merlin-eldoc ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column utop use-package unkillable-scratch unbound tuareg syslog-mode simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv paradox on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv diminish csv-mode coffee-mode avy auto-package-update auctex aggressive-indent)))
  '(paradox-github-token t)
  '(require-final-newline (quote visit-save))
+ '(safe-local-variable-values (quote ((c-basic-indent . 4))))
  '(scroll-bar-mode nil)
  '(sentence-end-double-space nil)
  '(show-paren-mode t)
@@ -123,16 +125,19 @@
  '(web-mode-css-indent-offset 2)
  '(web-mode-markup-indent-offset 2)
  '(web-mode-sql-indent-offset 2)
- '(web-mode-tests-directory "/Users/mort/teaching/ia.os/www/tests/"))
+ '(web-mode-tests-directory "/Users/mort/teaching/ia.os/www/tests/")
+ '(whitespace-line-column nil))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(default ((t (:inherit nil :stipple nil :background "#002b36" :foreground "#839496" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 100 :width normal :foundry "nil" :family "Hack Nerd Font"))))
  '(ediff-current-diff-C ((t (:background "yellow1"))))
  '(flyspell-duplicate ((t (:underline (:color "#b58900" :style wave)))))
  '(flyspell-incorrect ((t (:background "#aa0000" :foreground "gray75" :underline (:color "#dc322f" :style wave)))))
+ '(highlight ((t (:background "dark slate gray"))))
  '(smerge-base ((t (:background "lavender"))))
- '(whitespace-line ((t (:underline t))))
- '(whitespace-tab ((t (:foreground "burlywood3" :inverse-video t)))))
+ '(whitespace-line ((t (:underline "dark magenta"))))
+ '(whitespace-tab ((t (:foreground "burlywood4" :inverse-video t)))))
