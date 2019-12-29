@@ -627,9 +627,6 @@ are between the current date (DATE) and Easter Sunday."
 
 ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
 (use-package whitespace
-  ;; :diminish (global-whitespace-mode
-  ;;            whitespace-mode
-  ;;            whitespace-newline-mode)
   :commands (whitespace-buffer
              whitespace-cleanup
              whitespace-mode
@@ -655,24 +652,14 @@ are between the current date (DATE) and Easter Sunday."
   (defun maybe-turn-on-whitespace ()
     (when (not (locate-dominating-file default-directory ".noclean"))
       (progn
-        ;; (if (memq major-mode '(markdown-mode))
-        ;;     (setq whitespace-style '(face tabs lines-tail
-        ;;                                   newline empty space-before-tab tab-mark)
-        ;;           )
-        (setq whitespace-style '(face trailing tabs lines-tail
-                                      newline empty space-before-tab tab-mark)
-              )
-        ;; )
+        (setq whitespace-style
+              '(face trailing tabs lines-tail newline empty space-before-tab tab-mark))
         (whitespace-mode t)
         )))
 
   :hook ((find-file . maybe-turn-on-whitespace)
          (prog-mode . whitespace-cleanup)
          )
-
-  ;; :config
-  ;; (remove-hook 'find-file-hook 'whitespace-buffer)
-  ;; (remove-hook 'kill-buffer-hook 'whitespace-buffer)
   )
 
 ;;
