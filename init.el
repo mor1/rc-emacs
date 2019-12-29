@@ -422,6 +422,12 @@
           ("w" todo #("WAITING" 0 7 (face org-warning)) nil)
           ("u" todo "" ((org-agenda-todo-ignore-scheduled t)))
 
+          ;; XXX HIDE TAGS
+          ;; (setq org-agenda-hide-tags-regexp "tag1\\|tag2\\|tags3")
+          ;; (org-agenda-hide-tags-regexp
+          ;;           (concat org-agenda-hide-tags-regexp "\\|sometag")
+
+
           ("W" agenda "" ((org-agenda-ndays 21)))
           ("a" "Week agenda"
            ((agenda ""
@@ -456,7 +462,7 @@
            )
           )
 
-        org-agenda-files (append (directory-files-recursively "~/me/todo/todo.org$")
+        org-agenda-files (append (directory-files-recursively "~/me/todo/" "todo.org$")
                                  (directory-files-recursively "~/Dropbox/people/family.org/" "\.org$")
                                  )
         org-agenda-include-diary t
