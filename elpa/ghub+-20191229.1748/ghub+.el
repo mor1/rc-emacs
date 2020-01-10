@@ -6,7 +6,7 @@
 ;; Keywords: extensions, multimedia, tools
 ;; Homepage: https://github.com/vermiculus/ghub-plus
 ;; Package-Requires: ((emacs "25") (ghub "2.0") (apiwrap "0.5"))
-;; Package-Version: 20181113.32
+;; Package-Version: 20191229.1748
 ;; Package-X-Original-Version: 0.4
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -312,7 +312,7 @@ See that documentation for RESOURCE, PARAMS, and DATA."
 
 (defun ghubp-username ()
   "Exposes `ghub--username'."
-  (ghub--username (ghub--host)))
+  (ghub--username (ghub--host 'github)))
 
 (defun ghubp-token (package)
   "Exposes `ghub--token' for PACKAGE in a friendly way."
