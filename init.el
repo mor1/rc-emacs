@@ -337,11 +337,13 @@
   :pin org
   :bind (:map org-mode-map
               ("C-c a"    . org-agenda)
-              ("S-<up>"   . org-move-line-up)
-              ("S-<down>" . org-move-line-down)
               )
+  :bind (:map org-agenda-mode-map
+         ("C-x ." . org-agenda-reschedule-to-today)
+         )
 
   :init
+
   ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
   (defun org-agenda-reschedule-to-today (&optional arg)
     "Bulk reschedule selected tasks for today."
@@ -377,33 +379,40 @@
                  (list (list (list 12 27 y) "Christmas Day Bank Holiday")))
                 )))))
 
-  ;; TODO make :bind?
-  ;; :bind (:map org-agenda-mode-map
-  ;;        ("C-x ." . org-agenda-reschedule-to-today)
-  ;;        )
+  ;; lightly modified from
+  ;; https://sachachua.com/blog/2007/12/clocking-time-with-emacs-org/
+  (defun wicked/org-clock-in-if-starting ()
+    "Clock in when the task is marked DOING."
+    (when (and (string= state "DOING")
+               (not (string= last-state state)))
+      (org-clock-in)))
+  (defadvice org-clock-in (after wicked activate)
+    "Set this task's status to 'DOING'."
+    (org-todo "DOING"))
+
+  (defun wicked/org-clock-out-if-waiting ()
+    "Clock out when the task is marked WAITING."
+    (when (and (string= state "WAITING")
+               (equal (marker-buffer org-clock-marker) (current-buffer))
+               (< (point) org-clock-marker)
+               (> (save-excursion (outline-next-heading) (point))
+                  org-clock-marker)
+               (not (string= last-state state)))
+      (org-clock-out)))
+
+  :hook (org-after-todo-state-change-hook . wicked/org-clock-in-if-starting)
+  :hook (org-after-todo-state-change-hook . wicked/org-clock-out-if-waiting)
+
   :config
-  (add-hook
-   'org-agenda-mode-hook
-   '(lambda ()
-      (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-      ))
 
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
-  (defun org-archive-done-tasks ()
+  (defun org-archive-completed-tasks ()
     (interactive)
     (org-map-entries
      (lambda ()
        (org-archive-subtree)
        (setq org-map-continue-from (outline-previous-heading)))
-     "/DONE" 'agenda)
-    )
-  (defun org-archive-cancelled-tasks ()
-    (interactive)
-    (org-map-entries
-     (lambda ()
-       (org-archive-subtree)
-       (setq org-map-continue-from (outline-previous-heading)))
-     "/CANCELLED" 'agenda)
+     "/+DONE|+CANCELLED" 'agenda)
     )
 
   ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
@@ -413,36 +422,19 @@
 
   ;; customise my agenda options
   (setq org-agenda-custom-commands
-        '(("O" "Office block agenda"
-           ((agenda "" ((org-agenda-ndays 1))) ; display single day
-            (todo "WAITING")
-            )
-           ((org-agenda-compact-blocks t)
-            )
-           )
+        '(("n" "Agenda and all TODOs"
+           ((agenda "")
+            (alltodo "")))
 
-          ("c" todo #("DONE|CANCELLED" 0 14 (face org-warning)) nil)
-          ("w" todo #("WAITING" 0 7 (face org-warning)) nil)
-          ("u" todo "" ((org-agenda-todo-ignore-scheduled t)))
-
-          ;; XXX HIDE TAGS
-          ;; (setq org-agenda-hide-tags-regexp "tag1\\|tag2\\|tags3")
-          ;; (org-agenda-hide-tags-regexp
-          ;;           (concat org-agenda-hide-tags-regexp "\\|sometag")
-
-
-          ("W" agenda "" ((org-agenda-ndays 21)))
           ("a" "Week agenda"
            ((agenda ""
-                    ((org-agenda-ndays 7)
-                     (org-agenda-start-on-weekday 1)
+                    (
+                     (org-agenda-ndays 7)
                      (org-agenda-remove-tags t)
+                     (org-agenda-repeating-timestamp-show-all t)
                      (org-agenda-skip-deadline-if-done t)
                      (org-agenda-skip-scheduled-if-done t)
                      (org-agenda-skip-timestamp-if-done t)
-                     (org-agenda-time-grid nil)
-                     (org-agenda-repeating-timestamp-show-all t)
-                     (org-deadline-warning-days 15)
                      (org-agenda-sorting-strategy
                       '(habit-up
                         time-up
@@ -450,41 +442,36 @@
                         category-keep
                         todo-state-down
                         ))
-                     ))
-            )
-           ((org-agenda-compact-blocks t)
-            )
-           )
-          ("A" agenda ""
-           ((org-agenda-skip-function
-             (lambda nil
-               (org-agenda-skip-entry-if
-                (quote notregexp) "\\=.*\\[#A\\]")))
-            (org-agenda-ndays 1)
-            (org-agenda-overriding-header "Today's Priority #A tasks: "))
-           )
-          )
+                     (org-agenda-start-on-weekday 1)
+                     (org-agenda-time-grid nil)
+                     (org-deadline-warning-days 15)))
+            (alltodo ""))
+           ((org-agenda-compact-blocks t))
 
-        org-agenda-files (append (directory-files-recursively "~/me/todo/" "todo.org$")
-                                 (directory-files-recursively "~/Dropbox/people/family.org/" "\.org$")
-                                 )
-        org-agenda-include-diary t
-        org-agenda-log-mode-items (quote (closed clock))
-        org-agenda-ndays 7
-        org-agenda-show-all-dates t
-        org-agenda-sorting-strategy (quote (time-up todo-state-down category-keep priority-down alpha-down))
-        org-agenda-start-on-weekday nil
-        org-deadline-warning-days 14
-        org-default-notes-file "~/me/todo/notes.org"
-        org-fast-tag-selection-single-key (quote expert)
-        org-remember-store-without-prompt t
-        org-remember-templates (quote ((116 "* %? %u" "~/me/todo/todo.org" "Tasks")
-                                       (110 "* %u %?" "~/me/todo/notes.org" "Notes"))
-                                      )
-        org-reverse-note-order t
-        org-tags-match-list-sublevels t
-        )
+           org-agenda-include-diary t
+           org-agenda-log-mode-items (quote (closed clock))
+           org-agenda-ndays 7
+           org-agenda-show-all-dates t
+           org-agenda-sorting-strategy (quote (time-up todo-state-down category-keep priority-down alpha-down))
+           org-agenda-start-on-weekday nil
+           org-deadline-warning-days 14
+           org-default-notes-file "~/me/todo/notes.org"
+           org-fast-tag-selection-single-key (quote expert)
+           org-remember-store-without-prompt t
+           ;; org-remember-templates (quote ((116 "* %? %u" "~/me/todo/todo.org" "Tasks")
+           ;;                                (110 "* %u %?" "~/me/todo/notes.org" "Notes"))
+           ;; )
+           org-reverse-note-order t
+           )
 
+          ("c" "Weekly schedule"
+           ((agenda ""
+                    ((org-agenda-span 7)
+                     (org-agenda-skip-function
+                      '(org-agenda-skip-entry-if 'deadline 'scheduled))
+                     ))))
+
+          ))
 
   ;; some Easter related helpers
 
@@ -723,7 +710,7 @@ are between the current date (DATE) and Easter Sunday."
     (message "Aborted"))
   )
 
-(defun todo ()  (interactive) (find-file "~/me/todo/todo.org"))
+(defun todo ()  (interactive) (find-file "~/Dropbox/people/family.org/richard.org"))
 (defun notes () (interactive) (find-file "~/me/todo/notes.org"))
 
 (use-package solarized-theme

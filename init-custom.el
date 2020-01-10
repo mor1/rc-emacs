@@ -96,7 +96,8 @@
  '(ns-function-modifier (quote hyper))
  '(org-agenda-files
    (quote
-    ("/Users/mort/me/todo/todo.org" "/Users/mort/Dropbox/people/family.org/birthdays.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2019.org" "/Users/mort/Dropbox/people/family.org/birthdaysprint2020.org" "/Users/mort/Dropbox/people/family.org/david.org" "/Users/mort/Dropbox/people/family.org/eleanor.org" "/Users/mort/Dropbox/people/family.org/family.org" "/Users/mort/Dropbox/people/family.org/foodplans.org" "/Users/mort/Dropbox/people/family.org/holidaychecklist.org" "/Users/mort/Dropbox/people/family.org/holidays.org" "/Users/mort/Dropbox/people/family.org/homejournal.org" "/Users/mort/Dropbox/people/family.org/housework.org" "/Users/mort/Dropbox/people/family.org/packinglists.org" "/Users/mort/Dropbox/people/family.org/recipes.org" "/Users/mort/Dropbox/people/family.org/william.org")))
+    ("/Users/mort/Dropbox/people/family.org/birthdays.org" "/Users/mort/Dropbox/people/family.org/richard.org")))
+ '(org-agenda-todo-ignore-scheduled (quote all))
  '(org-clock-continuously t)
  '(package-selected-packages
    (quote
