@@ -311,16 +311,19 @@
       ))
   :hook ((tuareg-mode caml-mode) . merlin-mode)
   :hook
-  (tuareg-mode .
-               (lambda ()
-                 (setq merlin-use-auto-complete-mode 'easy
-                       ;; indent-line-function 'ocp-indent-line
-                       ;; indent-region-function 'ocp-indent-region
-                       )
-                 ))
+  (tuareg-mode . (lambda ()
+                   (setq merlin-use-auto-complete-mode 'easy
+                         indent-line-function 'ocp-indent-line
+                         indent-region-function 'ocp-indent-region
+                         utop-command "opam config exec -- utop -emacs"
+                         )))
   :bind (:map tuareg-mode-map
               ("C-S-<up>" . merlin-type-enclosing-go-up)
               ("C-S-<down>" . merlin-type-enclosing-go-down)
+              )
+  :bind (:map utop-mode-map
+              ("M-<right>" . utop-history-goto-next)
+              ("M-<left>" . utop-history-goto-prev)
               )
   :mode (("\\.ml[iylp]?$" . tuareg-mode)
          ("\\.fs[ix]?$" . tuareg-mode)
