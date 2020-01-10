@@ -1,4 +1,4 @@
-;; Copyright (C) 2000--2018 Richard Mortier <mort@cantab.net> except where
+;; Copyright (C) 2000--2020 Richard Mortier <mort@cantab.net> except where
 ;; noted. All Rights Reserved.
 ;;
 ;; Permission to use, copy, modify, and distribute this software for any
@@ -26,15 +26,8 @@
               (setq gc-cons-threshold 800000)) ; restore after startup
           )
 
-;; ;; evaluate locally if behind (eg) nottingham proxy
-;; (setq url-proxy-services '(("http" . "proxy.nottingham.ac.uk:8080")))
-;; (setq url-proxy-services '(("http" . "wwwcache.cs.nott.ac.uk:3128")))
-
-;;
 ;; package management
 ;; per http://cachestocaches.com/2015/8/getting-started-use-package/
-;;
-
 (require 'package)
 (setq package-enable-at-startup nil
       package-archives
@@ -55,14 +48,6 @@
   )
 (require 'diminish) ;; if you use :diminish
 (require 'bind-key) ;; if you use any :bind variant
-
-;; ;; auto-update packages
-;; (use-package auto-package-update
-;;   :config
-;;   (setq auto-package-update-delete-old-versions t)
-;;   (setq auto-package-update-hide-results t)
-;;   (auto-package-update-maybe)
-;;   )
 
 ;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
 (if init-file-debug
@@ -92,10 +77,16 @@
 (setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))
 (unless (server-running-p) (server-start))
 
-;; input method
-(setq default-input-method "TeX")
-(set-language-environment "utf-8")
+;; codings
 (prefer-coding-system 'utf-8)
+(set-buffer-file-coding-system 'utf-8)
+(set-clipboard-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-file-name-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(set-language-environment "utf-8")
+(set-selection-coding-system 'utf-8)
+(set-terminal-coding-system 'utf-8)
 
 ;; scrolling
 (setq scroll-conservatively 101
@@ -153,7 +144,6 @@
 (use-package coffee-mode
   :config
   (setq coffee-tab-width 2
-        ;; coffee-command "/usr/local/bin/coffee" ;; i containerised it...
         )
   :hook (coffee-mode . coffee-cos-mode)
   )
@@ -203,14 +193,10 @@
   :hook ((text-mode . flyspell-mode)
          (prog-mode . flyspell-prog-mode)
          )
-  ;; :init
-  ;; (add-hook 'text-mode-hook 'flyspell-mode)
-  ;; (add-hook 'prog-mode-hook 'flyspell-prog-mode)
   )
 
 (use-package git-ps1-mode
   :hook find-file
-  ;; git-ps1-mode-ps1-file
   )
 
 ;; git-timemachine
@@ -533,11 +519,39 @@ are between the current date (DATE) and Easter Sunday."
   :mode (("bash_" . sh-mode)
          ("APKBUILD$" . sh-mode)
          )
-
-  ;; :magic ("\\{{/* =% ssh %= */}}" . sh-mode)
   :config (setq sh-basic-offset 2
                 sh-indentation 2
                 )
+  )
+
+(use-package solarized-theme
+  :ensure
+  :init
+  (progn
+    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
+    (defvar theme-current my-color-themes)
+    (defvar color-theme-is-global nil) ; Initialization
+
+    (defun my-theme-set-default ()
+      (interactive)
+      (setq theme-current my-color-themes)
+      (load-theme (car theme-current) t))
+
+    (defun my-describe-theme () ; Show the current theme
+      (interactive)
+      (message "%s" (car theme-current)))
+
+    (defun my-theme-cycle ()
+      (interactive)
+      (setq theme-current (cdr theme-current))
+      (if (null theme-current)
+          (setq theme-current my-color-themes))
+      (load-theme (car theme-current) t)
+      (message "%S" (car theme-current)))
+    )
+
+  :bind
+  ("C-c t" . my-theme-cycle)
   )
 
 (use-package subword ;; subword -- obey CamelCase etc
@@ -640,7 +654,7 @@ are between the current date (DATE) and Easter Sunday."
       (goto-char (point-min))
       (while (re-search-forward "\r$" nil t)
         (replace-match ""))
-      (set-buffer-file-coding-system 'utf-8)
+      ;; (set-buffer-file-coding-system 'utf-8)
       (let ((require-final-newline t))
         (save-buffer))
       ))
@@ -713,36 +727,6 @@ are between the current date (DATE) and Easter Sunday."
 (defun todo ()  (interactive) (find-file "~/Dropbox/people/family.org/richard.org"))
 (defun notes () (interactive) (find-file "~/me/todo/notes.org"))
 
-(use-package solarized-theme
-  :ensure
-  :init
-  (progn
-    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
-    (defvar theme-current my-color-themes)
-    (defvar color-theme-is-global nil) ; Initialization
-
-    (defun my-theme-set-default ()
-      (interactive)
-      (setq theme-current my-color-themes)
-      (load-theme (car theme-current) t))
-
-    (defun my-describe-theme () ; Show the current theme
-      (interactive)
-      (message "%s" (car theme-current)))
-
-    (defun my-theme-cycle ()
-      (interactive)
-      (setq theme-current (cdr theme-current))
-      (if (null theme-current)
-          (setq theme-current my-color-themes))
-      (load-theme (car theme-current) t)
-      (message "%S" (car theme-current)))
-    )
-
-  :bind
-  ("C-c t" . my-theme-cycle)
-  )
-
 ;; theme switching
 (defun light () "Light colour scheme."
        (interactive)
@@ -765,17 +749,6 @@ are between the current date (DATE) and Easter Sunday."
 ;; keybindings
 ;;
 
-;; (when (on-osx-p)
-;;   (setq ns-alternate-modifier 'super
-;;         ns-command-modifier 'meta
-;;         ns-control-modifier 'control))
-
-;; (when window-system
-;;   (tooltip-mode -1)
-;;   (tool-bar-mode -1)
-;;   (menu-bar-mode -1)
-;;   (scroll-bar-mode -1))
-
 (bind-keys*
  ("%"          . match-paren)
  ("C-<return>" . split-line)
@@ -795,7 +768,6 @@ are between the current date (DATE) and Easter Sunday."
  ("M-n"        . next-buffer)
  ("M-p"        . previous-buffer)
  ("M-q"        . unfill-toggle)
- ;; (define-key my-keys-minor-mode-map (kbd "C-x 3")      'my-split-window-right)
 
  ;; | point-to  | previous   | next        |
  ;; |-----------+------------+-------------|
