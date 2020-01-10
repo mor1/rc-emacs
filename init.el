@@ -322,11 +322,8 @@
   :defer t
   :pin org
   :bind (:map org-mode-map
-              ("C-c a"    . org-agenda)
+              ("C-c a" . org-agenda)
               )
-  :bind (:map org-agenda-mode-map
-         ("C-x ." . org-agenda-reschedule-to-today)
-         )
 
   :init
 
@@ -390,6 +387,11 @@
   :hook (org-after-todo-state-change-hook . wicked/org-clock-out-if-waiting)
 
   :config
+  (add-hook
+   'org-agenda-mode-hook
+   '(lambda ()
+      (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+      ))
 
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
   (defun org-archive-completed-tasks ()
