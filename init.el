@@ -326,6 +326,7 @@
               )
 
   :init
+  (add-to-list 'file-coding-system-alist '("\\.org\\'" . utf-8-unix))
 
   ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
   (defun org-agenda-reschedule-to-today (&optional arg)
