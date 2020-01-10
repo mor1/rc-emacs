@@ -781,6 +781,7 @@ are between the current date (DATE) and Easter Sunday."
  ("C-<return>" . split-line)
  ("C-<tab>"    . dabbrev-expand)
  ("C-c ;"      . comment-region)
+ ("C-u C-c ;"  . uncomment-region)
  ("C-c C-SPC"  . whitespace-cleanup)
  ("C-c C-g"    . goto-line)
  ("C-x C-c"    . my-kill-emacs)
