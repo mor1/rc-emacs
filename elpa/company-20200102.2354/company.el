@@ -1,11 +1,11 @@
 ;;; company.el --- Modular text completion framework  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2009-2019  Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020  Free Software Foundation, Inc.
 
 ;; Author: Nikolaj Schumacher
 ;; Maintainer: Dmitry Gutov <dgutov@yandex.ru>
 ;; URL: http://company-mode.github.io/
-;; Version: 0.9.10
+;; Version: 0.9.11
 ;; Keywords: abbrev, convenience, matching
 ;; Package-Requires: ((emacs "24.3"))
 
@@ -641,13 +641,13 @@ commands in the `company-' namespace, abort completion."
 (defcustom company-show-numbers nil
   "If enabled, show quick-access numbers for the first ten candidates."
   :type '(choice (const :tag "off" nil)
-                 (const :tag "on" t)))
+                 (const :tag "left" 'left)
+                 (const :tag "on" 't)))
 
 (defcustom company-show-numbers-function #'company--show-numbers
-  "Function called to get custom quick-access numbers for the first then candidates.
+  "Function called to get quick-access numbers for the first ten candidates.
 
-If nil falls back to default function that generates 1...8, 9, 0. The function get
-the number of candidates (from 1 to 10 means 1st to 10th candidate) and should
+The function receives the candidate number (starting from 1) and should
 return a string prefixed with one space."
   :type 'function)
 
@@ -2818,17 +2818,20 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
         (let* ((item (pop items))
                (str (car item))
                (annotation (cdr item))
-               (right (company-space-string company-tooltip-margin))
+               (margin (company-space-string company-tooltip-margin))
+               (left margin)
+               (right margin)
                (width width))
           (when (< numbered 10)
             (cl-decf width 2)
             (cl-incf numbered)
-            (setq right (concat (funcall company-show-numbers-function numbered) right)))
+            (setf (if (eq company-show-numbers 'left) left right)
+                  (concat (funcall company-show-numbers-function numbered)
+                          margin)))
           (push (concat
                  (company-fill-propertize str annotation
                                           width (equal i selection)
-                                          (company-space-string
-                                           company-tooltip-margin)
+                                          left
                                           right)
                  (when scrollbar-bounds
                    (company--scrollbar i scrollbar-bounds)))
@@ -2936,8 +2939,9 @@ Returns a negative number if the tooltip should be displayed above point."
   (when company-pseudo-tooltip-overlay
     (let* ((ov company-pseudo-tooltip-overlay)
            (disp (overlay-get ov 'company-display)))
-      ;; Beat outline's folding overlays, at least.
-      (overlay-put ov 'priority 1)
+      ;; Beat outline's folding overlays.
+      ;; And Flymake (53). And Flycheck (110).
+      (overlay-put ov 'priority 111)
       ;; No (extra) prefix for the first line.
       (overlay-put ov 'line-prefix "")
       ;; `display' is better
