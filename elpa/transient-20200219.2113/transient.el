@@ -141,7 +141,7 @@ want to change the value of `transient-mode-line-format'."
   :type '(cons (choice function (repeat :tag "Functions" function))
                alist))
 
-(defcustom transient-mode-line-format (and window-system 'line)
+(defcustom transient-mode-line-format 'line
   "The mode-line format for the transient popup buffer.
 
 If nil, then the buffer has no mode-line.  If the buffer is not
@@ -150,7 +150,8 @@ a good value.
 
 If `line' (the default), then the buffer also has no mode-line,
 but a thin line is drawn instead, using the background color of
-the face `transient-separator'.
+the face `transient-separator'.  Termcap frames cannot display
+thin lines and therefore fallback to treating `line' like nil.
 
 Otherwise this can be any mode-line format.
 See `mode-line-format' for details."
@@ -173,7 +174,7 @@ of this variable use \"C-x t\" when a transient is active."
   :group 'transient
   :type 'boolean)
 
-(defcustom transient-read-with-initial-input t
+(defcustom transient-read-with-initial-input nil
   "Whether to use the last history element as initial minibuffer input."
   :package-version '(transient . "0.2.0")
   :group 'transient
@@ -451,7 +452,7 @@ If `transient-save-history' is nil, then do nothing."
    (command     :initarg :command)
    (level       :initarg :level)
    (variable    :initarg :variable    :initform nil)
-   (value       :initarg :value)
+   (value) (default-value :initarg :value)
    (scope       :initarg :scope       :initform nil)
    (history     :initarg :history     :initform nil)
    (history-pos :initarg :history-pos :initform 0)
@@ -640,7 +641,8 @@ to the setup function:
                            [&optional lambda-doc]
                            [&rest keywordp sexp]
                            [&rest vectorp]
-                           [&optional ("interactive" interactive) def-body])))
+                           [&optional ("interactive" interactive) def-body]))
+           (doc-string 3))
   (pcase-let ((`(,class ,slots ,suffixes ,docstr ,body)
                (transient--expand-define-args args)))
     `(progn
@@ -679,7 +681,8 @@ ARGLIST.  The infix arguments are usually accessed by using
                            [&optional lambda-doc]
                            [&rest keywordp sexp]
                            ("interactive" interactive)
-                           def-body)))
+                           def-body))
+           (doc-string 3))
   (pcase-let ((`(,class ,slots ,_ ,docstr ,body)
                (transient--expand-define-args args)))
     `(progn
@@ -726,7 +729,8 @@ keyword.
 \(fn NAME ARGLIST [DOCSTRING] [KEYWORD VALUE]...)"
   (declare (debug (&define name lambda-list
                            [&optional lambda-doc]
-                           [&rest keywordp sexp])))
+                           [&rest keywordp sexp]))
+           (doc-string 3))
   (pcase-let ((`(,class ,slots ,_ ,docstr ,_)
                (transient--expand-define-args args)))
     `(progn
@@ -2114,13 +2118,16 @@ Non-infix suffix commands usually don't have a value."
 
 (cl-defmethod transient-init-value ((obj transient-prefix))
   (if (slot-boundp obj 'value)
-      (let ((value (oref obj value)))
-        (when (functionp value)
-          (oset obj value (funcall value))))
+      (oref obj value)
     (oset obj value
           (if-let ((saved (assq (oref obj command) transient-values)))
               (cdr saved)
-            nil))))
+            (if-let ((default (and (slot-boundp obj 'default-value)
+                                   (oref obj default-value))))
+                (if (functionp default)
+                    (funcall default)
+                  default)
+              nil)))))
 
 (cl-defmethod transient-init-value ((obj transient-switch))
   (oset obj value
@@ -2208,7 +2215,9 @@ it\", in which case it is pointless to preserve history.)"
                                    (cons value transient--history)))
              (initial-input (and transient-read-with-initial-input
                                  (car transient--history)))
-             (history (cons 'transient--history (if initial-input 1 0)))
+             (history (if initial-input
+                          (cons 'transient--history 1)
+                        'transient--history))
              (value
               (cond
                (reader (funcall reader prompt initial-input history))
@@ -2223,6 +2232,9 @@ it\", in which case it is pointless to preserve history.)"
               ((and (equal value "\"\"") allow-empty)
                (setq value "")))
         (when value
+          (when (bound-and-true-p ivy-mode)
+            (set-text-properties 0 (length (car transient--history)) nil
+                                 (car transient--history)))
           (setf (alist-get history-key transient-history)
                 (delete-dups transient--history)))
         value))))
@@ -2532,7 +2544,8 @@ have a history of their own.")
       (transient--insert-groups)
       (when (or transient--helpp transient--editp)
         (transient--insert-help))
-      (when (eq transient-mode-line-format 'line)
+      (when (and (eq transient-mode-line-format 'line)
+                 window-system)
         (insert (propertize "__" 'face 'transient-separator
                             'display '(space :height (1))))
         (insert (propertize "\n" 'face 'transient-separator 'line-height t)))
