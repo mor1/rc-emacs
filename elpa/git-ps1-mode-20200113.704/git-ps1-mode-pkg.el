@@ -1,0 +1,2 @@
+;;; -*- no-byte-compile: t -*-
+(define-package "git-ps1-mode" "20200113.704" "Global minor-mode to print __git_ps1 in mode-line" 'nil :stars '(#("5" 0 1 (font-lock-face paradox-star-face))) :commit "6762a309bd593d26258dfbf43e7bc21254a70fbf" :keywords '("utility" "mode-line" "git") :authors '(("10sr <8slashes+el [at] gmail [dot] com>")) :maintainer '("10sr <8slashes+el [at] gmail [dot] com>") :url "https://github.com/10sr/git-ps1-mode-el")
