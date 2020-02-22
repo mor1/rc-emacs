@@ -386,13 +386,12 @@
 
   :hook (org-after-todo-state-change-hook . wicked/org-clock-in-if-starting)
   :hook (org-after-todo-state-change-hook . wicked/org-clock-out-if-waiting)
-
+  :hook (org-agenda-mode-hook
+         .
+         (lambda ()
+           (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+           ))
   :config
-  (add-hook
-   'org-agenda-mode-hook
-   '(lambda ()
-      (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-      ))
 
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
   (defun org-archive-completed-tasks ()
@@ -419,7 +418,6 @@
            ((agenda ""
                     (
                      (org-agenda-ndays 7)
-                     (org-agenda-remove-tags t)
                      (org-agenda-repeating-timestamp-show-all t)
                      (org-agenda-skip-deadline-if-done t)
                      (org-agenda-skip-scheduled-if-done t)
