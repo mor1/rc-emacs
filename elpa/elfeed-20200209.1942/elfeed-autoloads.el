@@ -117,6 +117,11 @@ Restore the state of an elfeed-search buffer on desktop restore.
 ;;;### (autoloads nil "elfeed-show" "elfeed-show.el" (0 0 0 0))
 ;;; Generated autoloads from elfeed-show.el
 
+(autoload 'elfeed-show-bookmark-handler "elfeed-show" "\
+Show the bookmarked entry saved in the `RECORD'.
+
+\(fn RECORD)" nil nil)
+
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "elfeed-show" '("elfeed-")))
 
 ;;;***
