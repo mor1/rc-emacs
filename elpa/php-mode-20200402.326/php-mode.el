@@ -1494,6 +1494,15 @@ a completion list."
    ;;  only add patterns here if you want to prevent cc-mode from applying
    ;;  a different face.
    `(
+     ;; Class declaration specification keywords (implements, extends)
+     ("\\_<\\(?:implements\\|extends\\)\\_>" . 'php-class-declaration-spec)
+     ;; Namespace declaration
+     ("\\_<namespace\\_>" . 'php-namespace-declaration)
+     ;; import statement
+     ("\\_<use\\_>" . 'php-import-declaration)
+     ;; Class modifiers (abstract, final)
+     ("\\_<\\(abstract\\|final\\)\\_>\\s-+\\_<class\\>" 1 'php-class-modifier)
+
      ;; Highlight variables, e.g. 'var' in '$var' and '$obj->var', but
      ;; not in $obj->var()
      ("\\(->\\)\\(\\sw+\\)\\s-*(" (1 'php-object-op) (2 'php-method-call))
@@ -1533,6 +1542,8 @@ a completion list."
       1 'php-class)
      ;; Support the ::class constant in PHP5.6
      ("\\sw+\\(::\\)\\(class\\)\\b" (1 'php-paamayim-nekudotayim) (2 'php-magical-constant))
+     ;; Class declaration keywords (class, trait, interface)
+     ("\\_<\\(class\\|trait\\|interface\\)\\_>" . 'php-class-declaration)
 
      ;; Highlight static method calls as such. This is necessary for method
      ;; names which are identical to keywords to be highlighted correctly.
