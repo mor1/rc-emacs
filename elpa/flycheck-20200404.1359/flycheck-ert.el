@@ -100,7 +100,7 @@ Defaults to `error'."
 Like `with-temp-buffer', but resets the modification state of the
 temporary buffer to make sure that it is properly killed even if
 it has a backing file and is modified."
-  (declare (indent 0))
+  (declare (indent 0) (debug t))
   `(with-temp-buffer
      (unwind-protect
          ,(macroexp-progn body)
@@ -115,7 +115,7 @@ it has a backing file and is modified."
 
 BODY is evaluated with `current-buffer' being a buffer with the
 contents FILE-NAME."
-  (declare (indent 1))
+  (declare (indent 1) (debug t))
   `(let ((file-name ,file-name))
      (unless (file-exists-p file-name)
        (error "%s does not exist" file-name))
@@ -300,7 +300,7 @@ failed, and the test aborted with failure.")
   (let ((starttime (float-time)))
     (while (and (not flycheck-ert-syntax-checker-finished)
                 (< (- (float-time) starttime) flycheck-ert-checker-wait-time))
-      (sleep-for 1))
+      (accept-process-output nil 0.02))
     (unless (< (- (float-time) starttime) flycheck-ert-checker-wait-time)
       (flycheck-stop)
       (signal 'flycheck-ert-syntax-check-timed-out nil)))
