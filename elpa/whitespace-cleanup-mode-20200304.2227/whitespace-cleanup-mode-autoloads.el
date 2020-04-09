@@ -36,12 +36,12 @@ otherwise, disable it.  If called from Lisp, enable the mode if
 ARG is omitted or nil.
 
 Whitespace-Cleanup mode is enabled in all buffers where
-`turn-on-whitespace-cleanup-mode' would do it.
+`whitespace-cleanup-mode--maybe' would do it.
 See `whitespace-cleanup-mode' for more information on Whitespace-Cleanup mode.
 
 \(fn &optional ARG)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "whitespace-cleanup-mode" '("whitespace-cleanup-mode-" "turn-on-whitespace-cleanup-mode")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "whitespace-cleanup-mode" '("whitespace-cleanup-mode-")))
 
 ;;;***
 
