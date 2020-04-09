@@ -651,7 +651,8 @@ extending any keys already present."
                     ,(when (eq use-package-verbose 'debug)
                        `(message ,(format "Compiling package %s" name-string)))
                     ,(unless (plist-get args :no-require)
-                       `(load ,name-string nil t)))))))))
+                       `(unless (featurep ',name-symbol)
+                          (load ,name-string nil t))))))))))
 
     ;; Certain keywords imply :defer, if :demand was not specified.
     (when (and (not (plist-member args :demand))
@@ -1028,7 +1029,7 @@ meaning:
   "use-package statistics"
   "Show current statistics gathered about use-package declarations."
   (setq tabulated-list-format
-        ;; The sum of column width is 80 caracters:
+        ;; The sum of column width is 80 characters:
         #[("Package" 25 t)
           ("Status" 13 t)
           ("Last Event" 23 t)
@@ -1547,9 +1548,11 @@ this file.  Usage:
                  `:magic-fallback', or `:interpreter'.  This can be an integer,
                  to force loading after N seconds of idle time, if the package
                  has not already been loaded.
-:after           Defer loading of a package until after any of the named
-                 features are loaded.
-:demand          Prevent deferred loading in all cases.
+:after           Delay the use-package declaration until after the named modules
+                 have loaded. Once load, it will be as though the use-package
+                 declaration (without `:after') had been seen at that moment.
+:demand          Prevent the automatic deferred loading introduced by constructs
+                 such as `:bind' (see `:defer' for the complete list).
 
 :if EXPR         Initialize and load only if EXPR evaluates to a non-nil value.
 :disabled        The package is ignored completely if this keyword is present.
