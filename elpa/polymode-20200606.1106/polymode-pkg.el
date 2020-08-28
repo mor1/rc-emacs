@@ -1,6 +1,6 @@
-(define-package "polymode" "20200316.1314" "Extensible framework for multiple major modes"
+(define-package "polymode" "20200606.1106" "Extensible framework for multiple major modes"
   '((emacs "25"))
-  :keywords
+  :commit "3284ff10017d280ba82f27dc20fe5223b0df709c" :keywords
   '("languages" "multi-modes" "processes")
   :authors
   '(("Vitalie Spinu"))

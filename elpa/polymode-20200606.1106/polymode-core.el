@@ -69,6 +69,7 @@
 (declare-function pm-get-buffer-create "polymode-methods")
 (declare-function pm-get-adjust-face "polymode-methods")
 (declare-function pm-get-span "polymode-methods")
+(declare-function pm-next-chunk "polymode-methods")
 
 ;; eieio silence "unknown slot"
 ;; http://emacs.1067599.n8.nabble.com/Fixing-quot-Unknown-slot-quot-warnings-td419119.html
@@ -1084,7 +1085,7 @@ switch."
       (with-current-buffer to-buffer
         (dolist (var vars)
           (when (default-boundp var)
-            (make-variable-buffer-local var)
+            (make-local-variable var)
             (set var (buffer-local-value var from-buffer))))))))
 
 (defun pm--move-minor-modes (modes from-buffer &optional to-buffer)
@@ -1519,8 +1520,7 @@ ARG is the same as in `forward-paragraph'"
 
         ;; some modes don't save data in their syntax propertize functions
         (save-match-data
-          (let ((real-end end)
-                (base (pm-base-buffer))
+          (let ((base (pm-base-buffer))
                 (protect-host (with-current-buffer (pm-base-buffer)
                                 (eieio-oref pm/chunkmode 'protect-syntax))))
 
@@ -1729,7 +1729,9 @@ Return FALLBACK if non-nil, otherwise the value of
                   (or (cdr (assq (intern (pm--symbol-name name))
                                  polymode-mode-name-aliases))
                       name)))
-            (mname (concat str "-mode")))
+            (mname (if (string-match-p "-mode$" str)
+                       str
+                     (concat str "-mode"))))
        (or
         ;; direct search
         (let ((mode (intern mname)))
