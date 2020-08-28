@@ -4,7 +4,8 @@
 
 ;; Author: Renan Ranelli
 ;; URL: http://github.com/rranelli/auto-package-update.el
-;; Package-Version: 20180712.2045
+;; Package-Version: 20200826.2227
+;; Package-Commit: c0df65ac9845ba2c7c9f53bbdbe013f1024f96f9
 ;; Version: 1.7
 ;; Keywords: package, update
 ;; Package-Requires: ((emacs "24.4") (dash "2.1.0"))
@@ -314,6 +315,18 @@
   :group 'auto-package-update
   :keymap '(("q" . quit-window)))
 
+(defun apu--filter-quelpa-packages (package-list)
+  "Return PACKAGE-LIST without quelpa packages."
+  (if (fboundp 'quelpa)
+      (let ((filtered-package-list package-list))
+        (quelpa-read-cache)
+        (dolist (package quelpa-cache)
+          (let ((package-name (car package)))
+            (setq filtered-package-list
+                  (delq package-name filtered-package-list))))
+        filtered-package-list)
+    package-list))
+
 ;;;###autoload
 (defun auto-package-update-now ()
   "Update installed Emacs packages."
@@ -322,7 +335,8 @@
 
   (package-refresh-contents)
 
-  (let ((installation-report (apu--safe-install-packages (apu--packages-to-install))))
+  (let* ((package-list (apu--filter-quelpa-packages (apu--packages-to-install)))
+         (installation-report (apu--safe-install-packages package-list)))
     (apu--write-current-day)
     (apu--write-results-buffer
      (mapconcat #'identity

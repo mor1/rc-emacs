@@ -25,7 +25,7 @@ Update installed Emacs packages if at least `auto-package-update-interval' days 
 
 \(fn)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "auto-package-update" '("apu--" "auto-package-update-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "auto-package-update" '("auto-package-update-" "apu--")))
 
 ;;;***
 
