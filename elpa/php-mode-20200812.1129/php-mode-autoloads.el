@@ -78,6 +78,14 @@ Alignment lines for PHP script.
 
 ;;;***
 
+;;;### (autoloads nil "php-local-manual" "php-local-manual.el" (0
+;;;;;;  0 0 0))
+;;; Generated autoloads from php-local-manual.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "php-local-manual" '("php-local-manual-search")))
+
+;;;***
+
 ;;;### (autoloads nil "php-mode" "php-mode.el" (0 0 0 0))
 ;;; Generated autoloads from php-mode.el
 
@@ -219,14 +227,6 @@ Return path to current PHP project.
 \(fn)" nil nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "php-project" '("php-project-")))
-
-;;;***
-
-;;;### (autoloads nil "php-util-buffer" "php-util-buffer.el" (0 0
-;;;;;;  0 0))
-;;; Generated autoloads from php-util-buffer.el
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "php-util-buffer" '("php-util-buffer-")))
 
 ;;;***
 

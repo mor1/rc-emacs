@@ -1,6 +1,6 @@
 ;;; php-mode.el --- Major mode for editing PHP code
 
-;; Copyright (C) 2018-2019  Friends of Emacs-PHP development
+;; Copyright (C) 2020  Friends of Emacs-PHP development
 ;; Copyright (C) 1999, 2000, 2001, 2003, 2004 Turadg Aleahmad
 ;;               2008 Aaron S. Hawley
 ;;               2011, 2012, 2013, 2014, 2015, 2016, 2017 Eric James Michael Ritz
@@ -9,11 +9,11 @@
 ;; Maintainer: USAMI Kenta <tadsan@zonu.me>
 ;; URL: https://github.com/emacs-php/php-mode
 ;; Keywords: languages php
-;; Version: 1.22.2
+;; Version: 1.23.0
 ;; Package-Requires: ((emacs "24.3"))
 ;; License: GPL-3.0-or-later
 
-(defconst php-mode-version-number "1.22.2"
+(defconst php-mode-version-number "1.23.0"
   "PHP Mode version number.")
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -68,7 +68,6 @@
   (c-add-language 'php-mode 'java-mode))
 
 (require 'font-lock)
-(require 'add-log)
 (require 'custom)
 (require 'etags)
 (require 'speedbar)
@@ -81,6 +80,8 @@
 
 (eval-when-compile
   (require 'regexp-opt)
+  (defvar add-log-current-defun-header-regexp)
+  (defvar add-log-current-defun-function)
   (defvar c-vsemi-status-unknown-p)
   (defvar syntax-propertize-via-font-lock))
 
@@ -298,6 +299,12 @@ In that case set to `NIL'."
   :tag "PHP Mode Enable Backup Style Variables"
   :type 'boolean)
 
+(defcustom php-mode-disable-c-auto-align-backslashes t
+  "When set to non-NIL, override `c-auto-align-backslashes' to NIL."
+  :group 'php-mode
+  :tag "PHP Mode Disable c-auto-align-backslashes"
+  :type 'boolean)
+
 (define-obsolete-variable-alias 'php-mode-disable-parent-mode-hooks 'php-mode-disable-c-mode-hook "1.21.0")
 (defcustom php-mode-disable-c-mode-hook t
   "When set to `T', do not run hooks of parent modes (`java-mode', `c-mode')."
@@ -465,7 +472,7 @@ In that case set to `NIL'."
 
 (c-lang-defconst c-primitive-type-kwds
   php '("int" "integer" "bool" "boolean" "float" "double" "real"
-        "string" "object" "void"))
+        "string" "object" "void" "mixed"))
 
 (c-lang-defconst c-class-decl-kwds
   "Keywords introducing declarations where the following block (if any)
@@ -511,6 +518,9 @@ PHP does not have an \"enum\"-like keyword."
 
 (c-lang-defconst c-lambda-kwds
   php '("function" "use"))
+
+(c-lang-defconst c-inexpr-block-kwds
+  php '("match"))
 
 (c-lang-defconst c-other-block-decl-kwds
   php '("namespace"))
@@ -630,8 +640,28 @@ might be to handle switch and goto labels differently."
 (defun php-lineup-cascaded-calls (langelem)
   "Line up chained methods using `c-lineup-cascaded-calls',
 but only if the setting is enabled"
-  (when php-mode-lineup-cascaded-calls
-    (c-lineup-cascaded-calls langelem)))
+  (if php-mode-lineup-cascaded-calls
+      (c-lineup-cascaded-calls langelem)
+    (save-excursion
+      (beginning-of-line)
+      (if (looking-at-p "\\s-*->") '+ nil))))
+
+(defun php-c-looking-at-or-maybe-in-bracelist (&optional containing-sexp lim)
+  "Replace `c-looking-at-or-maybe-in-bracelist'.
+
+CONTAINING-SEXP is the position of the brace/paren/bracket enclosing
+POINT, or nil if there is no such position, or we do not know it.  LIM is
+a backward search limit."
+  (cond
+   ((looking-at-p "{")
+    (save-excursion
+      (c-backward-token-2 2 t lim)
+      ;; PHP 8.0 match expression
+      ;; echo match ($var) |{
+      ;;     ↑ matches   ↑ initial position
+      (when (looking-at-p (eval-when-compile (rx symbol-start "match" symbol-end)))
+        (cons (point) t))))
+   (t nil)))
 
 (c-add-style
  "php"
@@ -855,6 +885,9 @@ reported, even if `c-report-syntactic-errors' is non-nil."
           php-warned-bad-indent
           (php-check-html-for-indentation))
       (let ((here (point))
+            (c-auto-align-backslashes
+             (unless php-mode-disable-c-auto-align-backslashes
+               c-auto-align-backslashes))
             doit)
         (move-beginning-of-line nil)
         ;; Don't indent heredoc end mark
@@ -867,38 +900,34 @@ reported, even if `c-report-syntactic-errors' is non-nil."
           (funcall 'c-indent-line)))))
 
 (defun php-c-at-vsemi-p (&optional pos)
-  "Return t on html lines (including php region border), otherwise nil.
+  "Return T on HTML lines (including php tag) or PHP8 Attribute, otherwise NIL.
 POS is a position on the line in question.
 
 This is was done due to the problem reported here:
 
   URL `https://answers.launchpad.net/nxhtml/+question/43320'"
-  (if (not php-template-compatibility)
-      nil
-    (setq pos (or pos (point)))
-    (let ((here (point))
-          ret)
-      (save-match-data
+  ;; If this function could call c-beginning-of-statement-1, change php-c-vsemi-status-unknown-p.
+  (save-excursion
+    (if pos
         (goto-char pos)
-        (beginning-of-line)
-        (setq ret (looking-at
-                   (rx
-                    (or (seq
-                         bol
-                         (0+ space)
-                         "<"
-                         (in "a-z\\?"))
-                        (seq
-                         (0+ not-newline)
-                         (in "a-z\\?")
-                         ">"
-                         (0+ space)
-                         eol))))))
-      (goto-char here)
-      ret)))
+      (setq pos (point)))
+    (unless (php-in-string-or-comment-p)
+      (or
+       ;; Detect PHP8 attribute: <<Attribute()>>
+       (when (and (< 2 pos) (< 2 (- pos (c-point 'bol))))
+         (backward-char 2)
+         (looking-at-p ">>\\s-*\\(?:<<\\|$\\)"))
+       ;; Detect HTML/XML tag and PHP tag (<?php, <?=, ?>)
+       (when php-mode-template-compatibility
+         (beginning-of-line)
+         (looking-at-p
+          (eval-when-compile
+            (rx (or (: bol (0+ space) "<" (in "a-z\\?"))
+                    (: (0+ not-newline) (in "a-z\\?") ">" (0+ space) eol))))))))))
 
 (defun php-c-vsemi-status-unknown-p ()
-  "Always return NIL.  See `php-c-at-vsemi-p'."
+  "Always return NIL.  See `c-vsemi-status-unknown-p'."
+  ;; Current implementation of php-c-at-vsemi-p never calls c-beginning-of-statement-1
   nil)
 
 (defun php-lineup-string-cont (langelem)
@@ -1174,8 +1203,12 @@ After setting the stylevars run hooks according to STYLENAME
   (setq-local open-paren-in-column-0-is-defun-start nil)
   (setq-local defun-prompt-regexp
               "^\\s-*function\\s-+&?\\s-*\\(\\(\\sw\\|\\s_\\)+\\)\\s-*")
-  (setq-local add-log-current-defun-header-regexp
-              php-beginning-of-defun-regexp)
+  (setq-local add-log-current-defun-function nil)
+  (setq-local add-log-current-defun-header-regexp php-beginning-of-defun-regexp)
+
+  (when (fboundp 'c-looking-at-or-maybe-in-bracelist)
+    (advice-add #'c-looking-at-or-maybe-in-bracelist
+                :override 'php-c-looking-at-or-maybe-in-bracelist))
 
   (when (>= emacs-major-version 25)
     (with-silent-modifications
@@ -1509,7 +1542,7 @@ a completion list."
      ("\\<\\(const\\)\\s-+\\(\\_<.+?\\_>\\)" (1 'php-keyword) (2 'php-constant-assign))
 
      ;; Logical operator (!)
-     ("\\(![^=]\\)" 1 'php-logical-op)
+     ("\\(!\\)[^=]" 1 'php-logical-op)
 
      ;; Highlight special variables
      ("\\(\\$\\)\\(this\\)\\>" (1 'php-$this-sigil) (2 'php-$this))

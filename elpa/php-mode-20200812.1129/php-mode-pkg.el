@@ -1,6 +1,6 @@
-(define-package "php-mode" "20200402.326" "Major mode for editing PHP code"
+(define-package "php-mode" "20200812.1129" "Major mode for editing PHP code"
   '((emacs "24.3"))
-  :keywords
+  :commit "f4c7c6995dadcdc6da5fefadfd362f8418b2eec1" :keywords
   '("languages" "php")
   :authors
   '(("Eric James Michael Ritz"))

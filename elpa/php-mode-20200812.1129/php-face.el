@@ -1,13 +1,12 @@
 ;;; php-face.el --- Face definitions for PHP script  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2019  Friends of Emacs-PHP development
+;; Copyright (C) 2020  Friends of Emacs-PHP development
 
 ;; Author: USAMI Kenta <tadsan@zonu.me>
 ;; Created: 5 May 2019
-;; Version: 1.22.2
+;; Version: 1.23.0
 ;; Keywords: faces, php
 ;; Homepage: https://github.com/emacs-php/php-mode
-;; Package-Requires: ((emacs "24.3"))
 ;; License: GPL-3.0-or-later
 
 ;; This program is free software; you can redistribute it and/or modify
