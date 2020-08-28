@@ -164,13 +164,6 @@ comments or strings.
 
 ;;;***
 
-;;;### (autoloads nil "company-eclim" "company-eclim.el" (0 0 0 0))
-;;; Generated autoloads from company-eclim.el
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "company-eclim" '("company-eclim")))
-
-;;;***
-
 ;;;### (autoloads nil "company-elisp" "company-elisp.el" (0 0 0 0))
 ;;; Generated autoloads from company-elisp.el
 
@@ -322,18 +315,6 @@ Applies the default configuration to enable company-tng.
 \(fn)" nil nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "company-tng" '("company-tng--")))
-
-;;;***
-
-;;;### (autoloads nil "company-xcode" "company-xcode.el" (0 0 0 0))
-;;; Generated autoloads from company-xcode.el
-
-(autoload 'company-xcode "company-xcode" "\
-`company-mode' completion backend for Xcode projects.
-
-\(fn COMMAND &optional ARG &rest IGNORED)" t nil)
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "company-xcode" '("company-xcode-")))
 
 ;;;***
 

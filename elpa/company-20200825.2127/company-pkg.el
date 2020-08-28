@@ -1,6 +1,6 @@
-(define-package "company" "20200324.2145" "Modular text completion framework"
+(define-package "company" "20200825.2127" "Modular text completion framework"
   '((emacs "24.3"))
-  :keywords
+  :commit "d6df27f1652ae56178ce64b9c1022ec90c850e1a" :keywords
   '("abbrev" "convenience" "matching")
   :authors
   '(("Nikolaj Schumacher"))

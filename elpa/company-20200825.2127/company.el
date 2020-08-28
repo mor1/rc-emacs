@@ -5,7 +5,7 @@
 ;; Author: Nikolaj Schumacher
 ;; Maintainer: Dmitry Gutov <dgutov@yandex.ru>
 ;; URL: http://company-mode.github.io/
-;; Version: 0.9.12
+;; Version: 0.9.13
 ;; Keywords: abbrev, convenience, matching
 ;; Package-Requires: ((emacs "24.3"))
 
@@ -94,6 +94,8 @@ attention to case differences."
     (((class color) (min-colors 88) (background light))
      (:background "cornsilk"))
     (((class color) (min-colors 88) (background dark))
+     (:background "yellow"))
+    (t
      (:background "yellow")))
   "Face used for the tooltip.")
 
@@ -278,6 +280,11 @@ This doesn't include the margins and the scroll bar."
   :type 'integer
   :package-version '(company . "0.9.5"))
 
+(defcustom company-tooltip-width-grow-only nil
+  "When non-nil, the tooltip width is not allowed to decrease."
+  :type 'boolean
+  :package-version '(company . "0.9.14"))
+
 (defcustom company-tooltip-margin 1
   "Width of margin columns to show around the toolip."
   :type 'integer)
@@ -305,21 +312,19 @@ This doesn't include the margins and the scroll bar."
     (company-capf . "completion-at-point-functions")
     (company-clang . "Clang")
     (company-cmake . "CMake")
-    (company-css . "CSS")
+    (company-css . "CSS (obsolete backend)")
     (company-dabbrev . "dabbrev for plain text")
     (company-dabbrev-code . "dabbrev for code")
-    (company-eclim . "Eclim (an Eclipse interface)")
-    (company-elisp . "Emacs Lisp")
+    (company-elisp . "Emacs Lisp (obsolete backend)")
     (company-etags . "etags")
     (company-files . "Files")
     (company-gtags . "GNU Global")
     (company-ispell . "Ispell")
     (company-keywords . "Programming language keywords")
-    (company-nxml . "nxml")
+    (company-nxml . "nxml (obsolete backend)")
     (company-oddmuse . "Oddmuse")
     (company-semantic . "Semantic")
-    (company-tempo . "Tempo templates")
-    (company-xcode . "Xcode")))
+    (company-tempo . "Tempo templates")))
 (put 'company-safe-backends 'risky-local-variable t)
 
 (defun company-safe-backends-p (backends)
@@ -337,9 +342,10 @@ This doesn't include the margins and the scroll bar."
                                   (list 'company-nxml))
                               ,@(unless (version<= "26" emacs-version)
                                   (list 'company-css))
-                              company-eclim company-semantic company-clang
-                              company-xcode company-cmake
+                              company-semantic
+                              company-cmake
                               company-capf
+                              company-clang
                               company-files
                               (company-dabbrev-code company-gtags company-etags
                                company-keywords)
@@ -542,34 +548,45 @@ prefix it was started from."
 This can be a function do determine if a match is required.
 
 This can be overridden by the backend, if it returns t or `never' to
-`require-match'.  `company-auto-complete' also takes precedence over this."
+`require-match'.  `company-auto-commit' also takes precedence over this."
   :type '(choice (const :tag "Off" nil)
                  (function :tag "Predicate function")
                  (const :tag "On, if user interaction took place"
                         'company-explicit-action-p)
                  (const :tag "On" t)))
 
-(defcustom company-auto-complete nil
-  "Determines when to auto-complete.
-If this is enabled, all characters from `company-auto-complete-chars'
+(define-obsolete-variable-alias
+  'company-auto-complete
+  'company-auto-commit
+  "0.9.14")
+
+(defcustom company-auto-commit nil
+  "Determines whether to auto-commit.
+If this is enabled, all characters from `company-auto-commit-chars'
 trigger insertion of the selected completion candidate.
 This can also be a function."
   :type '(choice (const :tag "Off" nil)
                  (function :tag "Predicate function")
                  (const :tag "On, if user interaction took place"
                         'company-explicit-action-p)
-                 (const :tag "On" t)))
+                 (const :tag "On" t))
+  :package-version '(company . "0.9.14"))
 
-(defcustom company-auto-complete-chars '(?\  ?\) ?.)
-  "Determines which characters trigger auto-completion.
-See `company-auto-complete'.  If this is a string, each string character
-triggers auto-completion.  If it is a list of syntax description characters (see
-`modify-syntax-entry'), all characters with that syntax auto-complete.
+(define-obsolete-variable-alias
+  'company-auto-complete-chars
+  'company-auto-commit-chars
+  "0.9.14")
+
+(defcustom company-auto-commit-chars '(?\  ?\) ?.)
+  "Determines which characters trigger auto-commit.
+See `company-auto-commit'.  If this is a string, each character in it
+triggers auto-commit.  If it is a list of syntax description characters (see
+`modify-syntax-entry'), characters with any of those syntaxes do that.
 
 This can also be a function, which is called with the new input and should
-return non-nil if company should auto-complete.
+return non-nil if company should auto-commit.
 
-A character that is part of a valid candidate never triggers auto-completion."
+A character that is part of a valid completion never triggers auto-commit."
   :type '(choice (string :tag "Characters")
                  (set :tag "Syntax"
                       (const :tag "Whitespace" ?\ )
@@ -586,7 +603,8 @@ A character that is part of a valid candidate never triggers auto-completion."
                       (const :tag "Character-quote." ?/)
                       (const :tag "Generic string fence." ?|)
                       (const :tag "Generic comment fence." ?!))
-                 (function :tag "Predicate function")))
+                 (function :tag "Predicate function"))
+  :package-version '(company . "0.9.14"))
 
 (defcustom company-idle-delay .5
   "The idle delay in seconds until completion starts automatically.
@@ -858,7 +876,8 @@ means that `company-mode' is always turned on except in `message-mode' buffers."
 ;; Hack:
 ;; Emacs calculates the active keymaps before reading the event.  That means we
 ;; cannot change the keymap from a timer.  So we send a bogus command.
-;; XXX: Even in Emacs 24.4, seems to be needed in the terminal.
+;; XXX: Seems not to be needed anymore in Emacs 24.4
+;; Apparently, starting with emacs-mirror/emacs@99d0d6dc23.
 (defun company-ignore ()
   (interactive)
   (setq this-command last-command))
@@ -1097,10 +1116,6 @@ matches IDLE-BEGIN-AFTER-RE, return it wrapped in a cons."
   "Non-nil, if manual completion took place.")
 
 (defvar-local company--manual-prefix nil)
-
-(defvar company--auto-completion nil
-  "Non-nil when current candidate is being inserted automatically.
-Controlled by `company-auto-complete'.")
 
 (defvar-local company--point-max nil)
 
@@ -1446,7 +1461,8 @@ prefix match (same case) will be prioritized."
        (eq tick (buffer-chars-modified-tick))
        (eq pos (point))
        (when (company-auto-begin)
-         (company-input-noop)
+         (when (version< emacs-version "24.3.50")
+           (company-input-noop))
          (let ((this-command 'company-idle-begin))
            (company-post-command)))))
 
@@ -1501,18 +1517,18 @@ prefix match (same case) will be prioritized."
                  (funcall company-require-match)
                (eq company-require-match t))))))
 
-(defun company-auto-complete-p (input)
-  "Return non-nil if INPUT should trigger auto-completion."
-  (and (if (functionp company-auto-complete)
-           (funcall company-auto-complete)
-         company-auto-complete)
-       (if (functionp company-auto-complete-chars)
-           (funcall company-auto-complete-chars input)
-         (if (consp company-auto-complete-chars)
+(defun company-auto-commit-p (input)
+  "Return non-nil if INPUT should trigger auto-commit."
+  (and (if (functionp company-auto-commit)
+           (funcall company-auto-commit)
+         company-auto-commit)
+       (if (functionp company-auto-commit-chars)
+           (funcall company-auto-commit-chars input)
+         (if (consp company-auto-commit-chars)
              (memq (char-syntax (string-to-char input))
-                   company-auto-complete-chars)
+                   company-auto-commit-chars)
            (string-match (regexp-quote (substring input 0 1))
-                          company-auto-complete-chars)))))
+                          company-auto-commit-chars)))))
 
 (defun company--incremental-p ()
   (and (> (point) company-point)
@@ -1575,14 +1591,12 @@ prefix match (same case) will be prioritized."
       (setq company-prefix new-prefix)
       (company-update-candidates c)
       c)
-     ((and (> (point) company-point)
-           (company-auto-complete-p (buffer-substring-no-properties
-                                     (point) company-point)))
-      ;; auto-complete
+     ((and (characterp last-command-event)
+           (company-auto-commit-p (string last-command-event)))
+      ;; auto-commit
       (save-excursion
         (goto-char company-point)
-        (let ((company--auto-completion t))
-          (company-complete-selection))
+        (company-complete-selection)
         nil))
      ((not (company--incremental-p))
       (company-cancel))
@@ -1816,6 +1830,7 @@ each one wraps a part of the input string."
 (defun company--permutations (lst)
   (if (not lst)
       '(nil)
+    ;; FIXME: Replace with `mapcan' in Emacs 26.
     (cl-mapcan
      (lambda (e)
        (mapcar (lambda (perm) (cons e perm))
@@ -2012,14 +2027,6 @@ The command `company-search-toggle-filtering' (\\[company-search-toggle-filterin
 uses the search string to filter the completion candidates."
   (interactive)
   (company-search-mode 1))
-
-(defvar company-filter-map
-  (let ((keymap (make-keymap)))
-    (define-key keymap [remap company-search-printing-char]
-      'company-filter-printing-char)
-    (set-keymap-parent keymap company-search-map)
-    keymap)
-  "Keymap used for incrementally searching the completion candidates.")
 
 (defun company-filter-candidates ()
   "Start filtering the completion candidates incrementally.
@@ -2435,6 +2442,7 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
                           thereis (let ((company-backend b))
                                     (setq backend b)
                                     (company-call-backend 'prefix))))
+         (c-a-p-f completion-at-point-functions)
          cc annotations)
     (when (or (stringp prefix) (consp prefix))
       (let ((company-backend backend))
@@ -2457,11 +2465,16 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
     (insert "\n")
     (insert "Used backend: " (pp-to-string backend))
     (insert "\n")
+    (when (if (listp backend)
+              (memq 'company-capf backend)
+            (eq backend 'company-capf))
+      (insert "Value of c-a-p-f: "
+              (pp-to-string c-a-p-f)))
     (insert "Major mode: " mode)
     (insert "\n")
     (insert "Prefix: " (pp-to-string prefix))
     (insert "\n")
-    (insert (message  "Completions:"))
+    (insert "Completions:")
     (unless cc (insert " none"))
     (if (eq annotations 'error)
         (insert "(error fetching)")
@@ -2477,6 +2490,8 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
 (defvar-local company-pseudo-tooltip-overlay nil)
 
 (defvar-local company-tooltip-offset 0)
+
+(defvar-local company--tooltip-current-width 0)
 
 (defun company-tooltip--lines-update-offset (selection num-lines limit)
   (cl-decf limit 2)
@@ -2629,7 +2644,10 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
       ((match-beginning 1)
        ;; FIXME: Better char for 'non-printable'?
        ;; We shouldn't get any of these, but sometimes we might.
-       "\u2017")
+       ;; The official "replacement character" is not supported by some fonts.
+       ;;"\ufffd"
+       "?"
+       )
       ((match-beginning 2)
        ;; Zero-width non-breakable space.
        "")
@@ -2736,9 +2754,20 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
                     (company--offset-line (pop lines) offset))
             new))
 
-    (let ((str (concat (when nl " \n")
-                       (mapconcat 'identity (nreverse new) "\n")
-                       "\n")))
+    ;; XXX: Also see branch 'more-precise-extend'.
+    (let* ((nl-face (list
+                     :extend t
+                     :inverse-video nil
+                     :background (face-attribute 'default :background)))
+           (str (apply #'concat
+                       (when nl " \n")
+                       (cl-mapcan
+                        ;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=42552#23
+                        (lambda (line) (list line (propertize "\n" 'face nl-face)))
+                        (nreverse new)))))
+      ;; Use add-face-text-property in Emacs 24.4
+      ;; https://debbugs.gnu.org/38563
+      (font-lock-append-text-property 0 (length str) 'face 'default str)
       (when nl (put-text-property 0 1 'cursor t str))
       str)))
 
@@ -2795,6 +2824,7 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
           (setq annotation (company--clean-string annotation))
           (when company-tooltip-align-annotations
             ;; `lisp-completion-at-point' adds a space.
+            ;; FIXME: Use `string-trim' in Emacs 24.4
             (setq annotation (comment-string-strip annotation t nil))))
         (push (cons value annotation) items)
         (setq width (max (+ (length value)
@@ -2809,6 +2839,10 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
                           (if company-show-numbers
                               (+ 2 width)
                             width))))
+
+    (when company-tooltip-width-grow-only
+      (setq width (max company--tooltip-current-width width))
+      (setq company--tooltip-current-width width))
 
     (let ((items (nreverse items))
           (numbered (if company-show-numbers 0 99999))
@@ -2947,14 +2981,12 @@ Returns a negative number if the tooltip should be displayed above point."
       (overlay-put ov 'priority 111)
       ;; No (extra) prefix for the first line.
       (overlay-put ov 'line-prefix "")
-      ;; `display' is better
-      ;; (http://debbugs.gnu.org/18285, http://debbugs.gnu.org/20847),
-      ;; but it doesn't work on 0-length overlays.
-      (if (< (overlay-start ov) (overlay-end ov))
-          (overlay-put ov 'display disp)
-        (overlay-put ov 'after-string disp)
-        (overlay-put ov 'invisible t))
-      (overlay-put ov 'face 'default)
+      (overlay-put ov 'after-string disp)
+      ;; `display' is better than `invisible':
+      ;; https://debbugs.gnu.org/18285
+      ;; https://debbugs.gnu.org/20847
+      ;; https://debbugs.gnu.org/42521
+      (overlay-put ov 'display "")
       (overlay-put ov 'window (selected-window)))))
 
 (defun company-pseudo-tooltip-guard ()
@@ -2988,6 +3020,7 @@ Returns a negative number if the tooltip should be displayed above point."
        (overlay-put company-pseudo-tooltip-overlay
                     'company-guard (company-pseudo-tooltip-guard)))
      (company-pseudo-tooltip-unhide))
+    (show (setq company--tooltip-current-width 0))
     (hide (company-pseudo-tooltip-hide)
           (setq company-tooltip-offset 0))
     (update (when (overlayp company-pseudo-tooltip-overlay)
