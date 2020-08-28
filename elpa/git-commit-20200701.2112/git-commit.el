@@ -11,8 +11,9 @@
 ;;	Marius Vollmer <marius.vollmer@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "25.1") (dash "20180910") (transient "20190812") (with-editor "20181103"))
-;; Package-Version: 20200207.1819
+;; Package-Requires: ((emacs "25.1") (dash "20200524") (transient "20200601") (with-editor "20200522"))
+;; Package-Version: 20200701.2112
+;; Package-Commit: 9ef75c1098a525a0c817a164516e67c8a13cfca7
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -176,6 +177,9 @@ The major mode configured here is turned on by the minor mode
 `git-commit-mode'."
   :group 'git-commit
   :type '(choice (function-item text-mode)
+                 (function-item markdown-mode)
+                 (function-item org-mode)
+                 (function :tag "Another mode")
                  (const :tag "No major mode")))
 
 (defcustom git-commit-setup-hook
@@ -697,7 +701,7 @@ With a numeric prefix ARG, go forward ARG comments."
 
 ;;; Headers
 
-(define-transient-command git-commit-insert-pseudo-header ()
+(transient-define-prefix git-commit-insert-pseudo-header ()
   "Insert a commit message pseudo header."
   [["Insert ... by yourself"
     ("a"   "Ack"         git-commit-ack)
