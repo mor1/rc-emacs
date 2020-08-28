@@ -8,7 +8,8 @@
 
 ;; Author: The go-mode Authors
 ;; Version: 1.5.0
-;; Package-Version: 20200331.407
+;; Package-Version: 20200822.1936
+;; Package-Commit: d17d21060b16a77f9ee28ff453e674225acbf1b1
 ;; Keywords: languages go
 ;; URL: https://github.com/dominikh/go-mode.el
 ;;
@@ -91,6 +92,10 @@ constant is changed.")
                                "\\s *)\\s *\\)?\\("
                                go-identifier-regexp
                                "\\)("))
+
+(defconst go--comment-start-regexp "[[:space:]]*\\(?:/[/*]\\)")
+(defconst go--case-regexp "\\([[:space:]]*case\\([[:space:]]\\|$\\)\\)")
+(defconst go--case-or-default-regexp (concat "\\(" go--case-regexp "\\|"  "[[:space:]]*default:\\)"))
 
 (defconst go-builtins
   '("append" "cap"   "close"   "complex" "copy"
@@ -408,8 +413,19 @@ For mode=set, all covered lines will have this weight."
     st)
   "Syntax table for Go mode.")
 
-(defvar go--default-face 'default
-  "A variable to refer to `default' face for use in font lock rules.")
+(defun go--fontify-type-switch-case-pre ()
+  "Move point to line following the end of case statement.
+
+This is used as an anchored font lock keyword PRE-MATCH-FORM. We
+expand the font lock region to include multiline type switch case
+statements."
+  (save-excursion
+    (beginning-of-line)
+    (while (or (looking-at "[[:space:]]*\\($\\|//\\)") (go--line-suffix-p ","))
+      (forward-line))
+    (when (go--line-suffix-p ":")
+      (forward-line))
+    (point)))
 
 (defun go--build-font-lock-keywords ()
   ;; we cannot use 'symbols in regexp-opt because GNU Emacs <24
@@ -428,7 +444,7 @@ For mode=set, all covered lines will have this weight."
        ;; Post-match form that runs after last sub-match.
        (go--fontify-param-post)
        ;; Subexp 1 is the param variable name, if any.
-       (1 ,(if go-fontify-variables 'font-lock-variable-name-face 'go--default-face))
+       (1 font-lock-variable-name-face nil t)
        ;; Subexp 2 is the param type name, if any. We set the LAXMATCH
        ;; flag to allow optional regex groups.
        (2 font-lock-type-face nil t)))
@@ -441,12 +457,16 @@ For mode=set, all covered lines will have this weight."
      (go--match-ident-type-pair 2 font-lock-type-face)
 
      ;; An anchored matcher for type switch case clauses.
-     (go--match-type-switch-case (go--fontify-type-switch-case nil nil (1 font-lock-type-face)))
+     (go--match-type-switch-case
+      (go--fontify-type-switch-case
+       (go--fontify-type-switch-case-pre)
+       nil
+       (1 font-lock-type-face)))
 
      ;; Match variable names in var decls, constant names in const
      ;; decls, and type names in type decls.
      (go--match-decl
-      (1 ,(if go-fontify-variables 'font-lock-variable-name-face 'go--default-face) nil t)
+      (1 font-lock-variable-name-face nil t)
       (2 font-lock-constant-face nil t)
       (3 font-lock-type-face nil t))
 
@@ -1164,8 +1184,6 @@ Return non-nil if point changed lines."
       (setq count (if (and count (< count 0 )) -1 1)))
     moved))
 
-(defconst go--comment-start-regexp "[[:space:]]*\\(?:/[/*]\\)")
-
 (defun go--case-comment-p (indent)
   "Return non-nil if looking at a comment attached to a case statement.
 
@@ -1220,9 +1238,6 @@ INDENT is the normal indent of this line, i.e. that of the case body."
         ;; other cases are ambiguous, so if comment is currently
         ;; aligned with "case", leave it that way
         (= (current-indentation) (- indent tab-width)))))))
-
-(defconst go--case-regexp "\\([[:space:]]*case\\([[:space:]]\\|$\\)\\)")
-(defconst go--case-or-default-regexp (concat "\\(" go--case-regexp "\\|"  "[[:space:]]*default:\\)"))
 
 (defun go-mode-indent-line ()
   (interactive)
@@ -1423,6 +1438,10 @@ the next comma or to the closing paren."
     (while (and (not found-match) (not done))
       (if go--fontify-param-has-name
           (when (looking-at go--named-param-re)
+            (when (not go-fontify-variables)
+              (let ((md (match-data)))
+                (setf (nth 2 md) nil (nth 3 md) nil)
+                (set-match-data md)))
             (setq found-match t))
         (when (looking-at go--unnamed-param-re)
           (setq found-match t)))
@@ -1468,7 +1487,7 @@ comma, it stops at it. Return non-nil if comma was found."
     ;; Loop until we find a match because we must skip types we don't
     ;; handle, such as "interface { foo() }".
     (while (and (not found-match) (not done))
-      (when (looking-at (concat "[[:space:]\n]*" go-type-name-regexp "[[:space:]]*[,:]"))
+      (when (looking-at (concat "\\(?:[[:space:]]*\\|//.*\\|\n\\)*" go-type-name-regexp "[[:space:]]*[,:]"))
         (goto-char (match-end 1))
         (unless (member (match-string 1) go-constants)
           (setq found-match t)))
@@ -1530,14 +1549,16 @@ gets highlighted by the font lock keyword."
           (let ((md (match-data)))
             (cond
              ((string= decl "var")
-              (setf (nth 4 md) nil (nth 5 md) nil (nth 6 md) nil (nth 7 md) nil))
+              (setf (nth 4 md) nil (nth 5 md) nil (nth 6 md) nil (nth 7 md) nil)
+              (when (not go-fontify-variables)
+                (setf (nth 2 md) nil (nth 3 md) nil)))
              ((string= decl "const")
               (setf (nth 2 md) nil (nth 3 md) nil (nth 6 md) nil (nth 7 md) nil))
              ((string= decl "type")
               (setf (nth 2 md) nil (nth 3 md) nil (nth 4 md) nil (nth 5 md) nil)))
             (set-match-data md)))
 
-         (t
+         (go-fontify-variables
           (save-match-data
             ;; Left side of ":=" assignmnet.
             (when (looking-at ".*:=")
@@ -1826,7 +1847,7 @@ with goflymake (see URL `https://github.com/dougm/goflymake'), gocode
              (boundp 'compilation-error-regexp-alist-alist))
     (add-to-list 'compilation-error-regexp-alist 'go-test)
     (add-to-list 'compilation-error-regexp-alist-alist
-                 '(go-test . ("^\t+\\([^()\t\n]+\\):\\([0-9]+\\):? .*$" 1 2)) t)))
+                 '(go-test . ("^\\s-+\\([^()\t\n]+\\):\\([0-9]+\\):? .*$" 1 2)) t)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist (cons "\\.go\\'" 'go-mode))
@@ -2337,6 +2358,7 @@ description at POINT."
 (defun godef--successful-p (output)
   (not (or (string= "-" output)
            (string= "godef: no identifier found" output)
+           (string= "godef: no object" output)
            (go--string-prefix-p "godef: no declaration found for " output)
            (go--string-prefix-p "error finding import path for " output))))
 
