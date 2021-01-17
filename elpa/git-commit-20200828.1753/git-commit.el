@@ -12,8 +12,8 @@
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
 ;; Package-Requires: ((emacs "25.1") (dash "20200524") (transient "20200601") (with-editor "20200522"))
-;; Package-Version: 20200701.2112
-;; Package-Commit: 9ef75c1098a525a0c817a164516e67c8a13cfca7
+;; Package-Version: 20200828.1753
+;; Package-Commit: 0ed84832bcd6e40802c43b662ed7f29b86695c76
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -314,7 +314,7 @@ already using it, then you probably shouldn't start doing so."
 (defface git-commit-keyword
   '((t :inherit font-lock-string-face))
   "Face used for keywords in commit messages.
-In this context a \"keyword\" is text surrounded be brackets."
+In this context a \"keyword\" is text surrounded by brackets."
   :group 'git-commit-faces)
 
 (define-obsolete-face-alias 'git-commit-note
