@@ -10,16 +10,12 @@
 ;;; Generated autoloads from c-eldoc.el
 
 (autoload 'c-turn-on-eldoc-mode "c-eldoc" "\
-Enable c-eldoc-mode
-
-\(fn)" t nil)
+Enable c-eldoc-mode." t nil)
 
 (autoload 'c-eldoc-print-current-symbol-info "c-eldoc" "\
-Returns documentation string for the current symbol.
+Return documentation string for the current symbol." nil nil)
 
-\(fn)" nil nil)
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "c-eldoc" '("call-c-eldoc-cleanup" "c-eldoc-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "c-eldoc" '("c-eldoc-" "call-c-eldoc-cleanup")))
 
 ;;;***
 
