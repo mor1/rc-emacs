@@ -4,9 +4,10 @@
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Homepage: https://github.com/purcell/unfill
-;; Package-Version: 20200304.2218
+;; Package-Version: 20210106.220
 ;; Package-X-Original-Version: 0
 ;; Package-Requires: ((emacs "24.1"))
+;; Package-Commit: 8375d87ec184fbe964189e2f9b7263cdb1396694
 ;; Keywords: convenience
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -66,7 +67,7 @@ This command does the inverse of `fill-region'."
     (call-interactively 'fill-paragraph)))
 
 ;;;###autoload
-(define-obsolete-function-alias 'toggle-fill-unfill 'unfill-toggle)
+(define-obsolete-function-alias 'toggle-fill-unfill 'unfill-toggle "0.2")
 
 (provide 'unfill)
 ;;; unfill.el ends here
