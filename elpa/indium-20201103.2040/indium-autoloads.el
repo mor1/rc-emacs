@@ -65,14 +65,10 @@
 ;;; Generated autoloads from indium-interaction.el
 
 (autoload 'indium-connect "indium-interaction" "\
-Open a new connection to a runtime.
-
-\(fn)" t nil)
+Open a new connection to a runtime." t nil)
 
 (autoload 'indium-launch "indium-interaction" "\
-Start a new process and connect to it.
-
-\(fn)" t nil)
+Start a new process and connect to it." t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-interaction" '("indium-")))
 
@@ -83,14 +79,10 @@ Start a new process and connect to it.
 ;;; Generated autoloads from indium-list-sources.el
 
 (autoload 'indium-list-sourcemap-sources "indium-list-sources" "\
-Display a list of all resolved sourcemap sources.
-
-\(fn)" t nil)
+Display a list of all resolved sourcemap sources." t nil)
 
 (autoload 'indium-list-script-sources "indium-list-sources" "\
-Display a list of all resolved script sources.
-
-\(fn)" t nil)
+Display a list of all resolved script sources." t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-list-sources" '("indium-list-sources-")))
 
@@ -113,7 +105,7 @@ Display a list of all resolved script sources.
 ;;;### (autoloads nil "indium-repl" "indium-repl.el" (0 0 0 0))
 ;;; Generated autoloads from indium-repl.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-repl" '("indium-" "company-indium-repl")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-repl" '("company-indium-repl" "indium-")))
 
 ;;;***
 
@@ -124,9 +116,7 @@ Display a list of all resolved script sources.
 (autoload 'indium-scratch "indium-scratch" "\
 Pop to the scratch buffer.
 If no scratch buffer exists for the current connection, create
-one first.
-
-\(fn)" t nil)
+one first." t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-scratch" '("indium-scratch-")))
 
