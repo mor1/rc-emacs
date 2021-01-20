@@ -40,6 +40,18 @@
   "The face used for fake cursors if the cursor-type is bar"
   :group 'multiple-cursors)
 
+(defcustom mc/match-cursor-style t
+  "If non-nil, attempt to match the cursor style that the user
+has selected.  Namely, use vertical bars the user has configured
+Emacs to use that cursor.
+
+If nil, just use standard rectangle cursors for all fake cursors.
+
+In some modes/themes, the bar fake cursors are either not
+rendered or shift text."
+  :type '(boolean)
+  :group 'multiple-cursors)
+
 (defface mc/region-face
   '((t :inherit region))
   "The face used for fake regions"
@@ -109,10 +121,23 @@
     (and (listp cursor-type)
          (eq (car cursor-type) 'bar))))
 
+(defun mc/line-number-at-pos (&optional pos absolute)
+  "Faster implementation of `line-number-at-pos'."
+  (if pos
+      (save-excursion
+        (if absolute
+            (save-restriction
+              (widen)
+              (goto-char pos)
+              (string-to-number (format-mode-line "%l")))
+          (goto-char pos)
+          (string-to-number (format-mode-line "%l"))))
+    (string-to-number (format-mode-line "%l"))))
+
 (defun mc/make-cursor-overlay-at-eol (pos)
   "Create overlay to look like cursor at end of line."
   (let ((overlay (make-overlay pos pos nil nil nil)))
-    (if (mc/cursor-is-bar)
+    (if (and mc/match-cursor-style (mc/cursor-is-bar))
 	(overlay-put overlay 'before-string (propertize "|" 'face 'mc/cursor-bar-face))
       (overlay-put overlay 'after-string (propertize " " 'face 'mc/cursor-face)))
     overlay))
@@ -120,7 +145,7 @@
 (defun mc/make-cursor-overlay-inline (pos)
   "Create overlay to look like cursor inside text."
   (let ((overlay (make-overlay pos (1+ pos) nil nil nil)))
-    (if (mc/cursor-is-bar)
+    (if (and mc/match-cursor-style (mc/cursor-is-bar))
 	(overlay-put overlay 'before-string (propertize "|" 'face 'mc/cursor-bar-face))
       (overlay-put overlay 'face 'mc/cursor-face))
     overlay))
@@ -594,7 +619,7 @@ from being executed if in multiple-cursors-mode."
     (when interprogram-paste
       ;; Add interprogram-paste to normal kill ring, just
       ;; like current-kill usually does for itself.
-      ;; We have to do the work for it tho, since the funcall only returns
+      ;; We have to do the work for it though, since the funcall only returns
       ;; something once. It is not a pure function.
       (let ((interprogram-cut-function nil))
         (if (listp interprogram-paste)
@@ -831,6 +856,8 @@ for running commands with multiple cursors."
   "Commands to run for all cursors in multiple-cursors-mode")
 
 (provide 'multiple-cursors-core)
+(require 'mc-cycle-cursors)
+(require 'mc-hide-unmatched-lines-mode)
 
 ;; Local Variables:
 ;; coding: utf-8
