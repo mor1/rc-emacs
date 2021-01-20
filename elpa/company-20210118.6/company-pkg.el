@@ -1,11 +1,11 @@
-(define-package "company" "20200927.2222" "Modular text completion framework"
+(define-package "company" "20210118.6" "Modular text completion framework"
   '((emacs "24.3"))
-  :commit "25f6a2717ade173c37dc4d013ce68312673596d7" :keywords
-  '("abbrev" "convenience" "matching")
-  :authors
+  :commit "93415dcef014b8aad21633bae1dabecc28742df1" :authors
   '(("Nikolaj Schumacher"))
   :maintainer
   '("Dmitry Gutov" . "dgutov@yandex.ru")
+  :keywords
+  '("abbrev" "convenience" "matching")
   :url "http://company-mode.github.io/")
 ;; Local Variables:
 ;; no-byte-compile: t
