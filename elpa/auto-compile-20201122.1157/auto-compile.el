@@ -1,13 +1,14 @@
 ;;; auto-compile.el --- automatically compile Emacs Lisp libraries  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2008-2018  Jonas Bernoulli
+;; Copyright (C) 2008-2020  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile, convenience, lisp
-;; Package-Version: 20181230.2216
+;; Package-Version: 20201122.1157
+;; Package-Commit: f8619d1616b523918323914ec77bfbee2c559781
 
-;; Package-Requires: ((emacs "25.1") (packed "3.0.0"))
+;; Package-Requires: ((emacs "25.1") (packed "3.0.1"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -69,7 +70,6 @@
 ;;
 ;;     ;;; init.el --- user init file
 ;;     (setq load-prefer-newer t)
-;;     (add-to-list 'load-path "/path/to/dash")
 ;;     (add-to-list 'load-path "/path/to/packed")
 ;;     (add-to-list 'load-path "/path/to/auto-compile")
 ;;     (require 'auto-compile)
@@ -82,6 +82,18 @@
 ;; from the protection offered by `load-prefer-newer' and the modes
 ;; that are defined here, otherwise `~/.emacs.d/init.el' is the only
 ;; exception.
+
+;; If you are using Emacs 27 or later, then these settings should be
+;; placed in `early-init.el', which should never be compiled:
+
+;;     ;;; early-init.el --- early bird  -*- no-byte-compile: t -*-
+;;     (setq load-prefer-newer t)
+;;     (add-to-list 'load-path "/path/to/packed")
+;;     (add-to-list 'load-path "/path/to/auto-compile")
+;;     (require 'auto-compile)
+;;     (auto-compile-on-load-mode)
+;;     (auto-compile-on-save-mode)
+;;     ;;; early-init.el ends here
 
 ;; Usage
 ;; -----
@@ -130,7 +142,6 @@
 (defvar autoload-modified-buffers)
 (defvar warning-minimum-level)
 
-(defvar auto-compile-update-autoloads)
 (defvar auto-compile-use-mode-line)
 
 (defgroup auto-compile nil
@@ -416,7 +427,7 @@ multiple files is toggled as follows:
         (`quit  (auto-compile-delete-dest (byte-compile-dest-file file))))
     (when (called-interactively-p 'any)
       (let ((buffer (get-buffer byte-compile-log-buffer)))
-        (when buffer
+        (when (buffer-live-p buffer)
           (kill-buffer buffer))))
     (dolist (f (directory-files file t))
       (cond
@@ -489,8 +500,9 @@ pretend the byte code file exists.")
       (setq buf  (get-file-buffer file)))
     (setq default-directory (file-name-directory file))
     (setq auto-compile-file-buffer buf)
-    (with-current-buffer buf
-      (setq auto-compile-warnings 0))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (setq auto-compile-warnings 0)))
     (catch 'auto-compile
       (when (and auto-compile-check-parens buf)
         (condition-case check-parens
@@ -508,14 +520,15 @@ pretend the byte code file exists.")
                          (not auto-compile-source-recreate-deletes-dest)
                          (prog1 nil
                            (auto-compile-delete-dest dest))))
-                (and buf (with-current-buffer buf
-                           auto-compile-pretend-byte-compiled)))
+                (and (buffer-live-p buf)
+                     (buffer-local-value auto-compile-pretend-byte-compiled
+                                         buf)))
         (condition-case nil
             (let ((byte-compile-verbose auto-compile-verbose)
                   (warning-minimum-level
                    (if auto-compile-display-buffer :warning :error)))
               (setq success (packed-byte-compile-file file))
-              (when buf
+              (when (buffer-live-p buf)
                 (with-current-buffer buf
                   (kill-local-variable auto-compile-pretend-byte-compiled))))
           (file-error
@@ -527,9 +540,9 @@ pretend the byte code file exists.")
           (require 'autoload)
           (condition-case nil
               (packed-with-loaddefs loaddefs
-                (let ((autoload-modified-buffers
-                       (list (find-buffer-visiting file))))
-                  (autoload-generate-file-autoloads file)))
+                (let ((autoload-modified-buffers nil))
+                  (autoload-generate-file-autoloads
+                   file nil generated-autoload-file)))
             (error
              (message "Generating loaddefs for %s failed" file)
              (setq loaddefs nil))))
@@ -548,7 +561,7 @@ pretend the byte code file exists.")
 (defun auto-compile-delete-dest (dest &optional failurep)
   (unless failurep
     (let ((buffer (get-file-buffer (packed-el-file dest))))
-      (when buffer
+      (when (buffer-live-p buffer)
         (with-current-buffer buffer
           (kill-local-variable 'auto-compile-pretend-byte-compiled)))))
   (condition-case nil
@@ -603,17 +616,6 @@ she actually did already safe.  This advice ensures she at least
 is only asked once about each such file."
   (let ((auto-compile-mark-failed-modified nil))
     (funcall fn arg)))
-
-;; REDEFINE autoload-save-buffers defined in autoload.el
-;; - verify buffers are still live before killing them
-(eval-after-load 'autoload
-  '(defun autoload-save-buffers ()
-     (while autoload-modified-buffers
-       (let ((buf (pop autoload-modified-buffers)))
-         (when (buffer-live-p buf)
-           (with-current-buffer buf
-             (let ((version-control 'never))
-               (save-buffer))))))))
 
 (defun auto-compile-inhibit-compile-detached-git-head ()
   "Inhibit compiling in Git repositories when `HEAD' is detached.
@@ -694,7 +696,7 @@ This is especially useful during rebase sessions."
   "Display the *Compile-Log* buffer."
   (interactive)
   (let ((buffer (get-buffer byte-compile-log-buffer)))
-    (if buffer
+    (if (buffer-live-p buffer)
         (pop-to-buffer buffer)
       (user-error "Buffer %s doesn't exist" byte-compile-log-buffer))))
 
