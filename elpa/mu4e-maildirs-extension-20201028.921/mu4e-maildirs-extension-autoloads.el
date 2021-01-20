@@ -11,14 +11,10 @@
 ;;; Generated autoloads from mu4e-maildirs-extension.el
 
 (autoload 'mu4e-maildirs-extension-load "mu4e-maildirs-extension" "\
-Initialize.
-
-\(fn)" nil nil)
+Initialize." nil nil)
 
 (autoload 'mu4e-maildirs-extension-unload "mu4e-maildirs-extension" "\
-Un-initialize.
-
-\(fn)" nil nil)
+Un-initialize." nil nil)
 
 (defalias 'mu4e-maildirs-extension 'mu4e-maildirs-extension-load)
 
