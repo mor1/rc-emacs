@@ -1,8 +1,9 @@
 ;;; dockerfile-mode.el --- Major mode for editing Docker's Dockerfiles -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2013 Spotify AB
-;; Package-Requires: ((emacs "24") (s "1.12"))
-;; Package-Version: 20200106.2126
+;; Package-Requires: ((emacs "24"))
+;; Package-Version: 20210106.235
+;; Package-Commit: 58b7380189de21496235382900838aa0db2dcf92
 ;; Homepage: https://github.com/spotify/dockerfile-mode
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -27,7 +28,6 @@
 
 (require 'sh-script)
 (require 'rx)
-(require 's)
 
 
 (declare-function cygwin-convert-file-name-to-windows "cygw32.c" (file &optional absolute-p))
@@ -145,7 +145,8 @@ indented by one `tab-width'."
 If in Cygwin environment, uses Cygwin specific function to convert the
 file name.  Otherwise, uses Emacs' standard conversion function."
   (if (fboundp 'cygwin-convert-file-name-to-windows)
-      (s-replace "\\" "\\\\" (cygwin-convert-file-name-to-windows file))
+      (replace-regexp-in-string
+       (rx "\\") "\\\\" (cygwin-convert-file-name-to-windows file) t t)
     (convert-standard-filename file)))
 
 (defun dockerfile-tag-string (image-name)
@@ -155,7 +156,7 @@ file name.  Otherwise, uses Emacs' standard conversion function."
 (defvar dockerfile-image-name nil
   "Name of the dockerfile currently being used.
 This can be set in file or directory-local variables.")
-(define-obsolete-variable-alias 'docker-image-name 'dockerfile-image-name)
+(define-obsolete-variable-alias 'docker-image-name 'dockerfile-image-name "2017-10-22")
 
 (defvar dockerfile-image-name-history nil
   "History of image names read by `dockerfile-read-image-name'.")
