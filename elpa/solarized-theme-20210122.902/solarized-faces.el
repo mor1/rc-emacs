@@ -1798,6 +1798,8 @@
        ((t (:underline nil :background ,(solarized-color-blend yellow-l s-base3 0.2)))))
      `(transient-mismatched-key
        ((t (:underline nil :background ,(solarized-color-blend red-l s-base3 0.2)))))
+     `(transient-separator           ((t (,@(and (>= emacs-major-version 27) '(:extend t))
+                                          :background ,s-line))))
 ;;;;; tuareg
      `(tuareg-font-lock-governing-face ((,class (:foreground ,magenta :weight bold))))
      `(tuareg-font-lock-multistage-face ((,class (:foreground ,blue :background ,base02
@@ -1979,6 +1981,9 @@
      `(window-divider-last-pixel ((,class (:foreground ,s-mode-line-bg))))
 ;;;;; window-number-mode
      `(window-number-face ((,class (:foreground ,green))))
+;;;;; woman
+     `(woman-bold ((,class (:inherit Man-overstrike))))
+     `(woman-italic ((,class (:inherit Man-underline))))
 ;;;;; yascroll
      `(yascroll:thumb-text-area
        ((,class (:foreground ,base01 :background ,base01))))
