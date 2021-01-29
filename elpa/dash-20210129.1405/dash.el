@@ -1751,23 +1751,24 @@ and when that result is non-nil, through the next form, etc."
                    (->> ,result ,form))
                  ,@more))))
 
-(defmacro -some--> (x &optional form &rest more)
-  "When expr is non-nil, thread it through the first form (via `-->'),
-and when that result is non-nil, through the next form, etc."
-  (declare (debug ->)
-           (indent 1))
-  (if (null form) x
+(defmacro -some--> (expr &rest forms)
+  "Thread EXPR through FORMS via `-->', while the result is non-nil.
+When EXPR evaluates to non-nil, thread the result through the
+first of FORMS, and when that result is non-nil, thread it
+through the next form, etc."
+  (declare (debug (form &rest &or symbolp consp)) (indent 1))
+  (if (null forms) expr
     (let ((result (make-symbol "result")))
-      `(-some--> (-when-let (,result ,x)
-                   (--> ,result ,form))
-                 ,@more))))
+      `(-some--> (-when-let (,result ,expr)
+                   (--> ,result ,(car forms)))
+         ,@(cdr forms)))))
 
 (defmacro -doto (init &rest forms)
   "Evaluate INIT and pass it as argument to FORMS with `->'.
 The RESULT of evaluating INIT is threaded through each of FORMS
 individually using `->', which see.  The return value is RESULT,
 which FORMS may have modified by side effect."
-  (declare (debug (form body)) (indent 1))
+  (declare (debug (form &rest &or symbolp consp)) (indent 1))
   (let ((retval (make-symbol "result")))
     `(let ((,retval ,init))
        ,@(mapcar (lambda (form) `(-> ,retval ,form)) forms)
