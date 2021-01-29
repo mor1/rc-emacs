@@ -1,10 +1,15 @@
+*~
+.DS_Store
+/url/
+async-bytecomp.log
 auto-save-list/
 elpa/*-readme.txt
+elpa/gnupg
 elpa/gnupg/.gpg-v21-migrated
+elpa/pubring/
 magithub/
 network-security.data
 places
 scrap/
 transient/
 vimish-fold/
-/url/
