@@ -128,11 +128,11 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:inherit nil :stipple nil :background "#002b36" :foreground "#839496" :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 100 :width normal :foundry "nil" :family "Hack Nerd Font"))))
+ '(default ((t (:inherit nil :stipple nil :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 100 :width normal :foundry "nil" :family "Hack Nerd Font"))))
  '(ediff-current-diff-C ((t (:background "yellow1"))))
  '(flyspell-duplicate ((t (:underline (:color "#b58900" :style wave)))))
  '(flyspell-incorrect ((t (:background "#aa0000" :foreground "gray75" :underline (:color "#dc322f" :style wave)))))
  '(highlight ((t (:background "dark slate gray"))))
  '(smerge-base ((t (:background "lavender"))))
- '(whitespace-line ((t (:underline "dark magenta"))))
+ '(whitespace-line ((t (:foreground unspecified :underline "OrangeRed3"))))
  '(whitespace-tab ((t (:foreground "burlywood4" :inverse-video t)))))
