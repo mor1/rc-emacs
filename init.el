@@ -22,20 +22,20 @@
 
 (setq gc-cons-threshold 64000000)
 (add-hook 'after-init-hook
-          #'(lambda ()
-              (setq gc-cons-threshold 800000)) ; restore after startup
-          )
+  #'(lambda ()
+      (setq gc-cons-threshold 800000)) ; restore after startup
+  )
 
 ;; package management
 ;; per http://cachestocaches.com/2015/8/getting-started-use-package/
 (require 'package)
-(setq package-enable-at-startup nil
-      package-archives
-      '(
-        ("melpa" . "https://melpa.org/packages/")
-        ("gnu" . "http://elpa.gnu.org/packages/")
-        ("org" . "http://orgmode.org/elpa/"))
-      )
+(setq
+  package-enable-at-startup nil
+  package-archives '(("melpa" . "https://melpa.org/packages/")
+                      ("gnu" . "http://elpa.gnu.org/packages/")
+                      ("org" . "http://orgmode.org/elpa/")
+                      )
+  )
 (package-initialize)
 
 (unless (package-installed-p 'use-package)
@@ -51,15 +51,17 @@
 
 ;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
 (if init-file-debug
-    (progn
-      (message "DEBUGGING ON")
-      (setq use-package-verbose t
-            use-package-expand-minimally nil
-            use-package-compute-statistics t
-            debug-on-error t)
-      )
-  (setq use-package-verbose nil
-        use-package-expand-minimally t)
+  (progn
+    (message "DEBUGGING ON")
+    (setq
+      use-package-verbose t
+      use-package-expand-minimally nil
+      use-package-compute-statistics t
+      debug-on-error t)
+    )
+  (setq
+    use-package-verbose nil
+    use-package-expand-minimally t)
   )
 
 ;; add homebrew site-lisp directories to the load-path
@@ -90,12 +92,12 @@
 
 ;; scrolling
 (setq scroll-conservatively 101
-      scroll-preserve-screen-position t
-      scroll-step 1
-      scroll-step 1
-      scroll-conservatively 10000
-      auto-window-vscroll nil
-      )
+  scroll-preserve-screen-position t
+  scroll-step 1
+  scroll-step 1
+  scroll-conservatively 10000
+  auto-window-vscroll nil
+  )
 
 ;;
 ;; packages
@@ -111,40 +113,43 @@
 
 (use-package auto-compile
   :init
-  (setq auto-compile-display-buffer nil
-        auto-compile-mode-line-counter t
-        )
-  (auto-compile-on-load-mode)
+  (setq
+    auto-compile-display-buffer nil
+    auto-compile-mode-line-counter t
+    )
   )
+(auto-compile-on-load-mode)
 
 (use-package cc-mode
   :defer t
   :config
-  (setq c-basic-offset 4
-        c-default-style "linux"
-        )
+  (setq
+    c-basic-offset 4
+    c-default-style "linux"
+    )
   )
 
 (use-package calendar
   :defer t
   :config
-  (setq calendar-bahai-all-holidays-flag nil
-        calendar-christian-all-holidays-flag t
-        calendar-date-style (quote iso)
-        calendar-mark-holidays-flag t
-        )
+  (setq
+    calendar-bahai-all-holidays-flag nil
+    calendar-christian-all-holidays-flag t
+    calendar-date-style (quote iso)
+    calendar-mark-holidays-flag t
+    )
   (calendar-set-date-style 'iso)
   (defun insert-current-date (&optional omit-day-of-week-p)
     (interactive "P*")
     (insert
-     (calendar-date-string (calendar-current-date) t omit-day-of-week-p)
-     ))
+      (calendar-date-string (calendar-current-date) t omit-day-of-week-p)
+      ))
   )
 
 (use-package coffee-mode
   :config
   (setq coffee-tab-width 2
-        )
+    )
   :hook (coffee-mode . coffee-cos-mode)
   )
 
@@ -191,10 +196,8 @@
   :config
   (setq ispell-dictionary "british")
   :hook ((text-mode . flyspell-mode)
-         (prog-mode . flyspell-prog-mode)
-         )
+          (prog-mode . flyspell-prog-mode))
   )
-
 (use-package git-ps1-mode
   :hook find-file
   )
@@ -203,12 +206,18 @@
 
 (use-package go-mode
   :hook ((before-save . gofmt-before-save)
-         (go-mode . go-eldoc-setup)
-         )
+          (go-mode . go-eldoc-setup)
+          )
+  :config (setq
+            gofmt-command "goimports"
+            go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
+            )
+  )
+
+(use-package js2-mode
+  :mode "\\.js$"
   :config
-  (setq gofmt-command "goimports"
-        go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
-        )
+  (setq js-indent-level 2)
   )
 
 (use-package json-mode
@@ -222,10 +231,10 @@
 (use-package magit
   :config
   (setq magit-commit-arguments (quote ("--signoff"))
-        magit-diff-refine-hunk (quote all)
-        magit-process-popup-time 5
-        magit-set-upstream-on-push t
-        )
+    magit-diff-refine-hunk (quote all)
+    magit-process-popup-time 5
+    magit-set-upstream-on-push t
+    )
   ;; full screen magit-status
   (defadvice magit-status (around magit-fullscreen activate)
     (window-configuration-to-register :magit-fullscreen)
@@ -244,15 +253,15 @@
 
 (use-package make-mode
   :mode (("sources$" . makefile-mode)
-         ("Makefile." . makefile-mode)
-         )
+          ("Makefile." . makefile-mode)
+          )
   )
 
 (use-package markdown-mode
   :commands (markdown-mode gfm-mode)
   :mode (("README\\.md\\'" . gfm-mode)
-         ("\\.md\\'" . markdown-mode)
-         ("\\.markdown\\'" . markdown-mode))
+          ("\\.md\\'" . markdown-mode)
+          ("\\.markdown\\'" . markdown-mode))
   :magic ("\\`==\\+==" . markdown-mode)
   :init (setq markdown-command "multimarkdown")
   ;; :hook (markdown-mode . (lambda () (orgtbl-mode 1)))
@@ -261,11 +270,11 @@
 (use-package mu4e
   :config
   (setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
-        mu4e-sent-folder   "/sent"               ;; folder for sent messages
-        mu4e-drafts-folder "/drafts"             ;; unfinished messages
-        mu4e-trash-folder  "/trash"              ;; trashed messages
-        mu4e-refile-folder "/archive"            ;; saved messages
-        )
+    mu4e-sent-folder   "/sent"               ;; folder for sent messages
+    mu4e-drafts-folder "/drafts"             ;; unfinished messages
+    mu4e-trash-folder  "/trash"              ;; trashed messages
+    mu4e-refile-folder "/archive"            ;; saved messages
+    )
 
   ;; ;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
   ;; ;;      mu4e-update-interval 300              ;; update every 5 minutes
@@ -295,26 +304,28 @@
       ;; Use opam switch to lookup ocamlmerlin binary
       (setq merlin-command 'opam)
       ))
+
   :hook ((tuareg-mode caml-mode) . merlin-mode)
   :hook
-  (tuareg-mode . (lambda ()
-                   (setq merlin-use-auto-complete-mode 'easy
-                         indent-line-function 'ocp-indent-line
-                         indent-region-function 'ocp-indent-region
-                         utop-command "opam config exec -- utop -emacs"
-                         )))
+  (utop-mode-hook . (lambda ()
+                      (local-set-key (kbd "M-<right>") utop-history-goto-next)
+                      (local-set-key (kbd "M-<left>") utop-history-goto-prev)
+                      ))
   :bind (:map tuareg-mode-map
-              ("C-S-<up>" . merlin-type-enclosing-go-up)
-              ("C-S-<down>" . merlin-type-enclosing-go-down)
-              )
-  :bind (:map utop-mode-map
-              ("M-<right>" . utop-history-goto-next)
-              ("M-<left>" . utop-history-goto-prev)
-              )
+          ("C-S-<up>" . merlin-type-enclosing-go-up)
+          ("C-S-<down>" . merlin-type-enclosing-go-down)
+          )
   :mode (("\\.ml[iylp]?$" . tuareg-mode)
-         ("\\.fs[ix]?$" . tuareg-mode)
-         ("[i]?ocamlinit$" . tuareg-mode)
-         )
+          ("\\.fs[ix]?$" . tuareg-mode)
+          ("[i]?ocamlinit$" . tuareg-mode)
+          )
+  :config
+  (setq merlin-use-auto-complete-mode 'easy
+    indent-line-function 'ocp-indent-line
+    indent-region-function 'ocp-indent-region
+    utop-command "opam config exec -- utop -emacs"
+    )
+
   )
 
 ;; org-mode
@@ -501,9 +512,10 @@ are between the current date (DATE) and Easter Sunday."
   )
 
 (use-package paren
-  :config (setq show-paren-mode t
-                show-paren-style (quote expression)
-                )
+  :config (setq
+            show-paren-mode t
+            show-paren-style (quote expression)
+            )
   :hook (find-file . show-paren-mode)
   )
 
@@ -518,11 +530,12 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package sh-script
   :mode (("bash_" . sh-mode)
-         ("APKBUILD$" . sh-mode)
-         )
-  :config (setq sh-basic-offset 2
-                sh-indentation 2
-                )
+          ("APKBUILD$" . sh-mode)
+          )
+  :config (setq
+            sh-basic-offset 2
+            sh-indentation 2
+            )
   )
 
 (use-package solarized-theme
@@ -546,7 +559,7 @@ are between the current date (DATE) and Easter Sunday."
       (interactive)
       (setq theme-current (cdr theme-current))
       (if (null theme-current)
-          (setq theme-current my-color-themes))
+        (setq theme-current my-color-themes))
       (load-theme (car theme-current) t)
       (message "%S" (car theme-current)))
     )
@@ -562,26 +575,26 @@ are between the current date (DATE) and Easter Sunday."
 (use-package tex
   :ensure auctex
   :mode (("\\.tex$" . TeX-latex-mode)
-         ("\\.latex$" . TeX-latex-mode)
-         ("\\.bibtex$" . bibtex-mode)
-         )
+          ("\\.latex$" . TeX-latex-mode)
+          ("\\.bibtex$" . bibtex-mode)
+          )
   :hook ((LaTeX-mode . LaTeX-math-mode)
-         (LaTeX-mode . turn-on-reftex)
-         )
+          (LaTeX-mode . turn-on-reftex)
+          )
   :config
   (use-package latex)
   (setq bibtex-dialect 'biblatex
-        TeX-auto-save t
-        TeX-parse-self t
-        TeX-master t
-        reftex-plug-into-AUCTeX t)
+    TeX-auto-save t
+    TeX-parse-self t
+    TeX-master t
+    reftex-plug-into-AUCTeX t)
 
   ;; modified from swiftex.el
   (defun tex-enclose-word (before after)
     (interactive "*Mbefore: \nMafter: ")
     (let* ((oldpoint (point))
-           (start oldpoint)
-           (end oldpoint))
+            (start oldpoint)
+            (end oldpoint))
 
       ;; get the start and end of the current word
       (skip-syntax-backward "w")
@@ -590,9 +603,9 @@ are between the current date (DATE) and Easter Sunday."
       (skip-syntax-forward "w")
       (setq end (point))
       (if (and (eq start oldpoint)
-               (eq end oldpoint))
-          ;; insert the command as nothing to enclose
-          (progn (insert before) (insert after) (backward-char))
+            (eq end oldpoint))
+        ;; insert the command as nothing to enclose
+        (progn (insert before) (insert after) (backward-char))
 
         ;; enclose the word with the command
         (progn
@@ -604,14 +617,14 @@ are between the current date (DATE) and Easter Sunday."
         )))
 
   :bind (:map LaTeX-mode-map
-              ("{" . TeX-insert-braces)
-              ( "M-[" . (lambda () (interactive) (insert "{")))
-              ( "M-]" . (lambda () (interactive) (insert "}")))
-              ( "C-c m" . (lambda () (interactive "*")
-                            (tex-enclose-word "\\emph{" "}")))
-              ( "C-c b" . (lambda () (interactive "*")
-                            (tex-enclose-word "\\textbf{" "}")))
-              )
+          ("{" . TeX-insert-braces)
+          ( "M-[" . (lambda () (interactive) (insert "{")))
+          ( "M-]" . (lambda () (interactive) (insert "}")))
+          ( "C-c m" . (lambda () (interactive "*")
+                        (tex-enclose-word "\\emph{" "}")))
+          ( "C-c b" . (lambda () (interactive "*")
+                        (tex-enclose-word "\\textbf{" "}")))
+          )
   )
 
 (use-package lisp-mode
@@ -620,8 +633,8 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package web-mode
   :mode (("\\.html$" . web-mode)
-         ("\\.tpl$" . web-mode)
-         )
+          ("\\.tpl$" . web-mode)
+          )
   :magic ("\\`<\\?xml" . web-mode)
   )
 
@@ -639,9 +652,9 @@ are between the current date (DATE) and Easter Sunday."
 ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
 (use-package whitespace
   :commands (whitespace-buffer
-             whitespace-cleanup
-             whitespace-mode
-             whitespace-turn-off)
+              whitespace-cleanup
+              whitespace-mode
+              whitespace-turn-off)
   :preface
   (defun normalize-file ()
     (interactive)
@@ -664,13 +677,13 @@ are between the current date (DATE) and Easter Sunday."
     (when (not (locate-dominating-file default-directory ".noclean"))
       (progn
         (setq whitespace-style
-              '(face trailing tabs lines-tail newline empty space-before-tab tab-mark))
+          '(face trailing tabs lines-tail newline empty space-before-tab tab-mark))
         (whitespace-mode t)
         )))
 
   :hook ((find-file . maybe-turn-on-whitespace)
-         (prog-mode . whitespace-cleanup)
-         )
+          (prog-mode . whitespace-cleanup)
+          )
   )
 
 ;;
@@ -682,10 +695,10 @@ are between the current date (DATE) and Easter Sunday."
   "Show line numbers temporarily, while prompting for the line number input."
   (interactive)
   (unwind-protect
-      (progn
-        (linum-mode 1)
-        (goto-line (read-number "Goto line: "))
-        )
+    (progn
+      (linum-mode 1)
+      (goto-line (read-number "Goto line: "))
+      )
     (linum-mode -1)
     ))
 (global-set-key [remap goto-line] 'goto-line-with-feedback)
@@ -705,15 +718,15 @@ are between the current date (DATE) and Easter Sunday."
   "Go to matching parenthesis if one exists, otherwise insert ARG(=1) %s."
   (interactive "p")
   (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-        ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-        (t (self-insert-command (or arg 1))))
+    ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+    (t (self-insert-command (or arg 1))))
   )
 
 (defun my-kill-emacs ()
   "Confirm before 'save-buffers-kill-emacs'."
   (interactive)
   (if (y-or-n-p "Really kill Emacs? ")
-      (save-buffers-kill-emacs)
+    (save-buffers-kill-emacs)
     (message "Aborted"))
   )
 
@@ -721,7 +734,7 @@ are between the current date (DATE) and Easter Sunday."
   "Confirm before suspend Emacs."
   (interactive)
   (if (y-or-n-p "Really minimise? ")
-      (suspend-frame)
+    (suspend-frame)
     (message "Aborted"))
   )
 
@@ -730,14 +743,14 @@ are between the current date (DATE) and Easter Sunday."
 
 ;; theme switching
 (defun light () "Light colour scheme."
-       (interactive)
-       (load-theme 'solarized-light t)
-       )
+  (interactive)
+  (load-theme 'solarized-light t)
+  )
 
 (defun dark () "Dark colour scheme."
-       (interactive)
-       (load-theme 'solarized-dark t)
-       )
+  (interactive)
+  (load-theme 'solarized-dark t)
+  )
 
 ;;
 ;; mode hooks
@@ -751,66 +764,74 @@ are between the current date (DATE) and Easter Sunday."
 ;;
 
 (bind-keys*
- ("%"          . match-paren)
- ("C-<return>" . split-line)
- ("C-<tab>"    . dabbrev-expand)
- ("C-c ;"      . comment-region)
- ("C-u C-c ;"  . uncomment-region)
- ("C-c C-SPC"  . whitespace-cleanup)
- ("C-c C-g"    . goto-line)
- ("C-x C-c"    . my-kill-emacs)
- ("C-x C-d"    . insert-current-date)
- ("C-x C-z"    . my-suspend-frame)
- ("C-x g"      . magit-status)
- ("C-x p"      . (lambda () (interactive) (other-window -1)))
- ("C-x z"      . my-suspend-frame)
- ("C-z"        . my-suspend-frame)
- ("M-%"        . replace-regexp)
- ("M-n"        . next-buffer)
- ("M-p"        . previous-buffer)
- ("M-q"        . unfill-toggle)
+  ("%"          . match-paren)
+  ("C-<return>" . split-line)
+  ("C-<tab>"    . dabbrev-expand)
+  ("C-c ;"      . comment-region)
+  ("C-u C-c ;"  . uncomment-region)
+  ("C-c C-SPC"  . whitespace-cleanup)
+  ("C-c C-g"    . goto-line)
+  ("C-x C-c"    . my-kill-emacs)
+  ("C-x C-d"    . insert-current-date)
+  ("C-x C-z"    . my-suspend-frame)
+  ("C-x g"      . magit-status)
+  ("C-x p"      . (lambda () (interactive) (other-window -1)))
+  ("C-x z"      . my-suspend-frame)
+  ("C-z"        . my-suspend-frame)
+  ("M-%"        . replace-regexp)
+  ("M-n"        . next-buffer)
+  ("M-p"        . previous-buffer)
+  ("M-q"        . unfill-toggle)
 
- ;; | point-to  | previous   | next        |
- ;; |-----------+------------+-------------|
- ;; | char      | <left>     | <right>     |
- ;; | word      | C/M-<left> | C/M-<right> |
- ;; | line      | <up>       | <down>      |
- ;; | paragraph | C-<up>     | C-<down>    |
+  ;; | point-to  | previous   | next        |
+  ;; |-----------+------------+-------------|
+  ;; | char      | <left>     | <right>     |
+  ;; | word      | C/M-<left> | C/M-<right> |
+  ;; | line      | <up>       | <down>      |
+  ;; | paragraph | C-<up>     | C-<down>    |
 
- ;; | point-to | start  | end      |
- ;; |----------+--------+----------|
- ;; | line     | C-a    | C-e      |
- ;; | sentence | M-a    | M-e      |
- ;; | screen   | M-<up> | M-<down> |
- ;; | file     | M-\<   | M-\>     |
+  ;; | point-to | start  | end      |
+  ;; |----------+--------+----------|
+  ;; | line     | C-a    | C-e      |
+  ;; | sentence | M-a    | M-e      |
+  ;; | screen   | M-<up> | M-<down> |
+  ;; | file     | M-\<   | M-\>     |
 
- ;; | window-to | key        |
- ;; |-----------+------------|
- ;; | top       | C-M-<down> |
- ;; | bottom    | C-M-<up>   |
+  ;; | window-to | key        |
+  ;; |-----------+------------|
+  ;; | top       | C-M-<down> |
+  ;; | bottom    | C-M-<up>   |
 
- ;; | centre-current |     |
- ;; |----------------+-----|
- ;; | point          | M-r |
- ;; | window         | C-l |
+  ;; | centre-current |     |
+  ;; |----------------+-----|
+  ;; | point          | M-r |
+  ;; | window         | C-l |
 
- ;; for poxy macbook keyboard with only the arrow keys
- ("C-<up>"     . backward-paragraph)
- ("C-<down>"   . forward-paragraph)
- ("M-<up>"     . warp-to-top-of-window)
- ("M-<down>"   . warp-to-bottom-of-window)
- ("C-M-<down>" . line-to-top-of-window)
- ("C-M-<up>"   . line-to-bottom-of-window)
+  ;; for poxy macbook keyboard with only the arrow keys
+  ("C-<up>"     . backward-paragraph)
+  ("C-<down>"   . forward-paragraph)
+  ("M-<up>"     . warp-to-top-of-window)
+  ("M-<down>"   . warp-to-bottom-of-window)
+  ("C-M-<down>" . line-to-top-of-window)
+  ("C-M-<up>"   . line-to-bottom-of-window)
 
- ;; for a sensible pc keyboard with pgup|pgdn|home|end
- ("C-<prior>" . warp-to-top-of-window)
- ("C-<next>"  . warp-to-bottom-of-window)
- ("C-<home>"  . line-to-top-of-window)
- ("C-<end>"   . line-to-bottom-of-window)
- ("<home>"    . beginning-of-buffer)    ; M-<
- ("<end>"     . end-of-buffer)          ; M->
+  ;; for a sensible pc keyboard with pgup|pgdn|home|end
+  ("C-<prior>" . warp-to-top-of-window)
+  ("C-<next>"  . warp-to-bottom-of-window)
+  ("C-<home>"  . line-to-top-of-window)
+  ("C-<end>"   . line-to-bottom-of-window)
+  ("<home>"    . beginning-of-buffer)    ; M-<
+  ("<end>"     . end-of-buffer)          ; M->
 
- )
+  )
+
+;; Horizontal scrolling mouse events should actually scroll left and right.
+(global-set-key (kbd "<mouse-6>")
+  (lambda () (interactive) (if truncate-lines (scroll-right 1)))
+  )
+(global-set-key (kbd "<mouse-7>")
+  (lambda () (interactive) (if truncate-lines (scroll-left 1)))
+  )
 
 ;;
 ;; load customisations
@@ -825,15 +846,16 @@ are between the current date (DATE) and Easter Sunday."
 ;;
 
 (let ((elapsed (float-time (time-subtract (current-time)
-                                          emacs-start-time))))
+                             emacs-start-time))))
   (message "Loading %s...done (%.3fs)" load-file-name elapsed))
 
 (add-hook
- 'after-init-hook
- `(lambda ()
-    (let ((elapsed
-           (float-time
-            (time-subtract (current-time) emacs-start-time))))
-      (message "Loading %s...done (%.3fs) [after-init]"
-               ,load-file-name elapsed)))
- t)
+  'after-init-hook
+  `(lambda ()
+     (let ((elapsed
+             (float-time
+               (time-subtract (current-time) emacs-start-time))))
+       (message "Loading %s...done (%.3fs) [after-init]"
+         ,load-file-name elapsed)))
+  t)
+(put 'scroll-left 'disabled nil)
