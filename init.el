@@ -333,11 +333,41 @@
   :defer t
   :pin org
   :bind (:map org-mode-map
-              ("C-c a" . org-agenda)
-              )
+          ("C-c a" . org-agenda)
+          ("<M-S-up>" . org-metaup)
+          ("<M-S-down>" . org-metadown)
+          )
 
   :init
   (add-to-list 'file-coding-system-alist '("\\.org\\'" . utf-8-unix))
+
+  ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
+  (defun holiday-new-year-bank-holiday ()
+    (let ((m displayed-month)
+           (y displayed-year))
+      (calendar-increment-month m y 1)
+      (when (<= m 3)
+        (let ((d (calendar-day-of-week (list 1 1 y))))
+          (cond ((= d 6)
+                  (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
+            ((= d 0)
+              (list (list (list 1 2 y) "New Year's Day Bank Holiday")))
+            )))))
+
+  (defun holiday-christmas-bank-holidays ()
+    (let ((m displayed-month)
+           (y displayed-year))
+      (calendar-increment-month m y -1)
+      (when (>= m 10)
+        (let ((d (calendar-day-of-week (list 12 25 y))))
+          (cond ((= d 5)
+                  (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
+            ((= d 6)
+              (list (list (list 12 27 y) "Boxing Day Bank Holiday")
+                (list (list 12 28 y) "Christmas Day Bank Holiday")))
+            ((= d 0)
+              (list (list (list 12 27 y) "Christmas Day Bank Holiday")))
+            )))))
 
   ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
   (defun org-agenda-reschedule-to-today (&optional arg)
@@ -346,40 +376,12 @@
     (org-agenda-schedule arg ".")
     )
 
-  ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
-  (defun holiday-new-year-bank-holiday ()
-    (let ((m displayed-month)
-          (y displayed-year))
-      (calendar-increment-month m y 1)
-      (when (<= m 3)
-        (let ((d (calendar-day-of-week (list 1 1 y))))
-          (cond ((= d 6)
-                 (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
-                ((= d 0)
-                 (list (list (list 1 2 y) "New Year's Day Bank Holiday")))
-                )))))
-
-  (defun holiday-christmas-bank-holidays ()
-    (let ((m displayed-month)
-          (y displayed-year))
-      (calendar-increment-month m y -1)
-      (when (>= m 10)
-        (let ((d (calendar-day-of-week (list 12 25 y))))
-          (cond ((= d 5)
-                 (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
-                ((= d 6)
-                 (list (list (list 12 27 y) "Boxing Day Bank Holiday")
-                       (list (list 12 28 y) "Christmas Day Bank Holiday")))
-                ((= d 0)
-                 (list (list (list 12 27 y) "Christmas Day Bank Holiday")))
-                )))))
-
   ;; lightly modified from
   ;; https://sachachua.com/blog/2007/12/clocking-time-with-emacs-org/
   (defun wicked/org-clock-in-if-starting ()
     "Clock in when the task is marked DOING."
-    (when (and (string= state "DOING")
-               (not (string= last-state state)))
+    (when (and (string= org-state "DOING")
+            (not (string= last-state org-state)))
       (org-clock-in)))
   (defadvice org-clock-in (after wicked activate)
     "Set this task's status to 'DOING'."
@@ -387,31 +389,32 @@
 
   (defun wicked/org-clock-out-if-waiting ()
     "Clock out when the task is marked WAITING."
-    (when (and (string= state "WAITING")
-               (equal (marker-buffer org-clock-marker) (current-buffer))
-               (< (point) org-clock-marker)
-               (> (save-excursion (outline-next-heading) (point))
-                  org-clock-marker)
-               (not (string= last-state state)))
+    (when (and (string= org-state "WAITING")
+            (equal (marker-buffer org-clock-marker) (current-buffer))
+            (< (point) org-clock-marker)
+            (> (save-excursion (outline-next-heading) (point))
+              org-clock-marker)
+            (not (string= last-state org-state)))
       (org-clock-out)))
 
-  :hook (org-after-todo-state-change-hook . wicked/org-clock-in-if-starting)
-  :hook (org-after-todo-state-change-hook . wicked/org-clock-out-if-waiting)
-  :hook (org-agenda-mode-hook
-         .
-         (lambda ()
-           (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-           ))
-  :config
+  :hook
+  ((org-after-todo-state-change . wicked/org-clock-out-if-waiting)
+    (org-after-todo-state-change . wicked/org-clock-in-if-starting)
+    (org-agenda-mode
+      .
+      (lambda ()
+        (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+        )))
 
+  :config
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
   (defun org-archive-completed-tasks ()
     (interactive)
     (org-map-entries
-     (lambda ()
-       (org-archive-subtree)
-       (setq org-map-continue-from (outline-previous-heading)))
-     "/+DONE|+CANCELLED" 'agenda)
+      (lambda ()
+        (org-archive-subtree)
+        (setq org-map-continue-from (outline-previous-heading)))
+      "/+DONE|+CANCELLED" 'agenda)
     )
 
   ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
@@ -421,55 +424,48 @@
 
   ;; customise my agenda options
   (setq org-agenda-custom-commands
-        '(("n" "Agenda and all TODOs"
-           ((agenda "")
-            (alltodo "")))
-
-          ("a" "Week agenda"
-           ((agenda ""
-                    (
-                     (org-agenda-ndays 7)
-                     (org-agenda-repeating-timestamp-show-all t)
-                     (org-agenda-skip-deadline-if-done t)
-                     (org-agenda-skip-scheduled-if-done t)
-                     (org-agenda-skip-timestamp-if-done t)
-                     (org-agenda-sorting-strategy
-                      '(habit-up
-                        time-up
-                        priority-down
-                        category-keep
-                        todo-state-down
-                        ))
-                     (org-agenda-start-on-weekday 1)
-                     (org-agenda-time-grid nil)
-                     (org-deadline-warning-days 15)))
-            (alltodo ""))
-           ((org-agenda-compact-blocks t))
-
-           org-agenda-include-diary t
-           org-agenda-log-mode-items (quote (closed clock))
-           org-agenda-ndays 7
-           org-agenda-show-all-dates t
-           org-agenda-sorting-strategy (quote (time-up todo-state-down category-keep priority-down alpha-down))
-           org-agenda-start-on-weekday nil
-           org-deadline-warning-days 14
-           org-default-notes-file "~/me/todo/notes.org"
-           org-fast-tag-selection-single-key (quote expert)
-           org-remember-store-without-prompt t
-           ;; org-remember-templates (quote ((116 "* %? %u" "~/me/todo/todo.org" "Tasks")
-           ;;                                (110 "* %u %?" "~/me/todo/notes.org" "Notes"))
-           ;; )
-           org-reverse-note-order t
-           )
-
-          ("c" "Weekly schedule"
-           ((agenda ""
-                    ((org-agenda-span 7)
-                     (org-agenda-skip-function
-                      '(org-agenda-skip-entry-if 'deadline 'scheduled))
-                     ))))
-
+    '(("a" "Week agenda" ((agenda "" ((org-agenda-span 8)))
+                           (alltodo ""))
+        ((org-agenda-compact-blocks t)
+          (org-agenda-filter-preset '("-kids"))
+          (org-agenda-include-diary t)
+          (org-agenda-log-mode-items (quote (closed clock)))
+          (org-agenda-ndays 7)
+          (org-agenda-repeating-timestamp-show-all t)
+          (org-agenda-show-all-dates t)
+          (org-agenda-skip-deadline-if-done t)
+          (org-agenda-skip-scheduled-if-done t)
+          (org-agenda-skip-timestamp-if-done t)
+          (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
+          (org-agenda-start-on-weekday 1)
+          (org-agenda-time-grid nil)
+          (org-deadline-warning-days 15)
+          (org-default-notes-file "~/me/todo/notes.org")
+          (org-fast-tag-selection-single-key (quote expert))
+          (org-remember-store-without-prompt t)
           ))
+
+       ("c" "Calendar" agenda ""
+         ((org-agenda-span 7)
+           (org-agenda-start-on-weekday 1)
+           (org-agenda-time-grid nil)
+           (org-agenda-repeating-timestamp-show-all t)
+           (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
+           (org-agenda-filter-preset '("-kids"))
+           ))
+
+       ("d" "Upcoming deadlines" agenda ""
+         ((org-agenda-span 60)
+           (org-agenda-time-grid nil)
+           (org-deadline-warning-days 365)        ;; [1]
+           (org-agenda-entry-types '(:deadline))  ;; [2]
+           ))
+
+       ("n" "Agenda and all TODOs"
+         ((agenda "")
+           (alltodo "")
+           ))
+       ))
 
   ;; some Easter related helpers
 
@@ -477,18 +473,18 @@
     "Calculate the date for Easter Sunday in YEAR. Returns the date in the
 Gregorian calendar, ie (MM DD YY) format."
     (let* ((century (1+ (/ year 100)))
-           (shifted-epact (% (+ 14 (* 11 (% year 19))
+            (shifted-epact (% (+ 14 (* 11 (% year 19))
                                 (- (/ (* 3 century) 4))
                                 (/ (+ 5 (* 8 century)) 25)
                                 (* 30 century))
                              30))
-           (adjusted-epact (if (or (= shifted-epact 0)
-                                   (and (= shifted-epact 1)
-                                        (< 10 (% year 19))))
-                               (1+ shifted-epact)
-                             shifted-epact))
-           (paschal-moon (- (calendar-absolute-from-gregorian
-                             (list 4 19 year))
+            (adjusted-epact (if (or (= shifted-epact 0)
+                                  (and (= shifted-epact 1)
+                                    (< 10 (% year 19))))
+                              (1+ shifted-epact)
+                              shifted-epact))
+            (paschal-moon (- (calendar-absolute-from-gregorian
+                               (list 4 19 year))
                             adjusted-epact)))
       (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
 
@@ -500,7 +496,7 @@ Gregorian calendar, ie (MM DD YY) format."
     "When used in a diary sexp, this function will calculate how many days
 are between the current date (DATE) and Easter Sunday."
     (- (calendar-absolute-from-gregorian date)
-       (da-easter (calendar-extract-year date))))
+      (da-easter (calendar-extract-year date))))
   )
 
 ;; on-screen
