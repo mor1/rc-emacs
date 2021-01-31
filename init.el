@@ -228,6 +228,10 @@
   :after json-mode
   )
 
+(use-package lisp-mode
+  :mode "dune"
+  )
+
 (use-package magit
   :config
   (setq magit-commit-arguments (quote ("--signoff"))
@@ -324,9 +328,7 @@
     indent-line-function 'ocp-indent-line
     indent-region-function 'ocp-indent-region
     utop-command "opam config exec -- utop -emacs"
-    )
-
-  )
+    ))
 
 ;; org-mode
 (use-package org
@@ -507,6 +509,14 @@ are between the current date (DATE) and Easter Sunday."
   :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode)
   )
 
+(use-package paradox
+  :init
+  (setq
+    paradox-github-token t
+    paradox-execute-asynchronously t
+    paradox-automatically-star t
+    ))
+
 (use-package paren
   :config (setq
             show-paren-mode t
@@ -621,10 +631,6 @@ are between the current date (DATE) and Easter Sunday."
           ( "C-c b" . (lambda () (interactive "*")
                         (tex-enclose-word "\\textbf{" "}")))
           )
-  )
-
-(use-package lisp-mode
-  :mode "dune"
   )
 
 (use-package web-mode

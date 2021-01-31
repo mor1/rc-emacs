@@ -4,9 +4,8 @@
 async-bytecomp.log
 auto-save-list/
 elpa/*-readme.txt
-elpa/gnupg
-elpa/gnupg/.gpg-v21-migrated
-elpa/pubring/
+elpa/archives/
+elpa/gnupg/
 magithub/
 network-security.data
 places
