@@ -44,8 +44,7 @@
   )
 
 (eval-when-compile
-  (require 'use-package)
-  )
+  (require 'use-package))
 (require 'diminish) ;; if you use :diminish
 (require 'bind-key) ;; if you use any :bind variant
 
@@ -159,7 +158,8 @@
 
 (use-package csv-mode
   :mode ("\\.tsv$")
-  :config (setq indent-tabs-mode 't)
+  :config
+  (setq indent-tabs-mode 't)
   )
 
 (use-package direnv
@@ -311,12 +311,13 @@
       (setq merlin-command 'opam)
       ))
 
-  :hook ((tuareg-mode caml-mode) . merlin-mode)
   :hook
-  (utop-mode-hook . (lambda ()
-                      (local-set-key (kbd "M-<right>") utop-history-goto-next)
-                      (local-set-key (kbd "M-<left>") utop-history-goto-prev)
-                      ))
+  ((tuareg-mode . merlin-mode)
+    (caml-mode . merlin-mode)
+    (utop-mode . (lambda ()
+                   (local-set-key (kbd "M-<right>") utop-history-goto-next)
+                   (local-set-key (kbd "M-<left>") utop-history-goto-prev)
+                   )))
   :bind (:map tuareg-mode-map
           ("C-S-<up>" . merlin-type-enclosing-go-up)
           ("C-S-<down>" . merlin-type-enclosing-go-down)
@@ -326,9 +327,10 @@
           ("[i]?ocamlinit$" . tuareg-mode)
           )
   :config
-  (setq merlin-use-auto-complete-mode 'easy
-    indent-line-function 'ocp-indent-line
-    indent-region-function 'ocp-indent-region
+  (setq
+    merlin-use-auto-complete-mode 'easy
+    ;; indent-line-function 'ocp-indent-line
+    ;; indent-region-function 'ocp-indent-region
     utop-command "opam config exec -- utop -emacs"
     ))
 
