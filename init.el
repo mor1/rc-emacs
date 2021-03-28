@@ -233,6 +233,7 @@
   )
 
 (use-package magit
+  :ensure t
   :config
   (setq magit-commit-arguments (quote ("--signoff"))
     magit-diff-refine-hunk (quote all)
@@ -251,6 +252,7 @@
     (kill-buffer)
     (jump-to-register :magit-fullscreen)
     )
+  :bind ("C-x g" . magit-status)
   :bind (:map magit-status-mode-map ("q" . magit-quit-session))
   :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
   )
@@ -788,7 +790,6 @@ are between the current date (DATE) and Easter Sunday."
   ("C-x C-c"    . my-kill-emacs)
   ("C-x C-d"    . insert-current-date)
   ("C-x C-z"    . my-suspend-frame)
-  ("C-x g"      . magit-status)
   ("C-x p"      . (lambda () (interactive) (other-window -1)))
   ("C-x z"      . my-suspend-frame)
   ("C-z"        . my-suspend-frame)
