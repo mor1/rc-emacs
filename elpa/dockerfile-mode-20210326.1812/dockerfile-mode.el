@@ -2,8 +2,8 @@
 
 ;; Copyright (c) 2013 Spotify AB
 ;; Package-Requires: ((emacs "24"))
-;; Package-Version: 20210301.52
-;; Package-Commit: 07dde72b0e356d772fb65b969bd6decfa166e4d7
+;; Package-Version: 20210326.1812
+;; Package-Commit: 3b1374563f62d71aec11ebd33d37109459e54571
 ;; Homepage: https://github.com/spotify/dockerfile-mode
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -200,8 +200,12 @@ The build string will be of the format:
             (if no-cache "--no-cache" "")
             (dockerfile-tag-string image-name)
             (dockerfile-build-arg-string)
-            (shell-quote-argument (dockerfile-standard-filename (buffer-file-name)))
-            (shell-quote-argument (dockerfile-standard-filename default-directory)))
+            (shell-quote-argument (dockerfile-standard-filename
+				   (or (file-remote-p (buffer-file-name) 'localname)
+				       (buffer-file-name))))
+            (shell-quote-argument (dockerfile-standard-filename
+				   (or (file-remote-p default-directory 'localname)
+				       default-directory))))
     nil
     (lambda (_) (format "*docker-build-output: %s *" image-name))))
 
