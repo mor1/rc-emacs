@@ -7,8 +7,8 @@
 ;; Author: Joost Kremers <joostkremers@fastmail.fm>
 ;; Maintainer: Joost Kremers <joostkremers@fastmail.fm>
 ;; URL: https://github.com/joostkremers/visual-fill-column
-;; Package-Version: 20201229.2303
-;; Package-Commit: 5b08b9ae9da5b95e42e94e4c9ec01d63e8848ea2
+;; Package-Version: 20210323.2039
+;; Package-Commit: a93dc5fc64340d8abda1272f67d46d4cc09a4c85
 ;; Created: 2015
 ;; Version: 2.2
 ;; Package-Requires: ((emacs "25.1"))
@@ -167,8 +167,9 @@ that actually visit a file."
 
   (when (version< "27.1" emacs-version)
     (let ((margins (window-margins (selected-window))))
-      (setq visual-fill-column--min-margins (cons (or (car margins) 0)
-                                                  (or (cdr margins) 0)))))
+      (unless visual-fill-column--min-margins
+        (setq visual-fill-column--min-margins (cons (or (car margins) 0)
+                                                    (or (cdr margins) 0))))))
 
   (visual-fill-column--adjust-window (selected-window)))
 
