@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2021 Free Software Foundation, Inc.
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
-;; Version: 2.17.0
+;; Version: 2.18.1
 ;; Package-Requires: ((emacs "24"))
 ;; Keywords: extensions, lisp
 ;; Homepage: https://github.com/magnars/dash.el
@@ -68,8 +68,11 @@ This is the anaphoric counterpart to `-each'."
 (defun -each (list fn)
   "Call FN on each element of LIST.
 Return nil; this function is intended for side effects.
-Its anaphoric counterpart is `--each'.  For access to the current
-element's index in LIST, see `-each-indexed'."
+
+Its anaphoric counterpart is `--each'.
+
+For access to the current element's index in LIST, see
+`-each-indexed'."
   (declare (indent 1))
   (ignore (mapc fn list)))
 
@@ -79,6 +82,7 @@ element's index in LIST, see `-each-indexed'."
   "Call FN on each index and element of LIST.
 For each ITEM at INDEX in LIST, call (funcall FN INDEX ITEM).
 Return nil; this function is intended for side effects.
+
 See also: `-map-indexed'."
   (declare (indent 1))
   (--each list (funcall fn it-index it)))
@@ -107,6 +111,7 @@ This is the anaphoric counterpart to `-each-while'."
 Once an ITEM is reached for which PRED returns nil, FN is no
 longer called.  Return nil; this function is intended for side
 effects.
+
 Its anaphoric counterpart is `--each-while'."
   (declare (indent 2))
   (--each-while list (funcall pred it) (funcall fn it)))
@@ -136,6 +141,7 @@ This is the anaphoric counterpart to `-each-r'."
 (defun -each-r (list fn)
   "Call FN on each element of LIST in reversed order.
 Return nil; this function is intended for side effects.
+
 Its anaphoric counterpart is `--each-r'."
   (--each-r list (funcall fn it)))
 
@@ -167,6 +173,7 @@ This is the anaphoric counterpart to `-each-r-while'."
 Once an ITEM is reached for which PRED returns nil, FN is no
 longer called.  Return nil; this function is intended for side
 effects.
+
 Its anaphoric counterpart is `--each-r-while'."
   (--each-r-while list (funcall pred it) (funcall fn it)))
 
@@ -192,12 +199,14 @@ This is the anaphoric counterpart to `-dotimes'."
 FN is called with a single argument on successive integers
 running from 0, inclusive, to NUM, exclusive.  FN is not called
 if NUM is less than 1.
+
 This function's anaphoric counterpart is `--dotimes'."
   (declare (indent 1))
   (--dotimes num (funcall fn it)))
 
 (defun -map (fn list)
   "Apply FN to each item in LIST and return the list of results.
+
 This function's anaphoric counterpart is `--map'."
   (mapcar fn list))
 
@@ -205,7 +214,6 @@ This function's anaphoric counterpart is `--map'."
   "Eval FORM for each item in LIST and return the list of results.
 Each element of LIST in turn is bound to `it' before evaluating
 FORM.
-
 This is the anaphoric counterpart to `-map'."
   (declare (debug (def-form form)))
   `(mapcar (lambda (it) (ignore it) ,form) ,list))
@@ -233,6 +241,7 @@ LIST, then applying FN to that result and the second element,
 etc.  If LIST is empty, return INIT without calling FN.
 
 This function's anaphoric counterpart is `--reduce-from'.
+
 For other folds, see also `-reduce' and `-reduce-r'."
   (--reduce-from (funcall fn acc it) init list))
 
@@ -261,6 +270,7 @@ If LIST is empty, return the result of calling FN with no
 arguments.
 
 This function's anaphoric counterpart is `--reduce'.
+
 For other folds, see also `-reduce-from' and `-reduce-r'."
   (if list
       (-reduce-from fn (car list) (cdr list))
@@ -291,6 +301,7 @@ is like replacing the conses in LIST with applications of FN, and
 its last link with INIT, and evaluating the resulting expression.
 
 This function's anaphoric counterpart is `--reduce-r-from'.
+
 For other folds, see also `-reduce-r' and `-reduce'."
   (--reduce-r-from (funcall fn it acc) init list))
 
@@ -319,6 +330,7 @@ like replacing the conses in LIST with applications of FN,
 ignoring its last link, and evaluating the resulting expression.
 
 This function's anaphoric counterpart is `--reduce-r'.
+
 For other folds, see also `-reduce-r-from' and `-reduce'."
   (if list
       (--reduce-r (funcall fn it acc) list)
@@ -341,7 +353,9 @@ This is the anaphoric counterpart to `-reductions-from'."
 That is, a list of the intermediate values of the accumulator
 when `-reduce-from' (which see) is called with the same
 arguments.
+
 This function's anaphoric counterpart is `--reductions-from'.
+
 For other folds, see also `-reductions' and `-reductions-r'."
   (--reductions-from (funcall fn acc it) init list))
 
@@ -363,7 +377,9 @@ This is the anaphoric counterpart to `-reductions'."
   "Return a list of FN's intermediate reductions across LIST.
 That is, a list of the intermediate values of the accumulator
 when `-reduce' (which see) is called with the same arguments.
+
 This function's anaphoric counterpart is `--reductions'.
+
 For other folds, see also `-reductions' and `-reductions-r'."
   (if list
       (--reductions-from (funcall fn acc it) (car list) (cdr list))
@@ -385,7 +401,9 @@ This is the anaphoric counterpart to `-reductions-r-from'."
 That is, a list of the intermediate values of the accumulator
 when `-reduce-r-from' (which see) is called with the same
 arguments.
+
 This function's anaphoric counterpart is `--reductions-r-from'.
+
 For other folds, see also `-reductions' and `-reductions-r'."
   (--reductions-r-from (funcall fn it acc) init list))
 
@@ -409,7 +427,9 @@ This is the anaphoric counterpart to `-reductions-r'."
   "Return a list of FN's intermediate reductions across reversed LIST.
 That is, a list of the intermediate values of the accumulator
 when `-reduce-r' (which see) is called with the same arguments.
+
 This function's anaphoric counterpart is `--reductions-r'.
+
 For other folds, see also `-reductions-r-from' and
 `-reductions'."
   (if list
@@ -430,8 +450,11 @@ For the opposite operation, see also `--remove'."
 
 (defun -filter (pred list)
   "Return a new list of the items in LIST for which PRED returns non-nil.
+
 Alias: `-select'.
+
 This function's anaphoric counterpart is `--filter'.
+
 For similar operations, see also `-keep' and `-remove'."
   (--filter (funcall pred it) list))
 
@@ -449,8 +472,11 @@ For the opposite operation, see also `--filter'."
 
 (defun -remove (pred list)
   "Return a new list of the items in LIST for which PRED returns nil.
+
 Alias: `-reject'.
+
 This function's anaphoric counterpart is `--remove'.
+
 For similar operations, see also `-keep' and `-filter'."
   (--remove (funcall pred it) list))
 
@@ -481,8 +507,11 @@ This is a non-destructive operation, but only the front of LIST
 leading up to the removed item is a copy; the rest is LIST's
 original tail.  If no item is removed, then the result is a
 complete copy.
+
 Alias: `-reject-first'.
+
 This function's anaphoric counterpart is `--remove-first'.
+
 See also `-map-first', `-remove-item', and `-remove-last'."
   (--remove-first (funcall pred it) list))
 
@@ -502,8 +531,11 @@ This is the anaphoric counterpart to `-remove-last'."
   "Remove the last item from LIST for which PRED returns non-nil.
 The result is a copy of LIST regardless of whether an element is
 removed.
+
 Alias: `-reject-last'.
+
 This function's anaphoric counterpart is `--remove-last'.
+
 See also `-map-last', `-remove-item', and `-remove-first'."
   (--remove-last (funcall pred it) list))
 
@@ -533,6 +565,7 @@ This is the anaphoric counterpart to `-keep'."
   "Return a new list of the non-nil results of applying FN to each item in LIST.
 Like `-filter', but returns the non-nil results of FN instead of
 the corresponding elements of LIST.
+
 Its anaphoric counterpart is `--keep'."
   (--keep (funcall fn it) list))
 
@@ -561,6 +594,7 @@ This is like `-map', but FN takes two arguments: the index of the
 current element within LIST, and the element itself.
 
 This function's anaphoric counterpart is `--map-indexed'.
+
 For a side-effecting variant, see also `-each-indexed'."
   (--map-indexed (funcall fn it-index it) list))
 
@@ -651,12 +685,15 @@ Thus function FN should return a list."
 (defmacro --iterate (form init n)
   "Anaphoric version of `-iterate'."
   (declare (debug (form form form)))
-  (let ((res (make-symbol "result")))
-    `(let ((it ,init) ,res)
-       (dotimes (_ ,n)
-         (push it ,res)
-         (setq it ,form))
-       (nreverse ,res))))
+  (let ((res (make-symbol "result"))
+        (len (make-symbol "n")))
+    `(let ((,len ,n))
+       (when (> ,len 0)
+         (let* ((it ,init)
+                (,res (list it)))
+           (dotimes (_ (1- ,len))
+             (push (setq it ,form) ,res))
+           (nreverse ,res))))))
 
 (defun -iterate (fun init n)
   "Return a list of iterated applications of FUN to INIT.
@@ -690,7 +727,9 @@ See also: `-flatten-n'"
 
 See also: `-flatten'"
   (declare (pure t) (side-effect-free t))
-  (-last-item (--iterate (--mapcat (-list it) it) list (1+ num))))
+  (dotimes (_ num)
+    (setq list (apply #'append (mapcar #'-list list))))
+  list)
 
 (defun -concat (&rest lists)
   "Return a new list with the concatenation of the elements in the supplied LISTS."
@@ -773,7 +812,9 @@ This is the anaphoric counterpart to `-first'."
   "Return the first item in LIST for which PRED returns non-nil.
 Return nil if no such element is found.
 To get the first item in the list no questions asked, use `car'.
+
 Alias: `-find'.
+
 This function's anaphoric counterpart is `--first'."
   (--first (funcall pred it) list))
 
@@ -794,7 +835,9 @@ This is the anaphoric counterpart to `-some'."
 
 (defun -some (pred list)
   "Return (PRED x) for the first LIST item where (PRED x) is non-nil, else nil.
+
 Alias: `-any'.
+
 This function's anaphoric counterpart is `--some'."
   (--some (funcall pred it) list))
 
@@ -1011,7 +1054,9 @@ This is the anaphoric counterpart to `-take-while'."
 PRED is a function of one argument.  Return a new list of the
 successive elements from the start of LIST for which PRED returns
 non-nil.
+
 This function's anaphoric counterpart is `--take-while'.
+
 For another variant, see also `-drop-while'."
   (--take-while (funcall pred it) list))
 
@@ -1033,7 +1078,9 @@ This is the anaphoric counterpart to `-drop-while'."
 PRED is a function of one argument.  Return the tail (not a copy)
 of LIST starting from its first element for which PRED returns
 nil.
+
 This function's anaphoric counterpart is `--drop-while'.
+
 For another variant, see also `-take-while'."
   (--drop-while (funcall pred it) list))
 
@@ -1059,6 +1106,7 @@ See also: `-take'."
   "Return the tail (not a copy) of LIST without the first N items.
 Return nil if LIST contains N items or fewer.
 Return LIST if N is zero or less.
+
 For another variant, see also `-drop-last'.
 \n(fn N LIST)")
 
@@ -1590,13 +1638,6 @@ See also: `-flatten-n', `-table'"
         (dash--table-carry lists restore-lists)))
     (nreverse re)))
 
-(defun -partial (fn &rest args)
-  "Take a function FN and fewer than the normal arguments to FN,
-and return a fn that takes a variable number of additional ARGS.
-When called, the returned function calls FN with ARGS first and
-then additional args."
-  (apply 'apply-partially fn args))
-
 (defun -elem-index (elem list)
   "Return the index of the first element in the given LIST which
 is equal to the query element ELEM, or nil if there is no
@@ -1684,7 +1725,8 @@ See also: `-select-columns', `-select-by-indices'"
 in the first form, making a list of it if it is not a list
 already. If there are more forms, insert the first form as the
 second item in second form, etc."
-  (declare (debug (form &rest [&or symbolp (sexp &rest form)])))
+  (declare (debug (form &rest [&or symbolp (sexp &rest form)]))
+           (indent 1))
   (cond
    ((null form) x)
    ((null more) (if (listp form)
@@ -1697,7 +1739,8 @@ second item in second form, etc."
 in the first form, making a list of it if it is not a list
 already. If there are more forms, insert the first form as the
 last item in second form, etc."
-  (declare (debug ->))
+  (declare (debug ->)
+           (indent 1))
   (cond
    ((null form) x)
    ((null more) (if (listp form)
@@ -2787,6 +2830,7 @@ the new seed."
 (defun -cons-pair? (obj)
   "Return non-nil if OBJ is a true cons pair.
 That is, a cons (A . B) where B is not a list.
+
 Alias: `-cons-pair-p'."
   (declare (pure t) (side-effect-free t))
   (nlistp (cdr-safe obj)))
@@ -2952,6 +2996,199 @@ replaced with new ones.  This is useful when you need to clone a
 structure such as plist or alist."
   (declare (pure t) (side-effect-free t))
   (-tree-map 'identity list))
+
+;;; Combinators
+
+(defalias '-partial #'apply-partially)
+
+(defun -rpartial (fn &rest args)
+  "Return a function that is a partial application of FN to ARGS.
+ARGS is a list of the last N arguments to pass to FN.  The result
+is a new function which does the same as FN, except that the last
+N arguments are fixed at the values with which this function was
+called.  This is like `-partial', except the arguments are fixed
+starting from the right rather than the left."
+  (declare (pure t) (side-effect-free t))
+  (lambda (&rest args-before) (apply fn (append args-before args))))
+
+(defun -juxt (&rest fns)
+  "Return a function that is the juxtaposition of FNS.
+The returned function takes a variable number of ARGS, applies
+each of FNS in turn to ARGS, and returns the list of results."
+  (declare (pure t) (side-effect-free t))
+  (lambda (&rest args) (mapcar (lambda (x) (apply x args)) fns)))
+
+(defun -compose (&rest fns)
+  "Compose FNS into a single composite function.
+Return a function that takes a variable number of ARGS, applies
+the last function in FNS to ARGS, and returns the result of
+calling each remaining function on the result of the previous
+function, right-to-left.  If no FNS are given, return a variadic
+`identity' function."
+  (declare (pure t) (side-effect-free t))
+  (let* ((fns (nreverse fns))
+         (head (car fns))
+         (tail (cdr fns)))
+    (cond (tail
+           (lambda (&rest args)
+             (--reduce-from (funcall it acc) (apply head args) tail)))
+          (fns head)
+          ((lambda (&optional arg &rest _) arg)))))
+
+(defun -applify (fn)
+  "Return a function that applies FN to a single list of args.
+This changes the arity of FN from taking N distinct arguments to
+taking 1 argument which is a list of N arguments."
+  (declare (pure t) (side-effect-free t))
+  (lambda (args) (apply fn args)))
+
+(defun -on (operator transformer)
+  "Return a function of two arguments that first applies
+TRANSFORMER to each of them and then applies OPERATOR on the
+results (in the same order).
+
+In types: (b -> b -> c) -> (a -> b) -> a -> a -> c"
+  (lambda (x y) (funcall operator (funcall transformer x) (funcall transformer y))))
+
+(defun -flip (func)
+  "Swap the order of arguments for binary function FUNC.
+
+In types: (a -> b -> c) -> b -> a -> c"
+  (lambda (x y) (funcall func y x)))
+
+(defun -const (c)
+  "Return a function that returns C ignoring any additional arguments.
+
+In types: a -> b -> a"
+  (lambda (&rest _) c))
+
+(defmacro -cut (&rest params)
+  "Take n-ary function and n arguments and specialize some of them.
+Arguments denoted by <> will be left unspecialized.
+
+See SRFI-26 for detailed description."
+  (let* ((i 0)
+         (args (--keep (when (eq it '<>)
+                         (setq i (1+ i))
+                         (make-symbol (format "D%d" i)))
+                       params)))
+    `(lambda ,args
+       ,(let ((body (--map (if (eq it '<>) (pop args) it) params)))
+          (if (eq (car params) '<>)
+              (cons 'funcall body)
+            body)))))
+
+(defun -not (pred)
+  "Take a unary predicate PRED and return a unary predicate
+that returns t if PRED returns nil and nil if PRED returns
+non-nil."
+  (lambda (x) (not (funcall pred x))))
+
+(defun -orfn (&rest preds)
+  "Take list of unary predicates PREDS and return a unary
+predicate with argument x that returns non-nil if at least one of
+the PREDS returns non-nil on x.
+
+In types: [a -> Bool] -> a -> Bool"
+  (lambda (x) (-any? (-cut funcall <> x) preds)))
+
+(defun -andfn (&rest preds)
+  "Take list of unary predicates PREDS and return a unary
+predicate with argument x that returns non-nil if all of the
+PREDS returns non-nil on x.
+
+In types: [a -> Bool] -> a -> Bool"
+  (lambda (x) (-all? (-cut funcall <> x) preds)))
+
+(defun -iteratefn (fn n)
+  "Return a function FN composed N times with itself.
+
+FN is a unary function.  If you need to use a function of higher
+arity, use `-applify' first to turn it into a unary function.
+
+With n = 0, this acts as identity function.
+
+In types: (a -> a) -> Int -> a -> a.
+
+This function satisfies the following law:
+
+  (funcall (-iteratefn fn n) init) = (-last-item (-iterate fn init (1+ n)))."
+  (lambda (x) (--dotimes n (setq x (funcall fn x))) x))
+
+(defun -counter (&optional beg end inc)
+  "Return a closure that counts from BEG to END, with increment INC.
+
+The closure will return the next value in the counting sequence
+each time it is called, and nil after END is reached. BEG
+defaults to 0, INC defaults to 1, and if END is nil, the counter
+will increment indefinitely.
+
+The closure accepts any number of arguments, which are discarded."
+  (let ((inc (or inc 1))
+        (n (or beg 0)))
+    (lambda (&rest _)
+      (when (or (not end) (< n end))
+        (prog1 n
+          (setq n (+ n inc)))))))
+
+(defvar -fixfn-max-iterations 1000
+  "The default maximum number of iterations performed by `-fixfn'
+  unless otherwise specified.")
+
+(defun -fixfn (fn &optional equal-test halt-test)
+  "Return a function that computes the (least) fixpoint of FN.
+
+FN must be a unary function. The returned lambda takes a single
+argument, X, the initial value for the fixpoint iteration. The
+iteration halts when either of the following conditions is satisfied:
+
+ 1. Iteration converges to the fixpoint, with equality being
+    tested using EQUAL-TEST. If EQUAL-TEST is not specified,
+    `equal' is used. For functions over the floating point
+    numbers, it may be necessary to provide an appropriate
+    approximate comparison test.
+
+ 2. HALT-TEST returns a non-nil value. HALT-TEST defaults to a
+    simple counter that returns t after `-fixfn-max-iterations',
+    to guard against infinite iteration. Otherwise, HALT-TEST
+    must be a function that accepts a single argument, the
+    current value of X, and returns non-nil as long as iteration
+    should continue. In this way, a more sophisticated
+    convergence test may be supplied by the caller.
+
+The return value of the lambda is either the fixpoint or, if
+iteration halted before converging, a cons with car `halted' and
+cdr the final output from HALT-TEST.
+
+In types: (a -> a) -> a -> a."
+  (let ((eqfn   (or equal-test 'equal))
+    (haltfn (or halt-test
+            (-not
+              (-counter 0 -fixfn-max-iterations)))))
+    (lambda (x)
+      (let ((re (funcall fn x))
+        (halt? (funcall haltfn x)))
+    (while (and (not halt?) (not (funcall eqfn x re)))
+      (setq x     re
+        re    (funcall fn re)
+        halt? (funcall haltfn re)))
+    (if halt? (cons 'halted halt?)
+      re)))))
+
+(defun -prodfn (&rest fns)
+  "Take a list of n functions and return a function that takes a
+list of length n, applying i-th function to i-th element of the
+input list.  Returns a list of length n.
+
+In types (for n=2): ((a -> b), (c -> d)) -> (a, c) -> (b, d)
+
+This function satisfies the following laws:
+
+  (-compose (-prodfn f g ...) (-prodfn f\\=' g\\=' ...)) = (-prodfn (-compose f f\\=') (-compose g g\\=') ...)
+  (-prodfn f g ...) = (-juxt (-compose f (-partial \\='nth 0)) (-compose g (-partial \\='nth 1)) ...)
+  (-compose (-prodfn f g ...) (-juxt f\\=' g\\=' ...)) = (-juxt (-compose f f\\=') (-compose g g\\=') ...)
+  (-compose (-partial \\='nth n) (-prod f1 f2 ...)) = (-compose fn (-partial \\='nth n))"
+  (lambda (x) (-zip-with 'funcall fns x)))
 
 ;;; Font lock
 
