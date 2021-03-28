@@ -90,12 +90,12 @@
  '(ns-command-modifier 'meta)
  '(ns-function-modifier 'hyper)
   '(org-agenda-files
-     '("/Users/mort/Dropbox/people/family.org/birthdays.org" "/Users/mort/Dropbox/people/family.org/richard.org" "/Users/mort/Dropbox/people/family.org/angela.org" "/Users/mort/Dropbox/people/family.org/term-dates.org" "/Users/mort/Dropbox/people/family.org/car.org" "/Users/mort/Dropbox/people/family.org/william.org" "/Users/mort/Dropbox/people/family.org/david.org" "/Users/mort/Dropbox/people/family.org/eleanor.org"))
+     '("~/Dropbox/people/family.org/richard" "~/Dropbox/people/family.org/zhome/home.org"))
  '(org-agenda-loop-over-headlines-in-active-region nil)
  '(org-agenda-todo-ignore-scheduled 'all)
  '(org-clock-continuously t)
   '(package-selected-packages
-     '(org-clock-convenience org-clock-today lua-mode balanced-windows solarized-theme mu4e-conversation mu4e-query-fragments ialign ansible terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column use-package unkillable-scratch unbound tuareg simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv csv-mode coffee-mode avy auto-package-update auctex aggressive-indent))
+     '(ido-completing-read+ paredit async typescript-mode rjsx-mode clojure-mode org-clock-convenience org-clock-today lua-mode balanced-windows solarized-theme mu4e-conversation mu4e-query-fragments ialign terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column use-package unkillable-scratch unbound tuareg simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv csv-mode coffee-mode avy auto-package-update auctex aggressive-indent))
  '(paradox-github-token t)
  '(require-final-newline 'visit-save)
  '(safe-local-variable-values '((c-basic-indent . 4)))
@@ -116,11 +116,6 @@
  '(vc-follow-symlinks t)
  '(visible-bell t)
  '(visual-line-fringe-indicators '(right-triangle right-curly-arrow))
- '(web-mode-code-indent-offset 2)
- '(web-mode-css-indent-offset 2)
- '(web-mode-markup-indent-offset 2)
- '(web-mode-sql-indent-offset 2)
- '(web-mode-tests-directory "/Users/mort/teaching/ia.os/www/tests/")
  '(whitespace-line-column nil))
 
 (custom-set-faces

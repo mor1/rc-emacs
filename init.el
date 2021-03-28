@@ -635,10 +635,22 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package web-mode
   :mode (("\\.html$" . web-mode)
+          ("\\.css$" . web-mode)
           ("\\.tpl$" . web-mode)
           )
   :magic ("\\`<\\?xml" . web-mode)
-  )
+  :config
+  (setq
+    web-mode-markup-indent-offset 2
+    web-mode-code-indent-offset 2
+    web-mode-css-indent-offset 2
+    web-mode-sql-indent-offset 2
+    web-mode-enable-current-column-highlight t
+    web-mode-enable-current-element-highlight t
+    )
+  (set (make-local-variable 'company-backends)
+    '(company-css company-web-html company-yasnippet company-files)
+    ))
 
 ;; lilypond TODO
 
@@ -740,7 +752,7 @@ are between the current date (DATE) and Easter Sunday."
     (message "Aborted"))
   )
 
-(defun todo ()  (interactive) (find-file "~/Dropbox/people/family.org/richard.org"))
+(defun todo ()  (interactive) (find-file "~/Dropbox/people/family.org/richard/richard.org"))
 (defun notes () (interactive) (find-file "~/me/todo/notes.org"))
 
 ;; theme switching
