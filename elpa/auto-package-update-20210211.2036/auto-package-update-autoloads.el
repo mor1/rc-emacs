@@ -11,9 +11,7 @@
 ;;; Generated autoloads from auto-package-update.el
 
 (autoload 'auto-package-update-now "auto-package-update" "\
-Update installed Emacs packages.
-
-\(fn)" t nil)
+Update installed Emacs packages." t nil)
 
 (autoload 'auto-package-update-at-time "auto-package-update" "\
 Try to update every day at the specified TIME.
@@ -21,11 +19,9 @@ Try to update every day at the specified TIME.
 \(fn TIME)" nil nil)
 
 (autoload 'auto-package-update-maybe "auto-package-update" "\
-Update installed Emacs packages if at least `auto-package-update-interval' days have passed since the last update.
+Update installed Emacs packages if at least `auto-package-update-interval' days have passed since the last update." nil nil)
 
-\(fn)" nil nil)
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "auto-package-update" '("auto-package-update-" "apu--")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "auto-package-update" '("apu--" "auto-package-update-")))
 
 ;;;***
 

@@ -4,8 +4,8 @@
 
 ;; Author: Renan Ranelli
 ;; URL: http://github.com/rranelli/auto-package-update.el
-;; Package-Version: 20200826.2227
-;; Package-Commit: c0df65ac9845ba2c7c9f53bbdbe013f1024f96f9
+;; Package-Version: 20210211.2036
+;; Package-Commit: 22130fb17d00d79497253c94f3e88382cb40c3ac
 ;; Version: 1.7
 ;; Keywords: package, update
 ;; Package-Requires: ((emacs "24.4") (dash "2.1.0"))
@@ -283,7 +283,10 @@
       (progn
         (when auto-package-update-delete-old-versions
           (apu--add-to-old-versions-dirs-list package))
-        (package-install-from-archive (cadr (assoc package package-archive-contents)))
+        (let* ((pkg-desc (cadr (assoc package package-archive-contents)))
+               (transaction (package-compute-transaction (list pkg-desc)
+                                                         (package-desc-reqs pkg-desc))))
+          (package-download-transaction transaction))
         (add-to-list 'apu--package-installation-results
                      (format "%s up to date." (symbol-name package))))
     ('error (add-to-list 'apu--package-installation-results
