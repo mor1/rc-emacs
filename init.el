@@ -234,7 +234,7 @@
   :after json-mode
   )
 
-(use-package lisp-mode
+(use-package elisp-mode
   :mode "dune"
   )
 
