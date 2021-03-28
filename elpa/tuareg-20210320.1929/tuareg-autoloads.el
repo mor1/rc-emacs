@@ -17,9 +17,9 @@ the ocamldebug commands `cd DIR' and `directory'.
 
 \(fn PGM-PATH)" t nil)
 
-(defalias 'camldebug 'ocamldebug)
+(defalias 'camldebug #'ocamldebug)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ocamldebug" '("ocamldebug-" "def-ocamldebug")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ocamldebug" '("def-ocamldebug" "ocamldebug-")))
 
 ;;;***
 
@@ -34,8 +34,7 @@ the ocamldebug commands `cd DIR' and `directory'.
 (autoload 'tuareg-mode "tuareg" "\
 Major mode for editing OCaml code.
 
-Dedicated to Emacs and XEmacs, version 21 and higher.  Provides
-automatic indentation and compilation interface.  Performs font/color
+Provides automatic indentation and compilation interface.  Performs font/color
 highlighting using Font-Lock.  It is designed for OCaml but handles
 Caml Light as well.
 
@@ -74,31 +73,15 @@ Short cuts for interactions with the REPL:
 \(fn)" t nil)
 
 (autoload 'tuareg-run-ocaml "tuareg" "\
-Run an OCaml REPL process.  I/O via buffer `*OCaml*'.
+Run an OCaml REPL process.  I/O via buffer `*OCaml*'." t nil)
 
-\(fn)" t nil)
-
-(defalias 'run-ocaml 'tuareg-run-ocaml)
+(defalias 'run-ocaml #'tuareg-run-ocaml)
 
 (add-to-list 'interpreter-mode-alist '("ocamlrun" . tuareg-mode))
 
 (add-to-list 'interpreter-mode-alist '("ocaml" . tuareg-mode))
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg" '("tuareg-")))
-
-;;;***
-
-;;;### (autoloads nil "tuareg-jbuild" "tuareg-jbuild.el" (0 0 0 0))
-;;; Generated autoloads from tuareg-jbuild.el
-
-(autoload 'tuareg-jbuild-mode "tuareg-jbuild" "\
-Major mode to edit jbuild files.
-
-\(fn)" t nil)
-
-(add-to-list 'auto-mode-alist '("\\(?:\\`\\|/\\)jbuild\\(?:\\.inc\\)?\\'" . tuareg-jbuild-mode))
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-jbuild" '("tuareg-jbuild-" "verbose-tuareg-jbuild-smie-rules")))
 
 ;;;***
 
@@ -139,7 +122,7 @@ Update the environment to follow current OPAM switch configuration.
 ;;;;;;  0 0 0))
 ;;; Generated autoloads from tuareg-site-file.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-site-file" '("run-ocaml" "camldebug")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-site-file" '("camldebug" "run-ocaml")))
 
 ;;;***
 
