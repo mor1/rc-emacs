@@ -1,6 +1,6 @@
 ;;; solarized-faces.el --- the faces definitions for solarized theme  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2019 Bozhidar Batsov
+;; Copyright (C) 2011 Bozhidar Batsov
 
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 ;; Author: Thomas Frössman <thomasf@jossystem.se>
@@ -54,6 +54,7 @@
      `(link-visited ((,class (:foreground ,yellow :underline t :weight normal))))
      `(match ((,class (:background ,base02 :foreground ,base1 :weight bold))))
      `(menu ((,class (:foreground ,base0 :background ,base03))))
+     `(help-key-binding ((,class (:box (:line-width (1 . -1) :color ,s-line :style nil) :background ,base02))))
      `(minibuffer-prompt ((,class (:foreground ,base0))))
      `(mode-line
        ((,class (:inverse-video unspecified
@@ -121,7 +122,12 @@
      `(debbugs-gnu-handled ((,class (:foreground ,green))))
      `(debbugs-gnu-new ((,class (:foreground ,blue))))
      `(debbugs-gnu-pending ((,class (:foreground ,cyan))))
-     `(debbugs-gnu-stale ((,class (:foreground ,yellow))))
+     `(debbugs-gnu-stale ((,class (:foreground ,yellow)))) ;@deprecated0.20
+     `(debbugs-gnu-stale-1 ((,class (:foreground ,yellow))))
+     `(debbugs-gnu-stale-2 ((,class (:foreground ,yellow-1fg))))
+     `(debbugs-gnu-stale-3 ((,class (:foreground ,yellow-2fg))))
+     `(debbugs-gnu-stale-4 ((,class (:foreground ,orange-1fg))))
+     `(debbugs-gnu-stale-5 ((,class (:foreground ,orange-2fg))))
      `(debbugs-gnu-tagged ((,class (:foreground ,base1 :weight bold))))
 
 ;;;;; diary
@@ -324,10 +330,14 @@
 ;;;;; auto-highlight-symbol
      `(ahs-definition-face ((,class (:foreground ,magenta :background unspecified
                                                  :slant normal))))
+     `(ahs-definition-face-unfocused ((,class (:foreground ,magenta :background unspecified
+                                                           :slant normal))))
      `(ahs-edit-mode-face ((,class (:foreground ,base03 :background ,magenta))))
      `(ahs-face ((,class (:foreground ,magenta :background unspecified))))
+     `(ahs-face-unfocused ((,class (:foreground ,magenta :background unspecified))))
      `(ahs-plugin-bod-face ((,class (:foreground ,magenta :background unspecified ))))
-     `(ahs-plugin-defalt-face ((,class (:foreground ,magenta :background unspecified))))
+     `(ahs-plugin-default-face ((,class (:foreground ,magenta :background unspecified))))
+     `(ahs-plugin-default-face-unfocused ((,class (:foreground ,magenta :background unspecified))))
      `(ahs-plugin-whole-buffer-face ((,class (:foreground ,magenta  :background unspecified))))
      `(ahs-warning-face ((,class (:foreground ,red :weight bold))))
 ;;;;; avy-mode
@@ -407,7 +417,9 @@
      `(company-tooltip-search ((,class (:foreground ,magenta))))
      `(company-tooltip-search-selection ((,class (:foreground ,magenta :weight bold))))
      `(company-tooltip-selection ((,class (:weight bold))))
-
+;;;;; consult
+     `(consult-preview-insertion ((,class (:background ,base02))))
+     `(consult-preview-line ((,class (:background ,base02))))
 ;;;;; cperl-mode
      `(cperl-array-face ((,class (:background unspecified :foreground ,blue))))
      `(cperl-hash-face ((,class (:background unspecified :foreground ,blue))))
@@ -606,17 +618,17 @@
        ((,class (:foreground ,(if solarized-emphasize-indicators
                                   red-hc red)
                              :background ,(if solarized-emphasize-indicators
-                                              red-lc base03) :weight bold))))
+                                              red-lc s-fringe-bg) :weight bold))))
      `(flycheck-fringe-warning
        ((,class (:foreground ,(if solarized-emphasize-indicators
                                   yellow-hc yellow)
                              :background ,(if solarized-emphasize-indicators
-                                              yellow-lc base03) :weight bold))))
+                                              yellow-lc s-fringe-bg) :weight bold))))
      `(flycheck-fringe-info
        ((,class (:foreground ,(if solarized-emphasize-indicators
                                   blue-hc base01)
                              :background ,(if solarized-emphasize-indicators
-                                              blue-lc base03) :weight bold))))
+                                              blue-lc s-fringe-bg) :weight bold))))
 ;;;;; flymake
      `(flymake-errline
        ((,(append '((supports :underline (:style wave))) class)
@@ -1141,7 +1153,6 @@
      `(magit-tag            ((t (:foreground ,cyan   :weight bold))))
      `(magit-branch-remote  ((t (:foreground ,green  :weight bold))))
      `(magit-branch-local   ((t (:foreground ,blue   :weight bold))))
-     `(magit-branch-current ((t (:foreground ,blue   :weight bold :box t))))
      `(magit-head           ((t (:foreground ,blue   :weight bold))))
      `(magit-refname        ((t (:background ,base02 :foreground ,base01 :weight bold))))
      `(magit-refname-stash  ((t (:background ,base02 :foreground ,base01 :weight bold))))
@@ -1175,10 +1186,18 @@
      `(markdown-footnote-face ((,class (:inherit default))))
      `(markdown-header-delimiter-face ((,class (:foreground ,base01))))
      `(markdown-header-face ((,class (:foreground ,blue))))
-     `(markdown-header-face-1 ((,class (:inherit markdown-header-face))))
-     `(markdown-header-face-2 ((,class (:inherit markdown-header-face))))
-     `(markdown-header-face-3 ((,class (:inherit markdown-header-face))))
-     `(markdown-header-face-4 ((,class (:inherit markdown-header-face))))
+     `(markdown-header-face-1 ((,class (:inherit markdown-header-face
+                                                 ,@(when solarized-scale-markdown-headlines
+                                                     (list :height solarized-height-plus-4))))))
+     `(markdown-header-face-2 ((,class (:inherit markdown-header-face
+                                                 ,@(when solarized-scale-markdown-headlines
+                                                     (list :height solarized-height-plus-3))))))
+     `(markdown-header-face-3 ((,class (:inherit markdown-header-face
+                                                 ,@(when solarized-scale-markdown-headlines
+                                                     (list :height solarized-height-plus-2))))))
+     `(markdown-header-face-4 ((,class (:inherit markdown-header-face
+                                                 ,@(when solarized-scale-markdown-headlines
+                                                     (list :height solarized-height-plus-1))))))
      `(markdown-header-face-5 ((,class (:inherit markdown-header-face))))
      `(markdown-header-face-6 ((,class (:inherit markdown-header-face))))
      `(markdown-header-rule-face ((,class (:foreground ,base01))))
@@ -1757,7 +1776,15 @@
      `(tabbar-unselected-modified ((,class (:inherit tabbar-modified :background ,base02 :underline nil :box (:line-width 1 :color ,base03)))))
      `(tabbar-selected ((,class (:inherit tabbar-default :foreground ,base3 :background ,base03 :weight bold :underline nil :box (:line-width 1 :color ,base03)))))
      `(tabbar-selected-modified ((,class (:inherit tabbar-selected :foreground ,blue :underline nil :box (:line-width 1 :color ,base03)))))
-
+;;;;; centaur-tabs
+   `(centaur-tabs-default ((t (:background ,base03 :foreground ,base0 :box nil))))
+   `(centaur-tabs-selected ((t (:background ,base03 :foreground ,base1 :box nil))))
+   `(centaur-tabs-unselected ((t (:background ,base02 :foreground ,base01 :box nil))))
+   `(centaur-tabs-selected-modified ((t (:background ,base03 :foreground ,orange :box nil))))
+   `(centaur-tabs-unselected-modified ((t (:background ,base02 :foreground ,orange :box nil))))
+   `(centaur-tabs-active-bar-face ((t (:background ,yellow :box nil))))
+   `(centaur-tabs-modified-marker-selected ((t (:inherit 'centaur-tabs-selected-modified :foreground ,yellow :box nil))))
+   `(centaur-tabs-modified-marker-unselected ((t (:inherit 'centaur-tabs-unselected-modified :foreground ,yellow :box nil))))
 ;;;;; table
      `(table-cell ((,class (:foreground ,base0 :background ,base02))))
 ;;;;; term
