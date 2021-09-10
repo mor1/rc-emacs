@@ -1,4 +1,4 @@
-;; Copyright (C) 2000--2020 Richard Mortier <mort@cantab.net> except where
+;; Copyright (C) 2000--2021 Richard Mortier <mort@cantab.net> except where
 ;; noted. All Rights Reserved.
 ;;
 ;; Permission to use, copy, modify, and distribute this software for any
