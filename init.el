@@ -142,6 +142,18 @@
   (coffee-mode . coffee-cos-mode)
   )
 
+(use-package company
+  :ensure
+  :custom
+  (company-idle-delay 0.5) ;; how long to wait until popup
+  ;; (company-begin-commands nil) ;; uncomment to disable popup
+  :bind (:map company-active-map
+          ("C-n". company-select-next)
+          ("C-p". company-select-previous)
+          ("M-<". company-select-first)
+          ("M->". company-select-last))
+  )
+
 (use-package css-mode
   :mode ("\\.less$")
   :config
@@ -219,6 +231,46 @@
     go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
     )
   )
+
+(use-package ido-completing-read+
+  ;; Display possible completions at all places
+  :ensure t
+  :diminish nil
+  :config
+  ;; This enables ido in all contexts where it could be useful, not just for
+  ;; selecting buffer and file names
+  (ido-mode t)
+  (ido-everywhere t)
+  ;; This allows partial matches, e.g. "uzh" will match "Ustad Zakir Hussain"
+  (setq
+    ido-enable-flex-matching t
+    ido-use-filename-at-point nil
+    ;; Includes buffer names of recently opened files, even if not open now.
+    ido-use-virtual-buffers t
+    ))
+
+(use-package lsp-mode
+  :ensure
+  :commands lsp
+  :hook
+  (lsp-mode . lsp-ui-mode)
+  :config
+  (setq
+    lsp-rust-analyzer-cargo-watch-command "clippy"
+    lsp-eldoc-render-all t
+    lsp-idle-delay 0.6
+    lsp-rust-analyzer-server-display-inlay-hints t
+    ))
+
+(use-package lsp-ui
+  :ensure
+  :commands lsp-ui-mode
+  :config
+  (setq
+    lsp-ui-peek-always-show t
+    lsp-ui-sideline-show-hover t
+    lsp-ui-doc-enable nil
+    ))
 
 (use-package magit
   :ensure t
@@ -514,6 +566,42 @@ are between the current date (DATE) and Easter Sunday."
   :hook prog-mode
   )
 
+(use-package recentf
+  ;; Recent buffers in a new Emacs session
+  :config
+  (setq
+    recentf-auto-cleanup 'never
+    recentf-max-saved-items 1000
+    recentf-save-file (concat user-emacs-directory ".recentf")
+    )
+  (recentf-mode t)
+  :diminish nil
+  )
+
+(use-package rjsx-mode
+  :mode
+  ((("\\.json$" "\\.js$") . rjsx-mode))
+  :config
+  (setq
+    js-indent-level 2
+    ))
+
+(use-package rustic
+  :ensure
+  :bind (:map rustic-mode-map
+              ("M-j" . lsp-ui-imenu)
+              ("M-?" . lsp-find-references)
+              ("C-c C-c l" . flycheck-list-errors)
+              ("C-c C-c a" . lsp-execute-code-action)
+              ("C-c C-c r" . lsp-rename)
+              ("C-c C-c q" . lsp-workspace-restart)
+              ("C-c C-c Q" . lsp-workspace-shutdown)
+              ("C-c C-c s" . lsp-rust-analyzer-status))
+  :config
+  (setq
+    rustic-format-on-save t
+    ))
+
 (use-package saveplace ;; save cursor position in file after close
   :unless noninteractive
   :config (save-place-mode t)
@@ -700,47 +788,13 @@ are between the current date (DATE) and Easter Sunday."
     (prog-mode . whitespace-cleanup)
     ))
 
-
-;; Recent buffers in a new Emacs session
-(use-package recentf
+(use-package yasnippet
+  :ensure
   :config
-  (setq
-    recentf-auto-cleanup 'never
-    recentf-max-saved-items 1000
-    recentf-save-file (concat user-emacs-directory ".recentf")
-    )
-  (recentf-mode t)
-  :diminish nil
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode)
   )
-
-;; Display possible completions at all places
-(use-package ido-completing-read+
-  :ensure t
-  :diminish nil
-  :config
-  ;; This enables ido in all contexts where it could be useful, not just
-  ;; for selecting buffer and file names
-  (ido-mode t)
-  (ido-everywhere t)
-  ;; This allows partial matches, e.g. "uzh" will match "Ustad Zakir Hussain"
-  (setq
-    ido-enable-flex-matching t
-    ido-use-filename-at-point nil
-    ;; Includes buffer names of recently opened files, even if they're not open now.
-    ido-use-virtual-buffers t
-    ))
-
-;; Enhance M-x to allow easier execution of commands
-(use-package smex
-  :ensure t
-  ;; Using counsel-M-x for now. Remove this permanently if counsel-M-x works better.
-  :disabled t
-  :config
-  (setq
-    smex-save-file (concat user-emacs-directory ".smex-items")
-    )
-  (smex-initialize)
-  :bind ("M-x" . smex))
 
 ;;
 ;; functions
