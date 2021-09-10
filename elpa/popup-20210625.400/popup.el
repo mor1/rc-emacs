@@ -6,8 +6,8 @@
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Maintainer: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/auto-complete/popup-el
-;; Package-Version: 20210317.138
-;; Package-Commit: 866a091b83369873b4d1c5d62a590fbb0a150bd0
+;; Package-Version: 20210625.400
+;; Package-Commit: cf899f8012f4189e76a009bebb589ff71631b1e9
 ;; Keywords: lisp
 ;; Version: 0.5.8
 ;; Package-Requires: ((emacs "24.3"))
@@ -35,6 +35,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'mule)
 
 (defconst popup-version "0.5.8")
 
@@ -239,6 +240,19 @@ existed value with `nil' property."
 ITEM is not string."
   (if (stringp item)
       (get-text-property 0 property item)))
+
+(defun popup-replace-displayable (str &optional rep)
+  "Replace non-displayable character from STR.
+
+Optional argument REP is the replacement string of non-displayable character."
+  (unless rep (setq rep ""))
+  (let ((result ""))
+    (mapc (lambda (ch)
+            (setq result (concat result
+                                 (if (char-displayable-p ch) (string ch)
+                                   rep))))
+          str)
+    result))
 
 (cl-defun popup-make-item (name
                            &key
@@ -1058,6 +1072,8 @@ PROMPT is a prompt string when reading events during event loop."
   (unless nostrip
     ;; TODO strip text (mainly face) properties
     (setq string (substring-no-properties string)))
+
+  (setq string (popup-replace-displayable string))
 
   (and (eq margin t) (setq margin 1))
   (or margin-left (setq margin-left margin))
