@@ -2,8 +2,8 @@
 
 ;; Copyright (c) 2013 Spotify AB
 ;; Package-Requires: ((emacs "24"))
-;; Package-Version: 20210326.1812
-;; Package-Commit: 3b1374563f62d71aec11ebd33d37109459e54571
+;; Package-Version: 20210404.2224
+;; Package-Commit: ad06a41259ff2961d603bf23a3a8fbd22dde2161
 ;; Homepage: https://github.com/spotify/dockerfile-mode
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -37,11 +37,6 @@
   :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :prefix "dockerfile-"
   :group 'languages)
-
-(defcustom dockerfile-mode-hook nil
-  "*Hook called by `dockerfile-mode'."
-  :type 'hook
-  :group 'dockerfile)
 
 (defcustom dockerfile-mode-command "docker"
   "Which binary to use to build images."
