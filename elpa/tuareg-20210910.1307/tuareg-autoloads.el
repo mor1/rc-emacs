@@ -72,6 +72,12 @@ Short cuts for interactions with the REPL:
 
 \(fn)" t nil)
 
+(with-eval-after-load 'compile (let ((rule (eval-when-compile `(ocaml ,(rx bol (32 (group-n 9 "       ")) (group-n 1 (or "File " (seq (or "Raised at" "Re-raised at" "Raised by primitive operation at" "Called from") (* nonl) " file ")) (group-n 2 (32 "\"")) (group-n 3 (+ (not (in "\11\n \",<>")))) (backref 2) (32 " (inlined)") ", line" (32 "s") " " (group-n 4 (+ (in "0-9"))) (32 "-" (group-n 5 (+ (in "0-9")))) (32 ", character" (32 "s") " " (group-n 6 (+ (in "0-9"))) (32 "-" (group-n 7 (+ (in "0-9"))))) (32 ":")) (32 "\n" (* (in "\11 ")) (* (or (seq (+ (in "0-9")) " | " (* nonl)) (+ "^")) "\n" (* (in "\11 "))) (group-n 8 (or "Warning" "Alert") (* (not (in ":\n"))) ":"))) 3 (4 . 5) (6 . tuareg--end-column) (8 . 9) 1 (8 font-lock-function-name-face))))) (defvar compilation-error-regexp-alist) (defvar compilation-error-regexp-alist-alist) (setq compilation-error-regexp-alist-alist (assq-delete-all 'ocaml compilation-error-regexp-alist-alist)) (push rule compilation-error-regexp-alist-alist) (setq compilation-error-regexp-alist (delq 'ocaml compilation-error-regexp-alist)) (push 'ocaml compilation-error-regexp-alist)))
+
+(autoload 'tuareg--end-column "tuareg" "\
+Return the end-column number in a parsed OCaml message.
+OCaml uses exclusive end-columns but Emacs wants them to be inclusive." nil nil)
+
 (autoload 'tuareg-run-ocaml "tuareg" "\
 Run an OCaml REPL process.  I/O via buffer `*OCaml*'." t nil)
 
@@ -82,6 +88,13 @@ Run an OCaml REPL process.  I/O via buffer `*OCaml*'." t nil)
 (add-to-list 'interpreter-mode-alist '("ocaml" . tuareg-mode))
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg" '("tuareg-")))
+
+;;;***
+
+;;;### (autoloads nil "tuareg-compat" "tuareg-compat.el" (0 0 0 0))
+;;; Generated autoloads from tuareg-compat.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-compat" '("tuareg--")))
 
 ;;;***
 
@@ -115,14 +128,6 @@ Update the environment to follow current OPAM switch configuration.
 (add-to-list 'auto-mode-alist '("[./]opam_?\\'" . tuareg-opam-mode))
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-opam" '("tuareg-" "verbose-tuareg-opam-smie-rules")))
-
-;;;***
-
-;;;### (autoloads nil "tuareg-site-file" "tuareg-site-file.el" (0
-;;;;;;  0 0 0))
-;;; Generated autoloads from tuareg-site-file.el
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-site-file" '("camldebug" "run-ocaml")))
 
 ;;;***
 

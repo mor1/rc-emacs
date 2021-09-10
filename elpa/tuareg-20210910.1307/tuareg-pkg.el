@@ -1,7 +1,7 @@
-(define-package "tuareg" "20210730.2027" "OCaml mode for Emacs."
-  '((caml "3.12.0.1")
-    (emacs "24.4"))
-  :commit "465b61fddcb9556a3e5a10b9654b3aff537022f4" :authors
+(define-package "tuareg" "20210910.1307" "OCaml mode"
+  '((emacs "24.4")
+    (caml "4.8"))
+  :commit "c33222d03f80a60818cfdeb0cbadcba7b35dfec2" :authors
   '(("Albert Cohen" . "Albert.Cohen@inria.fr")
     ("Sam Steingold" . "sds@gnu.org")
     ("Christophe Troestler" . "Christophe.Troestler@umons.ac.be")
@@ -9,7 +9,7 @@
     ("Sean McLaughlin" . "seanmcl@gmail.com")
     ("Stefan Monnier" . "monnier@iro.umontreal.ca"))
   :maintainer
-  '("Albert Cohen" . "Albert.Cohen@inria.fr")
+  '("Christophe Troestler" . "Christophe.Troestler@umons.ac.be")
   :keywords
   '("ocaml" "languages")
   :url "https://github.com/ocaml/tuareg")
