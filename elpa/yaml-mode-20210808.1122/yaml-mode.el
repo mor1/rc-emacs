@@ -5,9 +5,10 @@
 ;; Author: Yoshiki Kurihara <clouder@gmail.com>
 ;;         Marshall T. Vandegrift <llasram@gmail.com>
 ;; Maintainer: Vasilij Schneidermann <mail@vasilij.de>
+;; URL: https://github.com/yoshiki/yaml-mode
+;; Package-Version: 20210808.1122
+;; Package-Commit: 63b637f846411806ae47e63adc06fe9427be1131
 ;; Package-Requires: ((emacs "24.1"))
-;; Package-Version: 20201109.1026
-;; Package-Commit: fc5e1c58f94472944c4aa838f00f6adcac6fa992
 ;; Keywords: data yaml
 ;; Version: 0.0.15
 
@@ -484,6 +485,10 @@ this will do usual adaptive fill behaviors."
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.\\(e?ya?\\|ra\\)ml\\'" . yaml-mode))
+
+;;;###autoload
+(add-to-list 'magic-mode-alist
+             '("^%YAML\\s-+[0-9]+\\.[0-9]+\\(\\s-+#\\|\\s-*$\\)" . yaml-mode))
 
 (provide 'yaml-mode)
 
