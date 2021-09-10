@@ -31,7 +31,7 @@ to perform almost all of their daily version control tasks directly from
 within Emacs.  While many fine Git clients exist, only Magit and Git
 itself deserve to be called porcelains.
 
-This manual is for Magit version 3.2.1 (v3.2.1-43-g534ef5a64+1).
+This manual is for Magit version 3.2.1 (v3.2.1-62-g5a8e3aec3+1).
 
      Copyright (C) 2015-2021 Jonas Bernoulli <jonas@bernoul.li>
 
@@ -2279,11 +2279,34 @@ sections are available.  There is one additional command.
 
      This command kills the process represented by the section at point.
 
- -- User Option: magit-git-debug
+ -- Variable: magit-git-debug
 
-     When this is non-nil then the output of all calls to git are logged
-     in the process buffer.  This is useful when debugging, otherwise it
-     just negatively affects performance.
+     This option controls whether additional reporting of git errors is
+     enabled.
+
+     Magit basically calls git for one of these two reasons: for
+     side-effects or to do something with its standard output.
+
+     When git is run for side-effects then its output, including error
+     messages, go into the process buffer which is shown when using ‘$’.
+
+     When git’s output is consumed in some way, then it would be too
+     expensive to also insert it into this buffer, but when this option
+     is non-nil and git returns with a non-zero exit status, then at
+     least its standard error is inserted into this buffer.
+
+     This is only intended for debugging purposes.  Do not enable this
+     permanently, that would negatively affect performance.
+
+ -- Variable: magit-process-extreme-logging
+
+     This option controls whether ‘magit-process-file’ logs to the
+     ‘*Messages*’ buffer.
+
+     Only intended for temporary use when you try to figure out how
+     Magit uses Git behind the scene.  Output that normally goes to the
+     magit-process buffer continues to go there.  Not all output goes to
+     either of these two buffers.
 
 
 File: magit.info,  Node: Git Process Status,  Next: Running Git Manually,  Prev: Viewing Git Output,  Up: Running Git
@@ -4160,6 +4183,10 @@ the other references are compared.
      This command lists branches and tags in a dedicated buffer.  Each
      reference is being compared with a branch read from the user.
 
+‘y r’     (‘magit-refs-set-show-commit-count’)
+
+     This command changes for which refs the commit count is shown.
+
  -- User Option: magit-refs-show-commit-count
 
      Whether to show commit counts in Magit-Refs mode buffers.
@@ -5252,6 +5279,33 @@ Also see *note (gitman)git-commit::.
      the commit message in a buffer.
 
      Also see ‘git-commit-post-finish-hook’.
+
+ -- User Option: magit-commit-diff-inhibit-same-window
+
+     Whether to inhibit use of same window when showing diff while
+     committing.
+
+     When writing a commit, then a diff of the changes to be committed
+     is automatically shown.  The idea is that the diff is shown in a
+     different window of the same frame and for most users that just
+     works.  In other words most users can completely ignore this option
+     because its value doesn’t make a difference for them.
+
+     However for users who configured Emacs to never create a new window
+     even when the package explicitly tries to do so, then displaying
+     two new buffers necessarily means that the first is immediately
+     replaced by the second.  In our case the message buffer is
+     immediately replaced by the diff buffer, which is of course highly
+     undesirable.
+
+     A workaround is to suppress this user configuration in this
+     particular case.  Users have to explicitly opt-in by toggling this
+     option.  We cannot enable the workaround unconditionally because
+     that again causes issues for other users: if the frame is too tiny
+     or the relevant settings too aggressive, then the diff buffer would
+     end up being displayed in a new frame.
+
+     Also see <https://github.com/magit/magit/issues/4132>.
 
 
 File: magit.info,  Node: Editing Commit Messages,  Prev: Initiating a Commit,  Up: Committing
@@ -7699,52 +7753,4 @@ global values are displayed and can be modified.
      addition to the ref specified by ‘core.notesRef’.  It can have
      multiple values and may end with ‘*’ to display all refs in the
      ‘refs/notes/’ namespace (or ‘**’ if some names contain slashes).
-
-
-File: magit.info,  Node: Submodules,  Next: Subtree,  Prev: Notes,  Up: Miscellaneous
-
-8.3 Submodules
-==============
-
-Also see *note (gitman)git-submodule::.
-
-* Menu:
-
-* Listing Submodules::
-* Submodule Transient::
-
-
-File: magit.info,  Node: Listing Submodules,  Next: Submodule Transient,  Up: Submodules
-
-8.3.1 Listing Submodules
-------------------------
-
-The command ‘magit-list-submodules’ displays a list of the current
-repository’s submodules in a separate buffer.  It’s also possible to
-display information about submodules directly in the status buffer of
-the super-repository by adding ‘magit-insert-modules’ to the hook
-‘magit-status-sections-hook’ as described in *note Status Module
-Sections::.
-
- -- Command: magit-list-submodules
-
-     This command displays a list of the current repository’s submodules
-     in a separate buffer.
-
-     It can be invoked by pressing ‘RET’ on the section titled
-     "Modules".
-
- -- User Option: magit-submodule-list-columns
-
-     This option controls what columns are displayed by the command
-     ‘magit-list-submodules’ and how they are displayed.
-
-     Each element has the form ‘(HEADER WIDTH FORMAT PROPS)’.
-
-     HEADER is the string displayed in the header.  WIDTH is the width
-     of the column.  FORMAT is a function that is called with one
-     argument, the repository identification (usually its basename), and
-     with ‘default-directory’ bound to the toplevel of its working tree.
-     It has to return a string to be inserted or nil.  PROPS is an alist
-     that supports the keys ‘:right-align’ and ‘:pad-right’.
 

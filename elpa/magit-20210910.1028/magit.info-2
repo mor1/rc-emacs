@@ -18,6 +18,54 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
+File: magit.info,  Node: Submodules,  Next: Subtree,  Prev: Notes,  Up: Miscellaneous
+
+8.3 Submodules
+==============
+
+Also see *note (gitman)git-submodule::.
+
+* Menu:
+
+* Listing Submodules::
+* Submodule Transient::
+
+
+File: magit.info,  Node: Listing Submodules,  Next: Submodule Transient,  Up: Submodules
+
+8.3.1 Listing Submodules
+------------------------
+
+The command ‘magit-list-submodules’ displays a list of the current
+repository’s submodules in a separate buffer.  It’s also possible to
+display information about submodules directly in the status buffer of
+the super-repository by adding ‘magit-insert-modules’ to the hook
+‘magit-status-sections-hook’ as described in *note Status Module
+Sections::.
+
+ -- Command: magit-list-submodules
+
+     This command displays a list of the current repository’s submodules
+     in a separate buffer.
+
+     It can be invoked by pressing ‘RET’ on the section titled
+     "Modules".
+
+ -- User Option: magit-submodule-list-columns
+
+     This option controls what columns are displayed by the command
+     ‘magit-list-submodules’ and how they are displayed.
+
+     Each element has the form ‘(HEADER WIDTH FORMAT PROPS)’.
+
+     HEADER is the string displayed in the header.  WIDTH is the width
+     of the column.  FORMAT is a function that is called with one
+     argument, the repository identification (usually its basename), and
+     with ‘default-directory’ bound to the toplevel of its working tree.
+     It has to return a string to be inserted or nil.  PROPS is an alist
+     that supports the keys ‘:right-align’ and ‘:pad-right’.
+
+
 File: magit.info,  Node: Submodule Transient,  Prev: Listing Submodules,  Up: Submodules
 
 8.3.2 Submodule Transient
@@ -2764,7 +2812,7 @@ Appendix C Keystroke Index
 * r s <1>:                               Rebasing.            (line 113)
 * r u:                                   Rebasing.            (line  36)
 * r w:                                   Rebasing.            (line  94)
-* RET:                                   References Buffer.   (line 181)
+* RET:                                   References Buffer.   (line 185)
 * RET <1>:                               Visiting Files and Blobs from a Diff.
                                                               (line   8)
 * RET <2>:                               Blaming.             (line  75)
@@ -2837,6 +2885,7 @@ Appendix C Keystroke Index
                                                               (line  90)
 * y c:                                   References Buffer.   (line  26)
 * y o:                                   References Buffer.   (line  32)
+* y r:                                   References Buffer.   (line  37)
 * y y:                                   References Buffer.   (line  21)
 * z:                                     Stashing.            (line   8)
 * Z:                                     Worktree.            (line   8)
@@ -3227,6 +3276,7 @@ Appendix D Command Index
                                                               (line  25)
 * magit-refresh-all:                     Automatic Refreshing of Magit Buffers.
                                                               (line  34)
+* magit-refs-set-show-commit-count:      References Buffer.   (line  37)
 * magit-remote:                          Remote Commands.     (line  13)
 * magit-remote-add:                      Remote Commands.     (line  50)
 * magit-remote-configure:                Remote Commands.     (line  33)
@@ -3370,7 +3420,7 @@ Appendix D Command Index
                                                               (line  33)
 * magit-version:                         Git Executable.      (line  61)
 * magit-version <1>:                     Debugging Tools.     (line  10)
-* magit-visit-ref:                       References Buffer.   (line 181)
+* magit-visit-ref:                       References Buffer.   (line 185)
 * magit-wip-commit:                      Wip Modes.           (line  88)
 * magit-wip-log:                         Wip Modes.           (line  48)
 * magit-wip-log-current:                 Wip Modes.           (line  57)
@@ -3728,6 +3778,7 @@ Appendix F Variable Index
 * magit-clone-set-remote.pushDefault:    Cloning Repository.  (line  78)
 * magit-clone-url-format:                Cloning Repository.  (line 124)
 * magit-commit-ask-to-stage:             Initiating a Commit. (line  75)
+* magit-commit-diff-inhibit-same-window: Initiating a Commit. (line 113)
 * magit-commit-extend-override-date:     Initiating a Commit. (line  84)
 * magit-commit-reword-override-date:     Initiating a Commit. (line  88)
 * magit-commit-show-diff:                Initiating a Commit. (line  80)
@@ -3793,6 +3844,7 @@ Appendix F Variable Index
                                                               (line 126)
 * magit-prefix-use-buffer-arguments:     Transient Arguments and Buffer Variables.
                                                               (line  64)
+* magit-process-extreme-logging:         Viewing Git Output.  (line  47)
 * magit-process-raise-error:             Calling Git for Effect.
                                                               (line 136)
 * magit-pull-or-fetch:                   Fetching.            (line  59)
@@ -3803,15 +3855,15 @@ Appendix F Variable Index
 * magit-refresh-function:                Refreshing Buffers.  (line  49)
 * magit-refresh-status-buffer:           Automatic Refreshing of Magit Buffers.
                                                               (line  49)
-* magit-refs-filter-alist:               References Buffer.   (line 159)
-* magit-refs-focus-column-width:         References Buffer.   (line  82)
-* magit-refs-margin:                     References Buffer.   (line  97)
-* magit-refs-margin-for-tags:            References Buffer.   (line 125)
-* magit-refs-pad-commit-counts:          References Buffer.   (line  49)
-* magit-refs-primary-column-width:       References Buffer.   (line  69)
+* magit-refs-filter-alist:               References Buffer.   (line 163)
+* magit-refs-focus-column-width:         References Buffer.   (line  86)
+* magit-refs-margin:                     References Buffer.   (line 101)
+* magit-refs-margin-for-tags:            References Buffer.   (line 129)
+* magit-refs-pad-commit-counts:          References Buffer.   (line  53)
+* magit-refs-primary-column-width:       References Buffer.   (line  73)
 * magit-refs-sections-hook:              References Sections. (line  13)
-* magit-refs-show-commit-count:          References Buffer.   (line  37)
-* magit-refs-show-remote-prefix:         References Buffer.   (line  62)
+* magit-refs-show-commit-count:          References Buffer.   (line  41)
+* magit-refs-show-remote-prefix:         References Buffer.   (line  66)
 * magit-remote-add-set-remote.pushDefault: Remote Commands.   (line  92)
 * magit-remote-direct-configure:         Remote Commands.     (line  21)
 * magit-remote-git-executable:           Git Executable.      (line  33)
@@ -3845,7 +3897,7 @@ Appendix F Variable Index
 * magit-unstage-committed:               Staging and Unstaging.
                                                               (line  56)
 * magit-update-other-window-delay:       Section Movement.    (line 112)
-* magit-visit-ref-behavior:              References Buffer.   (line 192)
+* magit-visit-ref-behavior:              References Buffer.   (line 196)
 * magit-wip-after-apply-mode:            Legacy Wip Modes.    (line  19)
 * magit-wip-after-apply-mode-lighter:    Legacy Wip Modes.    (line  59)
 * magit-wip-after-save-local-mode-lighter: Legacy Wip Modes.  (line  55)
