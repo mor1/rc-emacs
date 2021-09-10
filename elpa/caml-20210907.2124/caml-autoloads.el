@@ -13,13 +13,6 @@
 
 ;;;***
 
-;;;### (autoloads nil "caml-emacs" "caml-emacs.el" (0 0 0 0))
-;;; Generated autoloads from caml-emacs.el
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-emacs" '("caml-")))
-
-;;;***
-
 ;;;### (autoloads nil "caml-font" "caml-font.el" (0 0 0 0))
 ;;; Generated autoloads from caml-font.el
 
@@ -45,13 +38,6 @@
 ;;; Generated autoloads from caml-types.el
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-types" '("caml-")))
-
-;;;***
-
-;;;### (autoloads nil "caml-xemacs" "caml-xemacs.el" (0 0 0 0))
-;;; Generated autoloads from caml-xemacs.el
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-xemacs" '("caml-")))
 
 ;;;***
 

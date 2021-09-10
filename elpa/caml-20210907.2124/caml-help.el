@@ -43,10 +43,8 @@
 
 ;;; Code:
 
-(eval-and-compile
-  (if (featurep 'xemacs)
-      (require 'caml-xemacs)
-    (require 'caml-emacs)))
+(require 'info)
+(require 'view)
 
 ;; Loading or building databases.
 ;;
@@ -54,7 +52,8 @@
 ;; variables to be customized
 
 (defgroup caml-help nil
-  "Customizations for `caml-help'.")
+  "Customizations for `caml-help'."
+  :group 'languages)
 
 (require 'cl-lib)
 
@@ -589,7 +588,7 @@ current buffer using \\[ocaml-qualified-identifier]."
   (let ((window (selected-window))
         (info-section (assoc module (ocaml-info-alist))))
     (if info-section
-        (caml-info-other-window (cdr info-section))
+        (info-other-window (cdr info-section))
       (ocaml-visible-modules)
       (let* ((module-info
               (or (assoc module (ocaml-module-alist))
@@ -602,7 +601,7 @@ current buffer using \\[ocaml-qualified-identifier]."
           (let ((file (concat location (ocaml-uncapitalize module) ".mli")))
             (if (window-live-p same-window)
                 (progn (select-window same-window)
-                       (view-mode-exit view-return-to-alist view-exit-action))
+                       (view-mode-exit nil view-exit-action))
               ;; (view-buffer (find-file-noselect file) 'view))
               )
             (view-file-other-window file)
@@ -773,8 +772,9 @@ buffer positions."
 (defun ocaml-link-goto (click)
   "Follow link at point."
   (interactive "e")
-  (let* ((pos (caml-event-point-start click))
-         (win (caml-event-window click))
+  (let* ((pos-click (event-start click))
+         (pos (posn-point pos-click))
+         (win (posn-window pos-click))
          (buf (window-buffer win))
          (window (selected-window))
          (link))

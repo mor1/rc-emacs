@@ -1,15 +1,16 @@
-;;; caml.el --- OCaml code editing commands for Emacs  -*- lexical-binding: t; -*-
+;;; caml.el --- Caml mode for GNU Emacs -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 1997-2017 Institut National de Recherche en Informatique et en Automatique.
 
 ;; Author: Jacques Garrigue <garrigue@kurims.kyoto-u.ac.jp>
 ;;         Ian T Zimmerman <itz@rahul.net>
-;; Maintainer: Damien Doligez <damien.doligez@inria.fr>
+;;         Damien Doligez <damien.doligez@inria.fr>
+;; Maintainer: Christophe Troestler <Christophe.Troestler@umons.ac.be>
 ;; Created: July 1993
-;; Package-Requires: ((emacs "22") (cl-lib "0.5"))
-;; Version: 4.7.1
+;; Package-Requires: ((emacs "24.3"))
+;; Version: 4.9
 ;; Keywords: OCaml
-;; Homepage: https://github.com/ocaml/ocaml/
+;; Homepage: https://github.com/ocaml/caml-mode
 
 ;; This file is not part of GNU Emacs.
 
@@ -304,9 +305,6 @@ have `caml-electric-indent' on, which see.")
     ;;that way we get out effect even when we do \C-x` in compilation buffer
     ;;  (define-key map "\C-x`" 'caml-next-error)
 
-    (define-key map (if (featurep 'xemacs) 'backspace "\177")
-      'backward-delete-char-untabify)
-
     ;; caml-types
     (define-key map [?\C-c?\C-t] 'caml-types-show-type)  ; "type"
     (define-key map [?\C-c?\C-f] 'caml-types-show-call)  ; "function"
@@ -340,93 +338,61 @@ have `caml-electric-indent' on, which see.")
     (define-key map "\M-\C-q" 'caml-indent-phrase)
     (define-key map "\M-\C-x" 'caml-eval-phrase)
 
-    (if (featurep 'xemacs) nil
-      (let ((menu (make-sparse-keymap "Caml"))
-            (forms (make-sparse-keymap "Forms")))
-        (define-key map "\C-c\C-d" 'caml-show-imenu)
-        (define-key map [menu-bar] (make-sparse-keymap))
-        (define-key map [menu-bar caml] (cons "Caml" menu))
-        ;; caml-help
+    (let ((menu (make-sparse-keymap "Caml"))
+          (forms (make-sparse-keymap "Forms")))
+      (define-key map "\C-c\C-d" 'caml-show-imenu)
+      (define-key map [menu-bar] (make-sparse-keymap))
+      (define-key map [menu-bar caml] (cons "Caml" menu))
+      ;; caml-help
 
-        (define-key menu [open] '("Open add path" . ocaml-add-path ))
-        (define-key menu [close]
-          '("Close module for help" . ocaml-close-module))
-        (define-key menu [open] '("Open module for help" . ocaml-open-module))
-        (define-key menu [help] '("Help for identifier" . caml-help))
-        (define-key menu [complete] '("Complete identifier" . caml-complete))
-        (define-key menu [separator-help] '("---"))
+      (define-key menu [open] '("Open add path" . ocaml-add-path ))
+      (define-key menu [close]
+        '("Close module for help" . ocaml-close-module))
+      (define-key menu [open] '("Open module for help" . ocaml-open-module))
+      (define-key menu [help] '("Help for identifier" . caml-help))
+      (define-key menu [complete] '("Complete identifier" . caml-complete))
+      (define-key menu [separator-help] '("---"))
 
-        ;; caml-types
-        (define-key menu [show-type]
-          '("Show type at point" . caml-types-show-type ))
-        (define-key menu [separator-types] '("---"))
+      ;; caml-types
+      (define-key menu [show-type]
+        '("Show type at point" . caml-types-show-type ))
+      (define-key menu [separator-types] '("---"))
 
-        ;; others
-        (define-key menu [camldebug] '("Call debugger..." . camldebug))
-        (define-key menu [run-caml] '("Start subshell..." . run-caml))
-        (define-key menu [compile] '("Compile..." . compile))
-        (define-key menu [switch-view]
-          '("Switch view" . caml-find-alternate-file))
-        (define-key menu [separator-format] '("--"))
-        (define-key menu [forms] (cons "Forms" forms))
-        (define-key menu [show-imenu] '("Show index" . caml-show-imenu))
-        (put 'caml-show-imenu 'menu-enable '(not caml-imenu-shown))
-        (define-key menu [show-subshell] '("Show subshell" . caml-show-subshell))
-        (put 'caml-show-subshell 'menu-enable 'caml-shell-active)
-        (define-key menu [eval-phrase] '("Eval phrase" . caml-eval-phrase))
-        (put 'caml-eval-phrase 'menu-enable 'caml-shell-active)
-        (define-key menu [indent-phrase] '("Indent phrase" . caml-indent-phrase))
-        (define-key forms [while]
-          '("while .. do .. done" . caml-insert-while-form))
-        (define-key forms [try] '("try .. with .." . caml-insert-try-form))
-        (define-key forms [match] '("match .. with .." . caml-insert-match-form))
-        (define-key forms [let] '("let .. in .." . caml-insert-let-form))
-        (define-key forms [if] '("if .. then .. else .." . caml-insert-if-form))
-        (define-key forms [begin] '("for .. do .. done" . caml-insert-for-form))
-        (define-key forms [begin] '("begin .. end" . caml-insert-begin-form))))
+      ;; others
+      (define-key menu [camldebug] '("Call debugger..." . camldebug))
+      (define-key menu [run-caml] '("Start subshell..." . run-caml))
+      (define-key menu [compile] '("Compile..." . compile))
+      (define-key menu [switch-view]
+        '("Switch view" . caml-find-alternate-file))
+      (define-key menu [separator-format] '("--"))
+      (define-key menu [forms] (cons "Forms" forms))
+      (define-key menu [show-imenu] '("Show index" . caml-show-imenu))
+      (put 'caml-show-imenu 'menu-enable '(not caml-imenu-shown))
+      (define-key menu [show-subshell] '("Show subshell" . caml-show-subshell))
+      (put 'caml-show-subshell 'menu-enable 'caml-shell-active)
+      (define-key menu [eval-phrase] '("Eval phrase" . caml-eval-phrase))
+      (put 'caml-eval-phrase 'menu-enable 'caml-shell-active)
+      (define-key menu [indent-phrase] '("Indent phrase" . caml-indent-phrase))
+      (define-key forms [while]
+        '("while .. do .. done" . caml-insert-while-form))
+      (define-key forms [try] '("try .. with .." . caml-insert-try-form))
+      (define-key forms [match] '("match .. with .." . caml-insert-match-form))
+      (define-key forms [let] '("let .. in .." . caml-insert-let-form))
+      (define-key forms [if] '("if .. then .. else .." . caml-insert-if-form))
+      (define-key forms [begin] '("for .. do .. done" . caml-insert-for-form))
+      (define-key forms [begin] '("begin .. end" . caml-insert-begin-form)))
     map)
   "Keymap used in Caml mode.")
 
-(defvar caml-mode-xemacs-menu
-  (if (featurep 'xemacs)
-      '("Caml"
-        [ "Indent phrase" caml-indent-phrase :keys "C-M-q" ]
-        [ "Eval phrase" caml-eval-phrase
-          :active caml-shell-active :keys "C-M-x" ]
-        [ "Show subshell" caml-show-subshell caml-shell-active ]
-        ("Forms"
-         [ "while .. do .. done" caml-insert-while-form t]
-         [ "try .. with .." caml-insert-try-form t ]
-         [ "match .. with .." caml-insert-match-form t ]
-         [ "let .. in .." caml-insert-let-form t ]
-         [ "if .. then .. else .." caml-insert-if-form t ]
-         [ "for .. do .. done" caml-insert-for-form t ]
-         [ "begin .. end" caml-insert-begin-form t ])
-        "---"
-        [ "Switch view" caml-find-alternate-file t ]
-        [ "Compile..." compile t ]
-        [ "Start subshell..." run-caml t ]
-        "---"
-        [ "Show type at point" caml-types-show-type t ]
-        "---"
-        [ "Complete identifier" caml-complete t ]
-        [ "Help for identifier" caml-help t ]
-        [ "Add path for documentation" ocaml-add-path t ]
-        [ "Open module for documentation" ocaml-open t ]
-        [ "Close module for documentation" ocaml-close t ]
-        ))
-  "Menu to add to the menubar when running Xemacs.")
-
 (defvar caml-mode-syntax-table
-  (let ((st (make-syntax-table))
-        (n (if (featurep 'xemacs) "" "n")))
+  (let ((st (make-syntax-table)))
     ;; backslash is an escape sequence
     (modify-syntax-entry ?\\ "\\" st)
     ;; ( is first character of comment start
-    (modify-syntax-entry ?\( (concat "()1" n) st)
+    (modify-syntax-entry ?\( "()1n" st)
     ;; * is second character of comment start,
     ;; and first character of comment end
-    (modify-syntax-entry ?*  (concat ". 23" n) st)
+    (modify-syntax-entry ?* ". 23n" st)
     ;; ) is last character of comment end
     (modify-syntax-entry ?\) ")(4" st)
     ;; backquote was a string-like delimiter (for character literals)
@@ -466,14 +432,13 @@ have `caml-electric-indent' on, which see.")
 
 ;;; The major mode
 (eval-when-compile
-  (if (featurep 'xemacs) nil
-    (require 'imenu)))
+  (require 'imenu))
 
 ;;
 (defvar caml-mode-hook nil
   "Hook for `caml-mode'.")
 
-(define-derived-mode caml-mode fundamental-mode "caml" ;FIXME: Use `prog-mode'
+(define-derived-mode caml-mode prog-mode "caml"
   "Major mode for editing OCaml code."
   (setq local-abbrev-table caml-mode-abbrev-table)
   (make-local-variable 'paragraph-start)
@@ -502,21 +467,13 @@ have `caml-electric-indent' on, which see.")
   ;garrigue 27-11-96
   (setq case-fold-search nil)
   ;garrigue july 97
-  (if (featurep 'xemacs)
-      (if (and (featurep 'menubar)
-               current-menubar)
-          (progn
-            ;; make a local copy of the menubar, so our modes don't
-            ;; change the global menubar
-            (set-buffer-menubar current-menubar)
-            (add-submenu nil caml-mode-xemacs-menu)))
-    ;imenu support (not for Xemacs)
-    (make-local-variable 'imenu-create-index-function)
-    (setq imenu-create-index-function #'caml-create-index-function)
-    (make-local-variable 'imenu-generic-expression)
-    (setq imenu-generic-expression caml-imenu-search-regexp)
-    (if (and caml-imenu-enable (< (buffer-size) 10000))
-        (caml-show-imenu))))
+  ;; imenu support
+  (make-local-variable 'imenu-create-index-function)
+  (setq imenu-create-index-function #'caml-create-index-function)
+  (make-local-variable 'imenu-generic-expression)
+  (setq imenu-generic-expression caml-imenu-search-regexp)
+  (if (and caml-imenu-enable (< (buffer-size) 10000))
+      (caml-show-imenu)))
 
 
 ;; Disabled because it assumes make and does not play well with ocamlbuild.
@@ -757,46 +714,60 @@ variable `caml-mode-indentation'."
 
 (require 'compile)
 
-;; In Emacs 19, the regexps in compilation-error-regexp-alist do not
-;; match the error messages when the language is not English.
-;; Hence we add a regexp.
-;; FIXME do we (still) have i18n of error messages ???
+(defconst caml--error-regexp
+  (rx bol
+      (* " ")
+      (group                                ; 1: HIGHLIGHT
+       (or "File "
+           ;; Exception backtrace.
+           (seq
+            (or "Raised at" "Re-raised at" "Raised by primitive operation at"
+                "Called from")
+            (* nonl)            ; OCaml ≥4.11: " FUNCTION in"
+            " file "))
+       (group (? "\""))                     ; 2
+       (group (+ (not (in "\t\n \",<>"))))  ; 3: FILE
+       (backref 2)
+       (? " (inlined)")
+       ", line" (? "s") " "
+       (group (+ (in "0-9")))               ; 4: LINE-START
+       (? "-" (group (+ (in "0-9"))))       ; 5; LINE-END
+       (? ", character" (? "s") " "
+          (group (+ (in "0-9")))            ; 6: COL-START
+          (? "-" (group (+ (in "0-9")))))   ; 7: COL-END
+       ;; Colon not present in backtraces.
+       (? ":"))
+      (? "\n"
+         (* (in "\t "))
+         (* (or (seq (+ (in "0-9"))
+                     " | "
+                     (* nonl))
+                (+ "^"))
+            "\n"
+            (* (in "\t ")))
+         (group "Warning"                   ; 8: WARNING
+                (? " " (+ (in "0-9")))
+                (? " [" (+ (in "a-z0-9-")) "]")
+                ":")))
+  "Regular expression matching the error messages produced by ocamlc/ocamlopt.
+Also matches source references in exception backtraces.")
 
-(defconst caml-error-regexp
-  "^[ A-\377]+ \"\\([^\"\n]+\\)\", [A-\377]+ \\([0-9]+\\)[-,:]"
-  "Regular expression matching the error messages produced by ocamlc.")
+(defun caml--end-column ()
+  "Return the end-column number in a parsed OCaml message.
+OCaml uses exclusive end-columns but Emacs wants them to be inclusive."
+  (and (match-beginning 7)
+       (+ (string-to-number (match-string 7))
+          ;; Prior to Emacs 28, the end-column function value was incorrectly
+          ;; off by one.
+          (if (>= emacs-major-version 28) -1 0))))
 
-;; Newer emacs versions support line/char ranges
-;; We will adapt OCaml to output error messages in a compatible format.
-;; In the meantime we add new formats here in addition to the old one.
-(defconst caml-error-regexp-newstyle
-  (concat "^[ A-\377]+ \"\\([^\"\n]+\\)\", line \\([0-9]+\\),"
-          "char \\([0-9]+\\) to line \\([0-9]+\\), char \\([0-9]+\\):")
-  "Regular expression matching the error messages produced by ocamlc/ocamlopt.")
+(when (boundp 'compilation-error-regexp-alist-alist)
+  (push `(ocaml ,caml--error-regexp 3 (4 . 5) (6 . caml--end-column) (8) 1
+                (8 font-lock-function-name-face))
+        compilation-error-regexp-alist-alist))
 
-(defconst caml-error-regexp-new-newstyle
-  (concat "^[ A-\377]+ \"\\([^\"\n]+\\)\", line \\([0-9]+\\), "
-          "characters \\([0-9]+\\)-\\([0-9]+\\):")
-  "Regular expression matching the error messages produced by ocamlc/ocamlopt.")
-
-
-(if (boundp 'compilation-error-regexp-alist)
-    (progn
-      (or (assoc caml-error-regexp
-                 compilation-error-regexp-alist)
-          (setq compilation-error-regexp-alist
-                (cons (list caml-error-regexp 1 2)
-                      compilation-error-regexp-alist)))
-      (or (assoc caml-error-regexp-newstyle
-                 compilation-error-regexp-alist)
-          (setq compilation-error-regexp-alist
-                (cons (list caml-error-regexp-newstyle 1 '(2 . 4) '(3 . 5))
-                      compilation-error-regexp-alist)))
-      (or (assoc caml-error-regexp-new-newstyle
-                 compilation-error-regexp-alist)
-          (setq compilation-error-regexp-alist
-                (cons (list caml-error-regexp-new-newstyle 1 2 '(3 . 4))
-                      compilation-error-regexp-alist)))))
+(when (boundp 'compilation-error-regexp-alist)
+  (push 'ocaml compilation-error-regexp-alist))
 
 ;; A regexp to extract the range info
 
@@ -810,9 +781,6 @@ error message produced by ocamlc.")
 
 (defvar caml-error-overlay nil)
 (defvar caml-next-error-skip-warnings-flag nil)
-
-(define-obsolete-function-alias 'caml-string-to-int
-  #'string-to-number "Jan 2021")
 
 ;;itz 04-21-96 somebody didn't get the documentation for next-error
 ;;right. When the optional argument is a number n, it should move
