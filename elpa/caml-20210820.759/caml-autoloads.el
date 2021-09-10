@@ -1,7 +1,10 @@
-;;; caml-mode-site-file.el --- Automatically extracted autoloads.
+;;; caml-autoloads.el --- automatically extracted autoloads
+;;
 ;;; Code:
-(add-to-list 'load-path
-             (or (file-name-directory load-file-name) (car load-path)))
+
+(add-to-list 'load-path (directory-file-name
+                         (or (file-name-directory #$) (car load-path))))
+
 
 ;;;### (autoloads nil "caml" "caml.el" (0 0 0 0))
 ;;; Generated autoloads from caml.el
@@ -20,35 +23,28 @@
 ;;;### (autoloads nil "caml-font" "caml-font.el" (0 0 0 0))
 ;;; Generated autoloads from caml-font.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-font" '("inferior-caml-" "caml-font-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-font" '("caml-font-" "inferior-caml-")))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-font-old" "caml-font-old.el" (0 0 0 0))
 ;;; Generated autoloads from caml-font-old.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-font-old" '("inferior-caml-" "caml-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-font-old" '("caml-" "inferior-caml-")))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-help" "caml-help.el" (0 0 0 0))
 ;;; Generated autoloads from caml-help.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-help" '("ocaml-" "caml-")))
-
-;;;***
-
-;;;### (autoloads nil "caml-hilit" "caml-hilit.el" (0 0 0 0))
-;;; Generated autoloads from caml-hilit.el
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-hilit" '("caml-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-help" '("caml-" "ocaml-")))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-types" "caml-types.el" (0 0 0 0))
 ;;; Generated autoloads from caml-types.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-types" '("caml-" "next-annotation")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-types" '("caml-")))
 
 ;;;***
 
@@ -73,7 +69,7 @@ the camldebug commands `cd DIR' and `directory'.
 
 \(fn PATH)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "camldebug" '("current-camldebug-buffer" "camldebug-" "def-camldebug")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "camldebug" '("camldebug-" "current-camldebug-buffer" "def-camldebug")))
 
 ;;;***
 
@@ -84,7 +80,14 @@ the camldebug commands `cd DIR' and `directory'.
 
 ;;;***
 
-;;;### (autoloads nil nil ("caml-compat.el") (0 0 0 0))
+;;;### (autoloads nil nil ("caml-pkg.el") (0 0 0 0))
 
 ;;;***
 
+;; Local Variables:
+;; version-control: never
+;; no-byte-compile: t
+;; no-update-autoloads: t
+;; coding: utf-8
+;; End:
+;;; caml-autoloads.el ends here
