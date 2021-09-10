@@ -98,15 +98,6 @@
 ;; packages
 ;;
 
-;; aggressive-indent
-;; (global-aggressive-indent-mode 1)
-;; (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
-
-;; (use-package adaptive-wrap
-;;   :hook
-;;   (visual-line-mode . adaptive-wrap-prefix-mode)
-;;   )
-
 (use-package auto-compile
   :init
   (setq
@@ -156,16 +147,14 @@
   :config
   (setq
     css-indent-offset 2
-    )
-  )
+    ))
 
 (use-package csv-mode
   :mode ("\\.tsv$")
   :config
   (setq
     indent-tabs-mode 't
-    )
-  )
+    ))
 
 (use-package direnv
   :config
@@ -206,15 +195,14 @@
 ;; flyspell -- on the fly spell checking
 (use-package flyspell
   :commands (flyspell-prog-mode flyspell-mode)
-  :config
-  (setq
-    ispell-dictionary "british"
-    )
   :hook
   ((text-mode . flyspell-mode)
     (prog-mode . flyspell-prog-mode)
     )
-  )
+  :config
+  (setq
+    ispell-dictionary "british"
+    ))
 
 (use-package git-ps1-mode
   :hook find-file
@@ -274,8 +262,7 @@
   :init
   (setq
     markdown-command "multimarkdown"
-    )
-  )
+    ))
 
 (use-package mu4e
   :config
@@ -285,13 +272,14 @@
     mu4e-drafts-folder "/drafts"             ;; unfinished messages
     mu4e-trash-folder  "/trash"              ;; trashed messages
     mu4e-refile-folder "/archive"            ;; saved messages
-    )
-  )
+    ))
 
 ;; ocaml
+
 ;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
 (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
 ;; ## end of OPAM user-setup addition for emacs / base ## keep this line
+
 (use-package tuareg
   :init
   (let ((opam-share (ignore-errors
@@ -304,7 +292,7 @@
       (setq merlin-command 'opam)
       ))
   :hook
-  ( ((tuareg-mode caml-mode) . merlin-mode)
+  (((tuareg-mode caml-mode) . merlin-mode)
     (utop-mode . (lambda ()
                    (local-set-key (kbd "M-<right>") utop-history-goto-next)
                    (local-set-key (kbd "M-<left>") utop-history-goto-prev)
@@ -325,7 +313,6 @@
     )
   )
 
-;; org-mode
 (use-package org
   :defer t
   :pin org
@@ -541,6 +528,18 @@ are between the current date (DATE) and Easter Sunday."
     sh-indentation 2
     ))
 
+(use-package smex
+  ;; Enhance M-x to allow easier execution of commands
+  :ensure t
+  ;; Using counsel-M-x for now. Remove this permanently if counsel-M-x works better.
+  :disabled t
+  :config
+  (setq
+    smex-save-file (concat user-emacs-directory ".smex-items")
+    )
+  (smex-initialize)
+  :bind ("M-x" . smex))
+
 (use-package solarized-theme
   :ensure
   :init
@@ -635,14 +634,6 @@ are between the current date (DATE) and Easter Sunday."
           )
   )
 
-(use-package rjsx-mode
-  :mode
-  ((("\\.json$" "\\.js$") . rjsx-mode))
-  :config
-  (setq
-    js-indent-level 2
-    ))
-
 (use-package typescript-mode
   :mode ("\\.ts$")
   :config
@@ -672,8 +663,8 @@ are between the current date (DATE) and Easter Sunday."
   :hook (text-mode . visual-fill-column-mode)
   )
 
-;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
 (use-package whitespace
+  ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
   :commands (whitespace-buffer
               whitespace-cleanup
               whitespace-mode
