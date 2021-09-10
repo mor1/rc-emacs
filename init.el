@@ -107,7 +107,8 @@
 ;; (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
 
 (use-package adaptive-wrap
-  :hook (visual-line-mode . adaptive-wrap-prefix-mode)
+  :hook
+  (visual-line-mode . adaptive-wrap-prefix-mode)
   )
 
 (use-package auto-compile
@@ -118,15 +119,6 @@
     )
   )
 (auto-compile-on-load-mode)
-
-(use-package cc-mode
-  :defer t
-  :config
-  (setq
-    c-basic-offset 4
-    c-default-style "linux"
-    )
-  )
 
 (use-package calendar
   :defer t
@@ -143,6 +135,15 @@
     (insert
       (calendar-date-string (calendar-current-date) t omit-day-of-week-p)
       ))
+  )
+
+(use-package cc-mode
+  :defer t
+  :config
+  (setq
+    c-basic-offset 4
+    c-default-style "linux"
+    )
   )
 
 (use-package coffee-mode
