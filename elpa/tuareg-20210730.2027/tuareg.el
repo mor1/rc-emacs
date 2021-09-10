@@ -460,8 +460,9 @@ Valid names are `browse-url', `browse-url-firefox', etc."
 
 (defface tuareg-font-lock-extension-node-face
   (if tuareg-faces-inherit-p
-      '((t :inherit tuareg-font-lock-infix-extension-node-face
-           :background "gray92"))
+      '((default :inherit tuareg-font-lock-infix-extension-node-face)
+        (((background dark)) :foreground "LightSteelBlue")
+        (t :background "gray92"))
     '((((background light)) (:foreground "Orchid" :background "gray92"))
       (((background dark)) (:foreground "LightSteelBlue" :background "gray92"))
       (t (:foreground "LightSteelBlue"))))
@@ -469,6 +470,16 @@ Valid names are `browse-url', `browse-url-firefox', etc."
   :group 'tuareg-faces)
 (defvar tuareg-font-lock-extension-node-face
   'tuareg-font-lock-extension-node-face)
+
+(defface tuareg-font-lock-doc-markup-face
+  '((t :inherit font-lock-constant-face)) ; FIXME: find something better
+  "Face for mark-up syntax in OCaml doc comments."
+  :group 'tuareg-faces)
+
+(defface tuareg-font-lock-doc-verbatim-face
+  '((t :inherit fixed-pitch))   ; FIXME: find something better
+  "Face for verbatim text in OCaml doc comments (inside {v ... v})."
+  :group 'tuareg-faces)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                            Support definitions
@@ -586,7 +597,7 @@ Regexp match data 0 points to the chars."
     (if (or (eq (char-syntax (or (char-before mbegin) ?\ )) syntax)
             (eq (char-syntax (or (char-after mend) ?\ )) syntax)
             (memq (get-text-property mbegin 'face)
-                  '(tuareg-doc-face
+                  '(font-lock-doc-face
                     font-lock-string-face
                     font-lock-comment-face
                     tuareg-font-lock-error-face
@@ -639,8 +650,6 @@ Regexp match data 0 points to the chars."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                  Font-Lock
-
-(defvar tuareg-doc-face 'font-lock-doc-face)
 
 (defconst tuareg-font-lock-syntactic-keywords
   ;; Char constants start with ' but ' can also appear in identifiers.
@@ -700,6 +709,165 @@ Regexp match data 0 points to the chars."
                                 'syntax-table (string-to-syntax "|")))))
         (c (error "Unexpected char '%c' starting delimited string" c))))))
 
+(defmacro tuareg--syntax-rules (&rest rules)
+  "Generate a function to parse according to RULES.
+Each argument has the form (RE BODY...) where RE is a regexp to
+match and BODY what to execute upon match. BODY is executed with
+point at the end of the match, `start' bound to the start of the
+match and `group' to the number of the first group in RE, if any.
+The returned function takes the two arguments BEGIN and END
+delimiting the region of interest. "
+  (let ((group-number 1)
+        (clauses nil)
+        (regexps nil))
+    (dolist (rule rules)
+      (let* ((re (macroexpand (car rule)))
+             (body (cdr rule))
+             (re-ngroups (regexp-opt-depth re))
+             (clause-body
+              (if (> re-ngroups 0)
+                  `((let ((group ,(1+ group-number)))
+                      ,@body))
+                body)))
+        (push re regexps)
+        (push `((match-beginning ,group-number) . ,clause-body)
+              clauses)
+        (setq group-number (+ group-number 1 re-ngroups))))
+    (let ((combined-re (mapconcat (lambda (re) (concat "\\(" re "\\)"))
+                                  (nreverse regexps) "\\|"))
+          (begin (gensym "begin"))
+          (end (gensym "end")))
+      `(lambda (,begin ,end)
+         (goto-char ,begin)
+         (while (and (< (point) ,end)
+                     (re-search-forward ,combined-re ,end t)
+                     (let ((start (match-beginning 0)))
+                       (cond . ,(nreverse clauses))
+                       t)))))))
+
+;; FIXME: using nil here is a tad unstable -- sometimes we get a full
+;; fontification as code (which is nice!), sometimes not.
+(defconst tuareg-font-lock-doc-code-face nil
+  "Face to use for parts of a doc comment marked up as code (ie, [TEXT]).")
+
+(defun tuareg-fontify-doc-comment (state)
+  (let ((beg (nth 8 state))
+        (end (save-excursion
+               (parse-partial-sexp (point) (point-max) nil nil state
+                                   'syntax-table)
+               (point))))
+    (put-text-property beg end 'face 'font-lock-doc-face)
+    (when (and (eq (char-after (- end 2)) ?*)
+               (eq (char-after (- end 1)) ?\)))
+      (setq end (- end 2)))             ; stop before closing "*)"
+    (save-excursion
+      (let ((case-fold-search nil))
+        (funcall
+         (tuareg--syntax-rules
+          ((rx (or "[" "{["))
+           ;; Fontify opening bracket.
+           (put-text-property start (point) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           ;; Skip balanced set of brackets.
+           (let ((start-end (point))
+                 (level 1))
+             (while (and (< (point) end)
+                         (re-search-forward (rx (? "\\") (in "[]"))
+                                            end 'noerror)
+                         (let ((next (char-after (match-beginning 0))))
+                           (cond
+                            ((eq next ?\[)
+                             (setq level (1+ level))
+                             t)
+                            ((eq next ?\])
+                             (setq level (1- level))
+                             (if (> level 0)
+                                 t
+                               (forward-char -1)
+                               nil))
+                            (t t)))))
+             (put-text-property start-end (point) 'face
+                                tuareg-font-lock-doc-code-face)
+             (if (> level 0)
+                 ;; Highlight unbalanced opening bracket.
+                 (put-text-property start start-end 'face
+                                    'tuareg-font-lock-error-face)
+               ;; Fontify closing bracket.
+               (put-text-property (point) (1+ (point)) 'face
+                                  'tuareg-font-lock-doc-markup-face)
+               (forward-char 1))))
+
+          ((rx "]")
+           (put-text-property start (1+ start) 'face
+                              'tuareg-font-lock-error-face))
+
+          ;; @-tag.
+          ((rx "@" (group (or "author" "deprecated" "param" "raise" "return"
+                              "see" "since" "before" "version"))
+               word-end)
+           (put-text-property start (point) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           ;; Use code face for the first argument of some tags.
+           (when (and (member (match-string group)
+                              '("param" "raise" "before"))
+                      (looking-at (rx (+ space)
+                                      (group
+                                       (+ (in "a-zA-Z0-9" "_.'-"))))))
+             (put-text-property (match-beginning 1) (match-end 1) 'face
+                                tuareg-font-lock-doc-code-face)
+             (goto-char (match-end 0))))
+
+          ;; Cross-reference.
+          ((rx (or "{!" "{{!")
+               (? (or "tag" "module" "modtype" "class" "classtype" "val" "type"
+                      "exception" "attribute" "method" "section" "const"
+                      "recfield")
+                  ":")
+                (group (* (in "a-zA-Z0-9" "_.'"))))
+           (put-text-property start (match-beginning group) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           ;; Use code face for the reference.
+           (put-text-property (match-beginning group) (match-end group) 'face
+                              tuareg-font-lock-doc-code-face))
+
+          ;; {v ... v}
+          ((rx "{v" (in " \t\n"))
+           (put-text-property start (+ 3 start) 'face
+                              'tuareg-font-lock-doc-markup-face)
+           (let ((verbatim-end end))
+             (when (re-search-forward (rx (in " \t\n") "v}")
+                                      end 'noerror)
+               (setq verbatim-end (match-beginning 0))
+               (put-text-property verbatim-end (point) 'face
+                                  'tuareg-font-lock-doc-markup-face))
+             (put-text-property (+ 3 start) verbatim-end 'face
+                                'tuareg-font-lock-doc-verbatim-face)))
+
+          ;; Other {..} and <..> constructs.
+          ((rx (or (seq "{"
+                        (or (or "-" ":" "_" "^"
+                                "b" "i" "e" "C" "L" "R"
+                                "ul" "ol" "%"
+                                "{:")
+                            ;; Section header with optional label.
+                            (seq (+ digit)
+                                 (? ":"
+                                    (+ (in "a-zA-Z0-9" "_"))))))
+                   "}"
+                   ;; HTML-style tags
+                   (seq "<" (? "/")
+                        (or "b" "i" "code" "ul" "ol" "li"
+                            "center" "left" "right"
+                            (seq "h" (+ digit)))
+                        ">")))
+           (put-text-property start (point) 'face
+                              'tuareg-font-lock-doc-markup-face))
+
+          ;; Escaped syntax characters.
+          ((rx "\\" (in "{}[]@"))))
+         beg end))))
+  nil)
+
 (defun tuareg-font-lock-syntactic-face-function (state)
   "`font-lock-syntactic-face-function' for Tuareg."
   (if (nth 3 state)
@@ -709,7 +877,7 @@ Regexp match data 0 points to the chars."
                (eq (char-after (+ start 2)) ?*)
                (not (eq (char-after (+ start 3)) ?*)))
           ;; This is a documentation comment
-          tuareg-doc-face
+          (tuareg-fontify-doc-comment state)
         font-lock-comment-face))))
 
 ;; Initially empty, set in `tuareg--install-font-lock-1'
@@ -1169,6 +1337,8 @@ This based on the fontification and is faster than calling `syntax-ppss'."
          (memq face '(font-lock-comment-face
                       font-lock-comment-delimiter-face
                       font-lock-doc-face
+                      tuareg-font-lock-doc-markup-face
+                      tuareg-font-lock-doc-verbatim-face
                       font-lock-string-face)))))
 
 (defun tuareg--pattern-pre-form-let ()
@@ -1327,7 +1497,6 @@ Run only once."
     (define-key map "\C-c\C-a" #'tuareg-find-alternate-file)
     (define-key map "\C-c\C-c" #'compile)
     (define-key map "\C-c\C-w" #'tuareg-opam-update-env)
-    (define-key map "\C-xnd" #'tuareg-narrow-to-phrase)
     (define-key map "\M-\C-x" #'tuareg-eval-phrase)
     (define-key map "\C-x\C-e" #'tuareg-eval-phrase)
     (define-key map "\C-c\C-e" #'tuareg-eval-phrase)
@@ -1477,7 +1646,7 @@ For use on `electric-indent-functions'."
             (def-in-exp (defs "in" exp))
             (def (var "d=" exp) (id "d=" datatype) (id "d=" module))
             (idtype (id ":" type))
-            (var (id) ("m-type" var) ("d-type" var) ("rec" var)
+            (var (id) ("m-type" var) ("d-type" var) ("c-type" var) ("rec" var)
                  ("private" var) (idtype)
                  ("l-module" var) ("l-class" var))
             (exception (id "of" type))
@@ -1908,7 +2077,7 @@ Return values can be
          (t t)))))))
 
 (defun tuareg-smie-backward-token ()
-  "Move point to the beginning of the next token and return its SMIE name."
+  "Move point to the beginning of the previous token and return its SMIE name."
   (let ((tok (tuareg-smie--backward-token)))
     (cond
      ;; Distinguish a let expression from a let declaration.
@@ -1933,12 +2102,13 @@ Return values can be
                         (tuareg-smie--label-colon-p))))
           (if (member nearest '("with" "|" "fun" "function" "functor"))
               tok "t->"))))
-     ;; Handle "module type", mod-constraint's "with/and type" and
-     ;; polymorphic syntax.
+     ;; Handle "module type", "class type", mod-constraint's "with/and type"
+     ;; and polymorphic syntax.
      ((equal tok "type")
       (save-excursion
         (let ((prev (tuareg-smie--backward-token)))
           (cond ((equal prev "module") "m-type")
+                ((equal prev "class") "c-type")
                 ((member prev '("and" "with")) "w-type")
                 ((equal prev ":") "d-type"); ": type a. ..."
                 (t tok)))))
@@ -2221,7 +2391,7 @@ Return values can be
    ;; An important role of this first condition is to call smie-indent-virtual
    ;; so that we get called back to compute the (virtual) indentation of
    ;; "object", thus making sure we get called back to apply the second rule.
-   ((and (member token '("inherit" "val" "method" "constraint"))
+   ((and (member token '("inherit" "val" "method" "constraint" "initializer"))
          (smie-rule-parent-p "object"))
     (save-excursion
       (forward-word 1)
@@ -2229,7 +2399,8 @@ Return values can be
       (let ((col (smie-indent-virtual)))
         `(column . ,(+ tuareg-default-indent col)))))
    ;; For "class foo = object(type)...end", align object...end with class.
-   ((and (equal token "object") (smie-rule-parent-p "class"))
+   ((and (equal token "object") (smie-rule-parent-p "class")
+         (not (smie-rule-bolp)))
     (smie-rule-parent))))
 
 (defun tuareg-smie--if-then-hack (token)
@@ -2362,60 +2533,169 @@ Return a non-nil value if a comment was skipped."
   (skip-chars-forward " \t;")
   (while (tuareg--skip-forward-comment)))
 
-(defconst tuareg-starters-syms
-  '("type" "d-let" "exception" "module" "class" "val" "external" "open"))
+(defvar-local tuareg-smie--forward-and-cache nil
+  "Alist memoising results from (smie-forward-sexp \"and\").")
 
-(defun tuareg-backward-beginning-of-defun ()
+(defvar-local tuareg-smie--backward-and-cache nil
+  "Alist memoising results from (smie-backward-sexp \"and\").
+Each element is (POS-BEFORE POS-AFTER VALUE) where POS-BEFORE and
+POS-AFTER are the positions before and after the call
+respectivaly, and VALUE what the call returned.")
+
+(defvar-local tuareg-smie--and-cache-tick nil
+  "Buffer-modification tick at which and-caches are valid.
+Applies to `tuareg-smie--forward-and-cache'
+and `tuareg-smie--backward-and-cache'.")
+
+(defun tuareg-backward-beginning-of-defun (&optional stay-in-current)
   "Move the point backward to the beginning of a definition.
-Return the token starting the phrase (`nil' if it is an expression)."
+Return the token starting the phrase (`nil' if it is an expression).
+If STAY-IN-CURRENT is non-nil, don't go to the previous defun if already
+at the start of one."
   (let ((state (syntax-ppss)))
-    (if (nth 3 state); in a string
-        (goto-char (nth 8 state))
-      ;; If on a word (e.g., "let" or "end"), move to the end of it.
-      ;; In particular, even if at the beginning of the "let" of a
-      ;; definition, one will not jump to the previous one.
-      (or (/= (skip-syntax-forward "w_") 0)
-          (tuareg--skip-backward-comments-semicolon))))
-  (let (td tok
-        (opoint (point)))
-    (setq td (smie-backward-sexp ";;")); for expressions
     (cond
-     ((and (car td) (member (nth 2 td) tuareg-starters-syms))
-      (goto-char (nth 1 td)) (setq tok (nth 2 td)))
-     ((and (car td) (string= (nth 2 td) ";;")))
-     (t
-      (goto-char opoint)
-      (while (progn
-               (setq td (smie-backward-sexp 'halfsexp))
-               (cond
-                ((and (car td)
-                      (member (nth 2 td) tuareg-starters-syms))
-                 (goto-char (nth 1 td)) (setq tok (nth 2 td)) nil)
-                ((and (car td) (string= (nth 2 td) ";;"))
-                 nil)
-                ((and (car td) (not (numberp (car td))))
-                 (unless (bobp)
-                   (goto-char (nth 1 td))
-                   ;; Make sure there is not a preceding ;;
-                   (setq opoint (point))
-                   (let ((tok (tuareg-smie-backward-token)))
-                     (goto-char opoint)
-                     (not (string= tok ";;")))))
-                (t t))))))
-    tok))
+     ;; In a string: move to its end (via the beginning).
+     ((nth 3 state)
+      (goto-char (nth 8 state))
+      (smie-forward-sexp))
+     ;; In a comment: move to its beginning.
+     ((nth 4 state)
+      (goto-char (nth 8 state)))
+     ;; At start of a word and we may move to previous defun: stay put.
+     ((and (not stay-in-current)
+           (looking-at (rx symbol-start))))
+     ;; If in or at the beginning of a word, move to the end.
+     ((/= (skip-syntax-forward "w_") 0))
+     ;; Otherwise, skip possibly trailing ";;".
+     (t (tuareg--skip-backward-comments-semicolon))))
 
-(defun tuareg--skip-double-semicolon ()
-  (tuareg-skip-blank-and-comments)
-  (when (looking-at ";;[ \t\n]*")
-    (goto-char (match-end 0))))
+  ;; We treat each "and" clause belonging to "d-let" or "type" as defuns
+  ;; in the own right since that is how programmers think about it.
+  (let* ((opoint (point))
+         (and-pos nil)
+         (ret-tok nil)
+         (tick (buffer-chars-modified-tick))
+         (cache-valid (eql tuareg-smie--and-cache-tick tick)))
+    (while
+        (and (not (bobp))
+             ;; Memoised call to (smie-backward-sexp "and")
+             (let* ((cached
+                     (and cache-valid
+                          (assq (point) tuareg-smie--backward-and-cache)))
+                    (td (if cached
+                            (progn
+                              (goto-char (nth 1 cached))
+                              (nth 2 cached))
+                          (unless cache-valid
+                            (setq tuareg-smie--forward-and-cache nil)
+                            (setq tuareg-smie--backward-and-cache nil)
+                            (setq tuareg-smie--and-cache-tick tick)
+                            (setq cache-valid t))
+                          (let* ((pt (point))
+                                 (r (smie-backward-sexp "and")))
+                            (push (list pt (point) r)
+                                  tuareg-smie--backward-and-cache)
+                            r))))
+               (and (nth 0 td)
+                    (let ((tpos (nth 1 td))
+                          (tok (nth 2 td)))
+                      (cond
+                       ;; Arrived at a token that always starts a defun.
+                       ((member tok '("type" "d-let" "exception" "module"
+                                      "class" "val" "external" "open"))
+                        (if (and and-pos (member tok '("d-let" "type")))
+                            ;; Previously found "and" is the start of the
+                            ;; defun: return it.
+                            (progn
+                              (goto-char and-pos)
+                              (setq ret-tok "and"))
+                          ;; This is the start of the defun.
+                          (goto-char tpos)
+                          (setq ret-tok tok))
+                        nil)
+                       ;; Arrived at "and": keep going backwards to find
+                       ;; out whether it was the start of a defun.
+                       ((equal tok "and")
+                        (unless and-pos
+                          (setq and-pos tpos))
+                        (goto-char tpos)
+                        t)
+                       ;; Arrived at "let": keep going backwards.
+                       ((equal tok "let")
+                        ;; Any previous "and" was not the start of a defun.
+                        (setq and-pos nil)
+                        (goto-char tpos)
+                        t)
+                       ((equal tok ";;")
+                        (if (and (= (point) opoint) (not stay-in-current))
+                            ;; Assume this ";;" to be the last part of
+                            ;; the defun to go past: skip and continue.
+                            (progn
+                              (goto-char tpos)
+                              t)
+                          ;; This marks the beginning of the defun.
+                          (setq ret-tok t)  ; Any non-nil value should do.
+                          nil))
+                       ((member tok '("do" "downto" "to"))
+                        (goto-char tpos)
+                        t)
+                       ;; Left bracket or similar: keep going.
+                       ((not (numberp (nth 0 td)))
+                        (goto-char tpos)
+                        t)
+                       ;; Something else: stop.
+                       (t nil)))))))
+    ret-tok))
+
+(defun tuareg-smie--forward-sexp-and ()
+  "Memoised (smie-forward-sexp \"and\"), point motion only."
+  (let* ((tick (buffer-chars-modified-tick))
+         (cache-valid (eql tuareg-smie--and-cache-tick tick))
+         (cached (and cache-valid
+                      (assq (point) tuareg-smie--forward-and-cache))))
+    (if cached
+        (goto-char (cdr cached))
+      (unless cache-valid
+        (setq tuareg-smie--forward-and-cache nil)
+        (setq tuareg-smie--backward-and-cache nil)
+        (setq tuareg-smie--and-cache-tick tick))
+      (let ((pt (point)))
+        (smie-forward-sexp "and")
+        (push (cons pt (point)) tuareg-smie--forward-and-cache)))))
 
 (defun tuareg-end-of-defun ()
   "Assuming that we are at the beginning of a definition, move to its end.
 See variable `end-of-defun-function'."
   (interactive)
-  (let ((td (smie-forward-sexp ";;"))) ; for expressions
-    (when (member (nth 2 td) tuareg-starters-syms)
-      (smie-forward-sexp 'halfsexp)))
+  (let* ((start (point))
+         (head (tuareg-smie--forward-token)))       ; Skip the head token.
+    (cond
+     ((member head '("type" "d-let" "let" "and" "exception" "module"
+                     "class" "val" "external" "open"))
+      ;; Non-expression defun.
+      (tuareg-smie--forward-sexp-and)
+      (let ((end (point)))
+        ;; Check whether this defun is part of a let...and... chain that
+        ;; ends with "in", in which case it is a single big defun.
+        ;; Otherwise, go back to the first end position.
+        (while
+            (let ((tok (tuareg-smie--forward-token)))
+              (cond ((equal tok "and")
+                     ;; Skip the "and" clause and keep looking.
+                     (tuareg-smie--forward-sexp-and)
+                     t)
+                    ((equal tok "in")
+                     ;; It's an expression, not a declaration: go to its end.
+                     (tuareg-smie--forward-sexp-and)
+                     nil)
+                    (t
+                     ;; No "in" found; use what we had at the start.
+                     (goto-char end)
+                     nil))))))
+     (t
+      ;; Expression: go back and skip it all at once.
+      (goto-char start)
+      (smie-forward-sexp ";;"))))
   (tuareg--skip-forward-comments-semicolon))
 
 (defun tuareg-beginning-of-defun (&optional arg)
@@ -2423,20 +2703,36 @@ See variable `end-of-defun-function'."
 See variable `beginning-of-defun-function'."
   (interactive "^P")
   (unless arg (setq arg 1))
-  (cond
-   ((> arg 0)
-    (while (and (> arg 0) (not (bobp)))
-      (tuareg-backward-beginning-of-defun)
-      (cl-decf arg)))
-   (t
-    (tuareg-backward-beginning-of-defun)
-    (unless (bobp) (tuareg-end-of-defun))
-    (while (and (< arg 0) (not (eobp)))
-      (tuareg--skip-double-semicolon)
-      (smie-forward-sexp 'halfsexp)
-      (cl-incf arg))
-    (tuareg-backward-beginning-of-defun)))
-  t); whether an experssion or a def, we found something.
+  (let ((ret t))
+    (cond
+     ((>= arg 0)
+      (while (and (> arg 0) ret)
+        (unless (tuareg-backward-beginning-of-defun)
+          (setq ret nil))
+        (cl-decf arg)))
+     (t
+      (while (and (< arg 0) ret)
+        (let ((start (point)))
+          (tuareg-end-of-defun)
+          (skip-chars-forward " \t\n")
+          (tuareg--skip-forward-comments-semicolon)
+          (let ((end (point)))
+            (tuareg-backward-beginning-of-defun)
+            ;; Did we make forward progress?
+            (when (<= (point) start)
+              ;; No, try again.
+              (goto-char end)
+              (tuareg-end-of-defun)
+              (skip-chars-forward " \t\n")
+              (tuareg--skip-forward-comments-semicolon)
+              (tuareg-backward-beginning-of-defun)
+              ;; This time?
+              (when (<= (point) start)
+                ;; No, no more defuns.
+                (goto-char (point-max))
+                (setq ret nil)))))
+        (cl-incf arg))))
+    ret))
 
 (defun tuareg-skip-siblings ()
   (while (and (not (bobp))
@@ -2444,7 +2740,7 @@ See variable `beginning-of-defun-function'."
                 (or (null (car td))
                     (and (string= (nth 2 td) ";;")
                          (tuareg-smie-backward-token)))))
-    (tuareg-backward-beginning-of-defun)
+    (tuareg-backward-beginning-of-defun t)
     (forward-comment (- (point))))
   (when (looking-at-p "in")
     ;; Skip over `local...in' and continue.
@@ -2453,7 +2749,7 @@ See variable `beginning-of-defun-function'."
     (tuareg-skip-siblings)))
 
 (defun tuareg--current-fun-name ()
-  (when (tuareg-backward-beginning-of-defun)
+  (when (tuareg-backward-beginning-of-defun t)
     (save-excursion (tuareg-smie-forward-token)
                     (tuareg-skip-blank-and-comments)
                     (let ((name (tuareg-smie-forward-token)))
@@ -2491,9 +2787,20 @@ point at the beginning of the error and return `nil'."
         begin end)
     (save-excursion
       (if pos (goto-char pos))
-      (tuareg-backward-beginning-of-defun)
+      ;; If the beginning of the defun was an "and", try again until we
+      ;; get to the start of the phrase.
+      (while (equal (tuareg-backward-beginning-of-defun t) "and")
+        (forward-char -1))
       (setq begin (point))
-      (tuareg-end-of-defun) ; OK as point is as beginning of defun
+      ;; Go all the way to the end of the phrase (not just the defun,
+      ;; which could end at an "and").
+      (let ((head (tuareg-smie-forward-token)))
+        (unless (member head '("type" "d-let" "let" "and" "exception" "module"
+                               "class" "val" "external" "open"))
+          ;; Expression phrase.
+          (goto-char begin)))
+      (smie-forward-sexp ";;")
+      (tuareg--skip-forward-comments-semicolon)
       (setq end (point))
       ;; Check if we were not stuck (after POS) because the phrase was
       ;; not well parenthesized.
@@ -2845,19 +3152,62 @@ Short cuts for interactions with the REPL:
 ;; the language is not English.  Hence we add a regexp.
 
 (defconst tuareg--error-regexp
-  "^ *\\(File \\(\"?\\)\\([^,\" \n\t<>]+\\)\\2, \
-lines? \\([0-9]+\\)-?\\([0-9]+\\)?\
-\\(?:, characters? \\([0-9]+\\)-?\\([0-9]+\\)?\\)?:\\)\
-\\(?:\n[ \t]*\\(?:\\(?:[0-9]+ | .*\\|\\^+\\)\n[ \t]*\\)*\
-\\(Warning\\(?: [0-9]+\\)?\\):\\)?"
-  "Regular expression matching the error messages produced by ocamlc/ocamlopt.")
+  (rx bol
+      (* " ")
+      (group                                ; 1: HIGHLIGHT
+       (or "File "
+           ;; Exception backtrace.
+           (seq
+            (or "Raised at" "Re-raised at" "Raised by primitive operation at"
+                "Called from")
+            (* nonl)            ; OCaml ≥4.11: " FUNCTION in"
+            " file "))
+       (group (? "\""))                     ; 2
+       (group (+ (not (in "\t\n \",<>"))))  ; 3: FILE
+       (backref 2)
+       (? " (inlined)")
+       ", line" (? "s") " "
+       (group (+ (in "0-9")))               ; 4: LINE-START
+       (? "-" (group (+ (in "0-9"))))       ; 5; LINE-END
+       (? ", character" (? "s") " "
+          (group (+ (in "0-9")))            ; 6: COL-START
+          (? "-" (group (+ (in "0-9")))))   ; 7: COL-END
+       ;; Colon not present in backtraces.
+       (? ":"))
+      (? "\n"
+         (* (in "\t "))
+         (* (or (seq (+ (in "0-9"))
+                     " | "
+                     (* nonl))
+                (+ "^"))
+            "\n"
+            (* (in "\t ")))
+         (group "Warning"                   ; 8: WARNING
+                (? " " (+ (in "0-9")))
+                (? " [" (+ (in "a-z0-9-")) "]")
+                ":")))
+  "Regular expression matching the error messages produced by ocamlc/ocamlopt.
+Also matches source references in exception backtraces.")
+
+(defun tuareg--end-column ()
+  "Return the end-column number in a parsed OCaml message.
+OCaml uses exclusive end-columns but Emacs wants them to be inclusive."
+  (and (match-beginning 7)
+       (+ (string-to-number (match-string 7))
+          ;; Prior to Emacs 28, the end-column function value was incorrectly
+          ;; off by one.
+          (if (>= emacs-major-version 28) -1 0))))
 
 (when (boundp 'compilation-error-regexp-alist-alist)
-  (push `(ocaml ,tuareg--error-regexp 3 (4 . 5) (6 . 7) (8) 1
+  (setq compilation-error-regexp-alist-alist
+        (assq-delete-all 'ocaml compilation-error-regexp-alist-alist))
+  (push `(ocaml ,tuareg--error-regexp 3 (4 . 5) (6 . tuareg--end-column) (8) 1
                 (8 font-lock-function-name-face))
         compilation-error-regexp-alist-alist))
 
 (when (boundp 'compilation-error-regexp-alist)
+  (setq compilation-error-regexp-alist
+        (delq 'ocaml compilation-error-regexp-alist))
   (push 'ocaml compilation-error-regexp-alist)
 
   (eval-after-load 'caml
@@ -2996,7 +3346,7 @@ lines? \\([0-9]+\\)-?\\([0-9]+\\)?\
 (require 'tuareg-opam)
 (when (and tuareg-opam-insinuate tuareg-opam)
   (setq tuareg-interactive-program
-        (concat tuareg-opam " config exec -- ocaml"))
+        (concat tuareg-opam " exec -- ocaml"))
 
   (advice-add 'compile :before #'tuareg--compile-opam)
 
