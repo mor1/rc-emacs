@@ -102,10 +102,10 @@
 ;; (global-aggressive-indent-mode 1)
 ;; (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
 
-(use-package adaptive-wrap
-  :hook
-  (visual-line-mode . adaptive-wrap-prefix-mode)
-  )
+;; (use-package adaptive-wrap
+;;   :hook
+;;   (visual-line-mode . adaptive-wrap-prefix-mode)
+;;   )
 
 (use-package auto-compile
   :init
@@ -137,30 +137,39 @@
   :defer t
   :config
   (setq
-    c-basic-offset 4
+    c-basic-offset 2
     c-default-style "linux"
     )
   )
 
 (use-package coffee-mode
   :config
-  (setq coffee-tab-width 2
+  (setq
+    coffee-tab-width 2
     )
-  :hook (coffee-mode . coffee-cos-mode)
+  :hook
+  (coffee-mode . coffee-cos-mode)
   )
 
 (use-package css-mode
   :mode ("\\.less$")
+  :config
+  (setq
+    css-indent-offset 2
+    )
   )
 
 (use-package csv-mode
   :mode ("\\.tsv$")
   :config
-  (setq indent-tabs-mode 't)
+  (setq
+    indent-tabs-mode 't
+    )
   )
 
 (use-package direnv
-  :config (direnv-mode)
+  :config
+  (direnv-mode)
   )
 
 (use-package dockerfile-mode
@@ -169,7 +178,12 @@
 
 (use-package eldoc
   :diminish
-  :hook ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
+  :hook
+  ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
+  )
+
+(use-package elisp-mode
+  :mode "dune"
   )
 
 (use-package exec-path-from-shell ;; set exec path
@@ -178,67 +192,51 @@
   )
 
 (use-package fill-column-indicator
-  :hook (prog-mode . fci-mode)
+  :hook
+  (prog-mode . fci-mode)
   )
 
 ;; flycheck -- on the fly checking
 (use-package flycheck
   :ensure t
-  :init (global-flycheck-mode)
+  :init
+  (global-flycheck-mode)
   )
 
 ;; flyspell -- on the fly spell checking
 (use-package flyspell
   :commands (flyspell-prog-mode flyspell-mode)
   :config
-  (setq ispell-dictionary "british")
-  :hook ((text-mode . flyspell-mode)
-          (prog-mode . flyspell-prog-mode))
+  (setq
+    ispell-dictionary "british"
+    )
+  :hook
+  ((text-mode . flyspell-mode)
+    (prog-mode . flyspell-prog-mode)
+    )
   )
+
 (use-package git-ps1-mode
   :hook find-file
   )
 
-;; git-timemachine
-
 (use-package go-mode
-  :hook ((before-save . gofmt-before-save)
-          (go-mode . go-eldoc-setup)
-          )
-  :config (setq
-            gofmt-command "goimports"
-            go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
-            )
-  )
-
-(use-package typescript-mode
-  :mode ("\\.ts$")
+  :hook
+  ((before-save . gofmt-before-save)
+    (go-mode . go-eldoc-setup)
+    )
   :config
-  (setq typescript-indent-level 2)
-  )
-
-(use-package rjsx-mode
-  :mode ("\\.js$")
-  :config
-  (setq js-indent-level 2)
-  )
-
-(use-package json-mode
-  :mode "\\.json$"
-  )
-
-(use-package json-reformat
-  :after json-mode
-  )
-
-(use-package elisp-mode
-  :mode "dune"
+  (setq
+    gofmt-command "goimports"
+    go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
+    )
   )
 
 (use-package magit
   :ensure t
   :config
-  (setq magit-commit-arguments (quote ("--signoff"))
+  (setq
+    magit-commit-arguments (quote ("--signoff"))
     magit-diff-refine-hunk (quote all)
     magit-process-popup-time 5
     magit-set-upstream-on-push t
@@ -261,41 +259,33 @@
   )
 
 (use-package make-mode
-  :mode (("sources$" . makefile-mode)
-          ("Makefile." . makefile-mode)
-          )
-  )
+  :mode
+  ((("sources$" "Makefile.") . makefile-mode)
+    ))
 
 (use-package markdown-mode
   :commands (markdown-mode gfm-mode)
-  :mode (("README\\.md\\'" . gfm-mode)
-          ("\\.md\\'" . markdown-mode)
-          ("\\.markdown\\'" . markdown-mode))
-  :magic ("\\`==\\+==" . markdown-mode)
-  :init (setq markdown-command "multimarkdown")
-  ;; :hook (markdown-mode . (lambda () (orgtbl-mode 1)))
+  :mode
+  (("README\\.md\\'" . gfm-mode)
+    (("\\.md\\'" "\\.markdown\\'") . markdown-mode)
+    )
+  :magic
+  ("\\`==\\+==" . markdown-mode)
+  :init
+  (setq
+    markdown-command "multimarkdown"
+    )
   )
 
 (use-package mu4e
   :config
-  (setq mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
+  (setq
+    mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
     mu4e-sent-folder   "/sent"               ;; folder for sent messages
     mu4e-drafts-folder "/drafts"             ;; unfinished messages
     mu4e-trash-folder  "/trash"              ;; trashed messages
     mu4e-refile-folder "/archive"            ;; saved messages
     )
-
-  ;; ;; (setq mu4e-get-mail-command "offlineimap"   ;; or fetchmail, or ...
-  ;; ;;      mu4e-update-interval 300              ;; update every 5 minutes
-  ;; ;;      )
-
-  ;; ;; ;; tell message-mode how to send mail
-  ;; ;; (setq message-send-mail-function 'smtpmail-send-it)
-  ;; ;; ;; if our mail server lives at smtp.example.org; if you have a
-  ;; ;; ;; local mail-server, simply use 'localhost' here.
-  ;; ;; (setq smtpmail-smtp-server "smtp.example.org")
-  ;; ;; ;; don't save messages to Sent Messages, Gmail/IMAP takes care of this
-  ;; ;; (setq mu4e-sent-messages-behavior 'delete)
   )
 
 ;; ocaml
@@ -313,10 +303,8 @@
       ;; Use opam switch to lookup ocamlmerlin binary
       (setq merlin-command 'opam)
       ))
-
   :hook
-  ((tuareg-mode . merlin-mode)
-    (caml-mode . merlin-mode)
+  ( ((tuareg-mode caml-mode) . merlin-mode)
     (utop-mode . (lambda ()
                    (local-set-key (kbd "M-<right>") utop-history-goto-next)
                    (local-set-key (kbd "M-<left>") utop-history-goto-prev)
@@ -325,17 +313,17 @@
           ("C-S-<up>" . merlin-type-enclosing-go-up)
           ("C-S-<down>" . merlin-type-enclosing-go-down)
           )
-  :mode (("\\.ml[iylp]?$" . tuareg-mode)
-          ("\\.fs[ix]?$" . tuareg-mode)
-          ("[i]?ocamlinit$" . tuareg-mode)
-          )
+  :mode
+  ((("\\.ml[iylp]?$" "\\.fs[ix]?$" "[i]?ocamlinit$"). tuareg-mode))
+
   :config
   (setq
     merlin-use-auto-complete-mode 'easy
     ;; indent-line-function 'ocp-indent-line
     ;; indent-region-function 'ocp-indent-region
     utop-command "opam config exec -- utop -emacs"
-    ))
+    )
+  )
 
 ;; org-mode
 (use-package org
@@ -385,35 +373,11 @@
     (org-agenda-schedule arg ".")
     )
 
-  ;; lightly modified from
-  ;; https://sachachua.com/blog/2007/12/clocking-time-with-emacs-org/
-  (defun wicked/org-clock-in-if-starting ()
-    "Clock in when the task is marked DOING."
-    (when (and (string= org-state "DOING")
-            (not (string= last-state org-state)))
-      (org-clock-in)))
-  (defadvice org-clock-in (after wicked activate)
-    "Set this task's status to 'DOING'."
-    (org-todo "DOING"))
-
-  (defun wicked/org-clock-out-if-waiting ()
-    "Clock out when the task is marked WAITING."
-    (when (and (string= org-state "WAITING")
-            (equal (marker-buffer org-clock-marker) (current-buffer))
-            (< (point) org-clock-marker)
-            (> (save-excursion (outline-next-heading) (point))
-              org-clock-marker)
-            (not (string= last-state org-state)))
-      (org-clock-out)))
-
   :hook
-  ((org-after-todo-state-change . wicked/org-clock-out-if-waiting)
-    (org-after-todo-state-change . wicked/org-clock-in-if-starting)
-    (org-agenda-mode
-      .
-      (lambda ()
-        (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-        )))
+  ((org-agenda-mode
+     . (lambda ()
+         (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+         )))
 
   :config
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
@@ -470,6 +434,27 @@
            (org-agenda-entry-types '(:deadline))  ;; [2]
            ))
 
+       ("m" "Month agenda" ((agenda "" ((org-agenda-span 31)))
+                             (alltodo ""))
+         ((org-agenda-compact-blocks t)
+           (org-agenda-filter-preset '("-kids"))
+           (org-agenda-include-diary t)
+           (org-agenda-log-mode-items (quote (closed clock)))
+           (org-agenda-ndays 31)
+           (org-agenda-repeating-timestamp-show-all t)
+           (org-agenda-show-all-dates t)
+           (org-agenda-skip-deadline-if-done t)
+           (org-agenda-skip-scheduled-if-done t)
+           (org-agenda-skip-timestamp-if-done t)
+           (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
+           (org-agenda-start-on-weekday 1)
+           (org-agenda-time-grid nil)
+           (org-deadline-warning-days 15)
+           (org-default-notes-file "~/me/todo/notes.org")
+           (org-fast-tag-selection-single-key (quote expert))
+           (org-remember-store-without-prompt t)
+           ))
+
        ("n" "Agenda and all TODOs"
          ((agenda "")
            (alltodo "")
@@ -508,9 +493,6 @@ are between the current date (DATE) and Easter Sunday."
       (da-easter (calendar-extract-year date))))
   )
 
-;; on-screen
-;; (on-screen-global-mode +1)
-
 (use-package outline
   :diminish outline-minor-mode
   :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode)
@@ -525,12 +507,21 @@ are between the current date (DATE) and Easter Sunday."
     ))
 
 (use-package paren
-  :config (setq
-            show-paren-mode t
-            show-paren-style (quote expression)
-            )
+  :config
+  (setq
+    show-paren-mode t
+    show-paren-style (quote expression)
+    )
   :hook (find-file . show-paren-mode)
   )
+
+;; (use-package python-mode
+;;  :mode ("\\.py$")
+;;  :hook prog-mode
+;;  :config (setq
+;;            python-indent-offset 2
+;;            )
+;;  )
 
 (use-package rainbow-mode
   :hook prog-mode
@@ -542,22 +533,20 @@ are between the current date (DATE) and Easter Sunday."
   )
 
 (use-package sh-script
-  :mode (("bash_" . sh-mode)
-          ("APKBUILD$" . sh-mode)
-          )
-  :config (setq
-            sh-basic-offset 2
-            sh-indentation 2
-            )
-  )
+  :mode
+  ((("bash_" "APKBUILD$") . sh-mode))
+  :config
+  (setq
+    sh-basic-offset 2
+    sh-indentation 2
+    ))
 
 (use-package solarized-theme
   :ensure
   :init
   (progn
-    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
+    (defvar my-color-themes (list 'solarized-light 'solarized-dark))
     (defvar theme-current my-color-themes)
-    (defvar color-theme-is-global nil) ; Initialization
 
     (defun my-theme-set-default ()
       (interactive)
@@ -579,11 +568,15 @@ are between the current date (DATE) and Easter Sunday."
 
   :bind
   ("C-c t" . my-theme-cycle)
+  :hook
+  (after-init . (lambda () (load-theme 'solarized-dark)))
   )
 
 (use-package subword ;; subword -- obey CamelCase etc
-  :config (setq global-subword-mode t)
-  )
+  :config
+  (setq
+    global-subword-mode t
+    ))
 
 (use-package tex
   :ensure auctex
@@ -596,11 +589,13 @@ are between the current date (DATE) and Easter Sunday."
           )
   :config
   (use-package latex)
-  (setq bibtex-dialect 'biblatex
+  (setq
+    bibtex-dialect 'biblatex
     TeX-auto-save t
     TeX-parse-self t
     TeX-master t
-    reftex-plug-into-AUCTeX t)
+    reftex-plug-into-AUCTeX t
+    )
 
   ;; modified from swiftex.el
   (defun tex-enclose-word (before after)
@@ -640,12 +635,26 @@ are between the current date (DATE) and Easter Sunday."
           )
   )
 
+(use-package rjsx-mode
+  :mode
+  ((("\\.json$" "\\.js$") . rjsx-mode))
+  :config
+  (setq
+    js-indent-level 2
+    ))
+
+(use-package typescript-mode
+  :mode ("\\.ts$")
+  :config
+  (setq
+    typescript-indent-level 2
+    ))
+
 (use-package web-mode
-  :mode (("\\.html$" . web-mode)
-          ("\\.css$" . web-mode)
-          ("\\.tpl$" . web-mode)
-          )
-  :magic ("\\`<\\?xml" . web-mode)
+  :mode
+  ((("\\.html$" "\\.css$") . web-mode))
+  :magic
+  ("\\`<\\?xml" . web-mode)
   :config
   (setq
     web-mode-markup-indent-offset 2
@@ -658,13 +667,6 @@ are between the current date (DATE) and Easter Sunday."
   (set (make-local-variable 'company-backends)
     '(company-css company-web-html company-yasnippet company-files)
     ))
-
-;; lilypond TODO
-
-;; (add-to-list 'load-path (expand-file-name "~/.emacs.d/lilypond-elisp"))
-;; (autoload 'LilyPond-mode "lilypond-mode" "LilyPond Editing Mode" t)
-;; (add-to-list 'auto-mode-alist '("\\.ly$" . LilyPond-mode))
-;; (add-to-list 'auto-mode-alist '("\\.ily$" . LilyPond-mode))
 
 (use-package visual-fill-column
   :hook (text-mode . visual-fill-column-mode)
@@ -702,35 +704,40 @@ are between the current date (DATE) and Easter Sunday."
         (whitespace-mode t)
         )))
 
-  :hook ((find-file . maybe-turn-on-whitespace)
-          (prog-mode . whitespace-cleanup)
-          )
-  )
+  :hook
+  ( (find-file . maybe-turn-on-whitespace)
+    (prog-mode . whitespace-cleanup)
+    ))
 
 
 ;; Recent buffers in a new Emacs session
 (use-package recentf
   :config
-  (setq recentf-auto-cleanup 'never
-        recentf-max-saved-items 1000
-        recentf-save-file (concat user-emacs-directory ".recentf"))
+  (setq
+    recentf-auto-cleanup 'never
+    recentf-max-saved-items 1000
+    recentf-save-file (concat user-emacs-directory ".recentf")
+    )
   (recentf-mode t)
-  :diminish nil)
+  :diminish nil
+  )
 
 ;; Display possible completions at all places
 (use-package ido-completing-read+
   :ensure t
+  :diminish nil
   :config
   ;; This enables ido in all contexts where it could be useful, not just
   ;; for selecting buffer and file names
   (ido-mode t)
   (ido-everywhere t)
   ;; This allows partial matches, e.g. "uzh" will match "Ustad Zakir Hussain"
-  (setq ido-enable-flex-matching t)
-  (setq ido-use-filename-at-point nil)
-  ;; Includes buffer names of recently opened files, even if they're not open now.
-  (setq ido-use-virtual-buffers t)
-  :diminish nil)
+  (setq
+    ido-enable-flex-matching t
+    ido-use-filename-at-point nil
+    ;; Includes buffer names of recently opened files, even if they're not open now.
+    ido-use-virtual-buffers t
+    ))
 
 ;; Enhance M-x to allow easier execution of commands
 (use-package smex
@@ -738,27 +745,11 @@ are between the current date (DATE) and Easter Sunday."
   ;; Using counsel-M-x for now. Remove this permanently if counsel-M-x works better.
   :disabled t
   :config
-  (setq smex-save-file (concat user-emacs-directory ".smex-items"))
+  (setq
+    smex-save-file (concat user-emacs-directory ".smex-items")
+    )
   (smex-initialize)
   :bind ("M-x" . smex))
-
-;; Better handling of paranthesis when writing Lisps.
-(use-package paredit
-  :ensure t
-  :init
-  (add-hook 'clojure-mode-hook #'enable-paredit-mode)
-  (add-hook 'cider-repl-mode-hook #'enable-paredit-mode)
-  (add-hook 'emacs-lisp-mode-hook #'enable-paredit-mode)
-  (add-hook 'eval-expression-minibuffer-setup-hook #'enable-paredit-mode)
-  (add-hook 'ielm-mode-hook #'enable-paredit-mode)
-  (add-hook 'lisp-mode-hook #'enable-paredit-mode)
-  (add-hook 'lisp-interaction-mode-hook #'enable-paredit-mode)
-  (add-hook 'scheme-mode-hook #'enable-paredit-mode)
-  :config
-  (show-paren-mode t)
-  :bind (("M-[" . paredit-wrap-square)
-         ("M-{" . paredit-wrap-curly))
-  :diminish nil)
 
 ;;
 ;; functions
@@ -815,23 +806,12 @@ are between the current date (DATE) and Easter Sunday."
 (defun todo ()  (interactive) (find-file "~/Dropbox/people/family.org/richard/richard.org"))
 (defun notes () (interactive) (find-file "~/me/todo/notes.org"))
 
-;; theme switching
-(defun light () "Light colour scheme."
-  (interactive)
-  (load-theme 'solarized-light t)
-  )
-
-(defun dark () "Dark colour scheme."
-  (interactive)
-  (load-theme 'solarized-dark t)
-  )
-
 ;;
 ;; mode hooks
 ;;
 
-(require 'filladapt)                    ; not a package :(
-(add-hook 'text-mode-hook '(lambda () (filladapt-mode t)))
+;; (require 'filladapt)                    ; not a package :(
+;; (add-hook 'text-mode-hook '(lambda () (filladapt-mode t)))
 
 ;;
 ;; keybindings
