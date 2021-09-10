@@ -5,30 +5,28 @@
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
-;; Authors: Jonas Bernoulli <jonas@bernoul.li>
-;;	Sebastian Wiesner <lunaryorn@gmail.com>
-;;	Florian Ragwitz <rafl@debian.org>
-;;	Marius Vollmer <marius.vollmer@gmail.com>
+;; Author: Jonas Bernoulli <jonas@bernoul.li>
+;;      Sebastian Wiesner <lunaryorn@gmail.com>
+;;      Florian Ragwitz <rafl@debian.org>
+;;      Marius Vollmer <marius.vollmer@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "25.1") (dash "20200524") (transient "20200601") (with-editor "20200522"))
-;; Package-Version: 20210309.1106
-;; Package-Commit: cb9bb20cfe8e3a50df8669a43611ebc9a516358a
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
-
-;; This file is not part of GNU Emacs.
+;; Package-Requires: ((emacs "25.1") (dash "2.18.1") (transient "0.3.6") (with-editor "3.0.4"))
+;; Package-Version: 3.2.1
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation; either version 3, or (at your option)
 ;; any later version.
-
+;;
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
-
+;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -445,8 +443,8 @@ This is only used if Magit is available."
 \\(\\(COMMIT\\|NOTES\\|PULLREQ\\|MERGEREQ\\|TAG\\)_EDIT\\|MERGE_\\|\\)MSG\
 \\|\\(BRANCH\\|EDIT\\)_DESCRIPTION\\)\\'")
 
-(eval-after-load 'recentf
-  '(add-to-list 'recentf-exclude git-commit-filename-regexp))
+(with-eval-after-load 'recentf
+  (add-to-list 'recentf-exclude git-commit-filename-regexp))
 
 (add-to-list 'with-editor-file-name-history-exclude git-commit-filename-regexp)
 
@@ -946,7 +944,7 @@ Added to `font-lock-extend-region-functions'."
      ;; Your branch is up to date with 'master'.
      ;; Your branch and 'master' have diverged,
      . `(,(format
-           "^%s Your branch \\(?:is up-to-date with\\|and\\) '%s'"
+           "^%s Your branch \\(?:is up[- ]to[- ]date with\\|and\\) '%s'"
            comment-start git-commit--branch-name-regexp)
          (1 'git-commit-comment-branch-local t)
          (2 'git-commit-comment-branch-remote t)))
@@ -958,7 +956,7 @@ Added to `font-lock-extend-region-functions'."
          (1 'bold t)
          (2 'bold t)))))
 
-(defvar git-commit-font-lock-keywords git-commit-font-lock-keywords-2
+(defvar git-commit-font-lock-keywords git-commit-font-lock-keywords-3
   "Font-Lock keywords for Git-Commit mode.")
 
 (defun git-commit-setup-font-lock ()
@@ -990,17 +988,14 @@ Added to `font-lock-extend-region-functions'."
                   (progn
                     ;; Make sure the below functions are available.
                     (require 'magit)
-                    ;; Font-Lock wants every submatch to succeed,
-                    ;; so also match the empty string.  Do not use
-                    ;; `regexp-quote' because that is slow if there
-                    ;; are thousands of branches outweighing the
-                    ;; benefit of an efficient regep.
-                    (format "\\(\\(?:%s\\)\\|\\)\\(\\(?:%s\\)\\|\\)"
+                    ;; Font-Lock wants every submatch to succeed, so
+                    ;; also match the empty string.  Avoid listing
+                    ;; remote branches and using `regexp-quote',
+                    ;; because in repositories have thousands of
+                    ;; branches that would be very slow.  See #4353.
+                    (format "\\(\\(?:%s\\)\\|\\)\\([^']+\\)"
                             (mapconcat #'identity
                                        (magit-list-local-branch-names)
-                                       "\\|")
-                            (mapconcat #'identity
-                                       (magit-list-remote-branch-names)
                                        "\\|")))
                 "\\([^']*\\)"))
   (setq-local font-lock-multiline t)
