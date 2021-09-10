@@ -26,21 +26,22 @@ listed in `simple-call-tree-buffers' will be used.
 \(fn &optional BUFFERS)" t nil)
 
 (autoload 'simple-call-tree-current-function "simple-call-tree" "\
-Display call tree for function FUNC.
+Display call tree at location for for function FUNC.
 If called interactively FUNC will be set to the symbol nearest point,
 unless a prefix arg is used in which case the function returned by `which-function'
 will be used.
 Note: `which-function' may give incorrect results if `imenu' has not been used in
 the current buffer.
-If a call tree containing FUNC has not already been created then the user is prompted
-for which files to build the tree from.
+If a call tree containing FUNC has not already been created then it will be created
+from the current buffer, unless a prefix arg is supplied in which case the user is 
+prompted for which files to build the tree from.
 
 If optional arg WIDE is non-nil then the *Simple Call Tree* buffer will be widened,
 otherwise it will be narrowed around FUNC.
 
 \(fn FUNC &optional WIDE)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "simple-call-tree" '("simple-call-tree-" "while")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "simple-call-tree" '("simple-call-tree-")))
 
 ;;;***
 
