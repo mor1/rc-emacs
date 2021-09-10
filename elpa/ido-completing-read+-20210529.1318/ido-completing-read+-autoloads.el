@@ -87,11 +87,11 @@ toggle it if ARG is `toggle'; disable the mode otherwise.
 
 If this mode causes problems for a function, you can customize
 when ido completion is or is not used by customizing
-`ido-cr+-function-blacklist'.
+`ido-cr+-disable-list'.
 
 \(fn &optional ARG)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ido-completing-read+" '("define-ido-internal-var" "ido-" "minibuf-eldef-update-minibuffer@ido-cr+-compat")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ido-completing-read+" '("ido-" "minibuf-eldef-update-minibuffer@ido-cr+-compat")))
 
 ;;;***
 
