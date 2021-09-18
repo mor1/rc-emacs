@@ -2850,7 +2850,7 @@ Appendix C Keystroke Index
                                                               (line  43)
 * U:                                     Staging and Unstaging.
                                                               (line  52)
-* v:                                     Applying.            (line  44)
+* v:                                     Applying.            (line  48)
 * V:                                     Reverting.           (line   6)
 * V A:                                   Reverting.           (line  31)
 * V a:                                   Reverting.           (line  39)
@@ -3295,7 +3295,7 @@ Appendix D Command Index
 * magit-reset-soft:                      Resetting.           (line  20)
 * magit-reset-worktree:                  Resetting.           (line  44)
 * magit-reset-worktree <1>:              Wip Modes.           (line  66)
-* magit-reverse:                         Applying.            (line  44)
+* magit-reverse:                         Applying.            (line  48)
 * magit-reverse-in-index:                Staging and Unstaging.
                                                               (line  62)
 * magit-revert:                          Reverting.           (line   6)
