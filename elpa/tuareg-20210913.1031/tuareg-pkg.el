@@ -1,7 +1,7 @@
-(define-package "tuareg" "20210910.1307" "OCaml mode"
+(define-package "tuareg" "20210913.1031" "OCaml mode"
   '((emacs "24.4")
     (caml "4.8"))
-  :commit "c33222d03f80a60818cfdeb0cbadcba7b35dfec2" :authors
+  :commit "00faf47a7c65e4cdcf040f38add1c6a08cd2ee2f" :authors
   '(("Albert Cohen" . "Albert.Cohen@inria.fr")
     ("Sam Steingold" . "sds@gnu.org")
     ("Christophe Troestler" . "Christophe.Troestler@umons.ac.be")

@@ -257,6 +257,11 @@ See `ff-other-file-alist'."
   :group 'tuareg
   :type '(repeat (list regexp (choice (repeat string) function))))
 
+(defcustom tuareg-comment-show-paren t
+  "Highlight comment delimiters in `show-paren-mode' if non-nil."
+  :group 'tuareg
+  :type 'boolean)
+
 
 (defcustom tuareg-interactive-scroll-to-bottom-on-output nil
   "*Controls when to scroll to the bottom of the interactive buffer
@@ -488,6 +493,13 @@ Valid names are `browse-url', `browse-url-firefox', etc."
 (defun tuareg-in-literal-or-comment-p (&optional pos)
   "Return non-nil if point is inside an OCaml literal or comment."
   (nth 8 (syntax-ppss pos)))
+
+(defun tuareg--point-after-comment-p ()
+  "Return non-nil if a comment precedes the point."
+  (and (eq (char-before) ?\))
+       (eq (char-before (1- (point))) ?*) ; implies position is in range
+       (save-excursion
+         (nth 4 (syntax-ppss (1- (point)))))))
 
 (defun tuareg-backward-up-list ()
   ;; FIXME: not clear if moving out of a string/comment should count as 1 or no.
@@ -1318,7 +1330,8 @@ for the interactive mode."
 
 (defun tuareg--font-lock-in-string-or-comment ()
   "Returns t if the point is inside a string or a comment.
-This based on the fontification and is faster than calling `syntax-ppss'."
+This based on the fontification and is faster than calling `syntax-ppss'.
+It must not be used outside fontification purposes."
   (let* ((face (get-text-property (point) 'face)))
     (and (symbolp face)
          (memq face '(font-lock-comment-face
@@ -3046,14 +3059,6 @@ file outside _build? "))
             (message "File in _build.  C-x C-q to edit.")
             nil))))))
 
-(defmacro tuareg--eval-when-macrop (f form)
-  "Execute FORM but only when F is `fboundp' (because it's a macro).
-If F is not bound yet, then keep the code un-expanded and perform the
-expansion at run-time, if the run-time version of Emacs does know this macro."
-  (declare (debug (symbolp body)) (indent 1))
-  (if (fboundp f) form                  ;Macro expanded at compile-time.
-    `(if (fboundp ',f) (eval ',form)))) ;Macro expanded at run-time.
-
 (defun tuareg--hanging-eolp-advice ()
   "Recognize \"fun ..args.. ->\" at EOL as being hanging."
   (when (looking-at "fun\\_>")
@@ -3065,30 +3070,7 @@ expansion at run-time, if the run-time version of Emacs does know this macro."
     (if (equal "->" (nth 2 (smie-forward-sexp "-dlpd-")))
         (smie-indent-forward-token))))
 
-(defun tuareg--point-before-comment-p ()
-  "Return non-nil if a comment follows the point."
-  (let ((pt (point)))
-    (and (< (+ pt 2) (point-max))
-         (eq (char-after) ?\()
-         (eq (char-after (1+ pt)) ?*)
-         (save-excursion
-           (and (forward-comment 1)
-                (forward-comment -1)
-                (eq (point) pt))))))
-
-(defun tuareg--point-after-comment-p ()
-  "Return non-nil if a comment precedes the point."
-  (let ((pt (point)))
-    (and (> pt (+ (point-min) 3))
-         (eq (char-before) ?\))
-         (eq (char-before (1- pt)) ?*)
-         (save-excursion
-           (and (forward-comment -1)
-                (forward-comment 1)
-                (eq (point) pt))))))
-
 (defun tuareg--blink-matching-check (orig-fun &rest args)
-  ;; FIXME: Should we merge this with `tuareg--show-paren'?
   (if (tuareg--point-after-comment-p)
       ;; Immediately after a comment-ending "*)" -- no mismatch error.
       nil
@@ -3097,9 +3079,44 @@ expansion at run-time, if the run-time version of Emacs does know this macro."
 (defvar show-paren-data-function); Silence the byte-compiler
 
 (defun tuareg--show-paren (orig-fun)
-  (if (or (tuareg--point-before-comment-p) (tuareg--point-after-comment-p))
-      nil
-    (funcall orig-fun)))
+  "Advice for `show-paren-data-function' to match comment delimiters."
+  (cond
+   ;; Immediately after "*)"
+   ((and (eq (char-before) ?\))
+         (eq (char-before (1- (point))) ?*))
+    (let* ((here-beg (- (point) 2))
+           (ppss (save-excursion (syntax-ppss here-beg)))
+           (comment-nesting (nth 4 ppss)))
+      (cond
+       (comment-nesting ; "*)" ends a comment
+        (let* ((there-beg (if (= comment-nesting 1) (nth 8 ppss)
+                            (save-excursion (forward-comment -1)
+                                            (point))))
+               (ofs (if (eq (char-after (+ there-beg 2)) ?*) 3 2)))
+          (list here-beg (point) there-beg (+ there-beg ofs) nil)))
+       ((nth 3 ppss); inside a string, don't consider "*)" as a closer
+        nil)
+       ;; Mismatch
+       (t (list here-beg (point) here-beg (point) t)))))
+   ;; Immediately before "(*"
+   ((and (eq (char-after) ?\()
+         (eq (char-after (1+ (point))) ?*))
+    (save-excursion
+      (let* ((here-beg (point))
+             (ofs (if (eq (char-after (+ here-beg 2)) ?*) 3 2))
+             (here-end (+ here-beg ofs))
+             (ppss (syntax-ppss here-end)))
+        (cond
+         ((nth 4 ppss); "(*" starts a comment
+          (if (progn (goto-char here-beg)
+                     (forward-comment 1))
+              (list here-beg here-end (- (point) 2) (point) nil)
+            (list here-beg here-end here-beg here-end t)))
+         ((nth 3 ppss); inside a string, don't consider "(*" as an opener
+          nil)
+         ;; Mismatch
+         (t (list here-beg here-end here-beg here-end t))))))
+   (t (funcall orig-fun))))
 
 (defun tuareg--common-mode-setup ()
   (setq-local syntax-propertize-function #'tuareg-syntax-propertize)
@@ -3107,20 +3124,20 @@ expansion at run-time, if the run-time version of Emacs does know this macro."
   (smie-setup tuareg-smie-grammar #'tuareg-smie-rules
               :forward-token #'tuareg-smie-forward-token
               :backward-token #'tuareg-smie-backward-token)
-  (add-function :around (local 'blink-matching-check-function)
-                #'tuareg--blink-matching-check)
-  (tuareg--eval-when-macrop add-function
-    (when (boundp 'smie--hanging-eolp-function)
-      ;; FIXME: As its name implies, smie--hanging-eolp-function
-      ;; is not to be used by packages like us, but SMIE's maintainer
-      ;; hasn't provided any alternative so far :-(
-      (add-function :before (local 'smie--hanging-eolp-function)
-                    #'tuareg--hanging-eolp-advice)))
+  (when (boundp 'smie--hanging-eolp-function)
+    ;; FIXME: As its name implies, smie--hanging-eolp-function
+    ;; is not to be used by packages like us, but SMIE's maintainer
+    ;; hasn't provided any alternative so far :-(
+    (add-function :before (local 'smie--hanging-eolp-function)
+                  #'tuareg--hanging-eolp-advice))
   (add-hook 'smie-indent-functions #'tuareg-smie--args nil t)
   (add-hook 'smie-indent-functions #'tuareg-smie--inside-string nil t)
   (setq-local add-log-current-defun-function #'tuareg-current-fun-name)
-  (add-function :around (local 'show-paren-data-function)
-                #'tuareg--show-paren)
+  (add-function :around (local 'blink-matching-check-function)
+                #'tuareg--blink-matching-check)
+  (when tuareg-comment-show-paren
+    (add-function :around (local 'show-paren-data-function)
+                  #'tuareg--show-paren))
   (setq prettify-symbols-alist
         (if tuareg-prettify-symbols-full
             (append tuareg-prettify-symbols-basic-alist
