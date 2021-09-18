@@ -343,7 +343,8 @@ using the `textDocument/references' request."
                                        (f-exists? binary))))
 
                   :major-modes '(csharp-mode csharp-tree-sitter-mode)
-                  :server-id 'csharp
+                  :server-id 'omnisharp
+                  :priority -1
                   :action-handlers (ht ("omnisharp/client/findReferences" 'lsp-csharp--action-client-find-references))
                   :notification-handlers (ht ("o#/projectadded" 'ignore)
                                              ("o#/projectchanged" 'ignore)
@@ -358,6 +359,73 @@ using the `textDocument/references' request."
                                              ("o#/projectconfiguration" 'ignore)
                                              ("o#/projectdiagnosticstatus" 'ignore))
                   :download-server-fn #'lsp-csharp--download-server))
+
+;;
+;; Alternative "csharp-ls" language server support
+;; see https://github.com/razzmatazz/csharp-language-server
+;;
+(lsp-defun lsp-csharp--cls-metadata-uri-handler (uri)
+  "Handle `csharp:/(metadata)' uri from csharp-ls server.
+
+'csharp/metadata' request is issued to retrieve metadata from the server.
+A cache file is created on project root dir that stores this metadata and filename
+is returned so lsp-mode can display this file."
+
+  (-when-let* ((metadata-req (lsp-make-csharp-ls-c-sharp-metadata
+                              :text-document (lsp-make-text-document-identifier :uri uri)))
+               (metadata (lsp-request "csharp/metadata" metadata-req))
+               ((&csharp-ls:CSharpMetadataResponse :project-name
+                                                   :assembly-name
+                                                   :symbol-name
+                                                   :source) metadata)
+               (filename (f-join ".cache"
+                                 "lsp-csharp"
+                                 "metadata"
+                                 "projects" project-name
+                                 "assemblies" assembly-name
+                                 (concat symbol-name ".cs")))
+               (file-location (expand-file-name filename (lsp-workspace-root)))
+               (metadata-file-location (concat file-location ".metadata-uri"))
+               (path (f-dirname file-location)))
+
+    (unless (file-exists-p file-location)
+      (unless (file-directory-p path)
+        (make-directory path t))
+
+      (with-temp-file metadata-file-location
+        (insert uri))
+
+      (with-temp-file file-location
+        (insert source)))
+
+    file-location))
+
+(defun lsp-csharp--cls-before-file-open (_workspace)
+  "Set `lsp-buffer-uri' variable after C# file is open from *.metadata-uri file."
+
+  (let ((metadata-file-name (concat buffer-file-name ".metadata-uri")))
+    (setq-local lsp-buffer-uri
+                (when (file-exists-p metadata-file-name)
+                  (with-temp-buffer (insert-file-contents metadata-file-name)
+                                    (buffer-string))))))
+
+(defun lsp-csharp--cls-download-server (_client callback error-callback update?)
+  "Install/update csharp-ls language server using `dotnet tool'.
+
+Will invoke CALLBACK or ERROR-CALLBACK based on result. Will update if UPDATE? is t"
+  (lsp-async-start-process
+   callback
+   error-callback
+   "dotnet" "tool" (if update? "update" "install") "-g" "csharp-ls"))
+
+(lsp-register-client
+ (make-lsp-client :new-connection (lsp-stdio-connection '(lambda () "csharp-ls"))
+                  :priority -2
+                  :server-id 'csharp-ls
+                  :major-modes '(csharp-mode csharp-tree-sitter-mode)
+                  :before-file-open-fn #'lsp-csharp--cls-before-file-open
+                  :uri-handlers (ht ("csharp" #'lsp-csharp--cls-metadata-uri-handler))
+                  :download-server-fn #'lsp-csharp--cls-download-server))
 
 (lsp-consistency-check lsp-csharp)
 
