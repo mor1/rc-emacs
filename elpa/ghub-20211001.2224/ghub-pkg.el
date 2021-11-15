@@ -1,8 +1,8 @@
-(define-package "ghub" "20210727.1414" "Minuscule client libraries for Git forge APIs."
+(define-package "ghub" "20211001.2224" "Minuscule client libraries for Git forge APIs."
   '((emacs "25.1")
     (let-alist "1.0.5")
     (treepy "0.1.1"))
-  :commit "00a77b79c28e22db1b151c3f7857073ccbeff726" :authors
+  :commit "192eff9da2c0f61813f3bc9c00913985c1804180" :authors
   '(("Jonas Bernoulli" . "jonas@bernoul.li"))
   :maintainer
   '("Jonas Bernoulli" . "jonas@bernoul.li")
