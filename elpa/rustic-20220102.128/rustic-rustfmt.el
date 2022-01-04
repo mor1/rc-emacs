@@ -6,16 +6,29 @@
 
 ;;; Code:
 
-(require 'rustic-cargo)
+(require 'project)
 
-(if (version<= emacs-version "28.0")
-    (declare-function project-roots "project")
-  (declare-function project-root "project"))
+(require 'rustic-cargo)
 
 ;;; Options
 
 (defcustom rustic-rustfmt-bin "rustfmt"
   "Path to rustfmt executable."
+  :type 'string
+  :group 'rustic)
+
+(defcustom rustic-rustfmt-bin-remote "~/.cargo/bin/rustfmt"
+  "Path to remote rustfmt executable."
+  :type 'string
+  :group 'rustic)
+
+(defun rustic-rustfmt-bin ()
+  (if (file-remote-p (or (buffer-file-name) ""))
+      rustic-rustfmt-bin-remote
+    rustic-rustfmt-bin))
+
+(defcustom rustic-rustfmt-args ""
+  "String of additional arguments."
   :type 'string
   :group 'rustic)
 
@@ -29,10 +42,20 @@ VALUE is a string, an integer or a boolean."
   :group 'rustic)
 
 (defcustom rustic-format-trigger nil
-  "Format future rust buffers before saving using rustfmt."
+  "This option allows you to automatically run rustfmt when saving
+or before using a compilation/cargo command.
+`on-compile' calls 'cargo fmt' in the directory that is returned by
+the function used in `rustic-compile-directory-method'."
   :type '(choice (const :tag "Format buffer before saving." on-save)
                  (const :tag "Run 'cargo fmt' before compilation." on-compile)
                  (const :tag "Don't format automatically." nil))
+  :group 'rustic)
+
+(defcustom rustic-format-on-save-method 'rustic-format-file
+  "Default function used for formatting before saving.
+This function will only be used when `rustic-format-trigger' is set
+to 'on-save."
+  :type 'function
   :group 'rustic)
 
 (defcustom rustic-format-display-method 'pop-to-buffer
@@ -70,13 +93,13 @@ When COMMAND is a list, it's `car' is the program file name
 and it's `cdr' is a list of arguments."
   (let* ((err-buf (get-buffer-create rustic-format-buffer-name))
          (inhibit-read-only t)
-         (dir (rustic-buffer-workspace))
+         (dir (funcall rustic-compile-directory-method))
          (buffer (plist-get args :buffer))
          (string (plist-get args :stdin))
          (files  (plist-get args :files))
          (files (if (listp files) files (list files)))
          (command (or (plist-get args :command)
-                      (cons rustic-rustfmt-bin (rustic-compute-rustfmt-args))))
+                      (rustic-compute-rustfmt-args)))
          (command (if (listp command) command (list command))))
     (setq rustic-save-pos (set-marker (make-marker) (point) (current-buffer)))
     (rustic-compilation-setup-buffer err-buf dir 'rustic-format-mode t)
@@ -84,11 +107,15 @@ and it's `cdr' is a list of arguments."
       (unless (file-exists-p it)
         (error (format "File %s does not exist." it))))
     (with-current-buffer err-buf
-      (let ((proc (rustic-make-process :name rustic-format-process-name
-                                       :buffer err-buf
-                                       :command `(,@command "--" ,@files)
-                                       :filter #'rustic-compilation-filter
-                                       :sentinel sentinel)))
+      (let* ((c `(,(rustic-rustfmt-bin)
+                  ,rustic-rustfmt-args
+                  ,@command "--" ,@files))
+             (proc (rustic-make-process :name rustic-format-process-name
+                                        :buffer err-buf
+                                        :command (remove "" c)
+                                        :filter #'rustic-compilation-filter
+                                        :sentinel sentinel
+                                        :file-handler t)))
         (setq next-error-last-buffer buffer)
         (when string
           (while (not (process-live-p proc))
@@ -141,14 +168,38 @@ and it's `cdr' is a list of arguments."
           (funcall rustic-format-display-method proc-buffer)
           (message "Rustfmt error."))))))
 
+(defun rustic-format-macro-sentinel (proc output)
+  "Format buffer and remove decorations that we create for rustfmt"
+  (rustic-format-sentinel proc output)
+  (with-current-buffer next-error-last-buffer
+    (save-excursion
+      (read-only-mode -1)
+      ;; remove fn __main() {
+      (goto-char (point-min))
+      (delete-region (point-min) (line-end-position))
+      (delete-blank-lines)
+      (goto-char (point-max))
+      ;; remove } from fn __main()
+      (forward-line -1)
+      (delete-region (line-beginning-position) (point-max))
+      ;; reindent buffer to left
+      (indent-region (point-min) (point-max))
+      (goto-char (point-max))
+      ;; clean blanked line
+      ;; (delete-blank-lines)
+      (delete-trailing-whitespace (point-min) (point-max)))))
+
+
 (defun rustic-format-file-sentinel (proc output)
   "Sentinel for rustfmt processes when formatting a file."
   (ignore-errors
     (let ((proc-buffer (process-buffer proc)))
       (with-current-buffer proc-buffer
         (if (string-match-p "^finished" output)
-            (with-current-buffer next-error-last-buffer
-              (revert-buffer t t))
+            (and
+             (with-current-buffer next-error-last-buffer
+               (revert-buffer t t))
+             (kill-buffer proc-buffer))
           (sit-for 0.1)
           (with-current-buffer next-error-last-buffer
             (goto-char rustic-save-pos))
@@ -166,7 +217,7 @@ and it's `cdr' is a list of arguments."
 (defun rustic-cargo-fmt ()
   "Use rustfmt via cargo."
   (interactive)
-  (let ((command (list rustic-cargo-bin "fmt"))
+  (let ((command (list (rustic-cargo-bin) "fmt"))
         (buffer rustic-format-buffer-name)
         (proc rustic-format-process-name)
         (mode 'rustic-cargo-fmt-mode))
@@ -214,8 +265,6 @@ This operation requires a nightly version of rustfmt.
               (eq major-mode 'rustic-macro-expansion-mode))
     (error "Not a rustic-mode buffer."))
   (if (not (region-active-p)) (rustic-format-buffer)
-    (unless (equal (call-process "cargo" nil nil nil "+nightly") 0)
-      (error "Need nightly toolchain to format region."))
     (let* ((buf (current-buffer))
            (file (buffer-file-name buf))
            (start (rustic--get-line-number begin))
@@ -225,23 +274,31 @@ This operation requires a nightly version of rustfmt.
        'rustic-format-file-sentinel
        :buffer buf
        :command
-       (append (list rustic-cargo-bin "+nightly" "fmt" "--")
+       (append (list (rustic-cargo-bin) "+nightly" "fmt" "--")
                (rustic-compute-rustfmt-file-lines-args file
                                                        start
                                                        finish))))))
 
 ;;;###autoload
 (defun rustic-format-buffer ()
-  "Format the current buffer using rustfmt.
-
-Provide optional argument NO-STDIN for `rustic-before-save-hook' since there
-were issues when using stdin for formatting."
+  "Format the current buffer using rustfmt."
   (interactive)
   (unless (or (eq major-mode 'rustic-mode)
               (eq major-mode 'rustic-macro-expansion-mode))
     (error "Not a rustic-mode buffer."))
   (rustic-compilation-process-live t)
   (rustic-format-start-process 'rustic-format-sentinel
+                               :buffer (current-buffer)
+                               :stdin (buffer-string)))
+
+(defun rustic-format-macro-buffer ()
+  "Format the current buffer using rustfmt, and theh remove first and last lines."
+  (interactive)
+  (unless (or (eq major-mode 'rustic-mode)
+              (eq major-mode 'rustic-macro-expansion-mode))
+    (error "Not a rustic-mode buffer."))
+  (rustic-compilation-process-live t)
+  (rustic-format-start-process 'rustic-format-macro-sentinel
                                :buffer (current-buffer)
                                :stdin (buffer-string)))
 
@@ -261,6 +318,13 @@ were issues when using stdin for formatting."
       (while (eq (process-status proc) 'run)
         (sit-for 0.05)))))
 
+(defun rustic-project-root (project)
+  "Runs the correct version of project-root function for
+different emacs versions."
+  (if (version<= emacs-version "28.0")
+      (car (funcall 'project-roots project))
+    (funcall 'project-root project)))
+
 (defun rustic-project-buffer-list ()
   "Return a list of the buffers belonging to the current project.
 This is basically a wrapper around `project--buffer-list'."
@@ -268,9 +332,7 @@ This is basically a wrapper around `project--buffer-list'."
     (if (fboundp 'project--buffer-list)
         (project--buffer-list pr)
       ;; Like the above function but for releases before Emacs 28.
-      (let ((root (if (version<= emacs-version "28.0")
-                      (car (project-roots pr))
-                    (project-root pr)))
+      (let ((root (rustic-project-root pr))
             bufs)
         (dolist (buf (buffer-list))
           (let ((filename (or (buffer-file-name buf)
@@ -300,15 +362,17 @@ This is basically a wrapper around `project--buffer-list'."
              (not (rustic-compilation-process-live t)))
     (condition-case nil
         (progn
-          (rustic-format-file)
+          (if (file-remote-p (buffer-file-name))
+              (rustic-format-buffer)
+            (funcall rustic-format-on-save-method))
           (sit-for 0.1))
       (error nil))))
 
 (defun rustic-after-save-hook ()
   "Check if rustfmt is installed after saving the file."
   (when (rustic-format-on-save-p)
-    (unless (executable-find rustic-rustfmt-bin)
-      (error "Could not locate executable \"%s\"" rustic-rustfmt-bin))))
+    (unless (executable-find (rustic-rustfmt-bin))
+      (error "Could not locate executable \"%s\"" (rustic-rustfmt-bin)))))
 
 (defun rustic-maybe-format-after-save (buffer)
   (when (rustic-format-on-save-p)

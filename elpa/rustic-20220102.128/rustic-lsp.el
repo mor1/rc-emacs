@@ -78,7 +78,8 @@ then you must set this to nil before loading `rustic-lsp'."
 with `lsp-rust-switch-server'."
   (require 'lsp-rust)
   (require 'lsp-modeline)
-  (lsp-workspace-folders-add (rustic-buffer-workspace))
+  ;; TODO: Do we still need this ? Seems to break stuff (hlissner/doom-emacs/issues/4070)
+  ;; (lsp-workspace-folders-add (rustic-buffer-workspace))
   (setq lsp-rust-server rustic-lsp-server)
   (setq lsp-rust-analyzer-server-command rustic-analyzer-command)
   (lsp-rust-switch-server rustic-lsp-server))
@@ -133,12 +134,22 @@ with `lsp-rust-switch-server'."
 
 (define-derived-mode rustic-macro-expansion-mode special-mode "Rust"
   :group 'rustic
-  :syntax-table rustic-mode-syntax-table
+
+  :syntax-table rust-mode-syntax-table
+
+  ;; Syntax
+  (setq-local syntax-propertize-function #'rust-syntax-propertize)
+
+  ;; Indentation
+  (setq-local indent-line-function 'rust-mode-indent-line)
+
   ;; Fonts
-  (setq-local font-lock-defaults '(rustic-font-lock-keywords
-                                   nil nil nil nil
-                                   (font-lock-syntactic-face-function
-                                    . rustic-syntactic-face-function))))
+  (setq-local font-lock-defaults
+              '(rust-font-lock-keywords
+                nil nil nil nil
+                (font-lock-syntactic-face-function
+                 . rust-mode-syntactic-face-function)))
+  )
 
 ;;;###autoload
 (defun rustic-analyzer-macro-expand (result)
@@ -151,18 +162,13 @@ with `lsp-rust-switch-server'."
       (let ((inhibit-read-only t))
         (erase-buffer)
         ;; wrap expanded macro in a main function so we can run rustfmt
-        (insert "fn main()")
+        (insert "fn main() {")
         ;; rustfmt complains about $s
         (insert (replace-regexp-in-string "\\$" "" result))
+        (insert "}")
         (rustic-macro-expansion-mode)
-        (rustic-format-buffer)
-        (with-current-buffer buf
-          (save-excursion
-            (goto-char (point-min))
-            (delete-region (point-min) (line-end-position))
-            (goto-char (point-max))
-            (forward-line -1)
-            (delete-region (line-beginning-position) (point-max))))))
+
+        (rustic-format-macro-buffer)))
     (display-buffer buf)))
 
 ;;; _

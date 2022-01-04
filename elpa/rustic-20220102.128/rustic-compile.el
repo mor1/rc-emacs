@@ -31,6 +31,16 @@
   :type 'string
   :group 'rustic-compilation)
 
+(defcustom rustic-compile-command-remote "~/.cargo/bin/cargo"
+  "Default command for remote rust compilation."
+  :type 'string
+  :group 'rustic-compilation)
+
+(defun rustic-compile-command ()
+  (if (file-remote-p (or (buffer-file-name) ""))
+      rustic-compile-command-remote
+    rustic-compile-command))
+
 (defcustom rustic-compile-display-method 'display-buffer
   "Default function used for displaying compilation buffer."
   :type 'function
@@ -52,6 +62,7 @@
                  (const rustic-project-buffer-list)
                  function)
   :group 'rustic)
+
 
 ;;; Faces
 
@@ -257,7 +268,7 @@ ARGS is a plist that affects how the process is run.
               (or (plist-get args :buffer) rustic-compilation-buffer-name)))
         (process (or (plist-get args :process) rustic-compilation-process-name))
         (mode (or (plist-get args :mode) 'rustic-compilation-mode))
-        (directory (or (plist-get args :directory) (rustic-buffer-workspace)))
+        (directory (or (plist-get args :directory) (funcall rustic-compile-directory-method)))
         (sentinel (or (plist-get args :sentinel) #'compilation-sentinel)))
     (rustic-compilation-setup-buffer buf directory mode)
     (setq next-error-last-buffer buf)
@@ -268,7 +279,8 @@ ARGS is a plist that affects how the process is run.
                            :buffer buf
                            :command command
                            :filter #'rustic-compilation-filter
-                           :sentinel sentinel))))
+                           :sentinel sentinel
+                           :file-handler t))))
 
 (defun rustic-compilation-filter (proc string)
   "Insert the text emitted by PROC.
@@ -485,11 +497,10 @@ In either store the used command in `compilation-arguments'."
   (interactive "P")
   (setq compilation-arguments
         (if (or compilation-read-command arg)
-            (read-from-minibuffer "Compile command: "
-                                  (or compilation-arguments
-                                      rustic-compile-command))
-          rustic-compile-command))
-  (setq compilation-directory (rustic-buffer-workspace))
+            (compilation-read-command (or compilation-arguments
+                                          (rustic-compile-command)))
+          (rustic-compile-command)))
+  (setq compilation-directory (funcall rustic-compile-directory-method))
   (rustic-compilation-process-live)
   (rustic-compilation-start (split-string compilation-arguments)
                             (list :directory compilation-directory)))
@@ -498,7 +509,7 @@ In either store the used command in `compilation-arguments'."
 (defun rustic-recompile ()
   "Re-compile the program using `compilation-arguments'."
   (interactive)
-  (let* ((command (or compilation-arguments rustic-compile-command))
+  (let* ((command (or compilation-arguments (rustic-compile-command)))
          (dir compilation-directory))
     (rustic-compilation-process-live)
     (rustic-compilation (split-string command) (list :directory dir))))

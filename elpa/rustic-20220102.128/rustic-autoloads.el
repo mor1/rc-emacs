@@ -152,7 +152,7 @@ If running with prefix command `C-u', read whole command from minibuffer.
 
 \(fn &optional ARG)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-cargo" '("rustic-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-cargo" '("poly-rustic-cargo-comint-switch-buffer-hook" "rustic-")))
 
 ;;;***
 
@@ -206,7 +206,12 @@ it doesn't manage to find what you're looking for, try `rustic-doc-dumb-search'.
 Convert the documentation for a project and its dependencies." t nil)
 
 (autoload 'rustic-doc-setup "rustic-doc" "\
-Setup or update rustic-doc filter and convert script. Convert std." t nil)
+Setup or update rustic-doc filter and convert script. Convert std.
+If NO-DL is non-nil, will not try to re-download
+the pandoc filter and bash script.
+NO-DL is primarily used for development of the filters.
+
+\(fn &optional NO-DL)" t nil)
 
 (autoload 'rustic-doc-mode "rustic-doc" "\
 Convert rust html docs to .org, and browse the converted docs.
@@ -240,42 +245,9 @@ Flycheck according to the Cargo project layout." t nil)
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from rustic-interaction.el
 
-(autoload 'rustic-indent-line "rustic-interaction" nil t nil)
-
-(autoload 'rustic-promote-module-into-dir "rustic-interaction" "\
-Promote the module file visited by the current buffer into its own directory.
-
-For example, if the current buffer is visiting the file `foo.rs',
-then this function creates the directory `foo' and renames the
-file to `foo/mod.rs'.  The current buffer will be updated to
-visit the new file." t nil)
-
 (autoload 'rustic-open-dependency-file "rustic-interaction" "\
 Open the 'Cargo.toml' file at the project root if the current buffer is
 visiting a project." t nil)
-
-(autoload 'rustic-beginning-of-defun "rustic-interaction" "\
-Move backward to the beginning of the current defun.
-
-With ARG, move backward multiple defuns.  Negative ARG means
-move forward.
-
-This is written mainly to be used as `beginning-of-defun-function' for Rust.
-Don't move to the beginning of the line. `beginning-of-defun',
-which calls this, does that afterwards.
-
-\(fn &optional ARG REGEX)" t nil)
-
-(autoload 'rustic-end-of-defun "rustic-interaction" "\
-Move forward to the next end of defun.
-
-With argument, do it that many times.
-Negative argument -N means move back to Nth preceding end of defun.
-
-Assume that this is called after beginning-of-defun. So point is
-at the beginning of the defun body.
-
-This is written mainly to be used as `end-of-defun-function' for Rust." t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-interaction" '("rustic-")))
 
@@ -312,7 +284,9 @@ src-block or buffer on the Rust playpen.
 
 (autoload 'rustic-popup "rustic-popup" "\
 Setup popup.
-If directory is not in a rust project call `read-directory-name'." t nil)
+If directory is not in a rust project call `read-directory-name'.
+
+\(fn &optional ARGS)" t nil)
 
 (autoload 'rustic-popup-invoke-popup-action "rustic-popup" "\
 Execute commands which are listed in `rustic-popup-commands'.
@@ -329,7 +303,7 @@ Display help buffer for cargo command at point." t nil)
 (autoload 'rustic-popup-kill-help-buffer "rustic-popup" "\
 Kill popup help buffer and switch to popup buffer." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-popup" '("rustic-popup-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-popup" '("rustic-")))
 
 ;;;***
 
@@ -369,10 +343,7 @@ This operation requires a nightly version of rustfmt.
 \(fn BEGIN END)" t nil)
 
 (autoload 'rustic-format-buffer "rustic-rustfmt" "\
-Format the current buffer using rustfmt.
-
-Provide optional argument NO-STDIN for `rustic-before-save-hook' since there
-were issues when using stdin for formatting." t nil)
+Format the current buffer using rustfmt." t nil)
 
 (autoload 'rustic-format-file "rustic-rustfmt" "\
 Unlike `rustic-format-buffer' format file directly and revert the buffer.
