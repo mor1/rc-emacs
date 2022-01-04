@@ -1,9 +1,9 @@
 ;;; direnv.el --- Support for direnv -*- lexical-binding: t; -*-
 
 ;; Author: wouter bolsterlee <wouter@bolsterl.ee>
-;; Version: 2.1.0
-;; Package-Version: 20210419.1851
-;; Package-Commit: 4b94393a9adf677c7c037215e233eef5fbca553d
+;; Version: 2.2.0
+;; Package-Version: 20211011.1804
+;; Package-Commit: bd161f38621d1a9e4d70c9bafab9b7e3520f00b2
 ;; Package-Requires: ((emacs "25.1") (dash "2.12.0"))
 ;; Keywords: direnv, environment, processes, unix, tools
 ;; URL: https://github.com/wbolster/emacs-direnv
@@ -113,7 +113,8 @@ use `default-directory', since there is no file name (or directory)."
                 (unless (zerop (buffer-size))
                   (goto-char (point-max))
                   (re-search-backward "^{")
-                  (let ((json-key-type 'string))
+                  (let ((json-key-type 'string)
+                        (json-object-type 'alist))
                     (json-read-object)))
               (unless (zerop (direnv--file-size stderr-tempfile))
                 (goto-char (point-max))
