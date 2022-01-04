@@ -4,8 +4,8 @@
 
 ;; Author: Hinrik Örn Sigurðsson <hinrik.sig@gmail.com>
 ;; URL: https://github.com/hinrik/flycheck-lilypond
-;; Package-Version: 20200614.2104
-;; Package-Commit: 17133911b519be76365103dec8c10cb2f3729f1a
+;; Package-Version: 20211006.2102
+;; Package-Commit: 78f8c16cd67f9f6d3f1806e1fd403222723ba400
 ;; Keywords: tools, convenience
 ;; Version: 0.1-git
 ;; Package-Requires: ((emacs "24.3") (flycheck "0.22"))
@@ -49,7 +49,9 @@
   :command ("lilypond" "-l" "WARNING" "-o" temporary-directory source)
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": error: " (message) line-end)
-   (warning line-start (file-name) ":" line ":" column ": warning: " (message) line-end))
+   (error line-start (file-name) ":" line ": error: " (message) line-end)
+   (warning line-start (file-name) ":" line ":" column ": warning: " (message) line-end)
+   (warning line-start (file-name) ":" line ": warning: " (message) line-end))
   :modes LilyPond-mode)
 
 (add-to-list 'flycheck-checkers 'lilypond)
