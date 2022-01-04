@@ -1,15 +1,15 @@
 ;;; popup.el --- Visual Popup User Interface
 
 ;; Copyright (C) 2009-2015  Tomohiro Matsuyama
-;; Copyright (c) 2020-2021 Jen-Chieh Shen
+;; Copyright (c) 2020-2022 Jen-Chieh Shen
 
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Maintainer: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/auto-complete/popup-el
-;; Package-Version: 20210625.400
-;; Package-Commit: cf899f8012f4189e76a009bebb589ff71631b1e9
+;; Package-Version: 20211231.1823
+;; Package-Commit: ec3d3169a4d60b0374198580e31b6c59f51ab08a
 ;; Keywords: lisp
-;; Version: 0.5.8
+;; Version: 0.5.9
 ;; Package-Requires: ((emacs "24.3"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@
 (require 'cl-lib)
 (require 'mule)
 
-(defconst popup-version "0.5.8")
+(defconst popup-version "0.5.9")
 
 
 
@@ -244,14 +244,16 @@ ITEM is not string."
 (defun popup-replace-displayable (str &optional rep)
   "Replace non-displayable character from STR.
 
-Optional argument REP is the replacement string of non-displayable character."
+Optional argument REP is the replacement string of
+non-displayable character."
   (unless rep (setq rep ""))
   (let ((result ""))
-    (mapc (lambda (ch)
-            (setq result (concat result
-                                 (if (char-displayable-p ch) (string ch)
-                                   rep))))
-          str)
+    (dolist (string (split-string str ""))
+      (let* ((char (string-to-char string))
+             (string (if (char-displayable-p char)
+                         string
+                       rep)))
+        (setq result (concat result string))))
     result))
 
 (cl-defun popup-make-item (name
@@ -1052,6 +1054,8 @@ HELP-DELAY is a delay of displaying helps."
                      nowait
                      nostrip
                      prompt
+                     face
+                     &allow-other-keys
                      &aux tip lines)
   "Show a tooltip of STRING at POINT. This function is
 synchronized unless NOWAIT specified. Almost all arguments are
@@ -1065,7 +1069,9 @@ tooltip instance without entering event loop.
 
 If `NOSTRIP` is non-nil, `STRING` properties are not stripped.
 
-PROMPT is a prompt string when reading events during event loop."
+PROMPT is a prompt string when reading events during event loop.
+
+If FACE is non-nil, it will be used instead of face `popup-tip-face'."
   (if (bufferp string)
       (setq string (with-current-buffer string (buffer-string))))
 
@@ -1090,7 +1096,7 @@ PROMPT is a prompt string when reading events during event loop."
                           :margin-left margin-left
                           :margin-right margin-right
                           :scroll-bar scroll-bar
-                          :face 'popup-tip-face
+                          :face (or face 'popup-tip-face)
                           :parent parent
                           :parent-offset parent-offset))
 
@@ -1351,6 +1357,7 @@ PROMPT is a prompt string when reading events during event loop."
                        (isearch-keymap popup-isearch-keymap)
                        isearch-callback
                        initial-index
+                       &allow-other-keys
                        &aux menu event)
   "Show a popup menu of LIST at POINT. This function returns a
 value of the selected item. Almost all arguments are the same as in
