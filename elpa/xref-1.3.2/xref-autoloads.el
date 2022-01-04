@@ -66,6 +66,8 @@ This command is intended to be bound to a mouse event.
 (autoload 'xref-find-apropos "xref" "\
 Find all meaningful symbols that match PATTERN.
 The argument has the same meaning as in `apropos'.
+See `tags-apropos-additional-actions' for how to augment the
+output of this command when the backend is etags.
 
 \(fn PATTERN)" t nil)
  (define-key esc-map "." #'xref-find-definitions)
@@ -98,6 +100,9 @@ IGNORES is a list of glob patterns for files to ignore.
 Find all matches for REGEXP in FILES.
 Return a list of xref values.
 FILES must be a list of absolute file names.
+
+See `xref-search-program' and `xref-search-program-alist' for how
+to control which program to use when looking for matches.
 
 \(fn REGEXP FILES)" nil nil)
 
