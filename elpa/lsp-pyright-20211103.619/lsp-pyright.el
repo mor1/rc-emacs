@@ -4,8 +4,8 @@
 
 ;; Author: Arif Rezai, Vincent Zhang, Andrew Christianson
 ;; Version: 0.2.0
-;; Package-Version: 20210513.1022
-;; Package-Commit: 72fd57643d2e8eccb9a55058ec0c89bdc04dba7d
+;; Package-Version: 20211103.619
+;; Package-Commit: d428dbcf1802fbe147271c8dc74b073bd9cd7403
 ;; Package-Requires: ((emacs "26.1") (lsp-mode "7.0") (dash "2.18.0") (ht "2.0"))
 ;; Homepage: https://github.com/emacs-lsp/lsp-pyright
 ;; Keywords: languages, tools, lsp
@@ -62,7 +62,7 @@
 In order to extract type information in the absence of type stub files.
 This can add significant overhead and may result in
 poor-quality type information.
-The default value for this option is false."
+The default value for this option is true."
   :type 'boolean
   :group 'lsp-pyright)
 
