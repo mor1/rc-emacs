@@ -7,8 +7,8 @@
 ;; Maintainer: Jason R. Blevins <jblevins@xbeta.org>
 ;; Created: May 24, 2007
 ;; Version: 2.5-dev
-;; Package-Version: 20210904.733
-;; Package-Commit: 4810cac10355310ec76cd0946d0af92d595b3b81
+;; Package-Version: 20211022.55
+;; Package-Commit: c3c2f0d473a3f8ca8c4ffb2ecc094d5c3541769f
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: Markdown, GitHub Flavored Markdown, itex
 ;; URL: https://jblevins.org/projects/markdown-mode/
@@ -2658,7 +2658,8 @@ intact additional processing."
                          (match-beginning 5) (match-end 5)))))))))
 
 (defun markdown-get-defined-references ()
-  "Return all defined reference labels and their line numbers (not including square brackets)."
+  "Return all defined reference labels and their line numbers.
+They does not include square brackets)."
   (save-excursion
     (goto-char (point-min))
     (let (refs)
@@ -3918,7 +3919,7 @@ This is an internal function called by
         (markdown-insert-uri uri))))))
 
 (defun markdown-insert-link ()
-  "Insert new or update an existing link, with interactive prompts.
+  "Insert new or update an existing link, with interactive prompt.
 If the point is at an existing link or URL, update the link text,
 URL, reference label, and/or title.  Otherwise, insert a new link.
 The type of link inserted (inline, reference, or plain URL)
@@ -3953,7 +3954,7 @@ selectively adding or removing information via the prompts."
   (markdown--insert-link-or-image nil))
 
 (defun markdown-insert-image ()
-  "Insert new or update an existing image, with interactive prompts.
+  "Insert new or update an existing image, with interactive prompt.
 If the point is at an existing image, update the alt text, URL,
 reference label, and/or title. Otherwise, insert a new image.
 The type of image inserted (inline or reference) depends on which
@@ -8235,6 +8236,9 @@ markers and footnote text."
    ;; Reference definition
    ((thing-at-point-looking-at markdown-regex-reference-definition)
     (markdown-reference-goto-link (match-string-no-properties 2)))
+   ;; Link
+   ((or (markdown-link-p) (markdown-wiki-link-p))
+    (markdown-follow-thing-at-point nil))
    ;; GFM task list item
    ((markdown-gfm-task-list-item-at-point)
     (markdown-toggle-gfm-checkbox))
@@ -8799,7 +8803,8 @@ at the END of code blocks."
   (goto-char (- beg 1))
   (let ((block-indentation (current-indentation)))
     (when (> block-indentation 0)
-      (indent-rigidly beg end block-indentation))))
+      (indent-rigidly beg end block-indentation)))
+  (font-lock-ensure))
 
 (defun markdown-edit-code-block ()
   "Edit Markdown code block in an indirect buffer."
@@ -8807,8 +8812,8 @@ at the END of code blocks."
   (save-excursion
     (if (fboundp 'edit-indirect-region)
         (let* ((bounds (markdown-get-enclosing-fenced-block-construct))
-               (begin (and bounds (goto-char (nth 0 bounds)) (point-at-bol 2)))
-               (end (and bounds (goto-char (nth 1 bounds)) (point-at-bol 1))))
+               (begin (and bounds (not (null (nth 0 bounds))) (goto-char (nth 0 bounds)) (point-at-bol 2)))
+               (end (and bounds(not (null (nth 1 bounds)))  (goto-char (nth 1 bounds)) (point-at-bol 1))))
           (if (and begin end)
               (let* ((indentation (and (goto-char (nth 0 bounds)) (current-indentation)))
                      (lang (markdown-code-block-lang))
@@ -8818,7 +8823,7 @@ at the END of code blocks."
                       (lambda (_parent-buffer _beg _end)
                         (funcall mode)))
                      (indirect-buf (edit-indirect-region begin end 'display-buffer)))
-                  ;; reset `sh-shell' when indirect buffer
+                ;; reset `sh-shell' when indirect buffer
                 (when (and (not (member system-type '(ms-dos windows-nt)))
                            (member mode '(shell-script-mode sh-mode))
                            (member lang (append
