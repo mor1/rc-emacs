@@ -1,6 +1,6 @@
-(define-package "polymode" "20210907.807" "Extensible framework for multiple major modes"
+(define-package "polymode" "20211124.913" "Extensible framework for multiple major modes"
   '((emacs "25"))
-  :commit "54888d6c15249503e1a66da7bd7761a9eda9b075" :authors
+  :commit "47a7b6541a1e1cea9c22052fa202b7fdb715f03b" :authors
   '(("Vitalie Spinu"))
   :maintainer
   '("Vitalie Spinu")
