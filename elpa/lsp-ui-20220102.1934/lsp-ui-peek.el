@@ -39,6 +39,8 @@
 (require 'xref)
 (require 'dash)
 
+(declare-function lsp-ui--mute-apply 'lsp-ui)
+
 (defgroup lsp-ui-peek nil
   "Improve version of xref with peek feature."
   :group 'tools
@@ -181,12 +183,12 @@ will cause performances issues.")
   (eval '(progn
            (evil-define-motion lsp-ui-peek-jump-backward (count)
                                (lsp-ui-peek--with-evil-jumps
-                                (evil--jump-backward count)
-                                (run-hooks 'xref-after-return-hook)))
+                                   (evil--jump-backward count)
+                                 (run-hooks 'xref-after-return-hook)))
            (evil-define-motion lsp-ui-peek-jump-forward (count)
                                (lsp-ui-peek--with-evil-jumps
-                                (evil--jump-forward count)
-                                (run-hooks 'xref-after-return-hook))))
+                                   (evil--jump-forward count)
+                                 (run-hooks 'xref-after-return-hook))))
         t))
 
 (defmacro lsp-ui-peek--prop (prop &optional string)
@@ -319,7 +321,12 @@ XREFS is a list of references/definitions."
                                 'face 'lsp-ui-peek-filename
                                 'file filename
                                 'xrefs xrefs)
-                    (propertize " " 'display `(space :align-to (- right-fringe ,(1+ (length len-str)))))
+                    (propertize " " 'display `(space :align-to (- right-fringe
+                                                                  ;; Account for Emacs TTY's window divider
+                                                                  ;; Without this leeway, the reference count
+                                                                  ;; string goes to next line - impairs readability
+                                                                  ,(if (display-graphic-p) 0 1)
+                                                                  ,(1+ (length len-str)))))
                     (propertize len-str 'face 'lsp-ui-peek-filename))
             lsp-ui-peek--list)))
   (setq lsp-ui-peek--list (nreverse lsp-ui-peek--list))
@@ -341,10 +348,8 @@ XREFS is a list of references/definitions."
   (with-temp-buffer
     (insert string)
     (delay-mode-hooks
-      (let ((inhibit-message t))
-        (funcall major))
-      (ignore-errors
-        (font-lock-ensure)))
+      (lsp-ui--mute-apply (funcall major))
+      (ignore-errors (font-lock-ensure)))
     (buffer-string)))
 
 (defun lsp-ui-peek--peek ()
@@ -682,9 +687,9 @@ LOCATION can be either a LSP Location or SymbolInformation."
     (unless buffer-file-name
       (make-local-variable 'delay-mode-hooks)
       (let ((buffer-file-name filename)
-            (enable-local-variables nil)
             (inhibit-message t)
-            (delay-mode-hooks t))
+            (delay-mode-hooks t)
+            enable-local-variables)
         (set-auto-mode)))
     (font-lock-ensure)))
 
