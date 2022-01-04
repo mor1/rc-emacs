@@ -2,8 +2,8 @@
 
 ;; Author: Yuri D'Elia <wavexx@thregr.org>
 ;; Version: 1.0
-;; Package-Version: 20200913.1558
-;; Package-Commit: 6a81d43fcbdc51c2fc47d88f4fd8f25d8f906b79
+;; Package-Version: 20211030.2307
+;; Package-Commit: 8d93ede3772353e2dbc307de03e06e37ea6a0b6c
 ;; URL: https://gitlab.com/wavexx/mu4e-query-fragments.el
 ;; Package-Requires: ((emacs "24.4"))
 ;; Keywords: mu4e, mail, convenience
@@ -112,7 +112,10 @@ Example:
 	(rest (cdr args)))
     (cons (mu4e-query-fragments-expand query) rest)))
 
-(advice-add 'mu4e~proc-find :filter-args 'mu4e-query-fragments--proc-find-query-expand)
+;; support mu4e versions older than 1.7
+(advice-add (if (fboundp 'mu4e--server-find) 'mu4e--server-find 'mu4e~proc-find)
+	    :filter-args 'mu4e-query-fragments--proc-find-query-expand)
+
 
 (defun mu4e-query-fragments-search (&optional arg)
   "Search for EXPR and switch to the output buffer for the results.
@@ -124,7 +127,11 @@ the end of the query if called without a prefix argument."
     (let ((expr (read-string "Search for: " nil 'mu4e~headers-search-hist)))
       (mu4e-headers-search (concat expr " " mu4e-query-fragments-append)))))
 
-(define-key mu4e-headers-mode-map (kbd "s") 'mu4e-query-fragments-search)
+(if (boundp 'mu4e-search-minor-mode-map)
+    (define-key mu4e-search-minor-mode-map (kbd "s") 'mu4e-query-fragments-search)
+  ;; support mu4e versions older than 1.7
+  (define-key mu4e-headers-mode-map (kbd "s") 'mu4e-query-fragments-search)
+  (define-key mu4e-main-mode-map (kbd "s") 'mu4e-query-fragments-search))
 
 (provide 'mu4e-query-fragments)
 
