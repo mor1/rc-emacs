@@ -1,6 +1,6 @@
-(define-package "solarized-theme" "20210827.859" "The Solarized color theme"
+(define-package "solarized-theme" "20211114.807" "The Solarized color theme"
   '((emacs "24.1"))
-  :commit "874694ed8569ae98959262cfb0c66a6528a60367" :authors
+  :commit "f34a171ff0e39549972edf533120f0b556f0b5ad" :authors
   '(("Bozhidar Batsov" . "bozhidar@batsov.dev"))
   :maintainer
   '("Bozhidar Batsov" . "bozhidar@batsov.dev")
