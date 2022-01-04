@@ -3,8 +3,8 @@
 ;; Author: Alexandre Vassalotti <alexandre@peadrop.com>
 ;; Created: 23-Apr-2009
 ;; Version: 0.3
-;; Package-Version: 20200619.1742
-;; Package-Commit: 6b1d0f11493ef2317ea74aa00804835a10ebaf19
+;; Package-Version: 20211013.1726
+;; Package-Commit: 8c29dc2c4d55bb620bfe15ca6b74f8097cbb006d
 ;; Keywords: google protobuf languages
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@
 (eval-when-compile
   (and (= emacs-major-version 24)
        (>= emacs-minor-version 4)
-       (require 'cl))
+       (require 'cl-lib))
   (require 'cc-langs)
   (require 'cc-fonts))
 
@@ -195,7 +195,7 @@
 ;;;###autoload (add-to-list 'auto-mode-alist '("\\.proto\\'" . protobuf-mode))
 
 ;;;###autoload
-(defun protobuf-mode ()
+(define-derived-mode protobuf-mode prog-mode "Protobuf"
   "Major mode for editing Protocol Buffers description language.
 
 The hook `c-mode-common-hook' is run with no argument at mode
