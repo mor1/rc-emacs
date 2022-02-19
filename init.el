@@ -356,12 +356,33 @@
     ;; indent-line-function 'ocp-indent-line
     ;; indent-region-function 'ocp-indent-region
     utop-command "opam config exec -- utop -emacs"
+    ))
+
+(use-package org-gcal
+  :after org
+  :defer t
+  :hook
+  ( (org-agenda-mode . (lambda () (org-gcal-sync)))
+    (org-capture-after-finalize . (lambda () (org-gcal-sync)))
     )
-  )
+  :config
+  (setq
+    org-gcal-auto-archive nil
+    org-gcal-client-id "8131340798-fgd3rln4o8f1uvktvi62mbgdar5usftf.apps.googleusercontent.com"
+    org-gcal-client-secret "qYwGpyB9RY8Y37TYO13-myXk"
+    org-gcal-file-alist
+    '(("o3sbrj8ud1hagvtonj9k9q55vo@group.calendar.google.com" . "~/Dropbox/people/family.org/richard/richard.org")
+       ("hiq7rr4gpllhrk84agrg585p357m5qtp@import.calendar.google.com" . "~/Dropbox/people/family.org/richard/tripit.org")
+       )
+    org-gcal-local-timezone "Europe/London"
+    org-gcal-managed-newly-fetched-mode "gcal"
+    org-gcal-managed-post-at-point-update-existing 'prompt
+    org-gcal-managed-update-existing-mode "org"
+    org-gcal-recurring-events-mode 'nested
+    ))
 
 (use-package org
   :defer t
-  :pin org
   :bind (:map org-mode-map
           ("C-c a" . org-agenda)
           ("<M-S-up>" . org-metaup)
@@ -413,6 +434,28 @@
          )))
 
   :config
+  (setq
+    org-basedir "~/Dropbox/people/family.org/"
+    org-agenda-files (mapcar
+                       (lambda (f) (expand-file-name f org-basedir))
+                       '( "richard/richard.org"
+                          "richard/incoming.org"
+                          "richard/tripit.org"
+                          "zhome/home.org"
+                          "zhome/birthdays.org"
+                          "angela/angela.org"
+                          "eleanor/eleanor.org"
+                          "david/david.org"
+                          "william/william.org"
+                          ))
+    revert-without-query (expand-file-name "incoming.org" org-basedir)
+    org-agenda-loop-over-headlines-in-active-region nil
+    org-agenda-todo-ignore-scheduled 'all
+    ;; org-clock-continuously t
+    org-adapt-indentation t
+    org-hide-leading-stars t
+    )
+
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
   (defun org-archive-completed-tasks ()
     (interactive)
@@ -420,7 +463,7 @@
       (lambda ()
         (org-archive-subtree)
         (setq org-map-continue-from (outline-previous-heading)))
-      "/+DONE|+CANCELLED" 'agenda)
+      "/+DONE|+CANCELLED" 'tree)
     )
 
   ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
