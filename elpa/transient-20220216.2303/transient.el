@@ -7,7 +7,7 @@
 ;; Keywords: bindings
 
 ;; Package-Requires: ((emacs "25.1"))
-;; Package-Version: 0.3.7
+;; Package-Version: 0.3.7-git
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -988,8 +988,9 @@ example, sets a variable use `transient-define-infix' instead.
           (push k keys)
           (push v keys))))
     (while (let ((arg (car args)))
-             (or (vectorp arg)
-                 (and arg (symbolp arg))))
+             (if (vectorp arg)
+                 (setcar args (eval (cdr (backquote-process arg))))
+               (and arg (symbolp arg))))
       (push (pop args) suffixes))
     (list (if (eq (car-safe class) 'quote)
               (cadr class)
@@ -1356,7 +1357,7 @@ variable instead.")
 
 (defvar transient--stack nil)
 
-(defvar transient--minibuffer-depth nil)
+(defvar transient--minibuffer-depth 0)
 
 (defvar transient--buffer-name " *transient*"
   "Name of the transient buffer.")
@@ -1546,10 +1547,11 @@ to `transient-predicate-map'.  Also see `transient-base-map'.")
      'transient--layout
      (cl-mapcan
       (lambda (s) (transient--parse-child 'transient-common-commands s))
-      '([:hide (lambda ()
-                 (and (not (memq (car transient--redisplay-key)
-                                 transient--common-command-prefixes))
-                      (not transient-show-common-commands)))
+      `([:hide ,(lambda ()
+                  (and (not (memq (car (bound-and-true-p
+                                        transient--redisplay-key))
+                                  transient--common-command-prefixes))
+                       (not transient-show-common-commands)))
          ["Value commands"
           ("C-x s  " "Set"            transient-set)
           ("C-x C-s" "Save"           transient-save)
@@ -1564,10 +1566,10 @@ to `transient-predicate-map'.  Also see `transient-base-map'.")
           ("C-z" "Suspend transient stack"  transient-suspend)]
          ["Customize"
           ("C-x t" transient-toggle-common
-           :description (lambda ()
-                          (if transient-show-common-commands
-                              "Hide common commands"
-                            "Show common permanently")))
+           :description ,(lambda ()
+                           (if transient-show-common-commands
+                               "Hide common commands"
+                             "Show common permanently")))
           ("C-x l" "Show/hide suffixes" transient-set-level)]])))
 
 (defvar transient-predicate-map
@@ -1633,15 +1635,19 @@ of the corresponding object.")
 (defvar transient--redisplay-map nil)
 (defvar transient--redisplay-key nil)
 
-(defun transient--push-keymap (map)
-  (transient--debug "     push %s%s" map (if (symbol-value map) "" " VOID"))
-  (with-demoted-errors "transient--push-keymap: %S"
-    (internal-push-keymap (symbol-value map) 'overriding-terminal-local-map)))
+(defun transient--push-keymap (var)
+  (let ((map (symbol-value var)))
+    (transient--debug "     push %s%s" var (if map "" " VOID"))
+    (when map
+      (with-demoted-errors "transient--push-keymap: %S"
+        (internal-push-keymap map 'overriding-terminal-local-map)))))
 
-(defun transient--pop-keymap (map)
-  (transient--debug "     pop  %s%s" map (if (symbol-value map) "" " VOID"))
-  (with-demoted-errors "transient--pop-keymap: %S"
-    (internal-pop-keymap (symbol-value map) 'overriding-terminal-local-map)))
+(defun transient--pop-keymap (var)
+  (let ((map (symbol-value var)))
+    (transient--debug "     pop  %s%s" var (if map "" " VOID"))
+    (when map
+      (with-demoted-errors "transient--pop-keymap: %S"
+        (internal-pop-keymap map 'overriding-terminal-local-map)))))
 
 (defun transient--make-transient-map ()
   (let ((map (make-sparse-keymap)))
@@ -2101,22 +2107,25 @@ value.  Otherwise return CHILDREN as is."
 
 (add-hook 'post-command-hook 'transient--post-command-hook)
 
-(defun transient--delay-post-command ()
+(defun transient--delay-post-command (&optional abort-only)
+  (transient--debug 'delay-post-command)
   (let ((depth (minibuffer-depth))
         (command this-command)
         (delayed (if transient--exitp
-                     #'transient--post-exit
+                     (apply-partially #'transient--post-exit this-command)
                    #'transient--resume-override))
         post-command abort-minibuffer)
-    (setq post-command
-          (lambda () "@transient--delay-post-command"
-            (let ((act (and (eq this-command command)
-                            (not (eq (this-command-keys-vector) [])))))
-              (transient--debug 'post-command-hook "act: %s" act)
-              (when act
-                (remove-hook 'transient--post-command-hook post-command)
-                (remove-hook 'minibuffer-exit-hook abort-minibuffer)
-                (funcall delayed)))))
+    (unless abort-only
+      (setq post-command
+            (lambda () "@transient--delay-post-command"
+              (let ((act (and (eq this-command command)
+                              (not (eq (this-command-keys-vector) [])))))
+                (transient--debug 'post-command-hook "act: %s" act)
+                (when act
+                  (remove-hook 'transient--post-command-hook post-command)
+                  (remove-hook 'minibuffer-exit-hook abort-minibuffer)
+                  (funcall delayed)))))
+      (add-hook 'transient--post-command-hook post-command))
     (setq abort-minibuffer
           (lambda () "@transient--delay-post-command"
             (let ((act (and (or (memq this-command transient--abort-commands)
@@ -2129,7 +2138,6 @@ value.  Otherwise return CHILDREN as is."
                 (remove-hook 'transient--post-command-hook post-command)
                 (remove-hook 'minibuffer-exit-hook abort-minibuffer)
                 (funcall delayed)))))
-    (add-hook 'transient--post-command-hook post-command)
     (add-hook 'minibuffer-exit-hook abort-minibuffer)))
 
 (defun transient--post-command ()
@@ -2140,7 +2148,7 @@ value.  Otherwise return CHILDREN as is."
            (= (minibuffer-depth)
               (1+ transient--minibuffer-depth)))
       (transient--suspend-override)
-      (transient--delay-post-command))
+      (transient--delay-post-command (eq transient--exitp 'replace)))
      (transient--exitp
       (transient--post-exit))
      ((eq this-command (oref transient--prefix command)))
@@ -2153,13 +2161,24 @@ value.  Otherwise return CHILDREN as is."
           (transient--push-keymap 'transient--redisplay-map)))
       (transient--redisplay)))))
 
-(defun transient--post-exit ()
+(defun transient--post-exit (&optional command)
   (transient--debug 'post-exit)
   (unless (and (eq transient--exitp 'replace)
                (or transient--prefix
                    ;; The current command could act as a prefix,
-                   ;; but decided not to call `transient-setup'.
-                   (prog1 nil (transient--stack-zap))))
+                   ;; but decided not to call `transient-setup',
+                   ;; or it is prevented from doing so because it
+                   ;; uses the minibuffer and the user aborted
+                   ;; that.
+                   (prog1 nil
+                     (if (let ((obj (transient-suffix-object command)))
+                           (and (slot-boundp obj 'transient)
+                                (oref obj transient)))
+                         ;; This sub-prefix is a transient suffix;
+                         ;; go back to outer prefix, by calling
+                         ;; `transient--stack-pop' further down.
+                         (setq transient--exitp nil)
+                       (transient--stack-zap)))))
     (remove-hook 'pre-command-hook  #'transient--pre-command)
     (remove-hook 'post-command-hook #'transient--post-command))
   (setq transient-current-prefix nil)
@@ -2170,7 +2189,7 @@ value.  Otherwise return CHILDREN as is."
     (setq transient--exitp nil)
     (setq transient--helpp nil)
     (setq transient--editp nil)
-    (setq transient--minibuffer-depth nil)
+    (setq transient--minibuffer-depth 0)
     (run-hooks 'transient-exit-hook)
     (when resume
       (transient--stack-pop))))
@@ -2228,7 +2247,7 @@ value.  Otherwise return CHILDREN as is."
   (when transient--debug
     (let ((inhibit-message (not (eq transient--debug 'message))))
       (if (symbolp arg)
-          (message "-- %-16s (cmd: %s, event: %S, exit: %s%s)"
+          (message "-- %-18s (cmd: %s, event: %S, exit: %s%s)"
                    arg
                    (or (ignore-errors (transient--suffix-symbol this-command))
                        (if (byte-code-function-p this-command)
@@ -3153,13 +3172,18 @@ have a history of their own.")
       (when groups
         (insert ?\n)))))
 
+(defvar transient--max-group-level 1)
+
 (cl-defgeneric transient--insert-group (group)
   "Format GROUP and its elements and insert the result.")
 
-(cl-defmethod transient--insert-group :before ((group transient-group))
+(cl-defmethod transient--insert-group :around ((group transient-group))
   "Insert GROUP's description, if any."
   (when-let ((desc (transient-format-description group)))
-    (insert desc ?\n)))
+    (insert desc ?\n))
+  (let ((transient--max-group-level
+         (max (oref group level) transient--max-group-level)))
+    (cl-call-next-method group)))
 
 (cl-defmethod transient--insert-group ((group transient-row))
   (transient--maybe-pad-keys group)
@@ -3400,7 +3424,8 @@ If the OBJ's `key' is currently unreachable, then apply the face
     (cond ((transient--key-unreachable-p obj)
            (propertize desc 'face 'transient-unreachable))
           ((and transient-highlight-higher-levels
-                (> (oref obj level) transient--default-prefix-level))
+                (> (max (oref obj level) transient--max-group-level)
+                   transient--default-prefix-level))
            (add-face-text-property
             0 (length desc) 'transient-higher-level nil desc)
            desc)
@@ -3660,6 +3685,13 @@ resumes the suspended transient.")
 
 (define-minor-mode transient-resume-mode
   "Auxiliary minor-mode used to resume a transient after viewing help.")
+
+(defun transient-toggle-debug ()
+  "Toggle debugging statements for transient commands."
+  (interactive)
+  (setq transient--debug (not transient--debug))
+  (message "Debugging transient %s"
+           (if transient--debug "enabled" "disabled")))
 
 ;;; Compatibility
 ;;;; Popup Navigation
@@ -3961,7 +3993,7 @@ we stop there."
            (oset obj value value)))
 
 (cl-defmethod transient-format-description ((obj transient-lisp-variable))
-  (or (oref obj description)
+  (or (cl-call-next-method obj)
       (symbol-name (oref obj variable))))
 
 (cl-defmethod transient-format-value ((obj transient-lisp-variable))
