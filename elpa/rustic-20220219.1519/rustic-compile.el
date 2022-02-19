@@ -11,6 +11,7 @@
 
 (require 'markdown-mode)
 (require 'xterm-color)
+(require 's)
 
 (require 'compile)
 
@@ -46,11 +47,16 @@
   :type 'function
   :group 'rustic-compilation)
 
-(defcustom rustic-compile-backtrace "0"
+(defcustom rustic-compile-backtrace (or (getenv "RUST_BACKTRACE") "0")
   "Set environment variable `RUST_BACKTRACE'."
   :type '(choice (string :tag "0")
                  (string :tag "1")
                  (string :tag "full"))
+  :group 'rustic-compilation)
+
+(defcustom rustic-compile-rustflags (or (getenv "RUSTFLAGS") "")
+  "String used for RUSTFLAGS."
+  :type 'string
   :group 'rustic-compilation)
 
 (defcustom rustic-list-project-buffers-function
@@ -197,7 +203,9 @@ Error matching regexes from compile.el are removed."
   (add-to-list 'compilation-error-regexp-alist 'rustic-info)
   (add-to-list 'compilation-error-regexp-alist 'rustic-panic)
 
-  (add-hook 'compilation-filter-hook #'rustic-insert-errno-button nil t))
+  (add-hook 'compilation-filter-hook #'rustic-insert-errno-button nil t)
+
+  (setq-local rustic-compilation-workspace (rustic-buffer-workspace)))
 
 ;;; Compilation Process
 
@@ -217,6 +225,12 @@ Set environment variables for rust process."
                                (format "TERM=%s" "ansi")
                                (format "RUST_BACKTRACE=%s" rustic-compile-backtrace))
                               process-environment)))
+
+    (when (> (length rustic-compile-rustflags) 0)
+      (setq process-environment
+            (nconc (list (format "RUSTFLAGS=%s" rustic-compile-rustflags))
+                   process-environment)))
+
     (let ((process (apply
                     #'start-file-process (plist-get args :name)
                     (plist-get args :buffer)
@@ -224,6 +238,9 @@ Set environment variables for rust process."
       (set-process-filter process (plist-get args :filter))
       (set-process-sentinel process (plist-get args :sentinel))
       (set-process-coding-system process 'utf-8-emacs-unix 'utf-8-emacs-unix)
+      (process-put process 'command (plist-get args :command))
+      (process-put process 'workspace (plist-get args :workspace))
+      (process-put process 'file-buffer (plist-get args :file-buffer))
       process)))
 
 (defun rustic-compilation-setup-buffer (buf dir mode &optional no-mode-line)
@@ -251,8 +268,9 @@ ARGS is a plist that affects how the process is run,
 see `rustic-compilation' for details.  First run
 `rustic-before-compilation-hook' and if any of these
 functions fails, then do not start compilation."
-  (when (run-hook-with-args-until-failure 'rustic-before-compilation-hook)
-    (rustic-compilation command args)))
+  (save-excursion
+    (when (run-hook-with-args-until-failure 'rustic-before-compilation-hook (plist-get args :clippy-fix))
+      (rustic-compilation command args))))
 
 (defun rustic-compilation (command &optional args)
   "Start a compilation process with COMMAND.
@@ -264,22 +282,28 @@ ARGS is a plist that affects how the process is run.
 - `:mode' mode for process buffer
 - `:directory' set `default-directory'
 - `:sentinel' process sentinel"
-  (let ((buf (get-buffer-create
-              (or (plist-get args :buffer) rustic-compilation-buffer-name)))
-        (process (or (plist-get args :process) rustic-compilation-process-name))
-        (mode (or (plist-get args :mode) 'rustic-compilation-mode))
-        (directory (or (plist-get args :directory) (funcall rustic-compile-directory-method)))
-        (sentinel (or (plist-get args :sentinel) #'compilation-sentinel)))
+  (let* ((buf (get-buffer-create
+               (or (plist-get args :buffer) rustic-compilation-buffer-name)))
+         (process (or (plist-get args :process) rustic-compilation-process-name))
+         (mode (or (plist-get args :mode) 'rustic-compilation-mode))
+         (directory (or (plist-get args :directory) (funcall rustic-compile-directory-method)))
+         (workspace (rustic-buffer-workspace))
+         (sentinel (or (plist-get args :sentinel) #'rustic-compilation-sentinel))
+         (file-buffer (current-buffer)))
     (rustic-compilation-setup-buffer buf directory mode)
     (setq next-error-last-buffer buf)
     (unless (plist-get args :no-display)
       (funcall rustic-compile-display-method buf))
     (with-current-buffer buf
+      (let ((inhibit-read-only t))
+        (insert (format "%s \n" (s-join " "  command))))
       (rustic-make-process :name process
                            :buffer buf
                            :command command
+                           :file-buffer file-buffer
                            :filter #'rustic-compilation-filter
                            :sentinel sentinel
+                           :workspace workspace
                            :file-handler t))))
 
 (defun rustic-compilation-filter (proc string)
@@ -310,6 +334,7 @@ Translate STRING with `xterm-color-filter'."
                 ;; now use window-point-insertion-type instead.
 
                 (insert xterm-string)
+
                 (compilation--ensure-parse (point-max))
 
                 (unless comint-inhibit-carriage-motion
@@ -327,6 +352,30 @@ Translate STRING with `xterm-color-filter'."
           (set-window-start win (point-min))
           (set-window-point win (point-min)))))))
 
+;; we only use this sentinel to set `default-directory' to the workspace
+;; dir to ensure goto-error functions work
+(defun rustic-compilation-sentinel (proc msg)
+  "Sentinel for compilation buffers."
+  (let ((buffer (process-buffer proc)))
+    (with-current-buffer buffer
+      (setq default-directory (process-get proc 'workspace)))
+    (if (memq (process-status proc) '(exit signal))
+	    (if (null (buffer-name buffer))
+	        ;; buffer killed
+	        (set-process-buffer proc nil)
+	      (with-current-buffer buffer
+	        ;; Write something in the compilation buffer
+	        ;; and hack its mode line.
+	        (compilation-handle-exit (process-status proc)
+				                     (process-exit-status proc)
+				                     msg)
+	        ;; Since the buffer and mode line will show that the
+	        ;; process is dead, we can delete it now.  Otherwise it
+	        ;; will stay around until M-x list-processes.
+	        (delete-process proc)))
+      (setq compilation-in-progress (delq proc compilation-in-progress))
+      (compilation--update-in-progress-mode-line))))
+
 (defun rustic-compilation-process-live (&optional nosave)
   "Ask to kill live rustic process if any and call `rustic-save-some-buffers'.
 If optional NOSAVE is non-nil, then do not do the latter.
@@ -339,7 +388,9 @@ Return non-nil if there was a live process."
                        (list rustic-compilation-process-name
                              (bound-and-true-p rustic-format-process-name)
                              (bound-and-true-p rustic-clippy-process-name)
-                             (bound-and-true-p rustic-test-process-name)))))
+                             (bound-and-true-p rustic-run-process-name)
+                             (bound-and-true-p rustic-test-process-name)
+                             (bound-and-true-p rustic-expand-process-name)))))
     (when (> (length procs) 1)
       (error "BUG: Multiple live rustic processes: %s" procs))
     (when procs
@@ -366,7 +417,7 @@ If NO-ERROR is t, don't throw error if user chooses not to kill running process.
 (defun rustic-save-some-buffers ()
   "Unlike `save-some-buffers', only consider project related files.
 
-The variable `buffer-save-without-query' can be used for customization and
+The variable `compilation-ask-about-save' can be used for customization and
 buffers are formatted after saving if turned on by `rustic-format-trigger'."
   (let ((buffers (cl-remove-if-not
                   #'buffer-file-name
@@ -385,7 +436,7 @@ buffers are formatted after saving if turned on by `rustic-format-trigger'."
             (let ((rustic-format-trigger nil)
                   (rustic-format-on-save nil))
               (setq saved-p
-                    (if buffer-save-without-query
+                    (if (not compilation-ask-about-save)
                         (progn (save-buffer) t)
                       (if (yes-or-no-p (format "Save file %s ? "
                                                (buffer-file-name buffer)))
@@ -401,6 +452,7 @@ buffers are formatted after saving if turned on by `rustic-format-trigger'."
 This hook checks if there's a line number at the beginning of the
 current line in an error section."
   (-if-let* ((rustic-p (eq major-mode 'rustic-compilation-mode))
+             (default-directory rustic-compilation-workspace)
              (line-contents (buffer-substring-no-properties
                              (line-beginning-position)
                              (line-end-position)))
@@ -433,7 +485,6 @@ buffer."
         (proc (get-buffer-process (current-buffer)))
         (inhibit-read-only t))
     (process-send-string proc (concat input "\n"))))
-
 
 ;;; Rustc
 
@@ -495,24 +546,34 @@ use `rustic-compile-command'.
 
 In either store the used command in `compilation-arguments'."
   (interactive "P")
-  (setq compilation-arguments
+  (rustic-set-compilation-arguments
         (if (or compilation-read-command arg)
-            (compilation-read-command (or compilation-arguments
+            (compilation-read-command (or (car compilation-arguments)
                                           (rustic-compile-command)))
           (rustic-compile-command)))
   (setq compilation-directory (funcall rustic-compile-directory-method))
   (rustic-compilation-process-live)
-  (rustic-compilation-start (split-string compilation-arguments)
-                            (list :directory compilation-directory)))
+  (rustic-compilation-start (split-string (car compilation-arguments))
+                            (list :directory compilation-directory
+                                  :clippy-fix t)))
+
+;; TODO: we don't use the other options stored in `compilation-arguments',
+;;       but probably we should
+(defun rustic-set-compilation-arguments (command)
+  "Set `compilation-arguments' using COMMAND.
+It's a list that looks like (list command mode name-function highlight-regexp)."
+  ;; TODO: compile.el uses setq-local, but that does seem weird right ?
+  (setq compilation-arguments (list command nil nil nil)))
 
 ;;;###autoload
 (defun rustic-recompile ()
   "Re-compile the program using `compilation-arguments'."
   (interactive)
-  (let* ((command (or compilation-arguments (rustic-compile-command)))
+  (let* ((command (or (car compilation-arguments) (rustic-compile-command)))
          (dir compilation-directory))
     (rustic-compilation-process-live)
-    (rustic-compilation (split-string command) (list :directory dir))))
+    (rustic-compilation-start (split-string command)
+                              (list :directory dir :clippy-fix t))))
 
 ;;; Spinner
 

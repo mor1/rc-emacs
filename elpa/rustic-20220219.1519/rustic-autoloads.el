@@ -32,23 +32,6 @@ Major mode for Rust code.
 ;;;### (autoloads nil "rustic-cargo" "rustic-cargo.el" (0 0 0 0))
 ;;; Generated autoloads from rustic-cargo.el
 
-(autoload 'rustic-cargo-clippy-run "rustic-cargo" "\
-Run `cargo clippy' with optional ARGS.
-
-\(fn &optional ARGS)" t nil)
-
-(autoload 'rustic-cargo-clippy "rustic-cargo" "\
-Run 'cargo clippy'.
-
-If ARG is not nil, use value as argument and store it in `rustic-clippy-arguments'.
-When calling this function from `rustic-popup-mode', always use the value of
-`rustic-clippy-arguments'.
-
-\(fn &optional ARG)" t nil)
-
-(autoload 'rustic-cargo-clippy-rerun "rustic-cargo" "\
-Run 'cargo clippy' with `rustic-clippy-arguments'." t nil)
-
 (autoload 'rustic-cargo-test-run "rustic-cargo" "\
 Start compilation process for 'cargo test' with optional TEST-ARGS.
 
@@ -69,6 +52,9 @@ Run 'cargo test' with `rustic-test-arguments'." t nil)
 (autoload 'rustic-cargo-current-test "rustic-cargo" "\
 Run 'cargo test' for the test near point." t nil)
 
+(autoload 'rustic-cargo-test-dwim "rustic-cargo" "\
+Run test or mod at point. Otherwise run `rustic-cargo-test'." t nil)
+
 (autoload 'rustic-cargo-outdated "rustic-cargo" "\
 Use 'cargo outdated' to list outdated packages in `tabulated-list-mode'.
 Execute process in PATH.
@@ -80,6 +66,12 @@ Update list of outdated packages." t nil)
 
 (autoload 'rustic-cargo-mark-upgrade "rustic-cargo" "\
 Mark an upgradable package." t nil)
+
+(autoload 'rustic-cargo-mark-latest-upgrade "rustic-cargo" "\
+Mark an upgradable package to the latest available version." t nil)
+
+(autoload 'rustic-cargo-mark-all-upgrades-latest "rustic-cargo" "\
+Mark all packages in the Package Menu to latest version." t nil)
 
 (autoload 'rustic-cargo-mark-all-upgrades "rustic-cargo" "\
 Mark all upgradable packages in the Package Menu." t nil)
@@ -102,24 +94,43 @@ If BIN is not nil, create a binary application, otherwise a library.
 
 \(fn PROJECT-PATH &optional BIN)" t nil)
 
+(autoload 'rustic-cargo-run-command "rustic-cargo" "\
+Start compilation process for 'cargo run' with optional RUN-ARGS.
+
+\(fn &optional RUN-ARGS)" t nil)
+
+(autoload 'rustic-cargo-run "rustic-cargo" "\
+Run 'cargo run'.
+
+If ARG is not nil, use value as argument and store it in `rustic-run-arguments'.
+When calling this function from `rustic-popup-mode', always use the value of
+`rustic-run-arguments'.
+
+\(fn &optional ARG)" t nil)
+
+(autoload 'rustic-cargo-run-rerun "rustic-cargo" "\
+Run 'cargo run' with `rustic-run-arguments'." t nil)
+
+(autoload 'rustic-run-shell-command "rustic-cargo" "\
+Run an arbitrary shell command using ARG for the current project.
+Example: use it to provide an environment variable to your
+application like this `env MYVAR=1 cargo run' so that it can read
+it at the runtime.  As a byproduct, you can run any shell command
+in your project like `pwd'
+
+\(fn &optional ARG)" t nil)
+
 (autoload 'rustic-cargo-build "rustic-cargo" "\
 Run 'cargo build' for the current project." t nil)
 
-(autoload 'rustic-run-shell-command "rustic-cargo" "\
-Run an arbitrary shell command for the current project.
-Example: use it to provide an environment variable to your application like this `env MYVAR=1 cargo run' so that it can read it at the runtime.
-As a byproduct, you can run any shell command in your project like `pwd'
-
-\(fn &optional ARG)" t nil)
-
-(autoload 'rustic-cargo-run "rustic-cargo" "\
-Run 'cargo run' for the current project.
-If running with prefix command `C-u', read whole command from minibuffer.
-
-\(fn &optional ARG)" t nil)
-
 (autoload 'rustic-cargo-clean "rustic-cargo" "\
-Run 'cargo clean' for the current project." t nil)
+Run 'cargo clean' for the current project.
+
+If ARG is not nil, use value as argument and store it in `rustic-clean-arguments'.
+When calling this function from `rustic-popup-mode', always use the value of
+`rustic-clean-arguments'.
+
+\(fn &optional ARG)" t nil)
 
 (autoload 'rustic-cargo-check "rustic-cargo" "\
 Run 'cargo check' for the current project." t nil)
@@ -152,7 +163,59 @@ If running with prefix command `C-u', read whole command from minibuffer.
 
 \(fn &optional ARG)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-cargo" '("poly-rustic-cargo-comint-switch-buffer-hook" "rustic-")))
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-cargo" '("rustic-")))
+
+;;;***
+
+;;;### (autoloads nil "rustic-clippy" "rustic-clippy.el" (0 0 0 0))
+;;; Generated autoloads from rustic-clippy.el
+
+(autoload 'rustic-cargo-clippy-run "rustic-clippy" "\
+Run `cargo clippy' with optional ARGS.
+
+\(fn &rest ARGS)" t nil)
+
+(autoload 'rustic-cargo-lints "rustic-clippy" "\
+Run cargo-lints with optional ARGS." t nil)
+
+(autoload 'rustic-cargo-clippy "rustic-clippy" "\
+Run 'cargo clippy'.
+
+If ARG is not nil, use value as argument and store it in `rustic-clippy-arguments'.
+When calling this function from `rustic-popup-mode', always use the value of
+`rustic-clippy-arguments'.
+
+\(fn &optional ARG)" t nil)
+
+(autoload 'rustic-cargo-clippy-rerun "rustic-clippy" "\
+Run 'cargo clippy' with `rustic-clippy-arguments'." t nil)
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-clippy" '("rustic-")))
+
+;;;***
+
+;;;### (autoloads nil "rustic-comint" "rustic-comint.el" (0 0 0 0))
+;;; Generated autoloads from rustic-comint.el
+
+(autoload 'rustic-cargo-comint-run "rustic-comint" "\
+Run 'cargo run' but for interactive programs.
+
+If ARG is not nil, use value as argument and store it in `rustic-run-arguments'.
+When calling this function from `rustic-popup-mode', always use the value of
+`rustic-run-arguments'.
+
+\(fn &optional ARG)" t nil)
+
+(autoload 'rustic-cargo-comint-run-rerun "rustic-comint" "\
+Run 'cargo run' with `rustic-run-comint-arguments'." t nil)
+
+(autoload 'rustic-cargo-plain-run "rustic-comint" "\
+Run 'cargo run' for the current project.
+If running with prefix command `C-u', read whole command from minibuffer.
+
+\(fn &optional ARG)" t nil)
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-comint" '("poly-rustic-cargo-comint-switch-buffer-hook" "rustic-")))
 
 ;;;***
 
@@ -210,8 +273,9 @@ Setup or update rustic-doc filter and convert script. Convert std.
 If NO-DL is non-nil, will not try to re-download
 the pandoc filter and bash script.
 NO-DL is primarily used for development of the filters.
+If NOCONFIRM is non-nil, install all dependencies without prompting user.
 
-\(fn &optional NO-DL)" t nil)
+\(fn &optional NO-DL NOCONFIRM)" t nil)
 
 (autoload 'rustic-doc-mode "rustic-doc" "\
 Convert rust html docs to .org, and browse the converted docs.
@@ -224,6 +288,26 @@ toggle it if ARG is `toggle'; disable the mode otherwise.
 \(fn &optional ARG)" t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-doc" '("rustic-doc-")))
+
+;;;***
+
+;;;### (autoloads nil "rustic-expand" "rustic-expand.el" (0 0 0 0))
+;;; Generated autoloads from rustic-expand.el
+
+(autoload 'rustic-cargo-expand "rustic-expand" "\
+Run 'cargo expand'.
+
+If ARG is not nil, use value as argument and store it in
+`rustic-expand-arguments'.  When calling this function from
+`rustic-popup-mode', always use the value of
+`rustic-expand-arguments'.
+
+\(fn &optional ARG)" t nil)
+
+(autoload 'rustic-cargo-expand-rerun "rustic-expand" "\
+Run 'cargo expand' with `rustic-expand-arguments'." t nil)
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "rustic-expand" '("rustic-")))
 
 ;;;***
 

@@ -63,6 +63,13 @@ to 'on-save."
   :type 'function
   :group 'rustic)
 
+(defcustom rustic-cargo-clippy-trigger-fix nil
+  "Whether to run 'clippy --fix' before build or run."
+  :type '(choice (const :tag "Run 'clippy --fix' before saving." on-save)
+                 (const :tag "Run 'clippy --fix' before compilation." on-compile)
+                 (const :tag "Don't fix automatically." nil))
+  :group 'rustic)
+
 ;;; _
 
 (defvar rustic-format-process-name "rustic-rustfmt-process"
@@ -100,7 +107,8 @@ and it's `cdr' is a list of arguments."
          (files (if (listp files) files (list files)))
          (command (or (plist-get args :command)
                       (rustic-compute-rustfmt-args)))
-         (command (if (listp command) command (list command))))
+         (command (if (listp command) command (list command)))
+         (cur-buf (current-buffer)))
     (setq rustic-save-pos (set-marker (make-marker) (point) (current-buffer)))
     (rustic-compilation-setup-buffer err-buf dir 'rustic-format-mode t)
     (--each files
@@ -118,6 +126,7 @@ and it's `cdr' is a list of arguments."
                                         :file-handler t)))
         (setq next-error-last-buffer buffer)
         (when string
+          (process-put proc 'command-buf cur-buf)
           (while (not (process-live-p proc))
             (sleep-for 0.01))
           (process-send-string proc (concat string "\n"))
@@ -166,7 +175,21 @@ and it's `cdr' is a list of arguments."
           (with-current-buffer next-error-last-buffer
             (goto-char rustic-save-pos))
           (funcall rustic-format-display-method proc-buffer)
-          (message "Rustfmt error."))))))
+          (message "Rustfmt error."))))
+
+    ;; rustfmt warnings
+    (when-let ((b (process-get proc 'command-buf)))
+      (when (process-get proc 'command-buf)
+        (let ((warnings ""))
+          (with-current-buffer b
+            (save-excursion
+              (goto-char (point-min))
+              (while (looking-at "^Warning:")
+                (setq warnings (concat warnings (buffer-substring-no-properties (line-beginning-position) (line-end-position)) "\n"))
+                (kill-line)
+                (delete-char 1)
+                (goto-char (point-min)))))
+          (message warnings))))))
 
 (defun rustic-format-macro-sentinel (proc output)
   "Format buffer and remove decorations that we create for rustfmt"
@@ -232,6 +255,8 @@ and it's `cdr' is a list of arguments."
 
 (defun rustic-cargo-fmt-sentinel (proc output)
   "Sentinel for formatting with `rustic-cargo-fmt'."
+  (with-current-buffer (process-buffer proc)
+    (setq default-directory (process-get proc 'workspace)))
   (let ((proc-buffer (process-buffer proc))
         (inhibit-read-only t))
     (with-current-buffer proc-buffer
@@ -287,9 +312,10 @@ This operation requires a nightly version of rustfmt.
               (eq major-mode 'rustic-macro-expansion-mode))
     (error "Not a rustic-mode buffer."))
   (rustic-compilation-process-live t)
-  (rustic-format-start-process 'rustic-format-sentinel
-                               :buffer (current-buffer)
-                               :stdin (buffer-string)))
+  (save-excursion
+    (rustic-format-start-process 'rustic-format-sentinel
+                                 :buffer (current-buffer)
+                                 :stdin (buffer-string))))
 
 (defun rustic-format-macro-buffer ()
   "Format the current buffer using rustfmt, and theh remove first and last lines."
@@ -318,6 +344,17 @@ This operation requires a nightly version of rustfmt.
       (while (eq (process-status proc) 'run)
         (sit-for 0.05)))))
 
+(defun rustic-format-dwim (beg end)
+  "Format region if active, if not check if major mode is rustic
+and format file, or else run 'cargo fmt'."
+  (interactive "r")
+  (cond ((region-active-p)
+         (rustic-format-region beg end))
+        ((eq major-mode 'rustic-mode)
+         (rustic-format-file))
+        (t
+         (rustic-cargo-fmt))))
+
 (defun rustic-project-root (project)
   "Runs the correct version of project-root function for
 different emacs versions."
@@ -343,30 +380,52 @@ This is basically a wrapper around `project--buffer-list'."
 
 ;;; Hooks
 
-(defun rustic-maybe-format-before-compilation ()
-  (if (eq rustic-format-trigger 'on-compile)
-      (let ((proc (rustic-cargo-fmt)))
+(defun rustic-maybe-format-before-compilation (&optional clippy-fix)
+  "Will be executed before running `rustic-compilation'."
+  (let ((compile-ready-p t))
+    ;; run clippy --fix, but only for "build" or "run" and rustic-compile
+    (when (and clippy-fix
+               (eq rustic-cargo-clippy-trigger-fix 'on-compile))
+      (let* ((proc (rustic-cargo-clippy-fix :silent t :no-save t)))
         (while (eq (process-status proc) 'run)
           (sit-for 0.1))
-        (and (not (zerop (process-exit-status proc)))
-             (funcall rustic-compile-display-method (process-buffer proc))
-             t))
-    t))
+        (unless (zerop (process-exit-status proc))
+          (setq compile-ready-p nil))))
+
+    ;; cargo fmt
+    (when compile-ready-p
+      (when (eq rustic-format-trigger 'on-compile)
+        (let ((proc (rustic-cargo-fmt)))
+          (while (eq (process-status proc) 'run)
+            (sit-for 0.1))
+          (unless (zerop (process-exit-status proc))
+            (setq compile-ready-p nil)))))
+    compile-ready-p))
 
 (add-hook 'rustic-before-compilation-hook
           #'rustic-maybe-format-before-compilation)
 
 (defun rustic-before-save-hook ()
-  "Don't throw error if rustfmt isn't installed, as it makes saving impossible."
-  (when (and (rustic-format-on-save-p)
-             (not (rustic-compilation-process-live t)))
-    (condition-case nil
-        (progn
-          (if (file-remote-p (buffer-file-name))
-              (rustic-format-buffer)
-            (funcall rustic-format-on-save-method))
-          (sit-for 0.1))
-      (error nil))))
+  "Automatically run 'clippy --fix' OR rustfmt before saving.
+
+Change `rustic-cargo-clippy-trigger-fix' and `rustic-format-trigger'
+to make use of these features.
+
+Don't throw error if rustfmt isn't installed, as it makes saving impossible."
+  (when (eq rustic-cargo-clippy-trigger-fix 'on-save)
+    (rustic-cargo-clippy-fix :silent t :no-save t))
+
+  (unless (eq rustic-cargo-clippy-trigger-fix 'on-save)
+    (save-excursion
+      (when (and (rustic-format-on-save-p)
+                 (not (rustic-compilation-process-live t)))
+        (condition-case nil
+            (progn
+              (if (file-remote-p (buffer-file-name))
+                  (rustic-format-buffer)
+                (funcall rustic-format-on-save-method))
+              (sit-for 0.1))
+          (error nil))))))
 
 (defun rustic-after-save-hook ()
   "Check if rustfmt is installed after saving the file."

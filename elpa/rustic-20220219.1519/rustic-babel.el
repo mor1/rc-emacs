@@ -364,7 +364,7 @@ kill the running process."
         (let ((default-directory dir)
               (toolchain (cdr (assq :toolchain params))))
           (write-region
-           (concat "#![allow(non_snake_case)]\n"
+           (concat "#![allow(non_snake_case, unused)]\n"
                    (if use-blocks (rustic-babel-insert-mod use-blocks) "")
                    (if include-blocks (rustic-babel-include-blocks include-blocks) "")
                    (if wrap-main (rustic-babel-ensure-main-wrap body) body))
@@ -387,6 +387,29 @@ at least one time in this emacs session before this command can be used."
     (if (file-exists-p path)
         (find-file path)
       (message "Run block first to visit generated project."))))
+
+;; TODO: honor babel params
+(defun rustic-babel-clippy ()
+  "Currently doesn't support params."
+  (interactive)
+  (let* ((err-buff (get-buffer-create rustic-babel-compilation-buffer-name))
+         (default-directory org-babel-temporary-directory)
+         (body (org-element-property :value (org-element-at-point)))
+         (project (rustic-babel-project))
+         (params (list "cargo" "clippy")))
+    (let* ((dir (setq rustic-babel-dir (expand-file-name project)))
+           (main (expand-file-name "main.rs" (concat dir "/src")))
+           (default-directory dir))
+      (write-region
+       (concat "#![allow(non_snake_case)]\n" body)
+       nil main nil 0)
+      (rustic-compilation-setup-buffer err-buff dir 'rustic-cargo-clippy-mode)
+      (display-buffer err-buff)
+      (rustic-make-process
+       :name rustic-babel-process-name
+       :buffer err-buff
+       :command params
+       :filter #'rustic-compilation-filter))))
 
 (provide 'rustic-babel)
 ;;; rustic-babel.el ends here

@@ -1,6 +1,6 @@
 ;;; rustic.el --- Rust development environment -*-lexical-binding: t-*-
 
-;; Version: 2.2
+;; Version: 3.0
 ;; Author: Mozilla
 ;;
 ;; Keywords: languages
@@ -55,7 +55,6 @@
 (defvaralias 'rustic-match-angle-brackets 'rust-match-angle-brackets)
 (defvaralias 'rustic-indent-return-type-to-arguments 'rust-indent-return-type-to-arguments)
 (defalias 'rustic-indent-line #'rust-mode-indent-line)
-(defalias 'rustic-beginning-of-defun #'rust-beginning-of-defun)
 (defalias 'rustic-end-of-defun #'rust-end-of-defun)
 
 ;;; Workspace
@@ -105,6 +104,10 @@ this variable."
 
     (define-key map (kbd "C-c C-c C-u") 'rustic-compile)
     (define-key map (kbd "C-c C-c C-i") 'rustic-recompile)
+    (define-key map (kbd "C-c C-c C-o") 'rustic-format-buffer)
+    (define-key map (kbd "C-c C-c C-d") 'rustic-racer-describe)
+    (define-key map (kbd "C-c C-c C-,") 'rustic-docstring-dwim)
+
     (define-key map (kbd "C-c C-c C-b") 'rustic-cargo-build)
     (define-key map (kbd "C-c C-c C-k") 'rustic-cargo-check)
     (define-key map (kbd "C-c C-c C-r") 'rustic-cargo-run)
@@ -112,11 +115,18 @@ this variable."
     (define-key map (kbd "C-c C-c C-t") 'rustic-cargo-test)
     (define-key map (kbd "C-c C-c C-c") 'rustic-cargo-current-test)
     (define-key map (kbd "C-c C-c C-l") 'rustic-cargo-clippy)
-    (define-key map (kbd "C-c C-c C-o") 'rustic-format-buffer)
-
-    (define-key map (kbd "C-c C-c C-d") 'rustic-racer-describe)
-    (define-key map (kbd "C-c C-c C-,") 'rustic-docstring-dwim)
     (define-key map (kbd "C-c C-c C-n") 'rustic-cargo-outdated)
+    (define-key map (kbd "C-c C-c n") 'rustic-cargo-new)
+    (define-key map (kbd "C-c C-c i") 'rustic-cargo-init)
+    (define-key map (kbd "C-c C-c b") 'rustic-cargo-bench)
+    (define-key map (kbd "C-c C-c d") 'rustic-cargo-doc)
+    (define-key map (kbd "C-c C-c c") 'rustic-cargo-clean)
+    (define-key map (kbd "C-c C-c k") 'rustic-cargo-clippy)
+    (define-key map (kbd "C-c C-c f") 'rustic-cargo-clippy-fix)
+    ;; cargo edit
+    (define-key map (kbd "C-c C-c a") 'rustic-cargo-add)
+    (define-key map (kbd "C-c C-c r") 'rustic-cargo-rm)
+    (define-key map (kbd "C-c C-c u") 'rustic-cargo-upgrade)
     map)
   "Keymap for Rust major mode.")
 
@@ -156,12 +166,16 @@ This variable might soon be remove again.")
   (require 'rustic-compile)
   (require 'rustic-popup)
   (require 'rustic-cargo)
+  (require 'rustic-doc)
+  (require 'rustic-clippy)
+  (require 'rustic-comint)
   (require 'rustic-babel)
   (require 'rustic-racer)
   (require 'rustic-rustfmt)
   (require 'rustic-rustfix)
   (require 'rustic-playpen)
   (require 'rustic-lsp)
+  (require 'rustic-expand)
   (with-eval-after-load 'flycheck
     (require 'rustic-flycheck)))
 
