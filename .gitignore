@@ -1,6 +1,9 @@
 *~
 .DS_Store
+.cache
 .lsp-session-*
+.org-generic-id-locations
+.org-id-locations
 .recentf
 archive-contents
 async-bytecomp.log
@@ -11,7 +14,11 @@ elpa/gnupg/
 ido.last
 magithub/
 network-security.data
+org-gcal/
+persist/
 places
+recentf
+request/
 scrap/
 transient/
 url/
