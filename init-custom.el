@@ -9,7 +9,7 @@
  '(before-save-hook nil)
  '(bibtex-autokey-titleword-separator ".")
  '(bibtex-autokey-year-title-separator ":")
- '(c-basic-offset 4)
+ '(c-basic-offset 2)
  '(column-number-mode t)
  '(comment-auto-fill-only-comments t)
   '(custom-safe-themes
@@ -89,16 +89,10 @@
  '(ns-alternate-modifier 'none)
  '(ns-command-modifier 'meta)
  '(ns-function-modifier 'hyper)
-  '(org-agenda-files
-     '("~/Dropbox/people/family.org/richard" "~/Dropbox/people/family.org/zhome/home.org"))
- '(org-agenda-loop-over-headlines-in-active-region nil)
- '(org-agenda-todo-ignore-scheduled 'all)
- '(org-clock-continuously t)
   '(package-selected-packages
-     '(lsp-ui lsp-mode rustic filladapt ido-completing-read+ paredit async typescript-mode rjsx-mode clojure-mode org-clock-convenience org-clock-today lua-mode balanced-windows solarized-theme mu4e-conversation mu4e-query-fragments ialign terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill org visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column use-package unkillable-scratch unbound tuareg simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv csv-mode coffee-mode avy auto-package-update auctex aggressive-indent))
+     '(helm-lsp lsp-docker org-gcal tide lsp-pyright lsp-ui lsp-mode rustic filladapt ido-completing-read+ paredit async typescript-mode rjsx-mode clojure-mode lua-mode balanced-windows solarized-theme mu4e-conversation mu4e-query-fragments ialign terraform terraform-mode flycheck-css-colorguard flycheck-cython flycheck-lilypond flycheck-mypy auto-compile c-eldoc css-eldoc go-eldoc php-eldoc mu4e-maildirs-extension unfill visual-line adaptive-wrap mu4e yaml-mode web-mode web-completion-data vline visual-fill-column use-package unkillable-scratch unbound tuareg simple-call-tree rainbow-mode protobuf-mode popup pointback php-mode pcsv on-screen magithub latex-preview-pane latex-pretty-symbols jekyll-modes irony indium go-mode gitignore-mode gitconfig git-timemachine git-ps1-mode gh fm flycheck fill-column-indicator exec-path-from-shell elfeed dockerfile-mode direnv csv-mode coffee-mode avy auto-package-update auctex aggressive-indent))
  '(paradox-github-token t)
  '(require-final-newline 'visit-save)
- '(safe-local-variable-values '((c-basic-indent . 4)))
  '(scroll-bar-mode nil)
  '(sentence-end-double-space nil)
  '(show-paren-mode t)
