@@ -5,7 +5,7 @@
 ;; Version: 0.3
 ;; Maintainer: Raimon Grau <raimonster@gmail.com>
 ;; Copyright (C) :2014 myuhe all rights reserved.
-;; Package-Requires: ((request "20190901") (request-deferred "20181129") (alert) (persist) (emacs "26"))
+;; Package-Requires: ((request "20190901") (request-deferred "20181129") (alert) (persist) (emacs "26") (org "9.3"))
 ;; Keywords: convenience,
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,7 @@
 (require 'alert)
 (require 'json)
 (require 'request-deferred)
+(require 'ol)
 (require 'org)
 (require 'org-archive)
 (require 'org-clock)
@@ -309,13 +310,14 @@ See: https://developers.google.com/calendar/v3/reference/events/insert."
 (defun org-gcal-events-url (calendar-id)
   "URL used to request access to events on calendar CALENDAR-ID."
   (format "https://www.googleapis.com/calendar/v3/calendars/%s/events"
-          calendar-id))
+          (url-hexify-string calendar-id)))
 
 (defun org-gcal-instances-url (calendar-id event-id)
   "URL used to request access to instances of recurring event EVENT-ID on \
 calendar CALENDAR-ID."
   (format "https://www.googleapis.com/calendar/v3/calendars/%s/events/%s/instances"
-          calendar-id event-id))
+          (url-hexify-string calendar-id)
+          (url-hexify-string event-id)))
 
 (cl-defstruct (org-gcal--event-entry
                (:constructor org-gcal--event-entry-create))
@@ -1177,6 +1179,24 @@ This will also update the stored ID locations using
           (when (plist-get (cadr tobj) :hour-end) t)))))
     (list :start start :end end :desc desc)))
 
+(defun org-gcal--source-from-link-string (link)
+  "Parse LINK, a link in Org format, to a Google Calendar API source object.
+
+Returns an alist with ‘:url’ for the link URL and ‘:title’ for the link title,
+or nil if no valid link is found."
+  (with-temp-buffer
+    (let ((org-inhibit-startup nil))
+      (insert link)
+      (org-mode)
+      (goto-char (point-min))
+      (when-let ((link-element (car-safe (cdr-safe (org-element-link-parser)))))
+        (list
+         `(url . ,(plist-get link-element :raw-link))
+         `(title
+           . ,(buffer-substring-no-properties
+               (plist-get link-element :contents-begin)
+               (plist-get link-element :contents-end))))))))
+
 ;;;###autoload
 (defun org-gcal-post-at-point (&optional skip-import skip-export existing-mode)
   "Post entry at point to current calendar.
@@ -1206,8 +1226,11 @@ For valid values of EXISTING-MODE see
            (smry (substring-no-properties
                   (org-get-heading 'no-tags 'no-todo 'no-priority 'no-comment)))
            (loc (org-entry-get (point) "LOCATION"))
+           (source
+            (when-let ((link-string (org-entry-get (point) "link")))
+              (org-gcal--source-from-link-string link-string)))
            (transparency (or (org-entry-get (point) "TRANSPARENCY")
-			      org-gcal-default-transparency))
+                             org-gcal-default-transparency))
            (recurrence (org-entry-get (point) "recurrence"))
            (event-id (org-gcal--get-id (point)))
            (etag (org-entry-get (point) org-gcal-etag-property))
@@ -1225,8 +1248,15 @@ For valid values of EXISTING-MODE see
       ;; Fill in Calendar ID if not already present.
       (unless calendar-id
         (setq calendar-id
-              (completing-read "Calendar ID: "
-                               (mapcar #'car org-gcal-file-alist)))
+              ;; Completes read with prompts like "CALENDAR-FILE (CALENDAR-ID)",
+              ;; and then uses ‘replace-regexp-in-string’ to extract just
+              ;; CALENDAR-ID.
+              (replace-regexp-in-string
+               ".*(\\(.*?\\))$" "\\1"
+               (completing-read "Calendar ID: "
+                                (mapcar
+                                 (lambda (x) (format "%s (%s)" (cdr x) (car x)))
+                                 org-gcal-fetch-file-alist))))
         (org-entry-put (point) org-gcal-calendar-id-property calendar-id))
       (when (equal managed "gcal")
         (unless existing-mode
@@ -1276,7 +1306,7 @@ For valid values of EXISTING-MODE see
                   end (org-gcal--format-time2iso end-time))))
         (when recurrence
           (setq start nil end nil))
-        (org-gcal--post-event start end smry loc desc calendar-id marker transparency etag
+        (org-gcal--post-event start end smry loc source desc calendar-id marker transparency etag
                               event-id nil skip-import skip-export)))))
 
 ;;;###autoload
@@ -1329,12 +1359,18 @@ For valid values of EXISTING-MODE see
   "Request OAuth authorization at AUTH-URL by launching `browse-url'.
   CLIENT-ID is the client id provided by the provider.
   It returns the code provided by the service."
-  (browse-url (concat org-gcal-auth-url
-                      "?client_id=" (url-hexify-string org-gcal-client-id)
-                      "&response_type=code"
-                      "&redirect_uri=" (url-hexify-string "urn:ietf:wg:oauth:2.0:oob")
-                      "&scope=" (url-hexify-string org-gcal-resource-url)))
-  (read-string "Enter the code your browser displayed: "))
+  (let* ((gcal-auth-url
+          (concat org-gcal-auth-url
+                  "?client_id=" (url-hexify-string org-gcal-client-id)
+                  "&response_type=code"
+                  "&redirect_uri=" (url-hexify-string "urn:ietf:wg:oauth:2.0:oob")
+                  "&scope=" (url-hexify-string org-gcal-resource-url)))
+         (prompt
+          (format
+           "Please visit (if it doesn't open automatically): %s\n\nEnter the code your browser displayed:"
+           gcal-auth-url)))
+    (browse-url gcal-auth-url)
+    (read-string prompt)))
 
 (defun org-gcal-request-token ()
   "Refresh OAuth access at TOKEN-URL.
@@ -1639,6 +1675,7 @@ heading."
                     "busy"))
          (desc  (plist-get event :description))
          (loc   (plist-get event :location))
+         (source (plist-get event :source))
          (transparency   (plist-get event :transparency))
          (_link  (plist-get event :htmlLink))
          (meet  (plist-get event :hangoutLink))
@@ -1664,6 +1701,11 @@ heading."
     (org-entry-put (point) org-gcal-etag-property etag)
     (when recurrence (org-entry-put (point) "recurrence" (format "%s" recurrence)))
     (when loc (org-entry-put (point) "LOCATION" loc))
+    (when source
+      (org-entry-put (point) "link"
+                     (org-link-make-string
+                      (plist-get source :url)
+                      (plist-get source :title))))
     (when transparency (org-entry-put (point) "TRANSPARENCY" transparency))
     (when meet
       (org-entry-put
@@ -1851,7 +1893,7 @@ object."
              ;; Fetch was successful.
              (t response))))))))
 
-(defun org-gcal--post-event (start end smry loc desc calendar-id marker transparency &optional etag event-id a-token skip-import skip-export)
+(defun org-gcal--post-event (start end smry loc source desc calendar-id marker transparency &optional etag event-id a-token skip-import skip-export)
   "\
 Creates or updates an event on Calendar CALENDAR-ID with attributes START, END,
 SMRY, LOC, DESC. The Org buffer and point from which the event is read is given
@@ -1874,7 +1916,7 @@ Returns a ‘deferred’ object that can be used to wait for completion."
          (concat
           (org-gcal-events-url calendar-id)
           (when event-id
-            (concat "/" event-id)))
+            (concat "/" (url-hexify-string event-id))))
          :type (cond
                 (skip-export "GET")
                 (event-id "PATCH")
@@ -1897,6 +1939,7 @@ Returns a ‘deferred’ object that can be used to wait for completion."
                     (append
                      `(("summary" . ,smry)
                        ("location" . ,loc)
+                       ("source" . ,source)
                        ("transparency" . ,transparency)
                        ("description" . ,desc))
                      (if (and start end)
@@ -1930,7 +1973,7 @@ Returns a ‘deferred’ object that can be used to wait for completion."
                   (org-gcal--refresh-token)
                   (deferred:nextc it
                     (lambda (_unused)
-                      (org-gcal--post-event start end smry loc desc calendar-id
+                      (org-gcal--post-event start end smry loc source desc calendar-id
                                             marker transparency etag event-id nil
                                             skip-import skip-export)))))
                ;; ETag on current entry is stale. This means the event on the
