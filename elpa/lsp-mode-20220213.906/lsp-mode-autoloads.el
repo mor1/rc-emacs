@@ -426,7 +426,14 @@ Click lsp lens using `avy' package." t nil)
 ;;;### (autoloads nil "lsp-mode" "lsp-mode.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-mode.el
 (put 'lsp-enable-file-watchers 'safe-local-variable #'booleanp)
+(put 'lsp-file-watch-ignored-directories 'safe-local-variable 'lsp--string-listp)
+(put 'lsp-file-watch-ignored-files 'safe-local-variable 'lsp--string-listp)
 (put 'lsp-file-watch-threshold 'safe-local-variable (lambda (i) (or (numberp i) (not i))))
+
+(autoload 'lsp--string-listp "lsp-mode" "\
+Return t if all elements of SEQUENCE are strings, else nil.
+
+\(fn SEQUENCE)" nil nil)
 
 (autoload 'lsp-load-vscode-workspace "lsp-mode" "\
 Load vscode workspace from FILE
