@@ -11,8 +11,8 @@
 ;;       Magnar Sveen <magnars@gmail.com>
 ;; Maintainer: Bozhidar Batsov <bozhidar@batsov.dev>
 ;; URL: http://github.com/clojure-emacs/clojure-mode
-;; Package-Version: 20211119.1904
-;; Package-Commit: 7d3c0c16e4aa14a051b393c249f0f4d307a2c74d
+;; Package-Version: 20220202.1341
+;; Package-Commit: 913e2450a77a6ddda051f55ac651c99337147db1
 ;; Keywords: languages clojure clojurescript lisp
 ;; Version: 5.13.0
 ;; Package-Requires: ((emacs "25.1"))
@@ -60,13 +60,13 @@
 ;;; Code:
 
 
-(eval-when-compile
-  (defvar calculate-lisp-indent-last-sexp)
-  (defvar font-lock-beg)
-  (defvar font-lock-end)
-  (defvar paredit-space-for-delimiter-predicates)
-  (defvar paredit-version)
-  (defvar paredit-mode))
+(defvar calculate-lisp-indent-last-sexp)
+(defvar delete-pair-blink-delay)
+(defvar font-lock-beg)
+(defvar font-lock-end)
+(defvar paredit-space-for-delimiter-predicates)
+(defvar paredit-version)
+(defvar paredit-mode)
 
 (require 'cl-lib)
 (require 'imenu)
@@ -2313,7 +2313,8 @@ With universal argument \\[universal-argument], fully unwind thread."
 (defun clojure--remove-superfluous-parens ()
   "Remove extra parens from a form."
   (when (looking-at "([^ )]+)")
-    (delete-pair)))
+    (let ((delete-pair-blink-delay 0))
+      (delete-pair))))
 
 (defun clojure--thread-first ()
   "Thread a nested sexp using ->."
