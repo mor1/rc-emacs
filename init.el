@@ -93,6 +93,9 @@
   auto-window-vscroll nil
   )
 
+;; reverting buffers
+(global-auto-revert-mode t)
+
 ;;
 ;; packages
 ;;
@@ -248,8 +251,8 @@
   (setq
     lsp-rust-analyzer-cargo-watch-command "clippy"
     lsp-eldoc-render-all t
-    lsp-idle-delay 0.6
-    lsp-rust-analyzer-server-display-inlay-hints t
+    lsp-idle-delay 1.0
+    lsp-rust-analyzer-server-display-inlay-hints nil
     ))
 
 (use-package lsp-ui
@@ -257,7 +260,7 @@
   :commands lsp-ui-mode
   :config
   (setq
-    lsp-ui-peek-always-show t
+    lsp-ui-peek-always-show nil
     lsp-ui-sideline-show-hover t
     lsp-ui-doc-enable nil
     ))
@@ -632,7 +635,7 @@ are between the current date (DATE) and Easter Sunday."
   :ensure
   :init
   (progn
-    (defvar my-color-themes (list 'solarized-light 'solarized-dark))
+    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
     (defvar theme-current my-color-themes)
 
     (defun my-theme-set-default ()
