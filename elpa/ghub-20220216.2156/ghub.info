@@ -26,7 +26,7 @@ Ghub User and Developer Manual
 Ghub is an Emacs library that is used by various packages to access the
 APIs of various instances of various Git forge implementations.
 
-This manual is for Ghub version v3.5.4-20-g20ccd6f+1.
+This manual is for Ghub version 3.5.5-git.
 
      Copyright (C) 2017-2022 Jonas Bernoulli <jonas@bernoul.li>
 
@@ -1137,30 +1137,30 @@ Appendix B Variable Index
 
 Tag Table:
 Node: Top764
-Node: Introduction2303
-Node: Getting Started2708
-Node: Basic Concepts Arguments and Variables4390
-Node: Setting the Username8244
-Ref: Setting your Githubcom Username8728
-Ref: Setting your Gitlabcom Username9084
-Ref: Setting your Github Enterprise Username9550
-Ref: Setting your Username for Other Hosts and/or Forges10281
-Node: Creating and Storing a Token11087
-Node: Creating a Token11351
-Node: Storing a Token12371
-Node: Github Configuration Variables14216
-Node: API15927
-Node: Their APIs16165
-Node: Making REST Requests16890
-Node: Making GraphQL Requests26303
-Node: Github Convenience Wrappers32932
-Node: Non-Github Convenience Wrappers36636
-Node: Notes42140
-Node: Using Ghub in Personal Scripts42347
-Node: Using Ghub in Your Own Package43238
-Node: Forge Limitations and Notes44173
-Node: Function Index45146
-Node: Variable Index50795
+Node: Introduction2292
+Node: Getting Started2697
+Node: Basic Concepts Arguments and Variables4379
+Node: Setting the Username8233
+Ref: Setting your Githubcom Username8717
+Ref: Setting your Gitlabcom Username9073
+Ref: Setting your Github Enterprise Username9539
+Ref: Setting your Username for Other Hosts and/or Forges10270
+Node: Creating and Storing a Token11076
+Node: Creating a Token11340
+Node: Storing a Token12360
+Node: Github Configuration Variables14205
+Node: API15916
+Node: Their APIs16154
+Node: Making REST Requests16879
+Node: Making GraphQL Requests26292
+Node: Github Convenience Wrappers32921
+Node: Non-Github Convenience Wrappers36625
+Node: Notes42129
+Node: Using Ghub in Personal Scripts42336
+Node: Using Ghub in Your Own Package43227
+Node: Forge Limitations and Notes44162
+Node: Function Index45135
+Node: Variable Index50784
 
 End Tag Table
 
