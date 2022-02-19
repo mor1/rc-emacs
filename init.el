@@ -29,12 +29,11 @@
 ;; package management
 ;; per http://cachestocaches.com/2015/8/getting-started-use-package/
 (require 'package)
-(setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3")
 (setq
+  gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"
   package-enable-at-startup nil
   package-archives '(("melpa" . "https://melpa.org/packages/")
-                      ("gnu" . "http://elpa.gnu.org/packages/")
-                      ("org" . "https://orgmode.org/elpa/")
+                      ("gnu" . "https://elpa.gnu.org/packages/")
                       )
   )
 (package-initialize)
