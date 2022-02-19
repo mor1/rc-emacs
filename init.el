@@ -80,9 +80,9 @@
 (set-default-coding-systems 'utf-8)
 (set-file-name-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
-(set-language-environment "utf-8")
 (set-selection-coding-system 'utf-8)
 (set-terminal-coding-system 'utf-8)
+(set-language-environment "utf-8")
 
 ;; scrolling
 (setq scroll-conservatively 101
@@ -102,12 +102,10 @@
   (setq
     auto-compile-display-buffer nil
     auto-compile-mode-line-counter t
-    )
-  )
+    ))
 (auto-compile-on-load-mode)
 
 (use-package calendar
-  :defer t
   :config
   (setq
     calendar-bahai-all-holidays-flag nil
@@ -124,22 +122,19 @@
   )
 
 (use-package cc-mode
-  :defer t
   :config
   (setq
     c-basic-offset 2
     c-default-style "linux"
-    )
-  )
+    ))
 
 (use-package coffee-mode
+  :hook
+  ((coffee-mode . coffee-cos-mode))
   :config
   (setq
     coffee-tab-width 2
-    )
-  :hook
-  (coffee-mode . coffee-cos-mode)
-  )
+    ))
 
 (use-package company
   :ensure
@@ -154,14 +149,12 @@
   )
 
 (use-package css-mode
-  :mode ("\\.less$")
   :config
   (setq
     css-indent-offset 2
     ))
 
 (use-package csv-mode
-  :mode ("\\.tsv$")
   :config
   (setq
     indent-tabs-mode 't
@@ -173,17 +166,12 @@
   )
 
 (use-package dockerfile-mode
-  :mode "Dockerfile"
   )
 
 (use-package eldoc
   :diminish
   :hook
   ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
-  )
-
-(use-package elisp-mode
-  :mode "dune"
   )
 
 (use-package exec-path-from-shell ;; set exec path
@@ -196,15 +184,15 @@
   (prog-mode . fci-mode)
   )
 
-;; flycheck -- on the fly checking
 (use-package flycheck
+  ;; flycheck -- on the fly checking
   :ensure t
   :init
   (global-flycheck-mode)
   )
 
-;; flyspell -- on the fly spell checking
 (use-package flyspell
+  ;; flyspell -- on the fly spell checking
   :commands (flyspell-prog-mode flyspell-mode)
   :hook
   ((text-mode . flyspell-mode)
@@ -228,8 +216,7 @@
   (setq
     gofmt-command "goimports"
     go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
-    )
-  )
+    ))
 
 (use-package ido-completing-read+
   ;; Display possible completions at all places
@@ -247,6 +234,10 @@
     ;; Includes buffer names of recently opened files, even if not open now.
     ido-use-virtual-buffers t
     ))
+
+(use-package lisp-mode
+  :mode "dune\\'"
+  )
 
 (use-package lsp-mode
   :ensure
@@ -273,6 +264,9 @@
 
 (use-package magit
   :ensure t
+  :bind ("C-x g" . magit-status)
+  :bind (:map magit-status-mode-map ("q" . magit-quit-session))
+  :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
   :config
   (setq
     magit-commit-arguments (quote ("--signoff"))
@@ -292,21 +286,17 @@
     (kill-buffer)
     (jump-to-register :magit-fullscreen)
     )
-  :bind ("C-x g" . magit-status)
-  :bind (:map magit-status-mode-map ("q" . magit-quit-session))
-  :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
   )
 
 (use-package make-mode
-  :mode
-  ((("sources$" "Makefile.") . makefile-mode)
-    ))
+  )
 
 (use-package markdown-mode
   :commands (markdown-mode gfm-mode)
   :mode
-  (("README\\.md\\'" . gfm-mode)
-    (("\\.md\\'" "\\.markdown\\'") . markdown-mode)
+  ( ("\\.md\\'" . markdown-mode)
+    ("\\.markdown\\'" . markdown-mode)
+    ("README.md\\'" . gfm-mode)
     )
   :magic
   ("\\`==\\+==" . markdown-mode)
@@ -318,11 +308,11 @@
 (use-package mu4e
   :config
   (setq
-    mu4e-maildir       "~/me/footprint/mail" ;; top-level Maildir
-    mu4e-sent-folder   "/sent"               ;; folder for sent messages
-    mu4e-drafts-folder "/drafts"             ;; unfinished messages
-    mu4e-trash-folder  "/trash"              ;; trashed messages
-    mu4e-refile-folder "/archive"            ;; saved messages
+    mu4e-maildir       "~/me/mail" ;; top-level Maildir
+    mu4e-sent-folder   "/sent"     ;; folder for sent messages
+    mu4e-drafts-folder "/drafts"   ;; unfinished messages
+    mu4e-trash-folder  "/trash"    ;; trashed messages
+    mu4e-refile-folder "/archive"  ;; saved messages
     ))
 
 ;; ocaml
@@ -353,8 +343,10 @@
           ("C-S-<down>" . merlin-type-enclosing-go-down)
           )
   :mode
-  ((("\\.ml[iylp]?$" "\\.fs[ix]?$" "[i]?ocamlinit$"). tuareg-mode))
-
+  ( ("\\.ml[iylp]?\\'" . tuareg-mode)
+    ("\\.fs[ix]?\\'" . tuareg-mode)
+    ("i?ocamlinit\\'" . tuareg-mode)
+    )
   :config
   (setq
     merlin-use-auto-complete-mode 'easy
@@ -545,21 +537,27 @@ are between the current date (DATE) and Easter Sunday."
     ))
 
 (use-package paren
+  :hook (find-file . show-paren-mode)
   :config
   (setq
     show-paren-mode t
     show-paren-style (quote expression)
-    )
-  :hook (find-file . show-paren-mode)
+    ))
+
+(use-package python-mode
+  :mode "\\.py\''"
+  :custom
+  (python-indent-offset 2)
   )
 
-;; (use-package python-mode
-;;  :mode ("\\.py$")
-;;  :hook prog-mode
-;;  :config (setq
-;;            python-indent-offset 2
-;;            )
-;;  )
+(use-package lsp-pyright
+  :ensure t
+  :hook
+  (python-mode . (lambda () (require 'lsp-pyright) (lsp))) ; or lsp-deferred
+  :config
+  (setq
+    python-indent-offset 2
+    ))
 
 (use-package rainbow-mode
   :hook prog-mode
@@ -567,19 +565,20 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package recentf
   ;; Recent buffers in a new Emacs session
+  :diminish nil
   :config
+  (recentf-mode t)
   (setq
     recentf-auto-cleanup 'never
     recentf-max-saved-items 1000
     recentf-save-file (concat user-emacs-directory ".recentf")
-    )
-  (recentf-mode t)
-  :diminish nil
-  )
+    ))
 
 (use-package rjsx-mode
   :mode
-  ((("\\.json$" "\\.js$") . rjsx-mode))
+  ( ("\\.json\\'" . rjsx-mode)
+    ("\\.js\\'" . rjsx-mode)
+    )
   :config
   (setq
     js-indent-level 2
@@ -588,14 +587,14 @@ are between the current date (DATE) and Easter Sunday."
 (use-package rustic
   :ensure
   :bind (:map rustic-mode-map
-              ("M-j" . lsp-ui-imenu)
-              ("M-?" . lsp-find-references)
-              ("C-c C-c l" . flycheck-list-errors)
-              ("C-c C-c a" . lsp-execute-code-action)
-              ("C-c C-c r" . lsp-rename)
-              ("C-c C-c q" . lsp-workspace-restart)
-              ("C-c C-c Q" . lsp-workspace-shutdown)
-              ("C-c C-c s" . lsp-rust-analyzer-status))
+          ("M-j" . lsp-ui-imenu)
+          ("M-?" . lsp-find-references)
+          ("C-c C-c l" . flycheck-list-errors)
+          ("C-c C-c a" . lsp-execute-code-action)
+          ("C-c C-c r" . lsp-rename)
+          ("C-c C-c q" . lsp-workspace-restart)
+          ("C-c C-c Q" . lsp-workspace-shutdown)
+          ("C-c C-c s" . lsp-rust-analyzer-status))
   :config
   (setq
     rustic-format-on-save t
@@ -608,7 +607,9 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package sh-script
   :mode
-  ((("bash_" "APKBUILD$") . sh-mode))
+  ( ("bash_" . sh-mode)
+    ( "APKBUILD\\'" . sh-mode)
+    )
   :config
   (setq
     sh-basic-offset 2
@@ -666,13 +667,15 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package tex
   :ensure auctex
-  :mode (("\\.tex$" . TeX-latex-mode)
-          ("\\.latex$" . TeX-latex-mode)
-          ("\\.bibtex$" . bibtex-mode)
-          )
-  :hook ((LaTeX-mode . LaTeX-math-mode)
-          (LaTeX-mode . turn-on-reftex)
-          )
+  :mode
+  ( ("\\.tex\\'" . TeX-latex-mode)
+    ("\\.latex\\'" . TeX-latex-mode)
+    ("\\.bibtex\\'" . bibtex-mode)
+    )
+  :hook
+  ((LaTeX-mode . LaTeX-math-mode)
+    (LaTeX-mode . turn-on-reftex)
+    )
   :config
   (use-package latex)
   (setq
@@ -722,7 +725,7 @@ are between the current date (DATE) and Easter Sunday."
   )
 
 (use-package typescript-mode
-  :mode ("\\.ts$")
+  :mode "\\.ts\\'"
   :config
   (setq
     typescript-indent-level 2
@@ -730,7 +733,9 @@ are between the current date (DATE) and Easter Sunday."
 
 (use-package web-mode
   :mode
-  ((("\\.html$" "\\.css$") . web-mode))
+  ( ("\\.html\\'" . web-mode)
+    ("\\.css\\'" . web-mode)
+    )
   :magic
   ("\\`<\\?xml" . web-mode)
   :config
@@ -866,7 +871,6 @@ are between the current date (DATE) and Easter Sunday."
   ("C-<return>" . split-line)
   ("C-<tab>"    . dabbrev-expand)
   ("C-c ;"      . comment-region)
-  ("C-u C-c ;"  . uncomment-region)
   ("C-c C-SPC"  . whitespace-cleanup)
   ("C-c C-g"    . goto-line)
   ("C-x C-c"    . my-kill-emacs)
