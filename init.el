@@ -142,9 +142,19 @@
 
 (use-package company
   :ensure
+  :defer t
+  :diminish
   :custom
   (company-idle-delay 0.5) ;; how long to wait until popup
   ;; (company-begin-commands nil) ;; uncomment to disable popup
+  :config
+  (setq
+    company-dabbrev-other-buffers t
+    company-dabbrev-code-other-buffers t
+    )
+  :hook ((text-mode . company-mode)
+          (prog-mode . company-mode)
+          )
   :bind (:map company-active-map
           ("C-n". company-select-next)
           ("C-p". company-select-previous)
@@ -163,6 +173,14 @@
   (setq
     indent-tabs-mode 't
     ))
+
+(use-package dap-mode
+  :ensure t
+  :defer t
+  :after lsp-mode
+  :config
+  (dap-auto-configure-mode)
+  )
 
 (use-package direnv
   :config
@@ -188,12 +206,13 @@
   (prog-mode . fci-mode)
   )
 
-(use-package flycheck
-  ;; flycheck -- on the fly checking
-  :ensure t
-  :init
-  (global-flycheck-mode)
-  )
+;; (use-package flycheck
+;;   ;; flycheck -- on the fly checking
+;;   :ensure t
+;;   :init
+;;   (global-flycheck-mode)
+;;   :hook (python-mode . (lambda () (flycheck-mode)))
+;;   )
 
 (use-package flyspell
   ;; flyspell -- on the fly spell checking
@@ -244,26 +263,49 @@
   )
 
 (use-package lsp-mode
-  :ensure
-  :commands lsp
+  :ensure t
+  :defer t
+  :commands (lsp lsp-deferred)
   :hook
-  (lsp-mode . lsp-ui-mode)
+  ((lsp-mode . lsp-ui-mode)
+    (python-mode . lsp-deferred))
   :config
   (setq
-    lsp-rust-analyzer-cargo-watch-command "clippy"
     lsp-eldoc-render-all t
     lsp-idle-delay 1.0
+    lsp-keymap-prefix "C-c l"
+    lsp-rust-analyzer-cargo-watch-command "clippy"
     lsp-rust-analyzer-server-display-inlay-hints nil
     ))
+
+(use-package lsp-pyright
+  :ensure t
+  :defer t
+  :config
+  (setq
+    lsp-pyright-disable-language-services nil
+    lsp-pyright-disable-organize-imports nil
+    lsp-pyright-auto-import-completions t
+    lsp-pyright-use-library-code-for-types t
+    )
+  :hook
+  ((python-mode . (lambda ()
+                    (require 'lsp-pyright)
+                    (lsp-deferred))
+     )))
 
 (use-package lsp-ui
   :ensure
   :commands lsp-ui-mode
+  :bind (:map lsp-ui-mode-map
+          ("C-c i" . lsp-ui-imenu))
+  :hook (lsp-mode . lsp-ui-mode)
   :config
   (setq
     lsp-ui-peek-always-show nil
     lsp-ui-sideline-show-hover t
-    lsp-ui-doc-enable nil
+    ;; lsp-ui-doc-enable nil
+    lsp-ui-doc-delay 2
     ))
 
 (use-package magit
