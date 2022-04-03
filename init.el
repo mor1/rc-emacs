@@ -726,18 +726,6 @@ are between the current date (DATE) and Easter Sunday."
     sh-indentation 2
     ))
 
-(use-package smex
-  ;; Enhance M-x to allow easier execution of commands
-  :ensure t
-  ;; Using counsel-M-x for now. Remove this permanently if counsel-M-x works better.
-  :disabled t
-  :config
-  (setq
-    smex-save-file (concat user-emacs-directory ".smex-items")
-    )
-  (smex-initialize)
-  :bind ("M-x" . smex))
-
 (use-package solarized-theme
   :ensure
   :init
