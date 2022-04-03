@@ -3,8 +3,8 @@
 ;; Author: Alexandre Vassalotti <alexandre@peadrop.com>
 ;; Created: 23-Apr-2009
 ;; Version: 0.3
-;; Package-Version: 20211013.1726
-;; Package-Commit: 8c29dc2c4d55bb620bfe15ca6b74f8097cbb006d
+;; Package-Version: 20220303.1716
+;; Package-Commit: 744baa96ecc0c48ae1bd568421f44c27ecba659d
 ;; Keywords: google protobuf languages
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -195,7 +195,7 @@
 ;;;###autoload (add-to-list 'auto-mode-alist '("\\.proto\\'" . protobuf-mode))
 
 ;;;###autoload
-(define-derived-mode protobuf-mode prog-mode "Protobuf"
+(define-derived-mode protobuf-mode prog-mode "Protocol-Buffers"
   "Major mode for editing Protocol Buffers description language.
 
 The hook `c-mode-common-hook' is run with no argument at mode
@@ -203,26 +203,17 @@ initialization, then `protobuf-mode-hook'.
 
 Key bindings:
 \\{protobuf-mode-map}"
-  (interactive)
-  (kill-all-local-variables)
-  (set-syntax-table protobuf-mode-syntax-table)
-  (setq major-mode 'protobuf-mode
-        mode-name "Protocol-Buffers"
-        local-abbrev-table protobuf-mode-abbrev-table
-        abbrev-mode t)
-  (use-local-map protobuf-mode-map)
+  :after-hook (c-update-modeline)
+  (setq abbrev-mode t)
   (c-initialize-cc-mode t)
-  (if (fboundp 'c-make-emacs-variables-local)
-      (c-make-emacs-variables-local))
   (c-init-language-vars protobuf-mode)
   (c-common-init 'protobuf-mode)
   (easy-menu-add protobuf-menu)
-  (c-run-mode-hooks 'c-mode-common-hook 'protobuf-mode-hook)
-  (c-update-modeline)
   (setq imenu-generic-expression
 	    '(("Message" "^[[:space:]]*message[[:space:]]+\\([[:alnum:]]+\\)" 1)
           ("Enum" "^[[:space:]]*enum[[:space:]]+\\([[:alnum:]]+\\)" 1)
-          ("Service" "^[[:space:]]*service[[:space:]]+\\([[:alnum:]]+\\)" 1))))
+          ("Service" "^[[:space:]]*service[[:space:]]+\\([[:alnum:]]+\\)" 1)))
+  (c-run-mode-hooks 'c-mode-common-hook))
 
 (provide 'protobuf-mode)
 
