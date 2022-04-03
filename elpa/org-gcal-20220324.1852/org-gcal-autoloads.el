@@ -58,7 +58,13 @@ For valid values of EXISTING-MODE see
 \(fn &optional SKIP-IMPORT SKIP-EXPORT EXISTING-MODE)" t nil)
 
 (autoload 'org-gcal-delete-at-point "org-gcal" "\
-Delete entry at point to current calendar." t nil)
+Delete entry at point to current calendar.
+
+If called with prefix or with CLEAR-GCAL-INFO non-nil, will clear calendar info
+from the entry even if deleting the event from the server fails.  Use this to
+delete calendar info from events on calendars you no longer have access to.
+
+\(fn &optional CLEAR-GCAL-INFO)" t nil)
 
 (autoload 'org-gcal-sync-tokens-clear "org-gcal" "\
 Clear all Calendar API sync tokens.
