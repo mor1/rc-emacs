@@ -242,8 +242,11 @@
     :initform nil
     :custom string
     :documentation
-    "  A string to explain persistent-action of this source. It also
-  accepts a function or a variable name.
+    "  A string to explain persistent-action of this source.
+  It is a facility to display what persistent action does in
+  header-line, once your source is loaded don't use it directly, it will
+  have no effect, use instead `header-line' attribute.
+  It also accepts a function or a variable name.
   It will be displayed in `header-line' or in `minibuffer' depending
   of value of `helm-echo-input-in-header-line' and `helm-display-header-line'.")
 
@@ -466,6 +469,9 @@
   in the list of results and then results from the other
   functions, respectively.
 
+  If the special symbol `diacritics' is given as value helm will match
+  diacritics candidates with `char-fold-to-regexp'.
+ 
   This attribute has no effect for asynchronous sources (see
   attribute `candidates'), and sources using `match-dynamic'
   since they perform pattern matching themselves.
@@ -904,21 +910,26 @@ See `helm-candidates-in-buffer' for more infos.")
                        (with-current-buffer (helm-candidate-buffer 'global)
                          (insert-file-contents file)
                          (goto-char (point-min))
-                         (while (not (eobp))
-                           (add-text-properties
-                            (point-at-bol) (point-at-eol)
-                            `(helm-linum ,count))
-                           (cl-incf count)
-                           (forward-line 1))))))
+                         (when (helm-get-attr 'linum)
+                           (while (not (eobp))
+                             (add-text-properties
+                              (point-at-bol) (point-at-eol)
+                              `(helm-linum ,count))
+                             (cl-incf count)
+                             (forward-line 1)))))))
    (get-line :initform #'buffer-substring)
    (candidates-file
     :initarg :candidates-file
     :initform nil
     :custom string
     :documentation
-    "  A filename.
-  Each line number of FILE is accessible with helm-linum property
-  from candidate display part."))
+    "  The file used to fetch candidates.")
+   (linum
+    :initarg :linum
+    :initform nil
+    :documentation
+    "  Store line number in each candidate when non nil.
+  Line number is stored in `helm-linum' text property."))
 
   "The contents of the FILE will be used as candidates in buffer.")
 
@@ -966,18 +977,20 @@ Arguments ARGS are keyword value pairs as defined in CLASS."
 (defvar helm-mm-default-match-functions)
 
 (defun helm-source-mm-get-search-or-match-fns (source method)
-  (let ((defmatch         (helm-aif (slot-value source 'match)
-                              (helm-mklist it)))
-        (defmatch-strict  (helm-aif (and (eq method 'match)
-                                         (slot-value source 'match-strict))
-                              (helm-mklist it)))
-        (defsearch        (helm-aif (and (eq method 'search)
-                                         (slot-value source 'search))
-                              (helm-mklist it)))
-        (defsearch-strict (helm-aif (and (eq method 'search-strict)
-                                         (slot-value source 'search-strict))
-                              (helm-mklist it)))
-        (migemo           (slot-value source 'migemo)))
+  (let* (diacritics
+         (defmatch         (helm-aif (slot-value source 'match)
+                               (unless (setq diacritics (eq it 'diacritics))
+                                 (helm-mklist it))))
+         (defmatch-strict  (helm-aif (and (eq method 'match)
+                                          (slot-value source 'match-strict))
+                               (helm-mklist it)))
+         (defsearch        (helm-aif (and (eq method 'search)
+                                          (slot-value source 'search))
+                               (helm-mklist it)))
+         (defsearch-strict (helm-aif (and (eq method 'search-strict)
+                                          (slot-value source 'search-strict))
+                               (helm-mklist it)))
+         (migemo           (slot-value source 'migemo)))
     (cl-case method
       (match (cond (defmatch-strict)
                    (migemo
@@ -985,7 +998,9 @@ Arguments ARGS are keyword value pairs as defined in CLASS."
                             defmatch '(helm-mm-3-migemo-match)))
                    (defmatch
                     (append helm-mm-default-match-functions defmatch))
-                   (t helm-mm-default-match-functions)))
+                   (t (if diacritics
+                          (list 'helm-mm-exact-match 'helm-mm-3-match-on-diacritics)
+                        helm-mm-default-match-functions))))
       (search (cond (defsearch-strict)
                     (migemo
                      (append helm-mm-default-search-functions
@@ -1023,11 +1038,14 @@ an eieio class."
 ;;; Methods to build sources.
 ;;
 ;;
-(defun helm-source--persistent-help-string (string source)
+(defun helm-source--persistent-help-string (value source)
+  "Format `persistent-help' VALUE in SOURCE.
+Argument VALUE can be a string, a variable or a function."
   (substitute-command-keys
-   (concat "\\<helm-map>\\[helm-execute-persistent-action]: "
-           (or (format "%s (keeping session)" string)
-               (slot-value source 'header-line)))))
+   (format "\\<helm-map>\\[helm-execute-persistent-action]: %s (keeping session)"
+           (helm-aif value
+               (helm-interpret-value value source)
+             (slot-value source 'header-line)))))
 
 (defun helm-source--header-line (source)
   "Compute a default header line for SOURCE.

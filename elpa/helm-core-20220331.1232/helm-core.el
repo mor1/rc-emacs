@@ -4,7 +4,7 @@
 
 ;; Author: Thierry Volpiatto <thierry.volpiatto@gmail.com>
 ;; URL: https://emacs-helm.github.io/helm/
-;; Version: 3.8.4
+;; Version: 3.8.5
 ;; Package-Requires: ((emacs "25.1") (async "1.9.4"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -4465,12 +4465,14 @@ useful when the order of the candidates is meaningful, e.g. with
 `recentf-list'."
   (helm-fuzzy-matching-default-sort-fn-1 candidates nil nil t))
 
-(defun helm--maybe-get-migemo-pattern (pattern)
+(defun helm--maybe-get-migemo-pattern (pattern &optional diacritics)
   (or (and helm-migemo-mode
            (assoc-default pattern helm-mm--previous-migemo-info))
-      pattern))
+      (if diacritics
+          (char-fold-to-regexp pattern)
+        pattern)))
 
-(defun helm-fuzzy-default-highlight-match (candidate)
+(defun helm-fuzzy-default-highlight-match (candidate &optional diacritics)
   "The default function to highlight matches in fuzzy matching.
 Highlight elements in CANDIDATE matching `helm-pattern' according
 to the matching method in use."
@@ -4481,7 +4483,7 @@ to the matching method in use."
     (let* ((pair    (and (consp candidate) candidate))
            (display (helm-stringify (if pair (car pair) candidate)))
            (real    (cdr pair))
-           (regex   (helm--maybe-get-migemo-pattern helm-pattern))
+           (regex   (helm--maybe-get-migemo-pattern helm-pattern diacritics))
            (mp      (pcase (get-text-property 0 'match-part display)
                       ((pred (string= display)) nil)
                       (str str)))
@@ -4510,8 +4512,11 @@ to the matching method in use."
               (when (zerop count)
                 (cl-loop with multi-match = (string-match-p " " helm-pattern)
                          with patterns = (if multi-match
-                                             (mapcar #'helm--maybe-get-migemo-pattern
-                                                     (helm-mm-split-pattern helm-pattern))
+                                             (cl-loop for pat in (helm-mm-split-pattern
+                                                                  helm-pattern)
+                                                      collect
+                                                      (helm--maybe-get-migemo-pattern
+                                                       pat diacritics))
                                            (split-string helm-pattern "" t))
                          for p in patterns
                          ;; Multi matches (regexps patterns).
@@ -4534,12 +4539,14 @@ to the matching method in use."
         (setq display (if mp (concat beg-str (buffer-string) end-str) (buffer-string))))
       (if real (cons display real) display))))
 
-(defun helm-fuzzy-highlight-matches (candidates _source)
+(defun helm-fuzzy-highlight-matches (candidates source)
   "The filtered-candidate-transformer function to highlight fuzzy matches.
 See `helm-fuzzy-default-highlight-match'."
   (cl-assert helm-fuzzy-matching-highlight-fn nil "Wrong type argument functionp: nil")
-  (cl-loop for c in candidates
-           collect (funcall helm-fuzzy-matching-highlight-fn c)))
+  (cl-loop with diac = (memq 'helm-mm-3-match-on-diacritics
+                             (helm-mklist (helm-get-attr 'match source)))
+           for c in candidates
+           collect (funcall helm-fuzzy-matching-highlight-fn c diac)))
 
 
 ;;; helm-flex style
@@ -6603,9 +6610,9 @@ before running again the init function."
                   (delete (assoc helm--source-name
                                  helm--candidate-buffer-alist)
                           helm--candidate-buffer-alist)))
-      ;; When using global or local as value of CREATE-OR-BUFFER
+      ;; When using global or local as value of BUFFER-SPEC
       ;; create the buffer global-bname or local-bname, otherwise
-      ;; reuse the named buffer.
+      ;; reuse the buffer named BUFFER-SPEC.
       (unless (bufferp buffer-spec)
         ;; Global buffers are killed and recreated.
         (and (eq buffer-spec 'global)
@@ -6615,9 +6622,11 @@ before running again the init function."
         ;; Local buffer, once created are reused and a new one
         ;; is created when `helm-current-buffer' change across sessions.
         (with-current-buffer (get-buffer-create
-                              (cl-ecase buffer-spec
+                              (helm-acase buffer-spec
                                 (global global-bname)
-                                (local  local-bname)))
+                                (local  local-bname)
+                                (t (and (stringp buffer-spec)
+                                        buffer-spec))))
           ;; We need a buffer not read-only to perhaps insert later
           ;; text coming from read-only buffers (Bug#1176).
           (set (make-local-variable 'buffer-read-only) nil)
@@ -6652,11 +6661,7 @@ when initializing a source with `helm-source-in-buffer' class."
   (let ((caching (and (or (stringp buffer-spec)
                           (bufferp buffer-spec))
                       (buffer-live-p (get-buffer buffer-spec))))
-        (buf (helm-candidate-buffer
-              (if (or (stringp buffer-spec)
-                      (bufferp buffer-spec))
-                  (get-buffer-create buffer-spec)
-                buffer-spec)))) ; a symbol 'global or 'local.
+        (buf (helm-candidate-buffer buffer-spec)))
     (unless caching
       (with-current-buffer buf
         (erase-buffer)

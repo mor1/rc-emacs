@@ -1,7 +1,7 @@
-(define-package "helm-core" "20220217.812" "Development files for Helm"
+(define-package "helm-core" "20220331.1232" "Development files for Helm"
   '((emacs "25.1")
     (async "1.9.4"))
-  :commit "011cc63cd2b01bcd4ee5c27ac7efdefcab882191" :authors
+  :commit "16ab10d4b8213594e09c3164025c57a6fe9c6cf6" :authors
   '(("Thierry Volpiatto" . "thierry.volpiatto@gmail.com"))
   :maintainer
   '("Thierry Volpiatto" . "thierry.volpiatto@gmail.com")
