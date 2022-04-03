@@ -459,6 +459,144 @@
   :init
   (add-to-list 'file-coding-system-alist '("\\.org\\'" . utf-8-unix))
 
+  :hook
+  ((org-agenda-mode
+     . (lambda ()
+         (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
+         )))
+
+  :config
+  (setq
+    org-basedir "~/Dropbox/people/family.org/"
+    org-agenda-files (mapcar
+                       (lambda (f) (expand-file-name f org-basedir))
+                       '( "richard/richard.org"
+                          "richard/incoming.org"
+                          "richard/tripit.org"
+                          "zhome/home.org"
+                          "zhome/birthdays.org"
+                          "angela/angela.org"
+                          "eleanor/eleanor.org"
+                          "david/david.org"
+                          "william/william.org"
+                          ))
+    revert-without-query (mapcar
+                           (lambda (f) (expand-file-name f org-basedir))
+                           '("richard/incoming.org"))
+    org-agenda-loop-over-headlines-in-active-region nil
+    org-agenda-todo-ignore-scheduled 'all
+    ;; org-clock-continuously t
+    org-adapt-indentation t
+    org-hide-leading-stars t
+    )
+
+  ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
+  (defun org-archive-completed-tasks ()
+    (interactive)
+    (org-map-entries
+      (lambda ()
+        (org-archive-subtree)
+        (setq org-map-continue-from (outline-previous-heading)))
+      "/+DONE|+CANCELLED" 'tree)
+    )
+
+  ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
+  (defadvice org-prepare-agenda (after org-fix-split)
+    (toggle-window-split))
+  (ad-activate 'org-prepare-agenda)
+
+  ;; customise my agenda options
+  (setq org-agenda-custom-commands
+    '(
+       ;;        ;; ("a" "Week agenda" ((agenda "" ((org-agenda-span 8)))
+       ;;        ;;                      (alltodo ""))
+       ;;        ;;   ((org-agenda-compact-blocks t)
+       ;;        ;;     (org-agenda-tag-filter-preset '("-kids"))
+       ;;        ;;     (org-agenda-include-diary t)
+       ;;        ;;     (org-agenda-log-mode-items (quote (closed clock)))
+       ;;        ;;     (org-agenda-ndays 7)
+       ;;        ;;     (org-agenda-repeating-timestamp-show-all t)
+       ;;        ;;     (org-agenda-show-all-dates t)
+       ;;        ;;     (org-agenda-skip-deadline-if-done t)
+       ;;        ;;     (org-agenda-skip-scheduled-if-done t)
+       ;;        ;;     (org-agenda-skip-timestamp-if-done t)
+       ;;        ;;     (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
+       ;;        ;;     (org-agenda-start-on-weekday 1)
+       ;;        ;;     (org-agenda-time-grid nil)
+       ;;        ;;     (org-deadline-warning-days 15)
+       ;;        ;;     (org-default-notes-file "~/me/todo/notes.org")
+       ;;        ;;     (org-fast-tag-selection-single-key (quote expert))
+       ;;        ;;     (org-remember-store-without-prompt t)
+       ;;        ;;     ))
+
+       ("a" "Week agenda" agenda ""
+         ( (org-agenda-compact-blocks t)
+           (org-agenda-include-diary t)
+           (org-agenda-log-mode-items (quote (closed clock)))
+           (org-agenda-repeating-timestamp-show-all t)
+           (org-agenda-skip-deadline-if-done t)
+           (org-agenda-skip-scheduled-if-done t)
+           (org-agenda-skip-timestamp-if-done t)
+           (org-agenda-span 7)
+           (org-agenda-start-on-weekday 1)
+           (org-deadline-warning-days 15)
+           ))
+
+       ("c" "Calendar" agenda ""
+         ((org-agenda-span 7)
+           (org-agenda-start-on-weekday 1)
+           (org-agenda-time-grid nil)
+           (org-agenda-repeating-timestamp-show-all t)
+           (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
+           (org-agenda-category-filter-preset '("-a/nosho"))
+           ))
+
+       ("d" "Upcoming deadlines" agenda ""
+         ((org-agenda-span 60)
+           (org-agenda-time-grid nil)
+           (org-deadline-warning-days 365)
+           (org-agenda-entry-types '(:deadline))
+           ))
+
+       ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
+         ((org-agenda-compact-blocks t)
+           (org-agenda-category-filter-preset '("-a/nosho"))
+           (org-agenda-include-diary t)
+           (org-agenda-log-mode-items (quote (closed clock)))
+           (org-agenda-ndays 31)
+           (org-agenda-repeating-timestamp-show-all t)
+           (org-agenda-show-all-dates t)
+           (org-agenda-skip-deadline-if-done t)
+           (org-agenda-skip-scheduled-if-done t)
+           (org-agenda-skip-timestamp-if-done t)
+           (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
+           (org-agenda-start-on-weekday 1)
+           (org-agenda-time-grid nil)
+           (org-deadline-warning-days 15)
+           (org-default-notes-file "~/me/todo/notes.org")
+           (org-fast-tag-selection-single-key (quote expert))
+           (org-remember-store-without-prompt t)
+           ))
+
+       ("n" "Agenda and all TODOs"
+         ( (agenda ""
+             ((org-agenda-skip-function
+                '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
+             )
+           (alltodo "")
+           ))
+
+       ("t" "Today"
+         ( (agenda ""
+             ((org-agenda-span 1)
+               ))
+           (alltodo "")
+           )
+         ( (org-agenda-tag-filter-preset '("-kids"))
+           (org-agenda-category-filter-preset '("-a/nosho"))
+           ))
+       ))
+
   ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
   (defun holiday-new-year-bank-holiday ()
     (let ((m displayed-month)
@@ -494,121 +632,11 @@
     (org-agenda-schedule arg ".")
     )
 
-  :hook
-  ((org-agenda-mode
-     . (lambda ()
-         (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-         )))
-
-  :config
-  (setq
-    org-basedir "~/Dropbox/people/family.org/"
-    org-agenda-files (mapcar
-                       (lambda (f) (expand-file-name f org-basedir))
-                       '( "richard/richard.org"
-                          "richard/incoming.org"
-                          "richard/tripit.org"
-                          "zhome/home.org"
-                          "zhome/birthdays.org"
-                          "angela/angela.org"
-                          "eleanor/eleanor.org"
-                          "david/david.org"
-                          "william/william.org"
-                          ))
-    revert-without-query (expand-file-name "incoming.org" org-basedir)
-    org-agenda-loop-over-headlines-in-active-region nil
-    org-agenda-todo-ignore-scheduled 'all
-    ;; org-clock-continuously t
-    org-adapt-indentation t
-    org-hide-leading-stars t
-    )
-
-  ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
-  (defun org-archive-completed-tasks ()
-    (interactive)
-    (org-map-entries
-      (lambda ()
-        (org-archive-subtree)
-        (setq org-map-continue-from (outline-previous-heading)))
-      "/+DONE|+CANCELLED" 'tree)
-    )
-
-  ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
-  (defadvice org-prepare-agenda (after org-fix-split)
-    (toggle-window-split))
-  (ad-activate 'org-prepare-agenda)
-
-  ;; customise my agenda options
-  (setq org-agenda-custom-commands
-    '(("a" "Week agenda" ((agenda "" ((org-agenda-span 8)))
-                           (alltodo ""))
-        ((org-agenda-compact-blocks t)
-          (org-agenda-filter-preset '("-kids"))
-          (org-agenda-include-diary t)
-          (org-agenda-log-mode-items (quote (closed clock)))
-          (org-agenda-ndays 7)
-          (org-agenda-repeating-timestamp-show-all t)
-          (org-agenda-show-all-dates t)
-          (org-agenda-skip-deadline-if-done t)
-          (org-agenda-skip-scheduled-if-done t)
-          (org-agenda-skip-timestamp-if-done t)
-          (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
-          (org-agenda-start-on-weekday 1)
-          (org-agenda-time-grid nil)
-          (org-deadline-warning-days 15)
-          (org-default-notes-file "~/me/todo/notes.org")
-          (org-fast-tag-selection-single-key (quote expert))
-          (org-remember-store-without-prompt t)
-          ))
-
-       ("c" "Calendar" agenda ""
-         ((org-agenda-span 7)
-           (org-agenda-start-on-weekday 1)
-           (org-agenda-time-grid nil)
-           (org-agenda-repeating-timestamp-show-all t)
-           (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
-           (org-agenda-filter-preset '("-kids"))
-           ))
-
-       ("d" "Upcoming deadlines" agenda ""
-         ((org-agenda-span 60)
-           (org-agenda-time-grid nil)
-           (org-deadline-warning-days 365)        ;; [1]
-           (org-agenda-entry-types '(:deadline))  ;; [2]
-           ))
-
-       ("m" "Month agenda" ((agenda "" ((org-agenda-span 31)))
-                             (alltodo ""))
-         ((org-agenda-compact-blocks t)
-           (org-agenda-filter-preset '("-kids"))
-           (org-agenda-include-diary t)
-           (org-agenda-log-mode-items (quote (closed clock)))
-           (org-agenda-ndays 31)
-           (org-agenda-repeating-timestamp-show-all t)
-           (org-agenda-show-all-dates t)
-           (org-agenda-skip-deadline-if-done t)
-           (org-agenda-skip-scheduled-if-done t)
-           (org-agenda-skip-timestamp-if-done t)
-           (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
-           (org-agenda-start-on-weekday 1)
-           (org-agenda-time-grid nil)
-           (org-deadline-warning-days 15)
-           (org-default-notes-file "~/me/todo/notes.org")
-           (org-fast-tag-selection-single-key (quote expert))
-           (org-remember-store-without-prompt t)
-           ))
-
-       ("n" "Agenda and all TODOs"
-         ((agenda "")
-           (alltodo "")
-           ))
-       ))
-
   ;; some Easter related helpers
 
   (defun da-easter (year)
     "Calculate the date for Easter Sunday in YEAR. Returns the date in the
-Gregorian calendar, ie (MM DD YY) format."
+  Gregorian calendar, ie (MM DD YY) format."
     (let* ((century (1+ (/ year 100)))
             (shifted-epact (% (+ 14 (* 11 (% year 19))
                                 (- (/ (* 3 century) 4))
@@ -631,7 +659,7 @@ Gregorian calendar, ie (MM DD YY) format."
 
   (defun calendar-days-from-easter ()
     "When used in a diary sexp, this function will calculate how many days
-are between the current date (DATE) and Easter Sunday."
+  are between the current date (DATE) and Easter Sunday."
     (- (calendar-absolute-from-gregorian date)
       (da-easter (calendar-extract-year date))))
   )
