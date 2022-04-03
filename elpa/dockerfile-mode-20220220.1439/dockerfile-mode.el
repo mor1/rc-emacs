@@ -2,8 +2,8 @@
 
 ;; Copyright (c) 2013 Spotify AB
 ;; Package-Requires: ((emacs "24"))
-;; Package-Version: 20211016.1545
-;; Package-Commit: 5db94549ce8b000ae35adf511c820ad228178052
+;; Package-Version: 20220220.1439
+;; Package-Commit: b63a3d12b7dea0cb9efc7f78d7ad5672ceab2a3f
 ;; Homepage: https://github.com/spotify/dockerfile-mode
 ;; URL: https://github.com/spotify/dockerfile-mode
 ;; Version: 1.5
@@ -48,6 +48,16 @@
 
 (defcustom dockerfile-use-sudo nil
   "Runs docker builder command with sudo."
+  :type 'boolean
+  :group 'dockerfile)
+
+(defcustom dockerfile-build-force-rm nil
+  "Runs docker builder command with --force-rm switch."
+  :type 'boolean
+  :group 'dockerfile)
+
+(defcustom dockerfile-build-pull nil
+  "Runs docker builder command with --pull switch."
   :type 'boolean
   :group 'dockerfile)
 
@@ -197,11 +207,13 @@ The build string will be of the format:
   (save-buffer)
     (compilation-start
         (format
-            "%s%s%s build %s %s %s -f %s %s"
+            "%s%s%s build %s %s %s %s %s -f %s %s"
             (if dockerfile-use-buildkit "DOCKER_BUILDKIT=1 " "")
             (if dockerfile-use-sudo "sudo " "")
             dockerfile-mode-command
             (if no-cache "--no-cache" "")
+            (if dockerfile-build-force-rm "--force-rm " "")
+            (if dockerfile-build-pull "--pull " "")
             (dockerfile-tag-string image-name)
             (dockerfile-build-arg-string)
             (shell-quote-argument (dockerfile-standard-filename
