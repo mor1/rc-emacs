@@ -367,6 +367,30 @@
 (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
 ;; ## end of OPAM user-setup addition for emacs / base ## keep this line
 
+(use-package python
+  :ensure t
+  :config
+  (setq
+    python-indent-guess-indent-offset-verbose nil
+    python-shell-interpreter "python3"
+    ))
+
+(use-package python-mode
+  :mode "\\.py\''"
+  :custom
+  (python-indent-offset 2)
+  )
+
+(use-package inferior-python-mode
+  :ensure nil
+  :hook (inferior-python-mode . hide-mode-line-mode)
+  )
+
+(use-package hide-mode-line
+  :ensure t
+  :defer t
+  )
+
 (use-package tuareg
   :init
   (let ((opam-share (ignore-errors
@@ -633,16 +657,13 @@ are between the current date (DATE) and Easter Sunday."
     show-paren-style (quote expression)
     ))
 
-(use-package python-mode
-  :mode "\\.py\''"
-  :custom
-  (python-indent-offset 2)
-  )
-
 (use-package lsp-pyright
   :ensure t
   :hook
-  (python-mode . (lambda () (require 'lsp-pyright) (lsp))) ; or lsp-deferred
+  (python-mode . (lambda () (require 'lsp-pyright)))
+  :init
+  (when (executable-find "python3")
+    (setq lsp-pyright-python-executable-cmd "pdm run python3"))
   :config
   (setq
     python-indent-offset 2
