@@ -85,7 +85,8 @@
 (set-language-environment "utf-8")
 
 ;; scrolling
-(setq scroll-conservatively 101
+(setq
+  scroll-conservatively 101
   scroll-preserve-screen-position t
   scroll-step 1
   scroll-step 1
@@ -969,7 +970,6 @@ are between the current date (DATE) and Easter Sunday."
   ("C-<end>"   . line-to-bottom-of-window)
   ("<home>"    . beginning-of-buffer)    ; M-<
   ("<end>"     . end-of-buffer)          ; M->
-
   )
 
 ;; Horizontal scrolling mouse events should actually scroll left and right.
