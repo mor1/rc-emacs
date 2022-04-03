@@ -20,9 +20,7 @@
 ;;; Generated autoloads from magithub-ci.el
 
 (autoload 'magithub-maybe-insert-ci-status-header "magithub-ci" "\
-If this is a GitHub repository, insert the CI status header.
-
-\(fn)" nil nil)
+If this is a GitHub repository, insert the CI status header." nil nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-ci" '("magit")))
 
@@ -53,22 +51,16 @@ initial contents of the reply if there is no draft.
 (autoload 'magithub-completion-complete-issues "magithub-completion" "\
 A `completion-at-point' function which completes \"#123\" issue references.
 Add this to `completion-at-point-functions' in buffers where you
-want this to be available.
-
-\(fn)" nil nil)
+want this to be available." nil nil)
 
 (autoload 'magithub-completion-complete-users "magithub-completion" "\
 A `completion-at-point' function which completes \"@user\" user references.
 Add this to `completion-at-point-functions' in buffers where you
 want this to be available.  The user list is currently simply the
-list of all users who created issues or pull requests.
-
-\(fn)" nil nil)
+list of all users who created issues or pull requests." nil nil)
 
 (autoload 'magithub-completion-enable "magithub-completion" "\
-Enable completion of info from magithub in the current buffer.
-
-\(fn)" nil nil)
+Enable completion of info from magithub in the current buffer." nil nil)
 
 ;;;***
 
@@ -119,9 +111,7 @@ this function: `github-user', `github-issue', `github-label',
 ;;; Generated autoloads from magithub-dash.el
 
 (autoload 'magithub-dashboard "magithub-dash" "\
-View your GitHub dashboard.
-
-\(fn)" t nil)
+View your GitHub dashboard." t nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-dash" '("magithub-dash")))
 
@@ -145,14 +135,10 @@ Major mode for editing GitHub issues and pull requests.
 ;;; Generated autoloads from magithub-issue.el
 
 (autoload 'magithub-issue--insert-issue-section "magithub-issue" "\
-Insert GitHub issues if appropriate.
-
-\(fn)" nil nil)
+Insert GitHub issues if appropriate." nil nil)
 
 (autoload 'magithub-issue--insert-pr-section "magithub-issue" "\
-Insert GitHub pull requests if appropriate.
-
-\(fn)" nil nil)
+Insert GitHub pull requests if appropriate." nil nil)
 
 (if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-issue" '("magit")))
 
