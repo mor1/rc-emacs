@@ -1,4 +1,4 @@
-(define-package "rustic" "20220219.1519" "Rust development environment"
+(define-package "rustic" "20220323.1159" "Rust development environment"
   '((emacs "26.1")
     (rust-mode "1.0.3")
     (dash "2.13.0")
@@ -10,7 +10,7 @@
     (seq "2.3")
     (spinner "1.7.3")
     (xterm-color "1.6"))
-  :commit "b3f4442f7198eee758958196f89a150f8de8963a" :authors
+  :commit "e3cc89f3b4e06f034a5716e7e66095b9a9e6e20d" :authors
   '(("Mozilla"))
   :maintainer
   '("Mozilla")
