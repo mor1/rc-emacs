@@ -1,4 +1,4 @@
-;;; lsp-pyright-autoloads.el --- automatically extracted autoloads
+;;; lsp-pyright-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -9,7 +9,11 @@
 ;;;### (autoloads nil "lsp-pyright" "lsp-pyright.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-pyright.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "lsp-pyright" '("lsp-pyright-")))
+(register-definition-prefixes "lsp-pyright" '("lsp-pyright-"))
+
+;;;***
+
+;;;### (autoloads nil nil ("lsp-pyright-pkg.el") (0 0 0 0))
 
 ;;;***
 
