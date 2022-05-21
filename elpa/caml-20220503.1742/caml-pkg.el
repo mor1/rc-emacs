@@ -1,6 +1,6 @@
-(define-package "caml" "20211226.27" "Caml mode for GNU Emacs"
+(define-package "caml" "20220503.1742" "Caml mode for GNU Emacs"
   '((emacs "24.3"))
-  :commit "204bfde9ad21cb94c273db8b0c12d31a4eb425e5" :authors
+  :commit "f2f170f46b758341d96385986e8a93b9b4d248f1" :authors
   '(("Jacques Garrigue" . "garrigue@kurims.kyoto-u.ac.jp")
     ("Ian T Zimmerman" . "itz@rahul.net")
     ("Damien Doligez" . "damien.doligez@inria.fr"))

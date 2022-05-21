@@ -1,4 +1,4 @@
-;;; caml-autoloads.el --- automatically extracted autoloads
+;;; caml-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -9,35 +9,35 @@
 ;;;### (autoloads nil "caml" "caml.el" (0 0 0 0))
 ;;; Generated autoloads from caml.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml" '("caml-")))
+(register-definition-prefixes "caml" '("caml-"))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-font" "caml-font.el" (0 0 0 0))
 ;;; Generated autoloads from caml-font.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-font" '("caml-font-" "inferior-caml-")))
+(register-definition-prefixes "caml-font" '("caml-font-" "inferior-caml-"))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-font-old" "caml-font-old.el" (0 0 0 0))
 ;;; Generated autoloads from caml-font-old.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-font-old" '("caml-" "inferior-caml-")))
+(register-definition-prefixes "caml-font-old" '("caml-" "inferior-caml-"))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-help" "caml-help.el" (0 0 0 0))
 ;;; Generated autoloads from caml-help.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-help" '("caml-" "ocaml-")))
+(register-definition-prefixes "caml-help" '("caml-" "ocaml-"))
 
 ;;;***
 
 ;;;### (autoloads nil "caml-types" "caml-types.el" (0 0 0 0))
 ;;; Generated autoloads from caml-types.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "caml-types" '("caml-")))
+(register-definition-prefixes "caml-types" '("caml-"))
 
 ;;;***
 
@@ -55,14 +55,14 @@ the camldebug commands `cd DIR' and `directory'.
 
 \(fn PATH)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "camldebug" '("camldebug-" "current-camldebug-buffer" "def-camldebug")))
+(register-definition-prefixes "camldebug" '("camldebug-" "current-camldebug-buffer" "def-camldebug"))
 
 ;;;***
 
 ;;;### (autoloads nil "inf-caml" "inf-caml.el" (0 0 0 0))
 ;;; Generated autoloads from inf-caml.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "inf-caml" '("caml-" "inferior-caml-" "run-caml")))
+(register-definition-prefixes "inf-caml" '("caml-" "inferior-caml-" "run-caml"))
 
 ;;;***
 
