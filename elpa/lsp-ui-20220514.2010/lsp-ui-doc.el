@@ -63,7 +63,8 @@
   :link '(info-link "(lsp-ui-doc) Customizing"))
 
 (defcustom lsp-ui-doc-enable t
-  "Whether or not to enable lsp-ui-doc."
+  "Whether or not to enable lsp-ui-doc.
+Displays documentation of the symbol at point on hover. This only takes effect when a buffer is started."
   :type 'boolean
   :group 'lsp-ui)
 
@@ -192,6 +193,8 @@ Only the `background' is used in this face."
     (right-fringe . 0)
     (menu-bar-lines . 0)
     (tool-bar-lines . 0)
+    (tab-bar-lines . 0)
+    (tab-bar-lines-keep-state . 0)
     (line-spacing . 0)
     (unsplittable . t)
     (undecorated . t)
@@ -460,6 +463,10 @@ We don't extract the string that `lps-line' is already displaying."
     (xwidget-resize (lsp-ui-doc--webkit-get-xwidget) offset-width offset-height))
   (lsp-ui-doc--move-frame (lsp-ui-doc--get-frame)))
 
+(defun lsp-ui-doc--scale-column-width (width)
+  "Return WIDTH adjusted relative to the text scale."
+  (floor (/ width (expt 1.1 lsp-ui-doc-text-scale-level))))
+
 (defun lsp-ui-doc--resize-buffer ()
   "If the buffer's width is larger than the current frame, resize it."
   (if lsp-ui-doc-use-webkit
@@ -468,7 +475,7 @@ We don't extract the string that `lps-line' is already displaying."
        'lsp-ui-doc--webkit-resize-callback)
 
     (let* ((frame-width (frame-width))
-           (fill-column (min lsp-ui-doc-max-width (- frame-width 5))))
+           (fill-column (lsp-ui-doc--scale-column-width (min lsp-ui-doc-max-width (- frame-width 5)))))
       (when (> (lsp-ui-doc--buffer-width) (min lsp-ui-doc-max-width frame-width))
         (lsp-ui-doc--with-buffer
           (fill-region (point-min) (point-max)))))))
@@ -618,7 +625,7 @@ FN is the function to call on click."
 
 (defun lsp-ui-doc--fill-document ()
   "Better wrap the document so it fits the doc window."
-  (let ((fill-column (- lsp-ui-doc-max-width 5))
+  (let ((fill-column (lsp-ui-doc--scale-column-width (- lsp-ui-doc-max-width 5)))
         start        ; record start for `fill-region'
         first-line)  ; first line in paragraph
     (save-excursion
