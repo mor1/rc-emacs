@@ -5,8 +5,8 @@
 ;; Author: Johan Andersson <johan.rejeep@gmail.com>
 ;; Maintainer: Johan Andersson <johan.rejeep@gmail.com>
 ;; Version: 0.20.0
-;; Package-Version: 20210624.1103
-;; Package-Commit: 50af874cd19042f17c8686813d52569b1025c76a
+;; Package-Version: 20220516.1809
+;; Package-Commit: e0dc429f9c20322c7af735a828fe2404bb416715
 ;; Keywords: files, directories
 ;; URL: http://github.com/rejeep/f.el
 ;; Package-Requires: ((s "1.7.0") (dash "2.2.0"))
@@ -61,18 +61,28 @@ If PATH is not allowed to be modified, throw error."
 ;;;; Paths
 
 (defun f-join (&rest args)
-  "Join ARGS to a single path."
-  (let (path (relative (f-relative? (car args))))
+  "Join ARGS to a single path.
+
+Be aware if one of the arguments is an absolute path, `f-join'
+will discard all the preceeding arguments and make this absolute
+path the new root of the generated path."
+  (let (path
+        (relative (f-relative? (car args))))
     (-map
      (lambda (arg)
-       (setq path (f-expand arg path)))
+       (setq path (cond ((not path) arg)
+                        ((f-absolute-p arg)
+                         (progn
+                           (setq relative nil)
+                           arg))
+                        (t (f-expand arg path)))))
      args)
     (if relative (f-relative path) path)))
 
 (defun f-split (path)
   "Split PATH and return list containing parts."
-  (let ((parts (s-split (f-path-separator) path 'omit-nulls)))
-    (if (f-absolute? path)
+  (let ((parts (split-string path (f-path-separator) 'omit-nulls)))
+    (if (string= (s-left 1 path) (f-path-separator))
         (push (f-path-separator) parts)
       parts)))
 
@@ -119,21 +129,14 @@ ignored."
        (:otherwise
         (concat (apply 'f-join (nreverse re)) "/")))))))
 
-(defun f-ext (path)
-  "Return the file extension of PATH.
+(defalias 'f-ext 'file-name-extension)
 
-The extension, in a file name, is the part that follows the last
-'.', excluding version numbers and backup suffixes."
-  (file-name-extension path))
-
-(defun f-no-ext (path)
-  "Return everything but the file extension of PATH."
-  (file-name-sans-extension path))
+(defalias 'f-no-ext 'file-name-sans-extension)
 
 (defun f-swap-ext (path ext)
   "Return PATH but with EXT as the new extension.
 EXT must not be nil or empty."
-  (if (s-blank? ext)
+  (if (s-blank-p ext)
       (error "Extension cannot be empty or nil")
     (concat (f-no-ext path) "." ext)))
 
@@ -141,22 +144,16 @@ EXT must not be nil or empty."
   "Return the name of PATH, excluding the extension of file."
   (f-no-ext (f-filename path)))
 
-(defun f-relative (path &optional dir)
-  "Return PATH relative to DIR."
-  (file-relative-name path dir))
+(defalias 'f-relative 'file-relative-name)
 
-(defalias 'f-abbrev 'f-short)
-(defun f-short (path)
-  "Return abbrev of PATH.  See `abbreviate-file-name'."
-  (abbreviate-file-name path))
+(defalias 'f-short 'abbreviate-file-name)
+(defalias 'f-abbrev 'abbreviate-file-name)
 
 (defun f-long (path)
   "Return long version of PATH."
   (f-expand path))
 
-(defun f-canonical (path)
-  "Return the canonical name of PATH."
-  (file-truename path))
+(defalias 'f-canonical 'file-truename)
 
 (defun f-slash (path)
   "Append slash to PATH unless one already.
@@ -276,7 +273,17 @@ If APPEND is non-nil, append the DATA to the existing contents."
 ;;;; Destructive
 
 (defun f-mkdir (&rest dirs)
-  "Create directories DIRS."
+  "Create directories DIRS.
+
+DIRS should be a successive list of directories forming together
+a full path. The easiest way to call this function with a fully
+formed path is using `f-split' alongside it:
+
+    (apply #'f-mkdir (f-split \"path/to/file\"))
+
+Although it works sometimes, it is not recommended to use fully
+formed paths in the function. In this case, it is recommended to
+use `f-mkdir-full-path' instead."
   (let (path)
     (-each
         dirs
@@ -284,6 +291,13 @@ If APPEND is non-nil, append the DATA to the existing contents."
         (setq path (f-expand dir path))
         (unless (f-directory? path)
           (f--destructive path (make-directory path)))))))
+
+(defun f-mkdir-full-path (dir)
+  "Create DIR from a full path.
+
+This function is similar to `f-mkdir' except it can accept a full
+path instead of requiring several successive directory names."
+  (apply #'f-mkdir (f-split dir)))
 
 (defun f-delete (path &optional force)
   "Delete PATH, which can be file or directory.
@@ -342,26 +356,17 @@ into TO as a subdirectory."
 
 ;;;; Predicates
 
-(defun f-exists? (path)
-  "Return t if PATH exists, false otherwise."
-  (file-exists-p path))
+(defalias 'f-exists? 'file-exists-p)
+(defalias 'f-exists-p 'file-exists-p)
 
-(defalias 'f-exists-p 'f-exists?)
+(defalias 'f-directory? 'file-directory-p)
+(defalias 'f-directory-p 'file-directory-p)
+(defalias 'f-dir? 'file-directory-p)
+(defalias 'f-dir-p 'file-directory-p)
 
-(defalias 'f-dir? 'f-directory?)
-(defalias 'f-dir-p 'f-dir?)
 
-(defun f-directory? (path)
-  "Return t if PATH is directory, false otherwise."
-  (file-directory-p path))
-
-(defalias 'f-directory-p 'f-directory?)
-
-(defun f-file? (path)
-  "Return t if PATH is file, false otherwise."
-  (file-regular-p path))
-
-(defalias 'f-file-p 'f-file?)
+(defalias 'f-file? 'file-regular-p)
+(defalias 'f-file-p 'file-regular-p)
 
 (defun f-symlink? (path)
   "Return t if PATH is symlink, false otherwise."
@@ -369,29 +374,17 @@ into TO as a subdirectory."
 
 (defalias 'f-symlink-p 'f-symlink?)
 
-(defun f-readable? (path)
-  "Return t if PATH is readable, false otherwise."
-  (file-readable-p path))
+(defalias 'f-readable? 'file-readable-p)
+(defalias 'f-readable-p 'file-readable-p)
 
-(defalias 'f-readable-p 'f-readable?)
+(defalias 'f-writable? 'file-writable-p)
+(defalias 'f-writable-p 'file-writable-p)
 
-(defun f-writable? (path)
-  "Return t if PATH is writable, false otherwise."
-  (file-writable-p path))
-
-(defalias 'f-writable-p 'f-writable?)
-
-(defun f-executable? (path)
-  "Return t if PATH is executable, false otherwise."
-  (file-executable-p path))
-
+(defalias 'f-executable? 'file-executable-p)
 (defalias 'f-executable-p 'f-executable?)
 
-(defun f-absolute? (path)
-  "Return t if PATH is absolute, false otherwise."
-  (file-name-absolute-p path))
-
-(defalias 'f-absolute-p 'f-absolute?)
+(defalias 'f-absolute? 'file-name-absolute-p)
+(defalias 'f-absolute-p 'file-name-absolute-p)
 
 (defun f-relative? (path)
   "Return t if PATH is relative, false otherwise."
@@ -449,16 +442,16 @@ The extension, in a file name, is the part that follows the last
 (defun f-ancestor-of? (path-a path-b)
   "Return t if PATH-A is ancestor of PATH-B."
   (unless (f-same? path-a path-b)
-    (s-starts-with? (f-full path-a)
-                    (f-full path-b))))
+    (string-prefix-p (f-full path-a)
+                     (f-full path-b))))
 
 (defalias 'f-ancestor-of-p 'f-ancestor-of?)
 
 (defun f-descendant-of? (path-a path-b)
   "Return t if PATH-A is desendant of PATH-B."
   (unless (f-same? path-a path-b)
-    (s-starts-with? (f-full path-b)
-                    (f-full path-a))))
+    (string-prefix-p (f-full path-b)
+                     (f-full path-a))))
 
 (defalias 'f-descendant-of-p 'f-descendant-of?)
 
