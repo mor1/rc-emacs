@@ -11,8 +11,8 @@
 ;;       Magnar Sveen <magnars@gmail.com>
 ;; Maintainer: Bozhidar Batsov <bozhidar@batsov.dev>
 ;; URL: http://github.com/clojure-emacs/clojure-mode
-;; Package-Version: 20220307.1903
-;; Package-Commit: c339353f9e649b3af084f1bb6ce759e614a2f243
+;; Package-Version: 20220418.2015
+;; Package-Commit: b6f41d74904daa9312648f3a7bea7a72fd8e140b
 ;; Keywords: languages clojure clojurescript lisp
 ;; Version: 5.14.0
 ;; Package-Requires: ((emacs "25.1"))
@@ -202,7 +202,7 @@ Out-of-the box `clojure-mode' understands lein, boot, gradle,
                (cl-every 'stringp value))))
 
 (defcustom clojure-directory-prefixes
-  '("\\`clj[scx]?\\.")
+  '("\\`clj[scxd]?\\.")
   "A list of directory prefixes used by `clojure-expected-ns'.
 The prefixes are used to generate the correct namespace."
   :type '(repeat string)
@@ -3072,7 +3072,7 @@ With universal argument \\[universal-argument], act on the \"top-level\" form."
 ;;;###autoload
 (progn
   (add-to-list 'auto-mode-alist
-               '("\\.\\(clj\\|dtm\\|edn\\)\\'" . clojure-mode))
+               '("\\.\\(clj\\|cljd\\|dtm\\|edn\\)\\'" . clojure-mode))
   (add-to-list 'auto-mode-alist '("\\.cljc\\'" . clojurec-mode))
   (add-to-list 'auto-mode-alist '("\\.cljs\\'" . clojurescript-mode))
   ;; boot build scripts are Clojure source files
