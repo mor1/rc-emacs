@@ -2,8 +2,8 @@
 
 ;; Author: wouter bolsterlee <wouter@bolsterl.ee>
 ;; Version: 2.2.0
-;; Package-Version: 20220103.1342
-;; Package-Commit: d71ceb415732c3b76a2948147fa3559622aceba2
+;; Package-Version: 20220513.656
+;; Package-Commit: 416ed17efa93503b37eba196a14f967e0899bce4
 ;; Package-Requires: ((emacs "25.1") (dash "2.12.0"))
 ;; Keywords: direnv, environment, processes, unix, tools
 ;; URL: https://github.com/wbolster/emacs-direnv
@@ -209,7 +209,7 @@ NEW-DIRECTORY, but OLD-DIRECTORY can be nil."
 (defun direnv--show-summary (summary old-directory new-directory)
   "Show a SUMMARY message.
 
-OLD-DIRECTORY and NEW-DIRECTORY are the directories before and afther
+OLD-DIRECTORY and NEW-DIRECTORY are the directories before and after
 the environment changes."
   (let ((summary
          (if (string-empty-p summary) "no changes" summary))
