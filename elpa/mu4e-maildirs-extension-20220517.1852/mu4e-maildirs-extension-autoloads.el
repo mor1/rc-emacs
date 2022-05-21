@@ -1,4 +1,4 @@
-;;; mu4e-maildirs-extension-autoloads.el --- automatically extracted autoloads
+;;; mu4e-maildirs-extension-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -18,7 +18,12 @@ Un-initialize." nil nil)
 
 (defalias 'mu4e-maildirs-extension 'mu4e-maildirs-extension-load)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "mu4e-maildirs-extension" '("mu4e-maildirs-extension-")))
+(register-definition-prefixes "mu4e-maildirs-extension" '("mu4e-maildirs-extension-"))
+
+;;;***
+
+;;;### (autoloads nil nil ("mu4e-maildirs-extension-pkg.el") (0 0
+;;;;;;  0 0))
 
 ;;;***
 

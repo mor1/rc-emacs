@@ -6,8 +6,8 @@
 
 ;; Filename: mu4e-maildirs-extension.el
 ;; Version: 0.1
-;; Package-Version: 20201028.921
-;; Package-Commit: 1167bc6e08996f866e73e9a02f563fd21ac317fd
+;; Package-Version: 20220517.1852
+;; Package-Commit: cdc2e141d8ecd59508a5cd50d6d02120073bf4f1
 ;; Author: Andreu Gil Pàmies <agpchil@gmail.com>
 ;; Created: 22-07-2013
 ;; Description: Show mu4e maildirs summary in mu4e-main-view with unread and
@@ -746,7 +746,7 @@ clicked."
               (insert mu4e-maildirs-extension-updating-string))
              (mu4e-maildirs-extension-action-text
               (insert "\n"
-                      (mu4e~main-action-str mu4e-maildirs-extension-action-text
+                      (mu4e--main-action-str mu4e-maildirs-extension-action-text
                                             mu4e-maildirs-extension-action-key))))
 
        (define-key mu4e-main-mode-map
