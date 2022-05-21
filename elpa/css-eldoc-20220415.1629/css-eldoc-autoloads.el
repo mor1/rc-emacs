@@ -1,4 +1,4 @@
-;;; css-eldoc-autoloads.el --- automatically extracted autoloads
+;;; css-eldoc-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -9,22 +9,15 @@
 ;;;### (autoloads nil "css-eldoc" "css-eldoc.el" (0 0 0 0))
 ;;; Generated autoloads from css-eldoc.el
 
-(autoload 'css-eldoc-function "css-eldoc" "\
-
-
-\(fn)" nil nil)
+(autoload 'css-eldoc-function "css-eldoc" nil nil nil)
 
 (autoload 'css-eldoc-enable "css-eldoc" "\
-Turn on css-eldoc in buffers where `css-mode' is active.
-
-\(fn)" t nil)
+Turn on css-eldoc in buffers where `css-mode' is active." t nil)
 
 (autoload 'css-eldoc-disable "css-eldoc" "\
-Disable css-eldoc.
+Disable css-eldoc." t nil)
 
-\(fn)" t nil)
-
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "css-eldoc" '("turn-on-css-eldoc")))
+(register-definition-prefixes "css-eldoc" '("turn-on-css-eldoc"))
 
 ;;;***
 
