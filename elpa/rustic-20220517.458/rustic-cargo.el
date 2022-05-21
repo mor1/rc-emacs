@@ -89,7 +89,7 @@ stored in this variable.")
 (defvar rustic-cargo-test-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map rustic-compilation-mode-map)
-    (define-key map (kbd "g") 'rustic-cargo-test-rerun)
+    (define-key map [remap recompile] 'rustic-cargo-test-rerun)
     map)
   "Local keymap for `rustic-cargo-test-mode' buffers.")
 
@@ -521,7 +521,7 @@ If BIN is not nil, create a binary application, otherwise a library."
 
 (defvar rustic-cargo-run-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "g") 'rustic-cargo-run-rerun)
+    (define-key map [remap recompile] 'rustic-cargo-run-rerun)
     map)
   "Local keymap for `rustic-cargo-test-mode' buffers.")
 
@@ -652,7 +652,7 @@ When calling this function from `rustic-popup-mode', always use the value of
   (interactive)
   (if (y-or-n-p "Create documentation for dependencies?")
       (rustic-run-cargo-command (list (rustic-cargo-bin) "doc"))
-    (rustic-run-cargo-command (list (rustic-cargo-bin) "doc --no-deps"))))
+    (rustic-run-cargo-command (list (rustic-cargo-bin) "doc" "--no-deps"))))
 
 ;; TODO: buffer with cargo output should be in rustic-compilation-mode
 ;;;###autoload
@@ -662,8 +662,8 @@ The documentation is built if necessary."
   (interactive)
   (if (y-or-n-p "Open docs for dependencies as well?")
       ;; open docs only works with synchronous process
-      (shell-command (list (rustic-cargo-bin) "doc --open"))
-    (shell-command (list (rustic-cargo-bin) "doc --open --no-deps"))))
+      (shell-command (format "%s doc --open" (rustic-cargo-bin)))
+    (shell-command (format "%s doc --open --no-deps" (rustic-cargo-bin)))))
 
 ;;; cargo edit
 
@@ -708,6 +708,18 @@ If running with prefix command `C-u', read whole command from minibuffer."
                                               (rustic-cargo-bin) " upgrade ")
                       (concat (rustic-cargo-bin) " upgrade"))))
       (rustic-run-cargo-command command))))
+
+;;;###autoload
+(defun rustic-cargo-login (token)
+  "Add crates.io API token using `cargo login'.
+
+`TOKEN' the token for interacting with crates.io. Visit [1] for
+        how to get one
+
+[1] https://doc.rust-lang.org/cargo/reference/publishing.html#before-your-first-publish"
+
+  (interactive "sAPI token: ")
+  (shell-command (format "%s login %s" (rustic-cargo-bin) token)))
 
 (provide 'rustic-cargo)
 ;;; rustic-cargo.el ends here
