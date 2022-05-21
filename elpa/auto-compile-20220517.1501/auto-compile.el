@@ -1,31 +1,30 @@
-;;; auto-compile.el --- automatically compile Emacs Lisp libraries  -*- lexical-binding: t -*-
+;;; auto-compile.el --- Automatically compile Emacs Lisp libraries  -*- lexical-binding:t -*-
 
-;; Copyright (C) 2008-2022  Jonas Bernoulli
+;; Copyright (C) 2008-2022 Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/auto-compile
-;; Keywords: compile, convenience, lisp
-;; Package-Commit: 014bf8d513dbf519077e9174a5f7db20c85864e0
+;; Keywords: compile convenience lisp
+;; Package-Commit: b204e2f85aaa4d41af4eb1819633c9613f5172bf
 
-;; Package-Requires: ((emacs "25.1") (packed "3.0.3"))
-;; Package-Version: 20220402.1035
+;; Package-Version: 20220517.1501
 ;; Package-X-Original-Version: 1.7.1
+;; Package-Requires: ((emacs "25.1") (compat "28.1.1.0") (packed "3.0.3"))
+
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;; This file is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
+;; This file is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation, either version 3 of the License,
+;; or (at your option) any later version.
 ;;
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
 ;;
-;; For a full copy of the GNU General Public License
-;; see <http://www.gnu.org/licenses/>.
-
-;; This file is not part of GNU Emacs.
+;; You should have received a copy of the GNU General Public License
+;; along with this file.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -133,7 +132,10 @@
 
 (require 'bytecomp)
 (require 'cl-lib)
+(require 'compat)
 (require 'packed)
+
+(eval-when-compile (require 'subr-x))
 
 (declare-function autoload-rubric "autoload")
 (declare-function autoload-find-destination "autoload")
@@ -458,8 +460,8 @@ multiple files is toggled as follows:
            action)))
   (if (file-regular-p file)
       (pcase action
-        (`start (auto-compile-byte-compile file t))
-        (`quit  (auto-compile-delete-dest (byte-compile-dest-file file))))
+        ('start (auto-compile-byte-compile file t))
+        ('quit  (auto-compile-delete-dest (byte-compile-dest-file file))))
     (when (called-interactively-p 'any)
       (let ((buffer (get-buffer byte-compile-log-buffer)))
         (when (buffer-live-p buffer)
@@ -484,7 +486,7 @@ multiple files is toggled as follows:
              (string-match (packed-el-regexp) f))
         (auto-compile-delete-dest (byte-compile-dest-file f)))
        ((and auto-compile-delete-stray-dest
-             (string-match "\\.elc$" f)
+             (equal (file-name-extension f) "elc")
              (not (file-exists-p (packed-el-file f))))
         (auto-compile-delete-dest f))))))
 
@@ -566,6 +568,7 @@ pretend the byte code file exists.")
               (when (and success
                          auto-compile-native-compile
                          (featurep 'native-compile)
+                         (fboundp 'native-compile-async)
                          (fboundp 'native-comp-available-p)
                          (native-comp-available-p))
                 (let ((warning-minimum-level :error))
@@ -589,8 +592,8 @@ pretend the byte code file exists.")
              (message "Generating loaddefs for %s failed" file)
              (setq loaddefs nil))))
         (pcase success
-          (`no-byte-compile)
-          (`t (message "Wrote %s.{%s,%s}%s"
+          ('no-byte-compile)
+          ('t (message "Wrote %s.{%s,%s}%s"
                        (file-name-sans-extension
                         (file-name-sans-extension file))
                        (progn (string-match "\\(\\.[^./]+\\)+$" file)
@@ -640,14 +643,15 @@ pretend the byte code file exists.")
     (ding)))
 
 (define-advice save-buffers-kill-emacs
-    (:around (fn &optional arg) auto-compile)
+    ;; <= 28 (&optional arg); >= 29 (&optional arg restart)
+    (:around (fn &rest args) auto-compile)
   "Bind `auto-compile-mark-failed-modified' to nil when killing Emacs.
 If the regular value of this variable is non-nil the user might
 still be asked whether she wants to save modified buffers, which
 she actually did already safe.  This advice ensures she at least
 is only asked once about each such file."
   (let ((auto-compile-mark-failed-modified nil))
-    (funcall fn arg)))
+    (apply fn args)))
 
 (define-advice save-buffers-kill-terminal
     (:around (fn &optional arg) auto-compile)
