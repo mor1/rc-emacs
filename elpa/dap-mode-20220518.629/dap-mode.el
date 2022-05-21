@@ -206,6 +206,12 @@ locations."
   :type 'hook
   :group 'dap-mode)
 
+(defcustom dap-stack-trace-limit 1000
+  "Number of stack frames to return in the automatic stack trace
+request on hitting a breakpoint. 0 means to return all frames."
+  :group 'dap-mode
+  :type 'number)
+
 (defvar dap--debug-providers (make-hash-table :test 'equal))
 
 (defcustom dap-debug-template-configurations nil
@@ -822,7 +828,7 @@ will be reversed."
     (run-hook-with-args 'dap-stopped-hook debug-session))
 
   (dap--send-message
-   (dap--make-request "stackTrace" (list :threadId thread-id))
+   (dap--make-request "stackTrace" (list :threadId thread-id :levels dap-stack-trace-limit))
    (dap--resp-handler
     (-lambda ((&hash "body" (&hash "stackFrames" stack-frames)))
       (puthash thread-id
@@ -1262,18 +1268,19 @@ DEBUG-SESSION is the active debug session."
 
 (defun dap--set-exception-breakpoints (debug-session callback)
   (-let [(&dap-session 'current-capabilities 'launch-args (&plist :type)) debug-session]
-    (dap--send-message
-     (dap--make-request "setExceptionBreakpoints"
-                        (list :filters
-                              (or (-some->> current-capabilities
-                                    (gethash "exceptionBreakpointFilters")
-                                    (-keep (-lambda ((&hash "default" "filter"))
-                                             (when (dap--breakpoint-filter-enabled filter type default)
-                                               filter))))
-                                  [])))
-     (lambda (_result)
-       (funcall callback))
-     debug-session)))
+    (-if-let (exception-breakpoint-filters (-some->> current-capabilities
+                                             (gethash "exceptionBreakpointFilters")
+                                             (-keep (-lambda ((&hash "default" "filter"))
+                                                      (when (dap--breakpoint-filter-enabled filter type default)
+                                                        filter)))))
+        (dap--send-message
+         (dap--make-request "setExceptionBreakpoints"
+                            (list :filters
+                                  exception-breakpoint-filters))
+         (lambda (_result)
+           (funcall callback))
+         debug-session)
+      (funcall callback))))
 
 (defun dap--configure-breakpoints (debug-session breakpoints callback)
   "Configure breakpoints for DEBUG-SESSION.

@@ -28,6 +28,8 @@
 ;;; Code:
 
 (require 'dap-mode)
+(require 'xml)
+(require 'dom)
 
 (defconst dap-utils--ext-unzip-script "bash -c 'mkdir -p %2$s && unzip -qq %1$s -d %2$s'"
   "Unzip script to unzip vscode extension package file.")
@@ -84,6 +86,14 @@ PATH is the download destination path."
          (dest (or path
                    (f-join dap-utils-extension-path "github" (concat owner "." repo)))))
     (dap-utils--get-extension url dest)))
+
+(defun dap-utils-vscode-get-installed-extension-version (path)
+  "Check the version of the vscode extension installed in PATH.
+Returns nil if the extension is not installed."
+  (let* ((extension-manifest (f-join path "extension.vsixmanifest")))
+    (when (f-exists? extension-manifest)
+      (let ((pkg-identity (dom-by-tag (xml-parse-file extension-manifest) 'Identity)))
+        (dom-attr pkg-identity 'Version)))))
 
 (defmacro dap-utils-vscode-setup-function (dapfile publisher name &optional path version callback)
   "Helper to create DAPFILE setup function for vscode debug extension.
