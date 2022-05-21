@@ -7,9 +7,9 @@
 ;; Maintainer: Jason R. Blevins <jblevins@xbeta.org>
 ;; Created: May 24, 2007
 ;; Version: 2.6-dev
-;; Package-Version: 20220212.728
-;; Package-Commit: 521658eb32e456681592443e04ae507c3a59ed07
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Version: 20220513.1453
+;; Package-Commit: 4477f381de0068a04b55e198c32614793f67b38a
+;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: Markdown, GitHub Flavored Markdown, itex
 ;; URL: https://jblevins.org/projects/markdown-mode/
 
@@ -634,6 +634,15 @@ This variable must be set before loading markdown-mode."
 
 (defcustom markdown-table-align-p t
   "Non-nil means that table is aligned after table operation."
+  :group 'markdown
+  :type 'boolean
+  :safe 'booleanp
+  :package-version '(markdown-mode . "2.5"))
+
+(defcustom markdown-fontify-whole-heading-line nil
+  "Non-nil means fontify the whole line for headings.
+This is useful when setting a background color for the
+markdown-header-face-* faces."
   :group 'markdown
   :type 'boolean
   :safe 'booleanp
@@ -3428,13 +3437,17 @@ SEQ may be an atom or a sequence."
                    (add-text-properties
                     (match-beginning 3) (match-end 3) rule-props)))
         ;; atx heading
-        (add-text-properties
-         (match-beginning 4) (match-end 4) left-markup-props)
-        (add-text-properties
-         (match-beginning 5) (match-end 5) heading-props)
-        (when (match-end 6)
+        (if markdown-fontify-whole-heading-line
+            (let ((header-end (min (point-max) (1+ (match-end 0)))))
+              (add-text-properties
+               (match-beginning 0) header-end heading-props))
           (add-text-properties
-           (match-beginning 6) (match-end 6) right-markup-props))))
+           (match-beginning 4) (match-end 4) left-markup-props)
+          (add-text-properties
+           (match-beginning 5) (match-end 5) heading-props)
+          (when (match-end 6)
+            (add-text-properties
+             (match-beginning 6) (match-end 6) right-markup-props)))))
     t))
 
 (defun markdown-fontify-tables (last)
@@ -9652,7 +9665,7 @@ rows and columns and the column alignment."
 
 ;;; ElDoc Support =============================================================
 
-(defun markdown-eldoc-function ()
+(defun markdown-eldoc-function (&rest _ignored)
   "Return a helpful string when appropriate based on context.
 * Report URL when point is at a hidden URL.
 * Report language name when point is a code block with hidden markup."
@@ -9792,8 +9805,10 @@ rows and columns and the column alignment."
   ;; Cause use of ellipses for invisible text.
   (add-to-invisibility-spec '(outline . t))
   ;; ElDoc support
-  (add-function :before-until (local 'eldoc-documentation-function)
-                #'markdown-eldoc-function)
+  (if (boundp 'eldoc-documentation-functions)
+      (add-hook 'eldoc-documentation-functions #'markdown-eldoc-function nil t)
+    (add-function :before-until (local 'eldoc-documentation-function)
+                  #'markdown-eldoc-function))
   ;; Inhibiting line-breaking:
   ;; Separating out each condition into a separate function so that users can
   ;; override if desired (with remove-hook)
