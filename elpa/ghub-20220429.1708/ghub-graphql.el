@@ -1,25 +1,25 @@
-;;; ghub-graphql.el --- access Github API using GrapthQL  -*- lexical-binding: t -*-
+;;; ghub-graphql.el --- Access Github API using GrapthQL  -*- lexical-binding:t -*-
 
-;; Copyright (C) 2016-2022  Jonas Bernoulli
+;; Copyright (C) 2016-2022 Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/magit/ghub
 ;; Keywords: tools
+
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;; This file is not part of GNU Emacs.
-
-;; This file is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
-
+;; This file is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation, either version 3 of the License,
+;; or (at your option) any later version.
+;;
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
-
-;; For a copy of the GPL see https://www.gnu.org/licenses/gpl.txt.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this file.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -27,8 +27,7 @@
 (require 'gsexp)
 (require 'treepy)
 
-(eval-when-compile
-  (require 'subr-x))
+(eval-when-compile (require 'subr-x))
 
 ;;; Api
 
@@ -41,8 +40,11 @@ Return the response as a JSON-like alist.  Even if the response
 contains `errors', do not raise an error.  GRAPHQL is a GraphQL
 string.  VARIABLES is a JSON-like alist.  The other arguments
 behave as for `ghub-request' (which see)."
-  (cl-assert (stringp graphql))
   (cl-assert (not (stringp variables)))
+  (cl-assert (or (stringp graphql)
+                 (memq (car-safe graphql) '(query mutation))))
+  (unless (stringp graphql)
+    (setq graphql (gsexp-encode (ghub--graphql-prepare-query graphql))))
   (ghub-request "POST" "/graphql" nil
                 :payload `(("query" . ,graphql)
                            ,@(and variables `(("variables" ,@variables))))
@@ -54,16 +56,16 @@ behave as for `ghub-request' (which see)."
 (cl-defun ghub-graphql-rate-limit (&key username auth host)
   "Return rate limit information."
   (let-alist (ghub-graphql
-              "query { rateLimit { limit cost remaining resetAt }}"
+              '(query (rateLimit limit cost remaining resetAt))
               nil :username username :auth auth :host host)
     .data.rateLimit))
 
 (cl-defun ghub--repository-id (owner name &key username auth host)
   "Return the id of the repository specified by OWNER, NAME and HOST."
   (let-alist (ghub-graphql
-              "query ($owner:String!, $name:String!) {
-                 repository(owner:$owner, name:$name) { id }
-               }"
+              '(query (repository [(owner $owner String!)
+                                   (name  $name  String!)]
+                                  id))
               `((owner . ,owner)
                 (name  . ,name))
               :username username :auth auth :host host)
@@ -381,10 +383,10 @@ See Info node `(ghub)GraphQL Support'."
                 (setq loc  (treepy-next loc)))
               (dolist (elt alist)
                 (cond ((keywordp (car elt)))
-                      ((= (length elt) 3)
+                      ((length= elt 3)
                        (push (list (nth 0 elt) (nth 1 elt)) vars)
                        (push (list (nth 1 elt) (nth 2 elt)) variables))
-                      ((= (length elt) 2)
+                      ((length= elt 2)
                        (push elt vars))))
               (setq loc (treepy-replace loc (vconcat (nreverse vars)))))))
         (if (treepy-end-p loc)
