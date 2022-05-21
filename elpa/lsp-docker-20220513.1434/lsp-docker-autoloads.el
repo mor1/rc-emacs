@@ -1,4 +1,4 @@
-;;; lsp-docker-autoloads.el --- automatically extracted autoloads
+;;; lsp-docker-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -9,7 +9,11 @@
 ;;;### (autoloads nil "lsp-docker" "lsp-docker.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-docker.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "lsp-docker" '("lsp-docker-")))
+(register-definition-prefixes "lsp-docker" '("lsp-docker-"))
+
+;;;***
+
+;;;### (autoloads nil nil ("lsp-docker-pkg.el") (0 0 0 0))
 
 ;;;***
 
