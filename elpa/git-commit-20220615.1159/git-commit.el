@@ -14,7 +14,7 @@
 ;; Package-Version: 3.3.0-git
 ;; Package-Requires: (
 ;;     (emacs "25.1")
-;;     (compat "28.1.1.0")
+;;     (compat "28.1.1.2")
 ;;     (transient "0.3.6")
 ;;     (with-editor "3.0.5"))
 
@@ -556,6 +556,9 @@ to recover older messages")
             #'git-commit-save-message nil t)
   (add-hook 'with-editor-pre-cancel-hook
             #'git-commit-save-message nil t)
+  (when (fboundp 'magit-commit--reset-command)
+    (add-hook 'with-editor-post-finish-hook #'magit-commit--reset-command)
+    (add-hook 'with-editor-post-cancel-hook #'magit-commit--reset-command))
   (when (and (fboundp 'magit-rev-parse)
              (not (memq last-command
                         '(magit-sequencer-continue
