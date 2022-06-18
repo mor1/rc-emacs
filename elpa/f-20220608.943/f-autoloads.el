@@ -13,7 +13,7 @@
 
 ;;;***
 
-;;;### (autoloads nil nil ("f-pkg.el") (0 0 0 0))
+;;;### (autoloads nil nil ("f-pkg.el" "f-shortdoc.el") (0 0 0 0))
 
 ;;;***
 
