@@ -288,7 +288,7 @@ ARGS is a plist that affects how the process is run.
          (process (or (plist-get args :process) rustic-compilation-process-name))
          (mode (or (plist-get args :mode) 'rustic-compilation-mode))
          (directory (or (plist-get args :directory) (funcall rustic-compile-directory-method)))
-         (workspace (rustic-buffer-workspace))
+         (workspace (rustic-buffer-workspace (plist-get args :no-default-dir)))
          (sentinel (or (plist-get args :sentinel) #'rustic-compilation-sentinel))
          (file-buffer (current-buffer)))
     (rustic-compilation-setup-buffer buf directory mode)
@@ -391,7 +391,8 @@ Return non-nil if there was a live process."
                              (bound-and-true-p rustic-clippy-process-name)
                              (bound-and-true-p rustic-run-process-name)
                              (bound-and-true-p rustic-test-process-name)
-                             (bound-and-true-p rustic-expand-process-name)))))
+                             (bound-and-true-p rustic-expand-process-name)
+                             (bound-and-true-p rustic-spellcheck-process-name)))))
     (when (> (length procs) 1)
       (error "BUG: Multiple live rustic processes: %s" procs))
     (when procs

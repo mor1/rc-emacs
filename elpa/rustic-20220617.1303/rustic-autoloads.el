@@ -457,6 +457,27 @@ Unlike `rustic-format-buffer' format file directly and revert the buffer.
 
 ;;;***
 
+;;;### (autoloads nil "rustic-spellcheck" "rustic-spellcheck.el"
+;;;;;;  (0 0 0 0))
+;;; Generated autoloads from rustic-spellcheck.el
+
+(autoload 'rustic-cargo-spellcheck "rustic-spellcheck" "\
+Run 'cargo spellcheck'.
+
+If ARG is not nil, use value as argument and store it in
+`rustic-spellcheck-arguments'.  When calling this function from
+`rustic-popup-mode', always use the value of
+`rustic-spellcheck-arguments'.
+
+\(fn &optional ARG)" t nil)
+
+(autoload 'rustic-cargo-spellcheck-rerun "rustic-spellcheck" "\
+Run 'cargo spellcheck' with `rustic-spellcheck-arguments'." t nil)
+
+(register-definition-prefixes "rustic-spellcheck" '("rustic-"))
+
+;;;***
+
 ;;;### (autoloads nil nil ("rustic-pkg.el") (0 0 0 0))
 
 ;;;***
