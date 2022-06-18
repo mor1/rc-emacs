@@ -1,6 +1,6 @@
-(define-package "typescript-mode" "20220506.827" "Major mode for editing typescript"
+(define-package "typescript-mode" "20220617.1901" "Major mode for editing typescript"
   '((emacs "24.3"))
-  :commit "4f056f6db77839dc8653afff68dfecf62d83ec70" :keywords
+  :commit "f2de3f4946c846a23753b351eaf8b56017e02d89" :keywords
   '("typescript" "languages")
   :url "http://github.com/ananthakumaran/typescript.el")
 ;; Local Variables:
