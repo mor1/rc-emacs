@@ -116,7 +116,7 @@ the string "tarsius^forge".
 
    This package used to attempt to get the answers to these questions
 using a setup wizard.  Unfortunately that had to be removed because (a)
-it only ever supported Github, (b) Github is about to remove support for
+it only ever supported Github, (b) by now Github has removed support for
 that on their end, (c) it did not always work, and (d) when it couldn’t
 be used, or failed, then it made things _more_ complicated.
 
@@ -733,7 +733,7 @@ instead implement something more powerful, though also more opinionated.
      again that you already have.
 
      Other arguments behave as for ‘ghub-graphql’ and ‘ghub-request’,
-     more or less.
+     more or less.  If ‘CALLBACK’ is nil, pretty-print the response.
 
    Using ‘ghub--graphql-vacuum’, the following resource specific
 functions are implemented.  These functions are not part of the public
@@ -1153,14 +1153,14 @@ Node: API15908
 Node: Their APIs16146
 Node: Making REST Requests16871
 Node: Making GraphQL Requests26284
-Node: Github Convenience Wrappers32913
-Node: Non-Github Convenience Wrappers36617
-Node: Notes42121
-Node: Using Ghub in Personal Scripts42328
-Node: Using Ghub in Your Own Package43219
-Node: Forge Limitations and Notes44154
-Node: Function Index45127
-Node: Variable Index50776
+Node: Github Convenience Wrappers32967
+Node: Non-Github Convenience Wrappers36671
+Node: Notes42175
+Node: Using Ghub in Personal Scripts42382
+Node: Using Ghub in Your Own Package43273
+Node: Forge Limitations and Notes44208
+Node: Function Index45181
+Node: Variable Index50830
 
 End Tag Table
 
