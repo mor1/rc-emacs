@@ -110,21 +110,20 @@
 
 (defcustom transient-show-popup t
   "Whether to show the current transient in a popup buffer.
-
+\\<transient-map>
 - If t, then show the popup as soon as a transient prefix command
   is invoked.
 
 - If nil, then do not show the popup unless the user explicitly
-  requests it, by pressing an incomplete prefix key sequence.
+  requests it, by pressing \\[transient-show] or a prefix key.
 
 - If a number, then delay displaying the popup and instead show
   a brief one-line summary.  If zero or negative, then suppress
   even showing that summary and display the pressed key only.
 
   Show the popup when the user explicitly requests it by pressing
-  an incomplete prefix key sequence.  Unless zero, then also show
-  the popup after that many seconds of inactivity (using the
-  absolute value)."
+  \\[transient-show] or a prefix key.  Unless zero, then also show the popup
+  after that many seconds of inactivity (using the absolute value)."
   :package-version '(transient . "0.1.0")
   :group 'transient
   :type '(choice (const  :tag "instantly" t)
@@ -1142,7 +1141,7 @@ example, sets a variable use `transient-define-infix' instead.
 
 ;;; Edit
 
-(defun transient--insert-suffix (prefix loc suffix action)
+(defun transient--insert-suffix (prefix loc suffix action &optional keep-other)
   (let* ((suf (cl-etypecase suffix
                 (vector (transient--parse-group  prefix suffix))
                 (list   (transient--parse-suffix prefix suffix))
@@ -1160,25 +1159,18 @@ example, sets a variable use `transient-define-infix' instead.
                suffix prefix loc
                "suffixes and groups cannot be siblings"))
      (t
-      (when (and (listp suffix)
-                 (listp elt))
-        ;; Both suffixes are key bindings; not heading strings.
-        (let ((key (transient--spec-key suf)))
-          (if (equal (transient--kbd key)
-                     (transient--kbd (transient--spec-key elt)))
-              ;; We must keep `mem' until after we have inserted
-              ;; behind it, which `transient-remove-suffix' does
-              ;; not allow us to do.
-              (let ((spred (transient--suffix-predicate suf))
-                    (epred (transient--suffix-predicate elt)))
-                ;; If both suffixes have a predicate and they
-                ;; are not identical, then there is a high
-                ;; probability that we want to keep both.
-                (when (or (not spred)
-                          (not epred)
-                          (equal spred epred))
-                  (setq action 'replace)))
-            (transient-remove-suffix prefix key))))
+      (when-let* ((bindingp (listp suf))
+                  (key (transient--spec-key suf))
+                  (conflict (car (transient--layout-member key prefix)))
+                  (conflictp
+                   (and (not (and (eq action 'replace)
+                                  (eq conflict elt)))
+                        (or (not keep-other)
+                            (eq (plist-get (nth 2 suf) :command)
+                                (plist-get (nth 2 conflict) :command)))
+                        (equal (transient--suffix-predicate suf)
+                               (transient--suffix-predicate conflict)))))
+        (transient-remove-suffix prefix key))
       (cl-ecase action
         (insert  (setcdr mem (cons elt (cdr mem)))
                  (setcar mem suf))
@@ -1186,7 +1178,7 @@ example, sets a variable use `transient-define-infix' instead.
         (replace (setcar mem suf)))))))
 
 ;;;###autoload
-(defun transient-insert-suffix (prefix loc suffix)
+(defun transient-insert-suffix (prefix loc suffix &optional keep-other)
   "Insert a SUFFIX into PREFIX before LOC.
 PREFIX is a prefix command, a symbol.
 SUFFIX is a suffix command or a group specification (of
@@ -1194,12 +1186,14 @@ SUFFIX is a suffix command or a group specification (of
 LOC is a command, a key vector, a key description (a string
   as returned by `key-description'), or a coordination list
   (whose last element may also be a command or key).
+Remove a conflicting binding unless optional KEEP-OTHER is
+  non-nil.
 See info node `(transient)Modifying Existing Transients'."
   (declare (indent defun))
-  (transient--insert-suffix prefix loc suffix 'insert))
+  (transient--insert-suffix prefix loc suffix 'insert keep-other))
 
 ;;;###autoload
-(defun transient-append-suffix (prefix loc suffix)
+(defun transient-append-suffix (prefix loc suffix &optional keep-other)
   "Insert a SUFFIX into PREFIX after LOC.
 PREFIX is a prefix command, a symbol.
 SUFFIX is a suffix command or a group specification (of
@@ -1207,9 +1201,11 @@ SUFFIX is a suffix command or a group specification (of
 LOC is a command, a key vector, a key description (a string
   as returned by `key-description'), or a coordination list
   (whose last element may also be a command or key).
+Remove a conflicting binding unless optional KEEP-OTHER is
+  non-nil.
 See info node `(transient)Modifying Existing Transients'."
   (declare (indent defun))
-  (transient--insert-suffix prefix loc suffix 'append))
+  (transient--insert-suffix prefix loc suffix 'append keep-other))
 
 ;;;###autoload
 (defun transient-replace-suffix (prefix loc suffix)
@@ -1445,7 +1441,7 @@ The optional argument COMMAND is intended for internal use.  If
 you are contemplating using it in your own code, then you should
 probably use this instead:
 
-  (get COMMAND 'transient--suffix)"
+  (get COMMAND \\='transient--suffix)"
   (when command
     (cl-check-type command command))
   (if (or transient--prefix
@@ -2079,7 +2075,6 @@ value.  Otherwise return CHILDREN as is."
   (setq transient--predicate-map nil)
   (setq transient--redisplay-map nil)
   (setq transient--redisplay-key nil)
-  (setq transient--showp nil)
   (setq transient--helpp nil)
   (setq transient--editp nil)
   (setq transient--prefix nil)
@@ -2248,6 +2243,8 @@ value.  Otherwise return CHILDREN as is."
   (setq transient-current-suffixes nil)
   (let ((resume (and transient--stack
                      (not (memq transient--exitp '(replace suspend))))))
+    (unless (or resume (eq transient--exitp 'replace))
+      (setq transient--showp nil))
     (setq transient--exitp nil)
     (setq transient--helpp nil)
     (setq transient--editp nil)
