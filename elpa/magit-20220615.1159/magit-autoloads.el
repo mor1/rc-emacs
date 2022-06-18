@@ -17,10 +17,10 @@ instance with all nil values is returned." nil nil)
 (autoload 'git-rebase-mode "git-rebase" "\
 Major mode for editing of a Git rebase file.
 
-Rebase files are generated when you run 'git rebase -i' or run
+Rebase files are generated when you run \"git rebase -i\" or run
 `magit-interactive-rebase'.  They describe how Git should perform
 the rebase.  See the documentation for git-rebase (e.g., by
-running 'man git-rebase' at the command line) for details.
+running \"man git-rebase\" at the command line) for details.
 
 \(fn)" t nil)
 
@@ -716,15 +716,13 @@ Show changes that are being merged.
 While committing, show the changes that are about to be committed.
 While amending, invoking the command again toggles between
 showing just the new changes or all the changes that will
-be committed.
-
-\(fn &optional ARGS)" t nil)
+be committed." t nil)
 
 (autoload 'magit-diff-buffer-file "magit-diff" "\
 Show diff for the blob or file visited in the current buffer.
 
 When the buffer visits a blob, then show the respective commit.
-When the buffer visits a file, then show the differenced between
+When the buffer visits a file, then show the differences between
 `HEAD' and the working tree.  In both cases limit the diff to
 the file or blob." t nil)
 
@@ -2221,7 +2219,7 @@ Prefix arguments have the same meaning as for `magit-status',
 and additionally cause the buffer to be refresh.
 
 To use this function instead of `magit-status', add this to your
-init file: (global-set-key (kbd \"C-x g\") 'magit-status-quick)." t nil)
+init file: (global-set-key (kbd \"C-x g\") \\='magit-status-quick)." t nil)
 
 (autoload 'magit-status-setup-buffer "magit-status" "\
 

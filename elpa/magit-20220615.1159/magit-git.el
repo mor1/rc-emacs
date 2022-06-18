@@ -233,13 +233,13 @@ This affects commands that read a ref.  More specifically, it
 controls the order of refs returned by `magit-list-refs', which
 is called by functions like `magit-list-branch-names' to generate
 the collection of refs.  By default, refs are sorted according to
-their full refname (i.e., 'refs/...').
+their full refname (i.e., \"refs/...\").
 
-Any value accepted by the `--sort' flag of `git for-each-ref' can
+Any value accepted by the `--sort' flag of \"git for-each-ref\" can
 be used.  For example, \"-creatordate\" places refs with more
 recent committer or tagger dates earlier in the list.  A list of
 strings can also be given in order to pass multiple sort keys to
-`git for-each-ref'.
+\"git for-each-ref\".
 
 Note that, depending on the completion framework you use, this
 may not be sufficient to change the order in which the refs are
@@ -1513,7 +1513,8 @@ to, or to some other symbolic-ref that points to the same ref."
 (defun magit-commit-at-point ()
   (or (magit-section-value-if 'commit)
       (magit-thing-at-point 'git-revision t)
-      (and-let* ((chunk (and (fboundp 'magit-current-blame-chunk)
+      (and-let* ((chunk (and (bound-and-true-p magit-blame-mode)
+                             (fboundp 'magit-current-blame-chunk)
                              (magit-current-blame-chunk 'addition t))))
         (oref chunk orig-rev))
       (and (derived-mode-p 'magit-stash-mode
@@ -1534,7 +1535,8 @@ to, or to some other symbolic-ref that points to the same ref."
                      (magit-ref-p (format "refs/pullreqs/%s"
                                           (oref (oref it value) number))))))
       (magit-thing-at-point 'git-revision t)
-      (and-let* ((chunk (and (fboundp 'magit-current-blame-chunk)
+      (and-let* ((chunk (and (bound-and-true-p magit-blame-mode)
+                             (fboundp 'magit-current-blame-chunk)
                              (magit-current-blame-chunk 'addition t))))
         (oref chunk orig-rev))
       (and magit-buffer-file-name
@@ -2133,7 +2135,9 @@ Return a list of two integers: (A>B B>A)."
      (car (split-string (buffer-string))))))
 
 (defun magit-rev-format (format &optional rev args)
-  (let ((str (magit-git-string "show" "--no-patch"
+  ;; Prefer `git log --no-walk' to `git show --no-patch' because it
+  ;; performs better in some scenarios.
+  (let ((str (magit-git-string "log" "--no-walk"
                                (concat "--format=" format) args
                                (if rev (magit--rev-dereference rev) "HEAD")
                                "--")))
@@ -2141,7 +2145,9 @@ Return a list of two integers: (A>B B>A)."
       str)))
 
 (defun magit-rev-insert-format (format &optional rev args)
-  (magit-git-insert "show" "--no-patch"
+  ;; Prefer `git log --no-walk' to `git show --no-patch' because it
+  ;; performs better in some scenarios.
+  (magit-git-insert "log" "--no-walk"
                     (concat "--format=" format) args
                     (if rev (magit--rev-dereference rev) "HEAD")
                     "--"))
@@ -2367,6 +2373,21 @@ and this option only controls what face is used.")
               (magit-rev-hash (match-string 3 range)))
     (magit-rev-hash range)))
 
+(defvar magit-revision-faces
+  '(magit-hash
+    magit-tag
+    magit-branch-remote
+    magit-branch-remote-head
+    magit-branch-local
+    magit-branch-current
+    magit-branch-upstream
+    magit-branch-warning
+    magit-head
+    magit-refname
+    magit-refname-stash
+    magit-refname-wip
+    magit-refname-pullreq))
+
 (put 'git-revision 'thing-at-point #'magit-thingatpt--git-revision)
 (defun magit-thingatpt--git-revision ()
   (and-let* ((bounds
@@ -2384,7 +2405,10 @@ and this option only controls what face is used.")
     (and (or (and (>= (length string) 7)
                   (string-match-p "[a-z]" string)
                   (magit-commit-p string))
-             (magit-ref-p string))
+             (and (magit-ref-p string)
+                  (let ((face (get-text-property (point) 'face)))
+                    (or (not face)
+                        (member face magit-revision-faces)))))
          string)))
 
 ;;; Completion

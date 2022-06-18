@@ -41,6 +41,7 @@
 (declare-function magit-find-file-noselect "magit-files" (rev file))
 (declare-function magit-status-setup-buffer "magit-status" (&optional directory))
 ;; For `magit-diff-while-committing'
+(declare-function magit-commit-diff-1 "magit-commit" ())
 (declare-function magit-commit-message-buffer "magit-commit" ())
 ;; For `magit-insert-revision-gravatar'
 (defvar gravatar-size)
@@ -437,7 +438,7 @@ image, accordingly.  Either the car or the cdr may be nil."
   "Whether to work around a bug which affects display of gravatars.
 
 Gravatar images are spliced into two halves which are then
-displayed on separate lines.  On OS X the splicing has a bug in
+displayed on separate lines.  On macOS the splicing has a bug in
 some Emacs builds, which causes the top and bottom halves to be
 interchanged.  Enabling this option works around this issue by
 interchanging the halves once more, which cancels out the effect
@@ -1229,43 +1230,25 @@ a commit read from the minibuffer."
   (magit-diff-setup-buffer (magit--merge-range) nil args files))
 
 ;;;###autoload
-(defun magit-diff-while-committing (&optional args)
+(defun magit-diff-while-committing ()
   "While committing, show the changes that are about to be committed.
 While amending, invoking the command again toggles between
 showing just the new changes or all the changes that will
 be committed."
-  (interactive (list (car (magit-diff-arguments))))
+  (interactive)
   (unless (magit-commit-message-buffer)
     (user-error "No commit in progress"))
-  (let ((magit-display-buffer-noselect t))
-    (if-let ((diff-buf (magit-get-mode-buffer 'magit-diff-mode 'selected)))
-        (with-current-buffer diff-buf
-          (cond ((and (equal magit-buffer-range "HEAD^")
-                      (equal magit-buffer-typearg "--cached"))
-                 (magit-diff-staged nil args))
-                ((and (equal magit-buffer-range nil)
-                      (equal magit-buffer-typearg "--cached"))
-                 (magit-diff-while-amending args))
-                ((magit-anything-staged-p)
-                 (magit-diff-staged nil args))
-                (t
-                 (magit-diff-while-amending args))))
-      (if (magit-anything-staged-p)
-          (magit-diff-staged nil args)
-        (magit-diff-while-amending args)))))
+  (magit-commit-diff-1))
 
 (define-key git-commit-mode-map
   (kbd "C-c C-d") #'magit-diff-while-committing)
-
-(defun magit-diff-while-amending (&optional args)
-  (magit-diff-setup-buffer "HEAD^" "--cached" args nil))
 
 ;;;###autoload
 (defun magit-diff-buffer-file ()
   "Show diff for the blob or file visited in the current buffer.
 
 When the buffer visits a blob, then show the respective commit.
-When the buffer visits a file, then show the differenced between
+When the buffer visits a file, then show the differences between
 `HEAD' and the working tree.  In both cases limit the diff to
 the file or blob."
   (interactive)
@@ -1939,17 +1922,22 @@ Staging and applying changes is documented in info node
    (if (equal magit-buffer-typearg "--no-index")
        (apply #'format "Differences between %s and %s" magit-buffer-diff-files)
      (concat (if magit-buffer-range
-                 (cond
-                  ((string-match-p "\\(\\.\\.\\|\\^-\\)"
-                                   magit-buffer-range)
-                   (format "Changes in %s" magit-buffer-range))
-                  ((member "-R" magit-buffer-diff-args)
-                   (format "Changes from working tree to %s" magit-buffer-range))
-                  (t
-                   (format "Changes from %s to working tree" magit-buffer-range)))
-               (if (equal magit-buffer-typearg "--cached")
-                   "Staged changes"
-                 "Unstaged changes"))
+                 (if (string-match-p "\\(\\.\\.\\|\\^-\\)"
+                                     magit-buffer-range)
+                     (format "Changes in %s" magit-buffer-range)
+                   (let ((msg "Changes from %s to %s")
+                         (end (if (equal magit-buffer-typearg "--cached")
+                                  "index"
+                                "working tree")))
+                     (if (member "-R" magit-buffer-diff-args)
+                         (format msg end magit-buffer-range)
+                       (format msg magit-buffer-range end))))
+               (cond ((equal magit-buffer-typearg "--cached")
+                      "Staged changes")
+                     ((and (magit-repository-local-get 'this-commit-command)
+                           (not (magit-anything-staged-p)))
+                      "Uncommitting changes")
+                     (t "Unstaged changes")))
              (pcase (length magit-buffer-diff-files)
                (0)
                (1 (concat " in file " (car magit-buffer-diff-files)))
@@ -3270,7 +3258,7 @@ are highlighted."
                              (default-value
                               'magit-diff-highlight-indentation))))))))
       (when (and magit-diff-highlight-trailing
-                 (looking-at (concat prefix ".*?\\([ \t]+\\)$")))
+                 (looking-at (concat prefix ".*?\\([ \t]+\\)?$")))
         (let ((ov (make-overlay (match-beginning 1) (match-end 1) nil t)))
           (overlay-put ov 'font-lock-face 'magit-diff-whitespace-warning)
           (overlay-put ov 'priority 2)
