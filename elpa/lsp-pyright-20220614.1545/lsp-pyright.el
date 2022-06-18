@@ -4,8 +4,8 @@
 
 ;; Author: Arif Rezai, Vincent Zhang, Andrew Christianson
 ;; Version: 0.2.0
-;; Package-Version: 20220411.1753
-;; Package-Commit: ab7369d96f4d7d058d0e06e743f86fda8ecc191c
+;; Package-Version: 20220614.1545
+;; Package-Commit: c745228f39fdb35372b29b909f25fa6c98dc7c88
 ;; Package-Requires: ((emacs "26.1") (lsp-mode "7.0") (dash "2.18.0") (ht "2.0"))
 ;; Homepage: https://github.com/emacs-lsp/lsp-pyright
 ;; Keywords: languages, tools, lsp
@@ -183,10 +183,9 @@ Current LSP WORKSPACE should be passed in."
   (when lsp-progress-via-spinner
     (with-lsp-workspace workspace
       (--each (lsp--workspace-buffers workspace)
-    (when (buffer-live-p it)
+        (when (buffer-live-p it)
           (with-current-buffer it
-            (lsp--spinner-start)))))
-    )
+            (lsp--spinner-start))))))
   (lsp-log "Pyright language server is analyzing..."))
 
 (defun lsp-pyright--report-progress-callback (_workspace params)
@@ -201,10 +200,9 @@ Current LSP WORKSPACE should be passed in."
   (when lsp-progress-via-spinner
     (with-lsp-workspace workspace
       (--each (lsp--workspace-buffers workspace)
-    (when (buffer-live-p it)
+        (when (buffer-live-p it)
           (with-current-buffer it
-            (lsp--spinner-stop)))))
-    )
+            (lsp--spinner-stop))))))
   (lsp-log "Pyright language server is analyzing...done"))
 
 (lsp-register-custom-settings
