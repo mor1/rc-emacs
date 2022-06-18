@@ -1,4 +1,4 @@
-;;; request-deferred-autoloads.el --- automatically extracted autoloads
+;;; request-deferred-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -10,7 +10,7 @@
 ;;;;;;  0 0 0))
 ;;; Generated autoloads from request-deferred.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "request-deferred" '("request-deferred")))
+(register-definition-prefixes "request-deferred" '("request-deferred"))
 
 ;;;***
 

@@ -4,8 +4,8 @@
 
 ;; Author: Takafumi Arakaki <aka.tkf at gmail.com>
 ;; URL: https://github.com/tkf/emacs-request
-;; Package-Version: 20210214.37
-;; Package-Commit: 2b68b3ca543f1dfbebb43a44f20601c3947bd729
+;; Package-Version: 20220614.1604
+;; Package-Commit: 38ed1d2e64138eb16a9d8ed2987cff2e01b4a93b
 ;; Package-Requires: ((emacs "24.1") (deferred "0.3.1") (request "0.3"))
 ;; Version: 0.2.0
 
@@ -46,10 +46,10 @@ be used as it is used for starting deferred callback chain.
 
 Example::
 
-  (require 'request-deferred)
+  (require \\='request-deferred)
 
   (deferred:$
-    (request-deferred \"https://httpbin.org/get\" :parser 'json-read)
+    (request-deferred \"https://httpbin.org/get\" :parser \\='json-read)
     (deferred:nextc it
       (lambda (response)
         (message \"Got: %S\" (request-response-data response)))))"
