@@ -132,7 +132,7 @@ Will invoke CALLBACK on success, ERROR-CALLBACK on error."
 (defun lsp-csharp--language-server-path ()
   "Resolve path to use to start the server."
   (if lsp-csharp-server-path
-      lsp-csharp-server-path
+      (executable-find lsp-csharp-server-path)
     (let ((server-dir lsp-csharp-omnisharp-roslyn-server-dir))
       (when (f-exists? server-dir)
         (f-join server-dir (cond ((eq system-type 'windows-nt) "OmniSharp.exe")
@@ -450,7 +450,8 @@ filename is returned so lsp-mode can display this file."
 (defun lsp-csharp--cls-download-server (_client callback error-callback update?)
   "Install/update csharp-ls language server using `dotnet tool'.
 
-Will invoke CALLBACK or ERROR-CALLBACK based on result. Will update if UPDATE? is t"
+Will invoke CALLBACK or ERROR-CALLBACK based on result.
+Will update if UPDATE? is t"
   (lsp-async-start-process
    callback
    error-callback

@@ -540,9 +540,12 @@ When prefix UPDATE? is t force installation even if the server is present.
 \(fn UPDATE\\=\\? &optional SERVER-ID)" t nil)
 
 (autoload 'lsp-update-server "lsp-mode" "\
-Interactively update a server.
+Interactively update (reinstall) a server.
 
 \(fn &optional SERVER-ID)" t nil)
+
+(autoload 'lsp-update-servers "lsp-mode" "\
+Update (reinstall) all installed servers." t nil)
 
 (autoload 'lsp-ensure-server "lsp-mode" "\
 Ensure server SERVER-ID
@@ -565,7 +568,8 @@ Entry point that defers server startup until buffer is visible.
 This avoids overloading the server with many files when starting Emacs." nil nil)
 
 (autoload 'lsp-start-plain "lsp-mode" "\
-Start `lsp-mode' using mininal configuration using the latest `melpa' version of the packages.
+Start `lsp-mode' using mininal configuration using the latest `melpa' version
+of the packages.
 
 In case the major-mode that you are using for " t nil)
 

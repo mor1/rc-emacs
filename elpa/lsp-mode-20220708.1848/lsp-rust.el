@@ -579,6 +579,14 @@ for formatting."
   :group 'lsp-rust-analyzer
   :package-version '(lsp-mode . "6.3.2"))
 
+(defcustom lsp-rust-analyzer-rustfmt-rangeformatting-enable nil
+  "Enables the use of rustfmt's unstable range formatting command for the
+`textDocument/rangeFormatting` request. The rustfmt option is unstable and only
+available on a nightly build."
+  :type 'boolean
+  :group 'lsp-rust-analyzer
+  :package-version '(lsp-mode . "8.0.1"))
+
 (defcustom lsp-rust-analyzer-completion-add-call-parenthesis t
   "Whether to add parenthesis when completing functions."
   :type 'boolean
@@ -672,7 +680,8 @@ and field accesses with self prefixed to them when inside a method."
   :package-version '(lsp-mode . "8.0.0"))
 
 (defcustom lsp-rust-analyzer-imports-merge-glob t
-  "Whether to allow import insertion to merge new imports into single path glob imports like `use std::fmt::*;`."
+  "Whether to allow import insertion to merge new imports into single path
+glob imports like `use std::fmt::*;`."
   :type 'boolean
   :group 'lsp-rust-analyzer
   :package-version '(lsp-mode . "8.0.1"))
@@ -745,7 +754,8 @@ or JSON objects in `rust-project.json` format."
             :useRustcWrapperForBuildScripts ,(lsp-json-bool lsp-rust-analyzer-use-rustc-wrapper-for-build-scripts)
             :unsetTest ,lsp-rust-analyzer-cargo-unset-test)
     :rustfmt (:extraArgs ,lsp-rust-analyzer-rustfmt-extra-args
-              :overrideCommand ,lsp-rust-analyzer-rustfmt-override-command)
+              :overrideCommand ,lsp-rust-analyzer-rustfmt-override-command
+              :rangeFormatting (:enable ,(lsp-json-bool lsp-rust-analyzer-rustfmt-rangeformatting-enable)))
     :inlayHints (:bindingModeHints ,(lsp-json-bool lsp-rust-analyzer-binding-mode-hints)
                  :chainingHints ,(lsp-json-bool lsp-rust-analyzer-display-chaining-hints)
                  :closingBraceHints (:enable ,(lsp-json-bool lsp-rust-analyzer-closing-brace-hints)
@@ -822,6 +832,39 @@ or JSON objects in `rust-project.json` format."
         (insert results)
         (pop-to-buffer buf)))))
 
+(defun lsp-rust-analyzer-view-item-tree ()
+  "Show item tree of rust file."
+  (interactive)
+  (-let* ((params (lsp-make-rust-analyzer-view-item-tree
+                   :text-document (lsp--text-document-identifier)))
+          (results (lsp-send-request (lsp-make-request
+                                      "rust-analyzer/viewItemTree"
+                                      params))))
+    (let ((buf (get-buffer-create "*rust-analyzer item tree*"))
+          (inhibit-read-only t))
+      (with-current-buffer buf
+        (special-mode)
+        (erase-buffer)
+        (insert (lsp--render-string results "rust"))
+        (pop-to-buffer buf)))))
+
+(defun lsp-rust-analyzer-view-hir ()
+  "View Hir of function at point."
+  (interactive)
+  (-let* ((params (lsp-make-rust-analyzer-expand-macro-params
+                   :text-document (lsp--text-document-identifier)
+                   :position (lsp--cur-position)))
+          (results (lsp-send-request (lsp-make-request
+                                      "rust-analyzer/viewHir"
+                                      params))))
+    (let ((buf (get-buffer-create "*rust-analyzer hir*"))
+          (inhibit-read-only t))
+      (with-current-buffer buf
+        (special-mode)
+        (erase-buffer)
+        (insert results)
+        (pop-to-buffer buf)))))
+
 (defun lsp-rust-analyzer-join-lines ()
   "Join selected lines into one, smartly fixing up whitespace and trailing commas."
   (interactive)
@@ -843,7 +886,9 @@ or JSON objects in `rust-project.json` format."
   (format "https://github.com/rust-analyzer/rust-analyzer/releases/latest/download/%s"
           (pcase system-type
             ('gnu/linux "rust-analyzer-x86_64-unknown-linux-gnu.gz")
-            ('darwin "rust-analyzer-x86_64-apple-darwin.gz")
+            ('darwin (if (string-match "^aarch64-.*" system-configuration)
+                         "rust-analyzer-aarch64-apple-darwin.gz"
+                       "rust-analyzer-x86_64-apple-darwin.gz"))
             ('windows-nt "rust-analyzer-x86_64-pc-windows-msvc.gz")))
   "Automatic download url for Rust Analyzer"
   :type 'string
@@ -1001,13 +1046,13 @@ meaning."
       label
     (cond
      ((eql kind lsp/rust-analyzer-inlay-hint-kind-type-hint) (format lsp-rust-analyzer-inlay-type-format label))
-     ((eql kind lsp/rust-analyzer-inlay-hint-kind-type-hint) (format lsp-rust-analyzer-inlay-param-format label))
+     ((eql kind lsp/rust-analyzer-inlay-hint-kind-param-hint) (format lsp-rust-analyzer-inlay-param-format label))
      (t label))))
 
 (defun lsp-rust-analyzer-face-for-inlay (kind)
   (cond
    ((eql kind lsp/rust-analyzer-inlay-hint-kind-type-hint) 'lsp-rust-analyzer-inlay-type-face)
-   ((eql kind lsp/rust-analyzer-inlay-hint-kind-type-hint) 'lsp-rust-analyzer-inlay-param-face)
+   ((eql kind lsp/rust-analyzer-inlay-hint-kind-param-hint) 'lsp-rust-analyzer-inlay-param-face)
    (t 'lsp-rust-analyzer-inlay-face)))
 
 (defun lsp-rust-analyzer-initialized? ()
@@ -1083,12 +1128,15 @@ meaning."
 Extract the arguments, prepare the minor mode (cargo-process-mode if possible)
 and run a compilation"
   (-let* (((&rust-analyzer:Runnable :kind :label :args) runnable)
-          ((&rust-analyzer:RunnableArgs :cargo-args :executable-args :workspace-root?) args)
+          ((&rust-analyzer:RunnableArgs :cargo-args :executable-args :workspace-root? :expect-test?) args)
           (default-directory (or workspace-root? default-directory)))
     (if (not (string-equal kind "cargo"))
         (lsp--error "'%s' runnable is not supported" kind)
       (compilation-start
-       (string-join (append (list "cargo") cargo-args (when executable-args '("--")) executable-args '()) " ")
+       (string-join (append (when expect-test? '("env" "UPDATE_EXPECT=1"))
+                            (list "cargo") cargo-args
+                            (when executable-args '("--")) executable-args '()) " ")
+
        ;; cargo-process-mode is nice, but try to work without it...
        (if (functionp 'cargo-process-mode) 'cargo-process-mode nil)
        (lambda (_) (concat "*" label "*"))))))
