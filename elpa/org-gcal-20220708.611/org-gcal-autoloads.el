@@ -1,4 +1,4 @@
-;;; org-gcal-autoloads.el --- automatically extracted autoloads
+;;; org-gcal-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -72,7 +72,7 @@ Clear all Calendar API sync tokens.
   Use this to force retrieving all events in ‘org-gcal-sync’ or
   ‘org-gcal-fetch’." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "org-gcal" '("org-gcal-")))
+(register-definition-prefixes "org-gcal" '("org-gcal-"))
 
 ;;;***
 
@@ -129,7 +129,7 @@ If NO-FALLBACK is set, don’t fall back to current buffer if not found in
 
 \(fn ID-PROP ID &optional NO-FALLBACK)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "org-generic-id" '("org-generic-id-")))
+(register-definition-prefixes "org-generic-id" '("org-generic-id-"))
 
 ;;;***
 
