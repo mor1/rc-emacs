@@ -173,6 +173,15 @@ Add crates.io API token using `cargo login'.
 
 \(fn TOKEN)" t nil)
 
+(autoload 'rustic-cargo-install-rerun "rustic-cargo" "\
+Run 'cargo install' with `rustic-install-arguments'." t nil)
+
+(autoload 'rustic-cargo-install "rustic-cargo" "\
+Install rust binary using 'cargo install'.
+If running with prefix command `C-u', read whole command from minibuffer.
+
+\(fn &optional ARG)" t nil)
+
 (register-definition-prefixes "rustic-cargo" '("rustic-"))
 
 ;;;***
