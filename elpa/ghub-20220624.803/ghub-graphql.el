@@ -32,7 +32,7 @@
 ;;; Api
 
 (cl-defun ghub-graphql (graphql &optional variables
-                                &key username auth host
+                                &key username auth host forge
                                 headers silent
                                 callback errorback value extra)
   "Make a GraphQL request using GRAPHQL and VARIABLES.
@@ -45,11 +45,13 @@ behave as for `ghub-request' (which see)."
                  (memq (car-safe graphql) '(query mutation))))
   (unless (stringp graphql)
     (setq graphql (gsexp-encode (ghub--graphql-prepare-query graphql))))
-  (ghub-request "POST" "/graphql" nil
+  (ghub-request "POST"
+                (if (eq forge 'gitlab) "/api/graphql" "/graphql")
+                nil
                 :payload `(("query" . ,graphql)
                            ,@(and variables `(("variables" ,@variables))))
                 :headers headers :silent silent
-                :username username :auth auth :host host
+                :username username :auth auth :host host :forge forge
                 :callback callback :errorback errorback
                 :extra extra :value value))
 
@@ -110,6 +112,7 @@ behave as for `ghub-request' (which see)."
                       (:singular issue number)
                       (orderBy ((field UPDATED_AT) (direction DESC)))]
                      number
+                     id
                      state
                      (author login)
                      title
@@ -149,6 +152,7 @@ behave as for `ghub-request' (which see)."
                       (:singular pullRequest number)
                       (orderBy ((field UPDATED_AT) (direction DESC)))]
                      number
+                     id
                      state
                      (author login)
                      title
@@ -156,6 +160,7 @@ behave as for `ghub-request' (which see)."
                      updatedAt
                      closedAt
                      mergedAt
+                     isDraft
                      locked
                      maintainerCanModify
                      isCrossRepository
@@ -367,7 +372,8 @@ See Info node `(ghub)GraphQL Support'."
     (cl-block nil
       (while t
         (let ((node (treepy-node loc)))
-          (when (vectorp node)
+          (when (and (vectorp node)
+                     (listp (aref node 0)))
             (let ((alist (cl-coerce node 'list))
                   vars)
               (when (cadr (assq :edges alist))
