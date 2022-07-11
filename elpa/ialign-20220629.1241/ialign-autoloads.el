@@ -1,4 +1,4 @@
-;;; ialign-autoloads.el --- automatically extracted autoloads
+;;; ialign-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -35,7 +35,7 @@ The keymap used in minibuffer is `ialign-minibuffer-keymap':
 
 (define-obsolete-function-alias 'ialign-interactive-align 'ialign "0.1.0")
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ialign" '("ialign-")))
+(register-definition-prefixes "ialign" '("ialign-"))
 
 ;;;***
 

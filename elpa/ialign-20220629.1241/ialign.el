@@ -3,8 +3,8 @@
 ;;
 ;; Author: Michał Krzywkowski <k.michal@zoho.com>
 ;; URL: https://github.com/mkcms/interactive-align
-;; Package-Version: 20200711.1117
-;; Package-Commit: eca40b8b59ea713dba21b18f5b047a6c086b91dc
+;; Package-Version: 20220629.1241
+;; Package-Commit: bc4d30d79f2f4b413288195ef19894ac0fd258b7
 ;; Package-Requires: ((emacs "24.4"))
 ;; Version: 0.4.2
 ;; Keywords: tools, editing, align, interactive
@@ -36,6 +36,7 @@
 ;;; Code:
 
 (require 'align)
+(require 'pcre2el nil 'noerror)
 
 (defgroup ialign nil
   "Interactive align-regexp."
@@ -58,7 +59,10 @@
     (define-key map (kbd "C-c ?") #'ialign-show-help)
     map)
   "Keymap used in minibuffer during `ialign'."
-  :group 'ialign)
+  :group 'ialign
+  :type '(restricted-sexp :match-alternatives (keymapp)))
+
+(defvaralias 'ialign-initial-spacing 'ialign-default-spacing)
 
 (defcustom ialign-default-spacing align-default-spacing
   "An integer that represents the default amount of padding to use."
@@ -125,8 +129,6 @@ mode during alignment with `ialign-toggle-pcre-mode'."
   :group 'ialign
   :type 'boolean)
 
-(defvaralias 'ialign-initial-spacing 'ialign-default-spacing)
-
 (defvar ialign--buffer nil)
 (defvar ialign--beg nil)
 (defvar ialign--end nil)
@@ -192,10 +194,6 @@ The buffer is narrowed to region that is to be aligned."
 	   ialign-auto-update))
     ialign-auto-update))
 
-(defun ialign--pcre-supported-p ()
-  "Check if `pcre2el' library is present."
-  (ignore-errors (require 'pcre2el) t))
-
 (defun ialign--update-minibuffer-prompt ()
   "Update the minibuffer prompt to show arguments passed to `align-regexp'."
   (let ((inhibit-read-only t)
@@ -224,8 +222,7 @@ help"))))
   "Revert the current region, then align it."
   (ialign--revert)
   (let ((reg ialign--regexp))
-    (when ialign--pcre-mode
-      (require 'pcre2el)
+    (when (and ialign--pcre-mode (fboundp 'rxt-pcre-to-elisp))
       (setq reg (rxt-pcre-to-elisp reg)))
     (when (and (null (string-match-p (regexp-quote "\\(") reg))
                (stringp ialign-implicit-regexp)
@@ -309,7 +306,7 @@ Updates the minibuffer prompt and maybe realigns the region."
 This requires the `pcre2el' library."
   (interactive)
   (when (ialign--active-p)
-    (if (ialign--pcre-supported-p)
+    (if (featurep 'pcre2el)
         (setq ialign--pcre-mode (not ialign--pcre-mode))
       (error "Cannot enable PCRE mode: `pcre2el' library is not installed"))
     (ialign-update)))
@@ -494,7 +491,7 @@ The keymap used in minibuffer is `ialign-minibuffer-keymap':
 	   (ialign--recursive-minibuffer nil)
 	   (region-contents (buffer-substring beg end))
 	   (ialign--region-contents region-contents)
-	   (ialign--pcre-mode (and ialign-pcre-mode (ialign--pcre-supported-p)))
+	   (ialign--pcre-mode (and ialign-pcre-mode (featurep 'pcre2el)))
 	   (ialign--repeat repeat)
 	   (ialign--group group)
 	   (ialign--spacing spacing)
