@@ -1,4 +1,4 @@
-;;; tuareg-autoloads.el --- automatically extracted autoloads
+;;; tuareg-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -19,7 +19,7 @@ the ocamldebug commands `cd DIR' and `directory'.
 
 (defalias 'camldebug #'ocamldebug)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ocamldebug" '("def-ocamldebug" "ocamldebug-")))
+(register-definition-prefixes "ocamldebug" '("def-ocamldebug" "ocamldebug-"))
 
 ;;;***
 
@@ -46,7 +46,7 @@ You have better byte-compile tuareg.el.
 For customization purposes, you should use `tuareg-mode-hook'
 \(run for every file) or `tuareg-load-hook' (run once) and not patch
 the mode itself.  You should add to your configuration file something like:
-  (add-hook 'tuareg-mode-hook
+  (add-hook \\='tuareg-mode-hook
             (lambda ()
                ... ; your customization code
             ))
@@ -87,14 +87,14 @@ Run an OCaml REPL process.  I/O via buffer `*OCaml*'." t nil)
 
 (add-to-list 'interpreter-mode-alist '("ocaml" . tuareg-mode))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg" '("tuareg-")))
+(register-definition-prefixes "tuareg" '("tuareg-"))
 
 ;;;***
 
 ;;;### (autoloads nil "tuareg-compat" "tuareg-compat.el" (0 0 0 0))
 ;;; Generated autoloads from tuareg-compat.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-compat" '("tuareg--")))
+(register-definition-prefixes "tuareg-compat" '("tuareg--"))
 
 ;;;***
 
@@ -108,7 +108,7 @@ Major mode to edit Menhir (and Ocamlyacc) files.
 
 \(fn)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-menhir" '("tuareg-menhir-")))
+(register-definition-prefixes "tuareg-menhir" '("tuareg-menhir-"))
 
 ;;;***
 
@@ -127,7 +127,7 @@ Update the environment to follow current OPAM switch configuration.
 
 (add-to-list 'auto-mode-alist '("[./]opam_?\\'" . tuareg-opam-mode))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "tuareg-opam" '("tuareg-" "verbose-tuareg-opam-smie-rules")))
+(register-definition-prefixes "tuareg-opam" '("tuareg-" "verbose-tuareg-opam-smie-rules"))
 
 ;;;***
 

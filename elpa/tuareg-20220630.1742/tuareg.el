@@ -1,7 +1,7 @@
 ;;; tuareg.el --- OCaml mode  -*- coding: utf-8; lexical-binding:t -*-
 
 ;; Copyright (C) 1997-2006 Albert Cohen, all rights reserved.
-;; Copyright (C) 2011-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2022 Free Software Foundation, Inc.
 ;; Copyright (C) 2009-2010 Jane Street Holding, LLC.
 ;; Licensed under the GNU General Public License.
 
@@ -99,11 +99,14 @@
   "Tuareg revision from the control system used.")
 
 (defconst tuareg-mode-version
-  (let ((version "Tuareg Version 2.2.0"))
-    (if (null tuareg-mode-revision)
-        version
-      (concat version " (" tuareg-mode-revision ")")
-      ))
+  (let ((version (or (if (fboundp 'package-get-version)
+                         (package-get-version))
+                     "2.3.0")))
+    (concat "Tuareg Version " version
+            (when tuareg-mode-revision
+              (concat " (" tuareg-mode-revision ")"))))
+  ;; FIXME: Do we really want to have this copy of the license blurb
+  ;; as the docstring?
   "         Copyright (C) 1997-2006 Albert Cohen, all rights reserved.
          Copyright (C) 2009-2010 Jane Street Holding, LLC.
          Copyright (C) 2011- Stefan Monnier & Christophe Troestler
@@ -111,7 +114,7 @@
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
+    the Free Software Foundation; either version 3 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -183,21 +186,21 @@ if it has to."
 
 (defcustom tuareg-in-indent 0 ; tuareg-default-indent
   "*How many spaces to indent from a `in' keyword.
-Upstream <http://caml.inria.fr/resources/doc/guides/guidelines.en.html>
+Upstream <https://ocaml.org/docs/guidelines>
 recommends 0, and this is what we default to since 2.0.1
 instead of the historical `tuareg-default-indent'."
   :group 'tuareg :type 'integer)
 
 (defcustom tuareg-with-indent 0
   "*How many spaces to indent from a `with' keyword.
-The examples at <http://caml.inria.fr/resources/doc/guides/guidelines.en.html>
-show the '|' is aligned with 'match', thus 0 is the default value."
+The examples at <https://ocaml.org/docs/guidelines>
+show the `|' is aligned with `match', thus 0 is the default value."
   :group 'tuareg :type 'integer)
 
 (defcustom tuareg-match-clause-indent 1
   "*How many spaces to indent a clause of match after a pattern `| ... ->'
 or `... ->' (pattern without preceding `|' in the first clause of a matching).
-To respect <http://caml.inria.fr/resources/doc/guides/guidelines.en.html>
+To respect <https://ocaml.org/docs/guidelines>
 the default is 1."
   :type 'integer)
 
@@ -311,7 +314,7 @@ them to the OCaml REPL."
   :group 'tuareg :type 'boolean)
 
 (defcustom tuareg-manual-url
-  "http://caml.inria.fr/pub/docs/manual-ocaml/"
+  "https://v2.ocaml.org/manual/"
   "*URL to the OCaml reference manual."
   :group 'tuareg :type 'string)
 
@@ -392,7 +395,7 @@ Valid names are `browse-url', `browse-url-firefox', etc."
   'tuareg-font-lock-module-face)
 
 (defface tuareg-font-lock-constructor-face
-  '((t (:inherit default)))
+  '((t (:inherit default)))             ;FIXME: Why not just nil?
   "Face description for constructors of (polymorphic) variants and exceptions."
   :group 'tuareg-faces)
 (defvar tuareg-font-lock-constructor-face
@@ -2516,7 +2519,7 @@ Return a non-nil value if a comment was skipped."
       nil)))
 
 (defun tuareg--skip-backward-comments-semicolon ()
-  "Skip 'sticky' comments and ';;' after a definition."
+  "Skip `sticky' comments and `;;' after a definition."
   ;; Comments after the definition not separated by a blank like
   ;; ("sticking") are considered part of the definition.
   (when (looking-at-p "[ \t]*(\\*")
@@ -2538,7 +2541,7 @@ Return a non-nil value if a comment was skipped."
       nil)))
 
 (defun tuareg--skip-forward-comments-semicolon ()
-  "Skip ';;' and then 'sticky' comments after a definition."
+  "Skip `;;' and then `sticky' comments after a definition."
   (when (looking-at (rx (* (in " \t\n")) ";;"))
     (goto-char (match-end 0)))
   (while (tuareg--skip-forward-comment)))
@@ -3253,7 +3256,7 @@ You have better byte-compile tuareg.el.
 For customization purposes, you should use `tuareg-mode-hook'
 \(run for every file) or `tuareg-load-hook' (run once) and not patch
 the mode itself.  You should add to your configuration file something like:
-  (add-hook 'tuareg-mode-hook
+  (add-hook \\='tuareg-mode-hook
             (lambda ()
                ... ; your customization code
             ))
@@ -4097,15 +4100,14 @@ See `imenu-create-index-function'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      Related files & modes
 
-(eval-when-compile
-  (autoload 'speedbar-add-supported-extension "speedbar")
-  (defvar speedbar-obj-alist))
+(with-eval-after-load 'speedbar
+  (declare-function speedbar-add-supported-extension "speedbar" (extension))
+  (defvar speedbar-obj-alist)
 
-(when (require 'speedbar nil t)
   (speedbar-add-supported-extension
    '(".ml" ".mli" ".mll" ".mly" ".mlp" ".ls"))
-  (push '("\\.mli$" . ".cmi") speedbar-obj-alist)
-  (push '("\\.ml$"  . ".cmo") speedbar-obj-alist))
+  (push '("\\.mli\\'" . ".cmi") speedbar-obj-alist)
+  (push '("\\.ml\\'"  . ".cmo") speedbar-obj-alist))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             Hooks and Exit
