@@ -1360,9 +1360,9 @@ Show log for the definition at point.
 Show log for the merge of COMMIT into BRANCH.
 
 More precisely, find merge commit M that brought COMMIT into
-BRANCH, and show the log of the range \"M^1..M\".  If COMMIT is
-directly on BRANCH, then show approximately twenty surrounding
-commits instead.
+BRANCH, and show the log of the range \"M^1..M\". If COMMIT is
+directly on BRANCH, then show approximately
+`magit-log-merged-commit-count' surrounding commits instead.
 
 This command requires git-when-merged, which is available from
 https://github.com/mhagger/git-when-merged.
@@ -1625,19 +1625,7 @@ Push a notes ref to another repository.
 
 \(fn REF REMOTE &optional ARGS)" t nil)
  (autoload 'magit-push-implicitly "magit-push" nil t)
-
-(autoload 'magit-push-to-remote "magit-push" "\
-Push to REMOTE without using an explicit refspec.
-The REMOTE is read in the minibuffer.
-
-This command simply runs \"git push -v [ARGS] REMOTE\".  ARGS
-are the arguments specified in the popup buffer.  No refspec
-arguments are used.  Instead the behavior depends on at least
-these Git variables: `push.default', `remote.pushDefault',
-`branch.<branch>.pushRemote', `branch.<branch>.remote',
-`branch.<branch>.merge', and `remote.<remote>.push'.
-
-\(fn REMOTE ARGS)" t nil)
+ (autoload 'magit-push-to-remote "magit-push" nil t)
 
 (register-definition-prefixes "magit-push" '("magit-"))
 
