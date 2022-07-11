@@ -34,6 +34,13 @@
 
 ;;;***
 
+;;;### (autoloads nil "dap-docker" "dap-docker.el" (0 0 0 0))
+;;; Generated autoloads from dap-docker.el
+
+(register-definition-prefixes "dap-docker" '("dap-docker-"))
+
+;;;***
+
 ;;;### (autoloads nil "dap-edge" "dap-edge.el" (0 0 0 0))
 ;;; Generated autoloads from dap-edge.el
 
