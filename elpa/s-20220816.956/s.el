@@ -4,8 +4,8 @@
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
 ;; Version: 1.12.0
-;; Package-Version: 20210616.619
-;; Package-Commit: 08661efb075d1c6b4fa812184c1e5e90c08795a9
+;; Package-Version: 20220816.956
+;; Package-Commit: 7f25ead4b0deac6f49d07e0c3b8859adedb28207
 ;; Keywords: strings
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -43,8 +43,8 @@
 
 (defun s-trim-right (s)
   "Remove whitespace at the end of S."
+  (declare (pure t) (side-effect-free t))
   (save-match-data
-    (declare (pure t) (side-effect-free t))
     (if (string-match "[ \t\n\r]+\\'" s)
         (replace-match "" t t s)
       s)))
@@ -119,6 +119,18 @@ See also `s-split'."
   "Concatenate S and SUFFIX."
   (declare (pure t) (side-effect-free t))
   (concat s suffix))
+
+(defun s-splice (needle n s)
+  "Splice NEEDLE into S at position N.
+0 is the beginning of the string, -1 is the end."
+  (if (< n 0)
+      (let ((left (substring s 0 (+ 1 n (length s))))
+            (right (s-right (- -1 n) s)))
+        (concat left needle right))
+    (let ((left (s-left n s))
+          (right (substring s n (length s))))
+        (concat left needle right))))
+
 
 (defun s-repeat (num s)
   "Make a string of S repeated NUM times."
@@ -223,9 +235,9 @@ When not specified, ELLIPSIS defaults to ‘...’."
   (declare (pure t) (side-effect-free t))
   (let ((extra (max 0 (- len (length s)))))
     (concat
-     (make-string (ceiling extra 2) ? )
+     (make-string (ceiling extra 2) ?\s)
      s
-     (make-string (floor extra 2) ? ))))
+     (make-string (floor extra 2) ?\s))))
 
 (defun s-pad-left (len padding s)
   "If S is shorter than LEN, pad it with PADDING on the left."
@@ -255,6 +267,20 @@ When not specified, ELLIPSIS defaults to ‘...’."
     (if (> l len)
         (substring s (- l len) l)
       s)))
+
+(defun s-chop-left (len s)
+  "Remove the first LEN chars from S."
+  (let ((l (length s)))
+    (if (> l len)
+        (substring s len l)
+      "")))
+
+(defun s-chop-right (len s)
+  "Remove the last LEN chars from S."
+  (let ((l (length s)))
+    (if (> l len)
+        (substring s 0 (- l len))
+      "")))
 
 (defun s-ends-with? (suffix s &optional ignore-case)
   "Does S end with SUFFIX?
@@ -400,12 +426,12 @@ This is a simple wrapper around the built-in `upcase'."
   (upcase s))
 
 (defun s-capitalize (s)
-  "Convert the first word's first character to upper case and the rest to lower case in S."
+  "Convert S first word's first character to upper and the rest to lower case."
   (declare (side-effect-free t))
   (concat (upcase (substring s 0 1)) (downcase (substring s 1))))
 
 (defun s-titleize (s)
-  "Convert each word's first character to upper case and the rest to lower case in S.
+  "Convert in S each word's first character to upper and the rest to lower case.
 
 This is a simple wrapper around the built-in `capitalize'."
   (declare (side-effect-free t))
@@ -491,7 +517,12 @@ SUBEXP-DEPTH is 0 by default."
 (defun s-match (regexp s &optional start)
   "When the given expression matches the string, this function returns a list
 of the whole matching string and a string for each matched subexpressions.
-If it did not match the returned value is an empty list (nil).
+Subexpressions that didn't match are represented by nil elements
+in the list, except that non-matching subexpressions at the end
+of REGEXP might not appear at all in the list.  That is, the
+returned list can be shorter than the number of subexpressions in
+REGEXP plus one.  If REGEXP did not match the returned value is
+an empty list (nil).
 
 When START is non-nil the search will start at that index."
   (declare (side-effect-free t))
@@ -511,14 +542,18 @@ When START is non-nil the search will start at that index."
 (defun s-slice-at (regexp s)
   "Slices S up at every index matching REGEXP."
   (declare (side-effect-free t))
-  (if (= 0 (length s)) (list "")
-    (save-match-data
-      (let (i)
-        (setq i (string-match regexp s 1))
-        (if i
-            (cons (substring s 0 i)
-                  (s-slice-at regexp (substring s i)))
-          (list s))))))
+  (if (s-blank? s)
+      (list s)
+    (let (ss)
+      (while (not (s-blank? s))
+        (save-match-data
+          (let ((i (string-match regexp s 1)))
+            (if i
+                (setq ss (cons (substring s 0 i) ss)
+                      s (substring s i))
+              (setq ss (cons s ss)
+                    s "")))))
+      (nreverse ss))))
 
 (defun s-split-words (s)
   "Split S into list of words."
@@ -556,6 +591,11 @@ When START is non-nil the search will start at that index."
   (declare (side-effect-free t))
   (s-join "-" (mapcar 'downcase (s-split-words s))))
 
+(defun s-spaced-words (s)
+  "Convert S to spaced words."
+  (declare (side-effect-free t))
+  (s-join " " (s-split-words s)))
+
 (defun s-capitalized-words (s)
   "Convert S to Capitalized words."
   (declare (side-effect-free t))
@@ -592,9 +632,9 @@ an extra argument which is the EXTRA value from the call to
 Several standard `s-format' helper functions are recognized and
 adapted for this:
 
-    (s-format \"${name}\" 'gethash hash-table)
-    (s-format \"${name}\" 'aget alist)
-    (s-format \"$0\" 'elt sequence)
+    (s-format \"${name}\" \\='gethash hash-table)
+    (s-format \"${name}\" \\='aget alist)
+    (s-format \"$0\" \\='elt sequence)
 
 The REPLACER function may be used to do any other kind of
 transformation."
