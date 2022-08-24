@@ -1,4 +1,4 @@
-;;; dockerfile-mode-autoloads.el --- automatically extracted autoloads
+;;; dockerfile-mode-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -13,9 +13,19 @@
 (autoload 'dockerfile-build-buffer "dockerfile-mode" "\
 Build an image called IMAGE-NAME based upon the buffer.
 
-If prefix arg NO-CACHE is set, don't cache the image.
-The build string will be of the format:
-`sudo docker build --no-cache --tag IMAGE-NAME --build-args arg1.. -f filename directory`
+If the prefix arg NO-CACHE is set, don't cache the image.
+
+The shell command used to build the image is:
+
+    sudo docker build    \\
+      --no-cache         \\
+      --force-rm         \\
+      --pull             \\
+      --tag IMAGE-NAME   \\
+      --build-args args  \\
+      --progress type    \\
+      -f filename        \\
+      directory
 
 \(fn IMAGE-NAME &optional NO-CACHE)" t nil)
 
@@ -30,11 +40,11 @@ A major mode to edit Dockerfiles.
 
 \(fn)" t nil)
 
-(add-to-list 'auto-mode-alist '("/Dockerfile\\(?:\\.[^/\\]*\\)?\\'" . dockerfile-mode))
+(add-to-list 'auto-mode-alist (cons (concat "[/\\]" "\\(?:Containerfile\\|Dockerfile\\)" "\\(?:\\.[^/\\]*\\)?\\'") 'dockerfile-mode))
 
 (add-to-list 'auto-mode-alist '("\\.dockerfile\\'" . dockerfile-mode))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "dockerfile-mode" '("dockerfile-")))
+(register-definition-prefixes "dockerfile-mode" '("dockerfile-"))
 
 ;;;***
 

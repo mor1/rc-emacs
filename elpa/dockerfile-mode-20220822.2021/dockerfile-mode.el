@@ -2,12 +2,12 @@
 
 ;; Copyright (c) 2013 Spotify AB
 ;; Package-Requires: ((emacs "24"))
-;; Package-Version: 20220220.1439
-;; Package-Commit: b63a3d12b7dea0cb9efc7f78d7ad5672ceab2a3f
+;; Package-Version: 20220822.2021
+;; Package-Commit: 52c6c00da1d31c0b6c29c74335b3af63ed6bf06c
 ;; Homepage: https://github.com/spotify/dockerfile-mode
 ;; URL: https://github.com/spotify/dockerfile-mode
-;; Version: 1.5
-;; Keywords: docker
+;; Version: 1.7
+;; Keywords: docker languages processes tools
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License"); you may not
 ;; use this file except in compliance with the License. You may obtain a copy of
@@ -36,7 +36,7 @@
 (declare-function cygwin-convert-file-name-to-windows "cygw32.c" (file &optional absolute-p))
 
 (defgroup dockerfile nil
-  "dockerfile code editing commands for Emacs."
+  "Dockerfile editing commands for Emacs."
   :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :prefix "dockerfile-"
   :group 'languages)
@@ -68,6 +68,11 @@ Each element of the list will be passed as a separate
  --build-arg to the docker build command."
   :type '(repeat string)
   :group 'dockerfile)
+
+(defcustom dockerfile-build-progress "auto"
+  "Type of --progress output (auto, plain, tty) of docker build."
+  :group 'dockerfile
+  :type 'string)
 
 (defcustom dockerfile-use-buildkit nil
   "Use Docker buildkit for building images?
@@ -178,7 +183,9 @@ file name.  Otherwise, uses Emacs' standard conversion function."
     (convert-standard-filename file)))
 
 (defun dockerfile-tag-string (image-name)
-  "Return a --tag shell-quoted IMAGE-NAME string or an empty string if image-name is blank."
+  "Return a --tag shell-quoted IMAGE-NAME string.
+
+Returns an empty string if IMAGE-NAME is blank."
     (if (string= image-name "") "" (format "--tag %s " (shell-quote-argument image-name))))
 
 (define-obsolete-variable-alias 'docker-image-name 'dockerfile-image-name "2017-10-22")
@@ -199,15 +206,25 @@ This can be set in file or directory-local variables.")
 (defun dockerfile-build-buffer (image-name &optional no-cache)
   "Build an image called IMAGE-NAME based upon the buffer.
 
-If prefix arg NO-CACHE is set, don't cache the image.
-The build string will be of the format:
-`sudo docker build --no-cache --tag IMAGE-NAME --build-args arg1.. -f filename directory`"
+If the prefix arg NO-CACHE is set, don't cache the image.
+
+The shell command used to build the image is:
+
+    sudo docker build    \\
+      --no-cache         \\
+      --force-rm         \\
+      --pull             \\
+      --tag IMAGE-NAME   \\
+      --build-args args  \\
+      --progress type    \\
+      -f filename        \\
+      directory"
 
   (interactive (list (dockerfile-read-image-name) prefix-arg))
   (save-buffer)
     (compilation-start
         (format
-            "%s%s%s build %s %s %s %s %s -f %s %s"
+            "%s%s%s build %s %s %s %s %s --progress %s -f %s %s"
             (if dockerfile-use-buildkit "DOCKER_BUILDKIT=1 " "")
             (if dockerfile-use-sudo "sudo " "")
             dockerfile-mode-command
@@ -216,6 +233,7 @@ The build string will be of the format:
             (if dockerfile-build-pull "--pull " "")
             (dockerfile-tag-string image-name)
             (dockerfile-build-arg-string)
+            dockerfile-build-progress
             (shell-quote-argument (dockerfile-standard-filename
 				   (or (file-remote-p (buffer-file-name) 'localname)
 				       (buffer-file-name))))
@@ -248,8 +266,7 @@ returned, otherwise the base image name is used."
 ;;;###autoload
 (define-derived-mode dockerfile-mode prog-mode "Dockerfile"
   "A major mode to edit Dockerfiles.
-\\{dockerfile-mode-map}
-"
+\\{dockerfile-mode-map}"
   (set-syntax-table dockerfile-mode-syntax-table)
   (set (make-local-variable 'imenu-generic-expression)
        `(("Stage" dockerfile--imenu-function 1)))
@@ -264,8 +281,11 @@ returned, otherwise the base image name is used."
   (set (make-local-variable 'indent-line-function) #'dockerfile-indent-line-function))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("/Dockerfile\\(?:\\.[^/\\]*\\)?\\'" .
-                                dockerfile-mode))
+(add-to-list 'auto-mode-alist
+             (cons (concat "[/\\]"
+                           "\\(?:Containerfile\\|Dockerfile\\)"
+                           "\\(?:\\.[^/\\]*\\)?\\'")
+                   'dockerfile-mode))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.dockerfile\\'" . dockerfile-mode))
