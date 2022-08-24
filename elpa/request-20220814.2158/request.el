@@ -6,8 +6,8 @@
 
 ;; Author: Takafumi Arakaki <aka.tkf at gmail.com>
 ;; URL: https://github.com/tkf/emacs-request
-;; Package-Version: 20220614.1604
-;; Package-Commit: 38ed1d2e64138eb16a9d8ed2987cff2e01b4a93b
+;; Package-Version: 20220814.2158
+;; Package-Commit: 91313f1e00302b7e60d2043d8104bccf72aae80b
 ;; Package-Requires: ((emacs "24.4"))
 ;; Version: 0.3.3
 
@@ -913,8 +913,8 @@ BUG: Simultaneous requests are a known cause of cookie-jar corruption."
                                                "only one buffer or data entry permitted"))
                               (setq stdin-p t)))
                           (list name (or (plist-get (cdr item) :file) "-") (car item)
-                                (if (plist-get item :mime-type)
-                                    (format ";type=%s" (plist-get item :mime-type))
+                                (if (plist-get (cdr item) :mime-type)
+                                    (format ";type=%s" (plist-get (cdr item) :mime-type))
                                   "")))
                          (t (error (concat "request--curl-command-args: "
                                            "%S not string, buffer, or list")
