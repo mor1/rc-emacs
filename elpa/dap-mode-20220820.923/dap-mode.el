@@ -848,7 +848,7 @@ will be reversed."
         ;; fall back to original stack-frames if none found
         (-when-let (stack-frames
                     (or (-filter (lambda(stack-frame)
-                                   (-when-let (path (dap--get-path-for-frame stack-frame))
+                                   (-when-let (path (dap--get-path-for-frame debug-session stack-frame))
                                      (file-exists-p path)))
                                  stack-frames)
                         stack-frames))
@@ -1738,8 +1738,8 @@ before starting the debug process."
 
               (dap--set-sessions (cons debug-session debug-sessions)))
             (let ((translated-launch-args (cl-copy-list launch-args)))
-              (plist-put translated-launch-args :cwd (funcall (dap--debug-session-local-to-remote-path-fn debug-session) cwd))
-              (plist-put translated-launch-args :program (funcall (dap--debug-session-local-to-remote-path-fn debug-session) program))
+              (when cwd (plist-put translated-launch-args :cwd (funcall (dap--debug-session-local-to-remote-path-fn debug-session) cwd)))
+              (when program (plist-put translated-launch-args :program (funcall (dap--debug-session-local-to-remote-path-fn debug-session) program)))
               (dap--send-message
                (dap--make-request request (-> translated-launch-args
                                               (cl-copy-list)
