@@ -511,6 +511,20 @@ Click lsp lens using `avy' package." t nil)
 
 ;;;***
 
+;;;### (autoloads nil "lsp-marksman" "lsp-marksman.el" (0 0 0 0))
+;;; Generated autoloads from lsp-marksman.el
+
+(register-definition-prefixes "lsp-marksman" '("lsp-marksman-"))
+
+;;;***
+
+;;;### (autoloads nil "lsp-mint" "lsp-mint.el" (0 0 0 0))
+;;; Generated autoloads from lsp-mint.el
+
+(register-definition-prefixes "lsp-mint" '("lsp-clients-mint-executable"))
+
+;;;***
+
 ;;;### (autoloads nil "lsp-mode" "lsp-mode.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-mode.el
 (put 'lsp-enable-file-watchers 'safe-local-variable #'booleanp)
@@ -679,7 +693,7 @@ it is disabled.
 ;;;### (autoloads nil "lsp-openscad" "lsp-openscad.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-openscad.el
 
-(register-definition-prefixes "lsp-openscad" '("lsp-openscad-server"))
+(register-definition-prefixes "lsp-openscad" '("lsp-openscad-"))
 
 ;;;***
 
@@ -773,6 +787,14 @@ it is disabled.
 ;;; Generated autoloads from lsp-rf.el
 
 (register-definition-prefixes "lsp-rf" '("expand-start-command" "lsp-rf-language-server-" "parse-rf-language-server-"))
+
+;;;***
+
+;;;### (autoloads nil "lsp-ruby-syntax-tree" "lsp-ruby-syntax-tree.el"
+;;;;;;  (0 0 0 0))
+;;; Generated autoloads from lsp-ruby-syntax-tree.el
+
+(register-definition-prefixes "lsp-ruby-syntax-tree" '("lsp-ruby-syntax-tree-"))
 
 ;;;***
 

@@ -1,9 +1,9 @@
-;;; lsp-openscad.el --- openscad client         -*- lexical-binding: t; -*-
+;;; lsp-mint.el --- Solargraph server configuration  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2022 Len Trigg
+;; Copyright (C) 2019  Ivan Yonchovski
 
-;; Author: Len Trigg
-;; Keywords: openscad lsp
+;; Author: Ivan Yonchovski <yyoncho@gmail.com>
+;; Keywords:
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,30 +20,29 @@
 
 ;;; Commentary:
 
-;; lsp-openscad client
+;;
 
 ;;; Code:
 
 (require 'lsp-mode)
 
-(defgroup lsp-openscad nil
-  "LSP support for openscad."
+(defgroup lsp-mint nil
+  "LSP support for mint-lang."
   :group 'lsp-mode
-  :link '(url-link "https://github.com/dzhu/openscad-language-server"))
+  :link '(url-link "https://github.com/mint-lang/mint")
+  :package-version '(lsp-mode . "6.1"))
 
-(defcustom lsp-openscad-server
-  "openscad-language-server"
-  "Path to the openscad language server."
-  :group 'lsp-openscad
+(defcustom lsp-clients-mint-executable '("mint" "ls")
+  "Command to start the mint language server."
+  :group 'lsp-mint
   :risky t
   :type 'file)
 
-
+;; Mint
 (lsp-register-client
- (make-lsp-client :new-connection (lsp-stdio-connection lsp-openscad-server)
-                  :major-modes '(scad-mode)
-                  :priority -1
-                  :server-id 'openscad))
+ (make-lsp-client :new-connection (lsp-stdio-connection lsp-clients-mint-executable)
+                  :major-modes '(mint-mode)
+                  :server-id 'mint-ls))
 
-(provide 'lsp-openscad)
-;;; lsp-openscad.el ends here
+(provide 'lsp-mint)
+;;; lsp-mint.el ends here

@@ -158,10 +158,10 @@ Defaults to side following treemacs default."
         ("hcl-bool" . lsp-face-semhl-constant)
         ("hcl-string" . lsp-face-semhl-string)
         ("hcl-number" . lsp-face-semhl-number)
-        ("hcl-objectKey" . lsp-face-semhl-label)
-        ("hcl-mapKey" . lsp-face-semhl-label)
+        ("hcl-objectKey" . lsp-face-semhl-member)
+        ("hcl-mapKey" . lsp-face-semhl-member)
         ("hcl-keyword" . lsp-face-semhl-keyword)
-        ("hcl-traversalStep" . lsp-face-semhl-label)
+        ("hcl-traversalStep" . lsp-face-semhl-member)
         ("hcl-typeCapsule" . lsp-face-semhl-type)
         ("hcl-typePrimitive" . lsp-face-semhl-type)))
   (setq lsp-semantic-token-modifier-faces
@@ -187,7 +187,7 @@ Defaults to side following treemacs default."
         ("terraform-variable" . lsp-face-semhl-variable)
         ("terraform-terraform" . lsp-face-semhl-constant)
         ("terraform-backend" . lsp-face-semhl-definition)
-        ("terraform-name" . lsp-face-semhl-label)
+        ("terraform-name" . lsp-face-semhl-interface)
         ("terraform-type" . lsp-face-semhl-type)
         ("terraform-requiredProviders" . lsp-face-semhl-default-library))))
 
@@ -221,6 +221,17 @@ This is a synchronous action."
            :arguments (vector (format "uri=%s" (lsp--path-to-uri (lsp-workspace-root)))))
      :no-wait nil
      :no-merge t))
+
+(defun lsp-terraform-ls-version ()
+  "Get information about the terraform binary version for the current module."
+  (interactive)
+  (let ((terraform-data (lsp-request
+                         "workspace/executeCommand"
+                         (list :command "terraform-ls.module.terraform"
+                               :arguments (vector (format "uri=%s" (lsp--path-to-uri (lsp-workspace-root))))))))
+    (lsp--info "Required: %s, Current: %s"
+               (lsp:terraform-ls-module-terraform-required-version terraform-data)
+               (lsp:terraform-ls-module-terraform-discovered-version terraform-data))))
 
 (lsp-consistency-check lsp-terraform)
 
@@ -285,7 +296,7 @@ This is a synchronous action."
                      :no-wait nil
                      :no-merge nil))
          (modules (lsp-terraform-ls--modules-to-tf-module tree-data)))
-    (setq lsp-terraform-ls--modules-call-tree-data modules)))
+    (setq-local lsp-terraform-ls--modules-call-tree-data modules)))
 
 (defun lsp-terraform-ls--fetch-providers ()
   "Fetch modules call data and set it in `lsp-terraform-ls--providers-tree-data'."
@@ -296,7 +307,7 @@ This is a synchronous action."
                      :no-wait nil
                      :no-merge nil))
          (tf-packages (lsp-terraform-ls--providers-to-tf-package tree-data)))
-    (setq lsp-terraform-ls--providers-tree-data tf-packages)))
+    (setq-local lsp-terraform-ls--providers-tree-data tf-packages)))
 
 (defun lsp-terraform-ls--tf-packages-to-treemacs (tf-packages)
   "Convert list of `TF-PACKAGES' to treemacs compatible data."
