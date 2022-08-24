@@ -5,7 +5,7 @@
 ;; Author: Noah Friedman <friedman@splode.com>
 ;; Keywords: extensions
 ;; Created: 1995-10-06
-;; Version: 1.12.0
+;; Version: 1.13.0
 ;; Package-Requires: ((emacs "26.3"))
 
 ;; This is a GNU ELPA :core package.  Avoid functionality that is not
@@ -629,8 +629,7 @@ Honor `eldoc-echo-area-use-multiline-p' and
   "Display DOCS in a dedicated buffer.
 If INTERACTIVE is t, also display the buffer."
   (eldoc--format-doc-buffer docs)
-  (when interactive
-    (eldoc-doc-buffer)))
+  (when interactive (eldoc-doc-buffer t)))
 
 (defun eldoc-documentation-default ()
   "Show first doc string for item at point.
@@ -812,7 +811,7 @@ function passes responsibility to the functions in
 Other third-party values of `eldoc-documentation-strategy' should
 not use `eldoc--make-callback'.  They must find some alternate
 way to produce callbacks to feed to
-`eldoc-documentation-functions' and should endeavour to display
+`eldoc-documentation-functions' and should endeavor to display
 the docstrings eventually produced, using
 `eldoc-display-functions'."
   (let* (;; How many callbacks have been created by the strategy
