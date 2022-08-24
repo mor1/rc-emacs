@@ -1,4 +1,4 @@
-;;; go-mode-autoloads.el --- automatically extracted autoloads
+;;; go-mode-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -101,7 +101,14 @@ A major mode for editing go.mod files.
 
 (add-to-list 'auto-mode-alist '("go\\.mod\\'" . go-dot-mod-mode))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "go-mode" '("go-" "god" "gofmt")))
+(autoload 'go-dot-work-mode "go-mode" "\
+A major mode for editor go.work files.
+
+\(fn)" t nil)
+
+(add-to-list 'auto-mode-alist '("go\\.work\\'" . go-dot-work-mode))
+
+(register-definition-prefixes "go-mode" '("go-" "god" "gofmt"))
 
 ;;;***
 
