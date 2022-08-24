@@ -207,10 +207,20 @@ For marking files see `treemacs-bulk-file-actions'.
 \(fn &optional ARG)" t nil)
 
 (autoload 'treemacs-move-file "treemacs-file-management" "\
-Move file (or directory) at point." t nil)
+Move file (or directory) at point.
+
+If the selected target is an existing directory the source file will be directly
+moved into this directory.  If the given target instead does not exist then it
+will be treated as the moved file's new name, meaning the original source file
+will be both moved and renamed." t nil)
 
 (autoload 'treemacs-copy-file "treemacs-file-management" "\
-Copy file (or directory) at point." t nil)
+Copy file (or directory) at point.
+
+If the selected target is an existing directory the source file will be directly
+copied into this directory.  If the given target instead does not exist then it
+will be treated as the copied file's new name, meaning the original source file
+will be both copied and renamed." t nil)
 
 (autoload 'treemacs-move-marked-files "treemacs-file-management" "\
 Move all marked files.
