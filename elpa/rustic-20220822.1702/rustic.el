@@ -1,6 +1,6 @@
 ;;; rustic.el --- Rust development environment -*-lexical-binding: t-*-
 
-;; Version: 3.2
+;; Version: 3.3
 ;; Author: Mozilla
 ;;
 ;; Keywords: languages
@@ -67,17 +67,28 @@
   ;; this variable is buffer local so we can use the cached value
   (if rustic--buffer-workspace
       rustic--buffer-workspace
-    (with-temp-buffer
-      (let ((ret (call-process (rustic-cargo-bin) nil (list (current-buffer) nil) nil "locate-project" "--workspace")))
-        (cond ((and (/= ret 0) nodefault)
-               (error "`cargo locate-project' returned %s status: %s" ret (buffer-string)))
-              ((and (/= ret 0) (not nodefault))
-               (setq rustic--buffer-workspace default-directory))
-              (t
-               (goto-char 0)
-               (let* ((output (json-read))
-                      (dir (file-name-directory (cdr (assoc-string "root" output)))))
-                 (setq rustic--buffer-workspace dir))))))))
+    ;; Copy environment variables into the new buffer, since
+    ;; with-temp-buffer will re-use the variables' defaults, even if
+    ;; they have been changed in this variable using e.g. envrc-mode.
+    ;; See https://github.com/purcell/envrc/issues/12.
+    (let ((env process-environment)
+          (path exec-path))
+      (with-temp-buffer
+        ;; Copy the entire environment just in case there's something we
+        ;; don't know we need.
+        (setq-local process-environment env)
+        ;; Set PATH so we can find cargo.
+        (setq-local exec-path path)
+        (let ((ret (call-process (rustic-cargo-bin) nil (list (current-buffer) nil) nil "locate-project" "--workspace")))
+          (cond ((and (/= ret 0) nodefault)
+                 (error "`cargo locate-project' returned %s status: %s" ret (buffer-string)))
+                ((and (/= ret 0) (not nodefault))
+                 (setq rustic--buffer-workspace default-directory))
+                (t
+                 (goto-char 0)
+                 (let* ((output (json-read))
+                        (dir (file-name-directory (cdr (assoc-string "root" output)))))
+                   (setq rustic--buffer-workspace dir)))))))))
 
 (defun rustic-buffer-crate (&optional nodefault)
   "Return the crate for the current buffer.
@@ -139,7 +150,10 @@ this variable."
   "Major mode for Rust code.
 
 \\{rustic-mode-map}"
-  :group 'rustic)
+  :group 'rustic
+
+  (when rustic-cargo-auto-add-missing-dependencies
+   (add-hook 'lsp-after-diagnostics-hook 'rustic-cargo-add-missing-dependencies-hook nil t)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.rs\\'" . rustic-mode))

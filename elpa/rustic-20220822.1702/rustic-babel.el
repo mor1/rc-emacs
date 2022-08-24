@@ -302,7 +302,7 @@ executed with the parameter `:include'."
   (let ((contents ""))
     (with-current-buffer (current-buffer)
       (save-excursion
-        (dolist (b blocks)
+        (dolist (b (mapcar (lambda (b) (if (symbolp b) (symbol-name b) b)) blocks))
           (when-let ((c (rustic-babel-block-contents b)))
             (setq contents (concat contents c))))))
     contents))
@@ -323,7 +323,7 @@ executed with the parameter `:include'."
 
 (defun rustic-babel-generate-modules (root blocks)
   "Create module files for BLOCKS in the project with ROOT."
-  (dolist (b blocks)
+  (dolist (b (mapcar (lambda (b) (if (symbolp b) (symbol-name b) b)) blocks))
     (let* ((contents (rustic-babel-block-contents b))
            (src-dir (concat root "/src/"))
            (module (expand-file-name (format "%s.rs" b) src-dir)))
@@ -410,6 +410,33 @@ at least one time in this emacs session before this command can be used."
        :buffer err-buff
        :command params
        :filter #'rustic-compilation-filter))))
+
+(defun rustic-babel-lookup-missing-dependencies ()
+  (let* ((contents (org-element-property :value (org-element-at-point)))
+         crates)
+    (dolist (line (split-string contents "\n"))
+      (when (string-match "\s+use\s" line)
+        (if (string-match "::" line)
+            (let* ((import (nth 1 (split-string line)))
+                   (c (nth 0 (split-string import "::"))))
+              (unless (string-match "^std" c)
+                (push c crates)))
+          (let* ((import (nth 1 (split-string line))))
+            (unless (string-match "^std" import)
+              (push (string-trim-right import ";") crates))))))
+    crates))
+
+(defun rustic-babel-header-insert-crates ()
+  "Parse crates from imports and insert them with the header arg `:crates'.
+Ignore crates that are listed in `:use'."
+  (interactive)
+  (let* ((crates (rustic-babel-lookup-missing-dependencies))
+         (use-blocks (cdr (assq :use (nth 2 (org-babel-get-src-block-info)))))
+         (missing (--filter
+                   (not (-contains?
+                         (mapcar (lambda (b) (if (symbolp b) (symbol-name b) b)) use-blocks) it))
+                   crates)))
+    (org-babel-insert-header-arg (concat "crates '" (format "%s" missing)))))
 
 (provide 'rustic-babel)
 ;;; rustic-babel.el ends here

@@ -80,6 +80,14 @@ If nil then the project is simply created."
   :type 'string
   :group 'rustic-cargo)
 
+(defcustom rustic-cargo-auto-add-missing-dependencies nil
+  "Automatically adds dependencies to Cargo.toml.
+This way rustic checks new diagnostics for 'unresolved import'
+errors and passes the crates to 'cargo add'.
+Currently only working with lsp-mode."
+  :type 'boolean
+  :group 'rustic-cargo)
+
 (defvar rustic-cargo-outdated-face nil)
 (make-obsolete-variable 'rustic-cargo-outdated-face
                         "use the face `rustic-cargo-outdated' instead."
@@ -692,6 +700,9 @@ The documentation is built if necessary."
 
 ;;; cargo edit
 
+(defvar rustic-cargo-dependencies "*cargo-add-dependencies*"
+  "Buffer that is used for adding missing dependencies with 'cargo add'.")
+
 (defun rustic-cargo-edit-installed-p ()
   "Check if cargo-edit is installed. If not, ask the user if he wants to install it."
   (if (executable-find "cargo-add") t (rustic-cargo-install-crate-p "edit") nil))
@@ -708,6 +719,81 @@ If running with prefix command `C-u', read whole command from minibuffer."
                       (concat (rustic-cargo-bin) " add "
                               (read-from-minibuffer "Crate: ")))))
       (rustic-run-cargo-command command))))
+
+(defun rustic-cargo-add-missing-dependencies (&optional arg)
+  "Lookup and add missing dependencies to Cargo.toml.
+Adds all missing crates by default with latest version using lsp functionality.
+Supports both lsp-mode and egot.
+Use with 'C-u` to open prompt with missing crates."
+  (interactive)
+  (when (rustic-cargo-edit-installed-p)
+    (-if-let (deps (rustic-cargo-find-missing-dependencies))
+        (progn
+          (when current-prefix-arg
+            (setq deps (read-from-minibuffer "Add dependencies: " deps)))
+          (rustic-compilation-start
+           (split-string (concat (rustic-cargo-bin) " add " deps))
+           (append (list :buffer rustic-cargo-dependencies))))
+      (message "No missing crates found. Maybe check your lsp server."))))
+
+(defun rustic-cargo-add-missing-dependencies-hook ()
+  "Silently look for missing dependencies and add them to Cargo.toml."
+  (-when-let (deps (rustic-cargo-find-missing-dependencies))
+    (rustic-compilation-start
+     (split-string (concat (rustic-cargo-bin) " add " deps))
+     (append (list :buffer rustic-cargo-dependencies
+                   :no-default-dir t
+                   :no-display t
+                   :sentinel (lambda (proc msg) ()))))))
+
+(defun rustic-cargo-find-missing-dependencies ()
+  "Return missing dependencies using either lsp-mode or eglot/flymake
+as string."
+  (let ((crates nil))
+    (setq crates (cond ((featurep 'lsp-mode)
+                        (rustic-cargo-add-missing-dependencies-lsp-mode))
+                       ((featurep 'eglot)
+                        (rustic-cargo-add-missing-dependencies-eglot))
+                       (t
+                        nil)))
+    (if (> (length crates) 0)
+        (mapconcat 'identity crates " ")
+      crates)))
+
+(defun rustic-cargo-add-missing-dependencies-lsp-mode ()
+  "Return missing dependencies using `lsp-diagnostics'."
+  (let* ((diags (gethash (buffer-file-name) (lsp-diagnostics t)))
+         (lookup-missing-crates
+          (lambda (missing-crates errortable)
+            (if (string= "E0432" (gethash "code" errortable))
+                (cons (nth 3 (split-string (gethash "message" errortable) "`"))
+                      missing-crates)
+              missing-crates))))
+    (delete-dups (seq-reduce lookup-missing-crates
+                             diags
+                             '()))))
+
+(defun rustic-cargo-add-missing-dependencies-eglot ()
+  "Return missing dependencies by parsing flymake diagnostics buffer."
+  (let* ((buf (flymake--diagnostics-buffer-name))
+         crates)
+    ;; ensure flymake diagnostics buffer exists
+    (unless (buffer-live-p buf)
+      (let* ((name (flymake--diagnostics-buffer-name))
+             (source (current-buffer))
+             (target (or (get-buffer name)
+                         (with-current-buffer (get-buffer-create name)
+                           (flymake-diagnostics-buffer-mode)
+                           (current-buffer)))))
+        (with-current-buffer target
+          (setq flymake--diagnostics-buffer-source source)
+          (revert-buffer))))
+    (with-current-buffer buf
+      (let ((errors (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n")))
+        (dolist (s errors)
+          (if (string-match-p (regexp-quote "unresolved import") s)
+              (push (string-trim (car (reverse (split-string s))) "`" "`" ) crates)))))
+    crates))
 
 ;;;###autoload
 (defun rustic-cargo-rm (&optional arg)
