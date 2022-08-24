@@ -1,11 +1,11 @@
-;;; pcache.el --- persistent caching for Emacs.
+;;; pcache.el --- persistent caching for Emacs. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2011-2020  Yann Hodique
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords: extensions
-;; Package-Version: 20201226.634
-;; Package-Commit: 893d2a637423bae2cc5e72c559e3a9d1518797c9
+;; Package-Version: 20220724.1841
+;; Package-Commit: 507230d094cc4a5025fe09b62569ad60c71c4226
 ;; Version: 0.5.1
 ;; Package-Requires: ((emacs "25.1"))
 
@@ -62,6 +62,8 @@
 
 (defvar *pcache-repositories* (make-hash-table :test 'equal))
 
+(defvar pcache-avoid-recursion nil)
+
 (defconst pcache-default-save-delay 300)
 
 (defconst pcache-internal-version-constant "0.5")
@@ -84,18 +86,18 @@
 
 (cl-defmethod make-instance ((cls (subclass pcache-repository)) &rest args)
   (let* ((newname (or (and (stringp (car args)) (car args))
-		      (plist-get args :object-name)
-		      *pcache-repository-name*
-		      (symbol-name cls)))
-	 (e (gethash newname *pcache-repositories*))
-	 (path (concat pcache-directory newname)))
+                      (plist-get args :object-name)
+                      *pcache-repository-name*
+                      (symbol-name cls)))
+         (e (gethash newname *pcache-repositories*))
+         (path (concat pcache-directory newname)))
     (setq args (append args (list :object-name newname)))
     (or e
-        (and (not (boundp 'pcache-avoid-recursion))
+        (and (not pcache-avoid-recursion)
              (file-exists-p path)
              (condition-case nil
                  (let* ((pcache-avoid-recursion t)
-			                  (*pcache-repository-name* newname)
+                        (*pcache-repository-name* newname)
                         (obj (eieio-persistent-read path 'pcache-repository t)))
                    (and (or (pcache-validate-repo obj)
                             (error "wrong version"))
@@ -205,7 +207,7 @@
 
 (cl-defmethod pcache-purge-invalid ((cache pcache-repository))
   (let ((table (oref cache entries)))
-    (maphash #'(lambda (k e)
+    (maphash (lambda (k e)
                  (unless (pcache-entry-valid-p e)
                    (remhash k table)))
              table)
@@ -226,7 +228,7 @@
     (maphash func table)))
 
 (defun pcache-kill-emacs-hook ()
-  (maphash #'(lambda (k v)
+  (maphash (lambda (k v)
                (condition-case nil
                    (pcache-purge-invalid v)
                  (error nil))
@@ -241,11 +243,11 @@
     (when (file-exists-p fname)
       (delete-file fname))))
 
-(add-hook 'kill-emacs-hook 'pcache-kill-emacs-hook)
+(add-hook 'kill-emacs-hook #'pcache-kill-emacs-hook)
 
 ;; in case we reload in place, clean all repositories with invalid version
 (let (to-clean)
-  (maphash #'(lambda (k v)
+  (maphash (lambda (k v)
                (condition-case nil
                    (unless (eql (oref v version)
                                 pcache-version-constant)
