@@ -64,7 +64,8 @@
 
 (defcustom lsp-ui-doc-enable t
   "Whether or not to enable lsp-ui-doc.
-Displays documentation of the symbol at point on hover. This only takes effect when a buffer is started."
+Displays documentation of the symbol at point on hover.  This only
+takes effect when a buffer is started."
   :type 'boolean
   :group 'lsp-ui)
 
@@ -90,8 +91,8 @@ Displays documentation of the symbol at point on hover. This only takes effect w
 
 (defcustom lsp-ui-doc-position 'top
   "Where to display the doc when moving the point cursor.
-This affect the position of the documentation when `lsp-ui-doc-show-with-cursor'
-is non-nil."
+This affects the position of the documentation when
+`lsp-ui-doc-show-with-cursor' is non-nil."
   :type '(choice (const :tag "Top" top)
                  (const :tag "Bottom" bottom)
                  (const :tag "At point" at-point))
@@ -1178,7 +1179,15 @@ It is supposed to be called from `lsp-ui--toggle'"
 (defun lsp-ui-doc-hide ()
   "Hide hover information popup."
   (interactive)
+  (lsp-ui-doc-unfocus-frame) ;; In case focus is in doc frame
   (lsp-ui-doc--hide-frame))
+
+(defun lsp-ui-doc-toggle ()
+  "Toggle hover information popup."
+  (interactive)
+  (if (lsp-ui-doc--visible-p)
+      (lsp-ui-doc-hide)
+    (lsp-ui-doc-show)))
 
 (defun lsp-ui-doc-glance ()
   "Trigger display hover information popup and hide it on next typing."
@@ -1200,6 +1209,7 @@ It is supposed to be called from `lsp-ui--toggle'"
   (interactive)
   (when-let* ((frame (lsp-ui-doc--get-frame))
               (visible (lsp-ui-doc--frame-visible-p)))
+    (remove-hook 'post-command-hook 'lsp-ui-doc--hide-frame)
     (set-frame-parameter frame 'lsp-ui-doc--no-focus nil)
     (set-frame-parameter frame 'cursor-type t)
     (lsp-ui-doc--with-buffer
