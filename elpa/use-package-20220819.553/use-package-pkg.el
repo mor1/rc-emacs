@@ -1,7 +1,7 @@
-(define-package "use-package" "20210207.1926" "A configuration macro for simplifying your .emacs"
+(define-package "use-package" "20220819.553" "A configuration macro for simplifying your .emacs"
   '((emacs "24.3")
     (bind-key "2.4"))
-  :commit "a7422fb8ab1baee19adb2717b5b47b9c3812a84c" :authors
+  :commit "e2d173b1200865a9efd5c2066831a230497582c0" :authors
   '(("John Wiegley" . "johnw@newartisans.com"))
   :maintainer
   '("John Wiegley" . "johnw@newartisans.com")

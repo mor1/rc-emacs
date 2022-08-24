@@ -1,4 +1,4 @@
-;;; use-package-autoloads.el --- automatically extracted autoloads
+;;; use-package-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -56,7 +56,7 @@ deferred until the prefix key sequence is pressed.
 
 \(fn NAME KEYWORD ARG REST STATE)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-bind-key" '("use-package-handler/:bind*")))
+(register-definition-prefixes "use-package-bind-key" '("use-package-handler/:bind*"))
 
 ;;;***
 
@@ -117,18 +117,18 @@ this file.  Usage:
 :load-path       Add to the `load-path' before attempting to load the package.
 :diminish        Support for diminish.el (if installed).
 :delight         Support for delight.el (if installed).
-:custom          Call `custom-set' or `set-default' with each variable
+:custom          Call `Custom-set' or `set-default' with each variable
                  definition without modifying the Emacs `custom-file'.
                  (compare with `custom-set-variables').
-:custom-face     Call `customize-set-faces' with each face definition.
+:custom-face     Call `custom-set-faces' with each face definition.
 :ensure          Loads the package using package.el if necessary.
 :pin             Pin the package to an archive.
 
 \(fn NAME &rest ARGS)" nil t)
 
-(function-put 'use-package 'lisp-indent-function '1)
+(function-put 'use-package 'lisp-indent-function 'defun)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-core" '("use-package-")))
+(register-definition-prefixes "use-package-core" '("use-package-"))
 
 ;;;***
 
@@ -146,7 +146,7 @@ Normalize arguments to delight.
 
 \(fn NAME KEYWORD ARGS REST STATE)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-delight" '("use-package-normalize-delight")))
+(register-definition-prefixes "use-package-delight" '("use-package-normalize-delight"))
 
 ;;;***
 
@@ -164,7 +164,7 @@ Normalize arguments to delight.
 
 \(fn NAME KEYWORD ARG REST STATE)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-diminish" '("use-package-normalize-diminish")))
+(register-definition-prefixes "use-package-diminish" '("use-package-normalize-diminish"))
 
 ;;;***
 
@@ -182,7 +182,7 @@ Normalize arguments to delight.
 
 \(fn NAME KEYWORD ENSURE REST STATE)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-ensure" '("use-package-")))
+(register-definition-prefixes "use-package-ensure" '("use-package-"))
 
 ;;;***
 
@@ -199,7 +199,7 @@ instead.
 
 \(fn PACKAGE)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-jump" '("use-package-find-require")))
+(register-definition-prefixes "use-package-jump" '("use-package-find-require"))
 
 ;;;***
 
@@ -212,7 +212,7 @@ Check for errors in use-package declarations.
 For example, if the module's `:if' condition is met, but even
 with the specified `:load-path' the module cannot be found." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "use-package-lint" '("use-package-lint-declaration")))
+(register-definition-prefixes "use-package-lint" '("use-package-lint-declaration"))
 
 ;;;***
 
