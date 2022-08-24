@@ -1,7 +1,7 @@
 ;;; xref.el --- Cross-referencing commands              -*-lexical-binding:t-*-
 
 ;; Copyright (C) 2014-2022 Free Software Foundation, Inc.
-;; Version: 1.4.1
+;; Version: 1.5.0
 ;; Package-Requires: ((emacs "26.1"))
 
 ;; This is a GNU ELPA :core package.  Avoid functionality that is not
@@ -227,7 +227,7 @@ This behavior is new in Emacs 28.")
   "A match xref item describes a search result."
   length)
 
-(cl-defgeneric xref-match-length ((item xref-match-item))
+(cl-defmethod xref-match-length ((item xref-match-item))
   "Return the length of the match."
   (xref-match-item-length item))
 
@@ -381,7 +381,8 @@ elements is negated: these commands will NOT prompt."
 
 (defcustom xref-after-jump-hook '(recenter
                                   xref-pulse-momentarily)
-  "Functions called after jumping to an xref."
+  "Functions called after jumping to an xref.
+Also see `xref-current-item'."
   :type 'hook)
 
 (defcustom xref-after-return-hook '(xref-pulse-momentarily)
@@ -490,7 +491,9 @@ To undo, use \\[xref-go-forward]."
   'xref-current-item
   "29.1")
 
-(defvar xref-current-item nil)
+(defvar xref-current-item nil
+  "Dynamically bound to the current item being processed.
+This can be used from `xref-after-jump-hook', for instance.")
 
 (defun xref-pulse-momentarily ()
   (pcase-let ((`(,beg . ,end)
@@ -642,9 +645,15 @@ SELECT is `quit', also quit the *xref* window."
              (xref-buffer (current-buffer)))
         (cond (select
                (if (eq select 'quit) (quit-window nil nil))
-               (select-window
-                (with-current-buffer xref-buffer
-                  (xref--show-pos-in-buf marker buf))))
+               (let* ((old-frame (selected-frame))
+                      (window (with-current-buffer xref-buffer
+                                (xref--show-pos-in-buf marker buf)))
+                      (frame (window-frame window)))
+                 ;; If we chose another frame, make sure it gets input
+                 ;; focus.
+                 (unless (eq frame old-frame)
+                   (select-frame-set-input-focus frame))
+                 (select-window window)))
               (t
                (save-selected-window
                  (xref--with-dedicated-window
@@ -747,7 +756,12 @@ references displayed in the current *xref* buffer.
 
 When called interactively, it uses '.*' as FROM, which means
 replace the whole name.  Unless called with prefix argument, in
-which case the user is prompted for both FROM and TO."
+which case the user is prompted for both FROM and TO.
+
+As each match is found, the user must type a character saying
+what to do with it.  Type SPC or `y' to replace the match,
+DEL or `n' to skip and go to the next match.  For more directions,
+type \\[help-command] at that time."
   (interactive
    (let* ((fr
            (if current-prefix-arg
@@ -957,8 +971,8 @@ beginning of the line."
 
 (defvar xref--button-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [mouse-1] #'xref-goto-xref)
-    (define-key map [mouse-2] #'xref-select-and-show-xref)
+    (define-key map [follow-link] 'mouse-face)
+    (define-key map [mouse-2] #'xref-goto-xref)
     map))
 
 (defun xref-select-and-show-xref (event)
@@ -1541,7 +1555,7 @@ This command is intended to be bound to a mouse event."
           (xref-find-references identifier))
       (user-error "No identifier here"))))
 
-(declare-function apropos-parse-pattern "apropos" (pattern))
+(declare-function apropos-parse-pattern "apropos" (pattern &optional do-all))
 
 ;;;###autoload
 (defun xref-find-apropos (pattern)
@@ -1715,7 +1729,8 @@ IGNORES is a list of glob patterns for files to ignore."
      .
      ;; '!*/' is there to filter out dirs (e.g. submodules).
      "xargs -0 rg <C> --null -nH --no-heading --no-messages -g '!*/' -e <R>"
-     ))
+     )
+    (ugrep . "xargs -0 ugrep <C> --null -ns -e <R>"))
   "Associative list mapping program identifiers to command templates.
 
 Program identifier should be a symbol, named after the search program.
@@ -1744,6 +1759,7 @@ utility function used by commands like `dired-do-find-regexp' and
   :type '(choice
           (const :tag "Use Grep" grep)
           (const :tag "Use ripgrep" ripgrep)
+          (const :tag "Use ugrep" ugrep)
           (symbol :tag "User defined"))
   :version "28.1"
   :package-version '(xref . "1.0.4"))
@@ -1805,7 +1821,8 @@ to control which program to use when looking for matches."
       (when (and (/= (point-min) (point-max))
                  (not (looking-at grep-re))
                  ;; TODO: Show these matches as well somehow?
-                 (not (looking-at "Binary file .* matches")))
+                 ;; Matching both Grep's and Ripgrep 13's messages.
+                 (not (looking-at ".*[bB]inary file.* matches")))
         (user-error "Search failed with status %d: %s" status
                     (buffer-substring (point-min) (line-end-position))))
       (while (re-search-forward grep-re nil t)
@@ -1863,7 +1880,7 @@ to control which program to use when looking for matches."
    (xref--find-ignores-arguments ignores dir)))
 
 (defun xref--find-ignores-arguments (ignores dir)
-  "Convert IGNORES and DIR to a list of arguments for 'find'.
+  "Convert IGNORES and DIR to a list of arguments for `find'.
 IGNORES is a list of glob patterns.  DIR is an absolute
 directory, used as the root of the ignore globs."
   (cl-assert (not (string-match-p "\\`~" dir)))

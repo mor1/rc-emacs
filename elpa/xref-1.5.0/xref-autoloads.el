@@ -1,4 +1,4 @@
-;;; xref-autoloads.el --- automatically extracted autoloads
+;;; xref-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -123,7 +123,7 @@ to control which program to use when looking for matches.
 
 \(fn REGEXP FILES)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "xref" '("xref-")))
+(register-definition-prefixes "xref" '("xref-"))
 
 ;;;***
 
