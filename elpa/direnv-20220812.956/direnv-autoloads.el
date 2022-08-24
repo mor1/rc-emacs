@@ -19,7 +19,8 @@ See `direnv-update-directory-environment' for FORCE-SUMMARY.
 (autoload 'direnv-update-directory-environment "direnv" "\
 Update the environment for DIRECTORY.
 
-When FORCE-SUMMARY is non-nil or when called interactively, show a summary message.
+When FORCE-SUMMARY is non-nil or when called interactively, show
+a summary message.
 
 \(fn &optional DIRECTORY FORCE-SUMMARY)" t nil)
 
@@ -70,10 +71,6 @@ Since .envrc files are shell scripts, this mode inherits from ‘sh-mode’.
 (add-to-list 'auto-mode-alist '("\\.envrc\\'" . direnv-envrc-mode))
 
 (register-definition-prefixes "direnv" '("direnv-"))
-
-;;;***
-
-;;;### (autoloads nil nil ("direnv-pkg.el") (0 0 0 0))
 
 ;;;***
 
