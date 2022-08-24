@@ -1340,7 +1340,15 @@ can retrieve meta-data for them."
             (and (symbolp this-command)
                  (string-match-p "\\`company-" (symbol-name this-command)))))))
 
+(defvar company-auto-update-doc nil
+  "If non-nil, update the documentation buffer on each selection change.
+To toggle the value of this variable, call `company-show-doc-buffer' with a
+prefix argument.")
+
 (defun company-call-frontends (command)
+  (when (and company-auto-update-doc
+             (memq command '(update show)))
+    (company-show-doc-buffer))
   (cl-loop for frontend in company-frontends collect
            (condition-case-unless-debug err
                (funcall frontend command)
@@ -2821,22 +2829,37 @@ from the candidates list.")
                                  unread-command-events))
     (clear-this-command-keys t)))
 
-(defun company-show-doc-buffer ()
-  "Temporarily show the documentation buffer for the selection."
-  (interactive)
+(defun company--show-doc-buffer ()
+  "Show the documentation buffer for the selection."
   (let ((other-window-scroll-buffer)
         (selection (or company-selection 0)))
-    (company--electric-do
       (let* ((selected (nth selection company-candidates))
              (doc-buffer (or (company-call-backend 'doc-buffer selected)
-                             (user-error "No documentation available")))
+                             (if company-auto-update-doc
+                                 (company-doc-buffer
+                                  (format "%s: No documentation available"
+                                          selected))
+                               (user-error "No documentation available"))))
              start)
         (when (consp doc-buffer)
           (setq start (cdr doc-buffer)
                 doc-buffer (car doc-buffer)))
         (setq other-window-scroll-buffer (get-buffer doc-buffer))
         (let ((win (display-buffer doc-buffer t)))
-          (set-window-start win (if start start (point-min))))))))
+          (set-window-start win (if start start (point-min)))))))
+
+(defun company-show-doc-buffer (&optional toggle-auto-update)
+  "Show the documentation buffer for the selection.
+With a prefix argument TOGGLE-AUTO-UPDATE, toggle the value of
+`company-auto-update-doc'.  When `company-auto-update-doc' is non-nil,
+automatically show the documentation buffer for each selection."
+  (interactive "P")
+  (when toggle-auto-update
+    (setq company-auto-update-doc (not company-auto-update-doc)))
+  (if company-auto-update-doc
+      (company--show-doc-buffer)
+    (company--electric-do
+      (company--show-doc-buffer))))
 (put 'company-show-doc-buffer 'company-keep t)
 
 (defun company-show-location ()

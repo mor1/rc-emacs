@@ -1,7 +1,7 @@
 This is company.info, produced by makeinfo version 6.7 from
 company.texi.
 
-This user manual is for Company version 0.9.14snapshot (8 January 2022).
+This user manual is for Company version 0.9.14snapshot (12 August 2022).
 
 Copyright © 2021-2022 Free Software Foundation, Inc.
 
@@ -26,7 +26,7 @@ The goal of this document is to lay out the foundational knowledge of
 the package, so that the readers of the manual could competently start
 adapting Company to their needs and preferences.
 
-This user manual is for Company version 0.9.14snapshot (8 January 2022).
+This user manual is for Company version 0.9.14snapshot (12 August 2022).
 
 Copyright © 2021-2022 Free Software Foundation, Inc.
 
@@ -264,9 +264,12 @@ commands of the out-of-the-box Company.
      Cancel _company-mode_ activity (‘company-abort’).
 
 ‘C-h’
-‘<f1>’
+‘<F1>’
      Display a buffer with the documentation for the selected candidate
-     (‘company-show-doc-buffer’).
+     (‘company-show-doc-buffer’).  With a prefix argument (‘C-u C-h’,
+     ‘C-u <F1>’), this command toggles between temporary showing the
+     documentation and keeping the documentation buffer up-to-date
+     whenever the selection changes.
 
 ‘C-w’
      Display a buffer with the definition of the selected candidate
@@ -1330,7 +1333,7 @@ Key Index
 * C-p:                                   Usage Basics.         (line 12)
 * C-p <1>:                               Commands.             (line 16)
 * C-s:                                   Candidates Search.    (line  6)
-* C-w:                                   Commands.             (line 39)
+* C-w:                                   Commands.             (line 42)
 * M-<digit>:                             Quick Access a Candidate.
                                                                (line  6)
 * RET:                                   Usage Basics.         (line 15)
@@ -1456,7 +1459,7 @@ Function Index
 * company-select-previous-or-abort:      Commands.            (line  16)
 * company-semantic:                      Code Completion.     (line  41)
 * company-show-doc-buffer:               Commands.            (line  34)
-* company-show-location:                 Commands.            (line  39)
+* company-show-location:                 Commands.            (line  42)
 * company-sort-by-backend-importance:    Candidates Post-Processing.
                                                               (line  28)
 * company-sort-by-occurrence:            Candidates Post-Processing.
@@ -1559,7 +1562,7 @@ Concept Index
                                                               (line  28)
 * custom <9>:                            Quick Access a Candidate.
                                                               (line  37)
-* definition:                            Commands.            (line  39)
+* definition:                            Commands.            (line  42)
 * distribution:                          Installation.        (line   6)
 * doc:                                   Commands.            (line  34)
 * duplicate:                             Candidates Post-Processing.
@@ -1603,7 +1606,7 @@ Concept Index
 * issue:                                 Troubleshooting.     (line   6)
 * issue tracker:                         Troubleshooting.     (line  27)
 * kind:                                  Tooltip Frontends.   (line 145)
-* location:                              Commands.            (line  39)
+* location:                              Commands.            (line  42)
 * manual:                                Initial Setup.       (line   8)
 * manual <1>:                            Usage Basics.        (line  10)
 * margin:                                Tooltip Frontends.   (line 134)
@@ -1657,35 +1660,35 @@ Node: Installation5375
 Node: Initial Setup5758
 Node: Usage Basics6604
 Node: Commands7367
-Ref: Commands-Footnote-19585
-Node: Customization9752
-Node: Customization Interface10224
-Node: Configuration File10757
-Node: Frontends15423
-Node: Tooltip Frontends16392
-Ref: Tooltip Frontends-Footnote-126761
-Node: Preview Frontends26998
-Ref: Preview Frontends-Footnote-128254
-Node: Echo Frontends28381
-Node: Candidates Search29914
-Node: Filter Candidates31248
-Node: Quick Access a Candidate32028
-Node: Backends33646
-Node: Backends Usage Basics34744
-Ref: Backends Usage Basics-Footnote-135959
-Node: Grouped Backends36043
-Node: Package Backends37672
-Node: Code Completion38601
-Node: Text Completion40970
-Node: File Name Completion45404
-Node: Template Expansion46952
-Node: Candidates Post-Processing47671
-Node: Troubleshooting49148
-Node: Index50821
-Node: Key Index50984
-Node: Variable Index52483
-Node: Function Index56533
-Node: Concept Index61014
+Ref: Commands-Footnote-19802
+Node: Customization9969
+Node: Customization Interface10441
+Node: Configuration File10974
+Node: Frontends15640
+Node: Tooltip Frontends16609
+Ref: Tooltip Frontends-Footnote-126978
+Node: Preview Frontends27215
+Ref: Preview Frontends-Footnote-128471
+Node: Echo Frontends28598
+Node: Candidates Search30131
+Node: Filter Candidates31465
+Node: Quick Access a Candidate32245
+Node: Backends33863
+Node: Backends Usage Basics34961
+Ref: Backends Usage Basics-Footnote-136176
+Node: Grouped Backends36260
+Node: Package Backends37889
+Node: Code Completion38818
+Node: Text Completion41187
+Node: File Name Completion45621
+Node: Template Expansion47169
+Node: Candidates Post-Processing47888
+Node: Troubleshooting49365
+Node: Index51038
+Node: Key Index51201
+Node: Variable Index52700
+Node: Function Index56750
+Node: Concept Index61231
 
 End Tag Table
 
