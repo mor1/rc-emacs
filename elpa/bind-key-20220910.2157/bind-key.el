@@ -7,8 +7,8 @@
 ;; Created: 16 Jun 2012
 ;; Modified: 29 Nov 2017
 ;; Version: 2.4
-;; Package-Version: 20220815.1925
-;; Package-Commit: e2d173b1200865a9efd5c2066831a230497582c0
+;; Package-Version: 20220910.2157
+;; Package-Commit: 9a45a8004a9e520e0e822b960ca9d70c2528181e
 ;; Keywords: keys keybinding config dotemacs
 ;; URL: https://github.com/jwiegley/use-package
 
@@ -160,9 +160,9 @@ COMMAND must be an interactive function or lambda form.
 KEYMAP, if present, should be a keymap variable or symbol.
 For example:
 
-  (bind-key \"M-h\" #'some-interactive-function my-mode-map)
+  (bind-key \"M-h\" #\\='some-interactive-function my-mode-map)
 
-  (bind-key \"M-h\" #'some-interactive-function \\='my-mode-map)
+  (bind-key \"M-h\" #\\='some-interactive-function \\='my-mode-map)
 
 If PREDICATE is non-nil, it is a form evaluated to determine when
 a key should be bound. It must return non-nil in such cases.
