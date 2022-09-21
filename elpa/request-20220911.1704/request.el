@@ -6,8 +6,8 @@
 
 ;; Author: Takafumi Arakaki <aka.tkf at gmail.com>
 ;; URL: https://github.com/tkf/emacs-request
-;; Package-Version: 20220814.2158
-;; Package-Commit: 91313f1e00302b7e60d2043d8104bccf72aae80b
+;; Package-Version: 20220911.1704
+;; Package-Commit: 43ff7865f9e0a67911f0f1dab462213089809f25
 ;; Package-Requires: ((emacs "24.4"))
 ;; Version: 0.3.3
 
@@ -816,12 +816,12 @@ Currently it is used only for testing.")
         (call-process request-curl nil t nil "--version")
         (let ((version
                (progn
-                 (setf (point) (point-min))
+                 (goto-char (point-min))
                  (when (re-search-forward "[.0-9]+" nil t)
                    (match-string 0))))
               (compression
                (progn
-                 (setf (point) (point-min))
+                 (goto-char (point-min))
                  (not (null (re-search-forward "libz\\>" nil t))))))
           (setf (gethash request-curl request--curl-capabilities-cache)
                 `(:version ,version :compression ,compression)))))))
