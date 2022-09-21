@@ -79,6 +79,14 @@ With prefix 2 show both.
 
 ;;;***
 
+;;;### (autoloads nil "lsp-treemacs-generic" "lsp-treemacs-generic.el"
+;;;;;;  (0 0 0 0))
+;;; Generated autoloads from lsp-treemacs-generic.el
+
+(register-definition-prefixes "lsp-treemacs-generic" '("lsp-treemacs-"))
+
+;;;***
+
 ;;;### (autoloads nil "lsp-treemacs-themes" "lsp-treemacs-themes.el"
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from lsp-treemacs-themes.el
