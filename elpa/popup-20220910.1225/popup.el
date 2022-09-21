@@ -6,8 +6,8 @@
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Maintainer: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/auto-complete/popup-el
-;; Package-Version: 20211231.1823
-;; Package-Commit: ec3d3169a4d60b0374198580e31b6c59f51ab08a
+;; Package-Version: 20220910.1225
+;; Package-Commit: 66b840b6ded808974225501d2e672da7363579a6
 ;; Keywords: lisp
 ;; Version: 0.5.9
 ;; Package-Requires: ((emacs "24.3"))
@@ -44,7 +44,7 @@
 ;;; Utilities
 
 (defun popup-calculate-max-width (max-width)
-  "Determines whether the width with MAX-WIDTH desired is character or window \
+  "Determines whether the width with MAX-WIDTH desired is character or window
 proportion based, And return the result."
   (cl-typecase max-width
     (integer max-width)
