@@ -6,8 +6,8 @@
 ;; Created: 24 Aug 2011
 ;; Updated: 16 Mar 2015
 ;; Version: 1.2
-;; Package-Version: 20220818.1606
-;; Package-Commit: c39ce68ed8d80fb996fb78eafc06481a54bf27ce
+;; Package-Version: 20220914.2051
+;; Package-Commit: 2c11cf9374f88bfc657764afe39ec7f6bad1779d
 ;; Package-Requires: ((gntp "0.1") (log4e "0.3.0") (cl-lib "0.5"))
 ;; Keywords: notification emacs message
 ;; X-URL: https://github.com/jwiegley/alert
@@ -137,6 +137,7 @@
 ;;   osx-notifier  - Native OSX notifier using AppleScript
 ;;   toaster       - Use the toast notification system
 ;;   x11           - Changes the urgency property of the window in the X Window System
+;;   termux        - Use termux-notification from the Termux API
 ;;
 ;; * Defining new styles
 ;;
@@ -987,6 +988,30 @@ This is found at https://github.com/nels-o/toaster."
 
 (alert-define-style 'toaster :title "Notify using Toaster"
                     :notifier #'alert-toaster-notify)
+
+(defcustom alert-termux-command (executable-find "termux-notification")
+  "Path to the termux-notification command.
+This is found in the termux-api package, and it requires the Termux
+API addon app to be installed."
+  :type 'file
+  :group 'alert)
+
+(defun alert-termux-notify (info)
+  "Send INFO using termux-notification.
+Handles :TITLE and :MESSAGE keywords from the
+INFO plist."
+  (if alert-termux-command
+      (let ((args (nconc
+                   (when (plist-get info :title)
+                     (list "-t" (alert-encode-string (plist-get info :title))))
+                   (list "-c" (alert-encode-string (plist-get info :message))))))
+        (apply #'call-process alert-termux-command nil
+               (list (get-buffer-create " *termux-notification output*") t)
+               nil args))
+    (alert-message-notify info)))
+
+(alert-define-style 'termux :title "Notify using termux"
+                    :notifier #'alert-termux-notify)
 
 ;; jww (2011-08-25): Not quite working yet
 ;;(alert-define-style 'frame :title "Popup buffer in a frame"
