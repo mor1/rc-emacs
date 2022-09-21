@@ -65,7 +65,7 @@ If nil then the project is simply created."
   :type 'string
   :group 'rustic-cargo)
 
-(defcustom rustic-cargo-default-install-arguments '("--path" ".")
+(defcustom rustic-cargo-default-install-arguments '("--path" "." "--locked")
   "Default arguments when running 'cargo install'."
   :type '(list string)
   :group 'rustic-cargo)
@@ -635,9 +635,13 @@ in your project like `pwd'"
     (rustic-compilation-start c (append (list :no-default-dir t) args))))
 
 ;;;###autoload
-(defun rustic-cargo-build ()
-  "Run 'cargo build' for the current project."
-  (interactive)
+(defun rustic-cargo-build (&optional arg)
+  "Run 'cargo build' for the current project, allow configuring
+`rustic-cargo-build-arguments' when prefix argument (C-u) is enabled."
+  (interactive "P")
+  (when arg
+    (setq rustic-cargo-build-arguments
+          (read-string "Cargo build arguments: " "")))
   (rustic-run-cargo-command `(,(rustic-cargo-bin)
                               ,rustic-cargo-build-exec-command
                               ,@(split-string rustic-cargo-build-arguments))
@@ -666,9 +670,13 @@ When calling this function from `rustic-popup-mode', always use the value of
                          (t rustic-clean-arguments)))))))
 
 ;;;###autoload
-(defun rustic-cargo-check ()
-  "Run 'cargo check' for the current project."
-  (interactive)
+(defun rustic-cargo-check (&optional arg)
+  "Run 'cargo check' for the current project, allow configuring
+`rustic-cargo-check-arguments' when prefix argument (C-u) is enabled."
+  (interactive "P")
+  (when arg
+    (setq rustic-cargo-check-arguments
+          (read-string "Cargo check arguments: " "")))
   (rustic-run-cargo-command `(,(rustic-cargo-bin)
                               ,rustic-cargo-check-exec-command
                               ,@(split-string rustic-cargo-check-arguments))))
@@ -737,7 +745,8 @@ Use with 'C-u` to open prompt with missing crates."
       (message "No missing crates found. Maybe check your lsp server."))))
 
 (defun rustic-cargo-add-missing-dependencies-hook ()
-  "Silently look for missing dependencies and add them to Cargo.toml."
+  "Silently look for missing dependencies in the current buffer and add
+them to Cargo.toml."
   (-when-let (deps (rustic-cargo-find-missing-dependencies))
     (rustic-compilation-start
      (split-string (concat (rustic-cargo-bin) " add " deps))
@@ -750,10 +759,12 @@ Use with 'C-u` to open prompt with missing crates."
   "Return missing dependencies using either lsp-mode or eglot/flymake
 as string."
   (let ((crates nil))
-    (setq crates (cond ((featurep 'lsp-mode)
+    (setq crates (cond ((bound-and-true-p lsp-mode)
                         (rustic-cargo-add-missing-dependencies-lsp-mode))
-                       ((featurep 'eglot)
+                       ((bound-and-true-p eglot)
                         (rustic-cargo-add-missing-dependencies-eglot))
+                       ((bound-and-true-p flycheck-mode)
+                        (rustic-cargo-add-missing-dependencies-flycheck))
                        (t
                         nil)))
     (if (> (length crates) 0)
@@ -795,6 +806,18 @@ as string."
               (push (string-trim (car (reverse (split-string s))) "`" "`" ) crates)))))
     crates))
 
+(defun rustic-cargo-add-missing-dependencies-flycheck ()
+  "Return missing dependencies by parsing flycheck diagnostics buffer."
+  (let* (crates)
+    (unless (get-buffer flycheck-error-list-buffer)
+      (flycheck-list-errors))
+    (with-current-buffer (get-buffer flycheck-error-list-buffer)
+      (let ((errors (split-string (buffer-substring-no-properties (point-min) (point-max)) "\n")))
+        (dolist (s errors)
+          (when (string-match-p (regexp-quote "unresolved import") s)
+            (push  (string-trim (nth 7 (split-string s))  "`" "`" )  crates)))))
+    crates))
+
 ;;;###autoload
 (defun rustic-cargo-rm (&optional arg)
   "Remove crate from Cargo.toml using 'cargo rm'.
@@ -819,6 +842,18 @@ If running with prefix command `C-u', read whole command from minibuffer."
                                               (rustic-cargo-bin) " upgrade ")
                       (concat (rustic-cargo-bin) " upgrade"))))
       (rustic-run-cargo-command command))))
+
+;;;###autoload
+(defun rustic-cargo-update (&optional arg)
+  "Update dependencies as recorded in the local lock file.
+If running with prefix command `C-u', use ARG by reading whole
+command from minibuffer."
+  (interactive "P")
+  (let* ((command (if arg
+                      (read-from-minibuffer "Cargo update command: "
+                                            (format "%s %s" (rustic-cargo-bin) "update"))
+                    (concat (rustic-cargo-bin) " update"))))
+    (rustic-run-cargo-command command)))
 
 ;;;###autoload
 (defun rustic-cargo-login (token)

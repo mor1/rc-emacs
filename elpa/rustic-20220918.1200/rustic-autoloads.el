@@ -121,7 +121,10 @@ in your project like `pwd'
 \(fn &optional ARG)" t nil)
 
 (autoload 'rustic-cargo-build "rustic-cargo" "\
-Run 'cargo build' for the current project." t nil)
+Run 'cargo build' for the current project, allow configuring
+`rustic-cargo-build-arguments' when prefix argument (C-u) is enabled.
+
+\(fn &optional ARG)" t nil)
 
 (autoload 'rustic-cargo-clean "rustic-cargo" "\
 Run 'cargo clean' for the current project.
@@ -133,7 +136,10 @@ When calling this function from `rustic-popup-mode', always use the value of
 \(fn &optional ARG)" t nil)
 
 (autoload 'rustic-cargo-check "rustic-cargo" "\
-Run 'cargo check' for the current project." t nil)
+Run 'cargo check' for the current project, allow configuring
+`rustic-cargo-check-arguments' when prefix argument (C-u) is enabled.
+
+\(fn &optional ARG)" t nil)
 
 (autoload 'rustic-cargo-bench "rustic-cargo" "\
 Run 'cargo bench' for the current project." t nil)
@@ -160,6 +166,13 @@ If running with prefix command `C-u', read whole command from minibuffer.
 (autoload 'rustic-cargo-upgrade "rustic-cargo" "\
 Upgrade dependencies as specified in the local manifest file using 'cargo upgrade'.
 If running with prefix command `C-u', read whole command from minibuffer.
+
+\(fn &optional ARG)" t nil)
+
+(autoload 'rustic-cargo-update "rustic-cargo" "\
+Update dependencies as recorded in the local lock file.
+If running with prefix command `C-u', use ARG by reading whole
+command from minibuffer.
 
 \(fn &optional ARG)" t nil)
 
