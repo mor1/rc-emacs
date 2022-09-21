@@ -285,6 +285,13 @@ it is disabled.
 
 ;;;***
 
+;;;### (autoloads nil "dap-tasks" "dap-tasks.el" (0 0 0 0))
+;;; Generated autoloads from dap-tasks.el
+
+(register-definition-prefixes "dap-tasks" '("dap-tasks-"))
+
+;;;***
+
 ;;;### (autoloads nil "dap-ui" "dap-ui.el" (0 0 0 0))
 ;;; Generated autoloads from dap-ui.el
 
