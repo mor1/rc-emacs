@@ -1,11 +1,12 @@
-;;; s.el --- The long lost Emacs string manipulation library.
+;;; s.el --- The long lost Emacs string manipulation library. -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012-2015 Magnar Sveen
+;; Copyright (C) 2012-2022 Magnar Sveen
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
-;; Version: 1.12.0
-;; Package-Version: 20220816.956
-;; Package-Commit: 7f25ead4b0deac6f49d07e0c3b8859adedb28207
+;; Maintainer: Jason Milkins <jasonm23@gmail.com>
+;; Version: 1.13.1
+;; Package-Version: 20220902.1511
+;; Package-Commit: b4b8c03fcef316a27f75633fe4bb990aeff6e705
 ;; Keywords: strings
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -58,6 +59,14 @@
   "Convert all adjacent whitespace characters to a single space."
   (declare (pure t) (side-effect-free t))
   (replace-regexp-in-string "[ \t\n\r]+" " " s))
+
+(defun s-unindent (s &optional bol)
+  "Unindent S which has BOL (beginning of line) indicators.
+BOL will default to pipe. You can optionally supply your own."
+  (declare (pure t) (side-effect-free t))
+  (let ((case-fold-search nil)
+        (bol (or bol "|")))
+   (s-replace-regexp (concat "^[[:space:]]*" (regexp-quote bol)) "" s)))
 
 (defun s-split (separator s &optional omit-nulls)
   "Split S into substrings bounded by matches for regexp SEPARATOR.
@@ -401,15 +410,17 @@ This is a simple wrapper around the built-in `string-match-p'."
 (defalias 's-replace-regexp 'replace-regexp-in-string)
 
 (defun s--aget (alist key)
+  "Get the value of KEY in ALIST."
   (declare (pure t) (side-effect-free t))
   (cdr (assoc-string key alist)))
 
 (defun s-replace-all (replacements s)
   "REPLACEMENTS is a list of cons-cells. Each `car` is replaced with `cdr` in S."
   (declare (pure t) (side-effect-free t))
-  (replace-regexp-in-string (regexp-opt (mapcar 'car replacements))
-                            (lambda (it) (s--aget replacements it))
-                            s t t))
+  (let ((case-fold-search nil))
+   (replace-regexp-in-string (regexp-opt (mapcar 'car replacements))
+                             (lambda (it) (s--aget replacements it))
+                             s t t)))
 
 (defun s-downcase (s)
   "Convert S to lower case.
@@ -509,9 +520,8 @@ SUBEXP-DEPTH is 0 by default."
     (let ((pos 0) result)
       (while (and (string-match regexp string pos)
                   (< pos (length string)))
-        (let ((m (match-end subexp-depth)))
-          (push (cons (match-beginning subexp-depth) (match-end subexp-depth)) result)
-          (setq pos (match-end 0))))
+        (push (cons (match-beginning subexp-depth) (match-end subexp-depth)) result)
+        (setq pos (match-end 0)))
       (nreverse result))))
 
 (defun s-match (regexp s &optional start)
@@ -739,9 +749,8 @@ previously found match, use `s-count-matches'."
   (let* ((anchored-regexp (format "^%s" regexp))
          (match-count 0)
          (i 0)
-         (narrowed-s (substring s
-                                (when start (1- start))
-                                (when end (1- end)))))
+         (narrowed-s (substring s (if start (1- start) 0)
+                                  (when end (1- end)))))
     (save-match-data
       (while (< i (length narrowed-s))
         (when (s-matches? anchored-regexp (substring narrowed-s i))
