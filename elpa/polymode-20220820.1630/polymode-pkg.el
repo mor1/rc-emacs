@@ -1,9 +1,9 @@
-(define-package "polymode" "20220322.824" "Extensible framework for multiple major modes"
+(define-package "polymode" "20220820.1630" "Extensible framework for multiple major modes"
   '((emacs "25"))
-  :commit "2094c92403fe395dfb2b8b2521da1012a966e9ab" :authors
+  :commit "63d2c2184941902e2358d0e9b0deb17b943db61a" :authors
   '(("Vitalie Spinu"))
   :maintainer
-  '("Vitalie Spinu")
+  '("Vitalie Spinu" . "spinuvit@gmail.com")
   :keywords
   '("languages" "multi-modes" "processes")
   :url "https://github.com/polymode/polymode")
