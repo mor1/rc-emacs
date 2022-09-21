@@ -1,4 +1,4 @@
-;;; git-ps1-mode-autoloads.el --- automatically extracted autoloads
+;;; git-ps1-mode-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -22,6 +22,20 @@ or call the function `git-ps1-mode'.")
 (autoload 'git-ps1-mode "git-ps1-mode" "\
 Minor-mode to print __git_ps1.
 
+This is a minor mode.  If called interactively, toggle the
+`Git-Ps1 mode' mode.  If the prefix argument is positive, enable
+the mode, and if it is zero or negative, disable the mode.
+
+If called from Lisp, toggle the mode if ARG is `toggle'.  Enable
+the mode if ARG is nil, omitted, or is a positive number.
+Disable the mode if ARG is a negative number.
+
+To check whether the minor mode is enabled in the current buffer,
+evaluate `(default-value \\='git-ps1-mode)'.
+
+The mode's hook is called both when the mode is enabled and when
+it is disabled.
+
 \(fn &optional ARG)" t nil)
 
 (autoload 'git-ps1-mode-get-current "git-ps1-mode" "\
@@ -33,7 +47,7 @@ This function returns nil if the output is not available for some reasons.
 
 \(fn &optional FORMAT DIR)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "git-ps1-mode" '("git-ps1-mode-")))
+(register-definition-prefixes "git-ps1-mode" '("git-ps1-mode-"))
 
 ;;;***
 

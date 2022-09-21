@@ -1,4 +1,4 @@
-;;; magithub-autoloads.el --- automatically extracted autoloads
+;;; magithub-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -12,7 +12,7 @@
 
 (eval-after-load 'magit '(progn (require 'transient) (when (functionp 'magit-am) (transient-append-suffix 'magit-dispatch "C-h m" '("H" "Magithub" magithub-dispatch-popup))) (define-key magit-status-mode-map "H" #'magithub-dispatch-popup)))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub" '("magithub-")))
+(register-definition-prefixes "magithub" '("magithub-"))
 
 ;;;***
 
@@ -22,7 +22,7 @@
 (autoload 'magithub-maybe-insert-ci-status-header "magithub-ci" "\
 If this is a GitHub repository, insert the CI status header." nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-ci" '("magit")))
+(register-definition-prefixes "magithub-ci" '("magit"))
 
 ;;;***
 
@@ -40,7 +40,7 @@ initial contents of the reply if there is no draft.
 
 \(fn ISSUE &optional DISCARD-DRAFT INITIAL-CONTENT)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-comment" '("magit")))
+(register-definition-prefixes "magithub-comment" '("magit"))
 
 ;;;***
 
@@ -103,7 +103,7 @@ this function: `github-user', `github-issue', `github-label',
 
 (put 'github-pull-request 'thing-at-point (lambda nil (or (magithub--section-value-at-point 'pull-request) (when-let ((issue (thing-at-point 'github-issue))) (and (magithub-issue--issue-is-pull-p issue) (magithub-cache :issues `(magithub-request (ghubp-get-repos-owner-repo-pulls-number ',(magithub-issue-repo issue) ',issue))))))))
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-core" '("magit")))
+(register-definition-prefixes "magithub-core" '("magit"))
 
 ;;;***
 
@@ -113,7 +113,7 @@ this function: `github-user', `github-issue', `github-label',
 (autoload 'magithub-dashboard "magithub-dash" "\
 View your GitHub dashboard." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-dash" '("magithub-dash")))
+(register-definition-prefixes "magithub-dash" '("magithub-dash"))
 
 ;;;***
 
@@ -126,7 +126,7 @@ Major mode for editing GitHub issues and pull requests.
 
 \(fn)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-edit-mode" '("magithub-edit-")))
+(register-definition-prefixes "magithub-edit-mode" '("magithub-edit-"))
 
 ;;;***
 
@@ -140,7 +140,7 @@ Insert GitHub issues if appropriate." nil nil)
 (autoload 'magithub-issue--insert-pr-section "magithub-issue" "\
 Insert GitHub pull requests if appropriate." nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-issue" '("magit")))
+(register-definition-prefixes "magithub-issue" '("magit"))
 
 ;;;***
 
@@ -148,7 +148,7 @@ Insert GitHub pull requests if appropriate." nil nil)
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from magithub-issue-post.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-issue-post" '("magithub-")))
+(register-definition-prefixes "magithub-issue-post" '("magithub-"))
 
 ;;;***
 
@@ -163,7 +163,7 @@ pull-request object, that object is selected by default.
 
 \(fn PULL-REQUEST &optional ARGS)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-issue-tricks" '("magithub-")))
+(register-definition-prefixes "magithub-issue-tricks" '("magithub-"))
 
 ;;;***
 
@@ -177,7 +177,7 @@ Return the new buffer.
 
 \(fn ISSUE)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-issue-view" '("magithub-issue-view-")))
+(register-definition-prefixes "magithub-issue-view" '("magithub-issue-view-"))
 
 ;;;***
 
@@ -185,7 +185,7 @@ Return the new buffer.
 ;;;;;;  0))
 ;;; Generated autoloads from magithub-label.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-label" '("magit")))
+(register-definition-prefixes "magithub-label" '("magit"))
 
 ;;;***
 
@@ -193,21 +193,21 @@ Return the new buffer.
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from magithub-notification.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-notification" '("magit")))
+(register-definition-prefixes "magithub-notification" '("magit"))
 
 ;;;***
 
 ;;;### (autoloads nil "magithub-orgs" "magithub-orgs.el" (0 0 0 0))
 ;;; Generated autoloads from magithub-orgs.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-orgs" '("magithub-orgs-list")))
+(register-definition-prefixes "magithub-orgs" '("magithub-orgs-list"))
 
 ;;;***
 
 ;;;### (autoloads nil "magithub-repo" "magithub-repo.el" (0 0 0 0))
 ;;; Generated autoloads from magithub-repo.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-repo" '("magit")))
+(register-definition-prefixes "magithub-repo" '("magit"))
 
 ;;;***
 
@@ -216,14 +216,14 @@ Return the new buffer.
 ;;; Generated autoloads from magithub-settings.el
  (autoload 'magithub-settings-popup "magithub-settings" nil t)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-settings" '("magithub-")))
+(register-definition-prefixes "magithub-settings" '("magithub-"))
 
 ;;;***
 
 ;;;### (autoloads nil "magithub-user" "magithub-user.el" (0 0 0 0))
 ;;; Generated autoloads from magithub-user.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "magithub-user" '("magit")))
+(register-definition-prefixes "magithub-user" '("magit"))
 
 ;;;***
 

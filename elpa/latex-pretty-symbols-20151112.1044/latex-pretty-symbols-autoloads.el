@@ -1,4 +1,4 @@
-;;; latex-pretty-symbols-autoloads.el --- automatically extracted autoloads
+;;; latex-pretty-symbols-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -10,7 +10,7 @@
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from latex-pretty-symbols.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "latex-pretty-symbols" '("latex-" "substitute-pattern")))
+(register-definition-prefixes "latex-pretty-symbols" '("latex-" "substitute-pattern"))
 
 ;;;***
 

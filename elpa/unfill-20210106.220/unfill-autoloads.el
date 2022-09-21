@@ -1,4 +1,4 @@
-;;; unfill-autoloads.el --- automatically extracted autoloads
+;;; unfill-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 

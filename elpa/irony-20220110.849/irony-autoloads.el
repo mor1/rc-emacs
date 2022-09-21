@@ -1,4 +1,4 @@
-;;; irony-autoloads.el --- automatically extracted autoloads
+;;; irony-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -24,10 +24,19 @@ database.")
 (autoload 'irony-mode "irony" "\
 Minor mode for C, C++ and Objective-C, powered by libclang.
 
-If called interactively, enable Irony mode if ARG is positive,
-and disable it if ARG is zero or negative.  If called from Lisp,
-also enable the mode if ARG is omitted or nil, and toggle it if
-ARG is `toggle'; disable the mode otherwise.
+This is a minor mode.  If called interactively, toggle the `Irony
+mode' mode.  If the prefix argument is positive, enable the mode,
+and if it is zero or negative, disable the mode.
+
+If called from Lisp, toggle the mode if ARG is `toggle'.  Enable
+the mode if ARG is nil, omitted, or is a positive number.
+Disable the mode if ARG is a negative number.
+
+To check whether the minor mode is enabled in the current buffer,
+evaluate `irony-mode'.
+
+The mode's hook is called both when the mode is enabled and when
+it is disabled.
 
 \(fn &optional ARG)" t nil)
 
@@ -44,7 +53,7 @@ Kill the running irony-server process, if any." t nil)
 (autoload 'irony-get-type "irony" "\
 Get the type of symbol under cursor." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony" '("irony-")))
+(register-definition-prefixes "irony" '("irony-"))
 
 ;;;***
 
@@ -55,7 +64,7 @@ Get the type of symbol under cursor." t nil)
 
 (autoload 'irony-cdb-menu "irony-cdb" nil t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb" '("irony-cdb-")))
+(register-definition-prefixes "irony-cdb" '("irony-cdb-"))
 
 ;;;***
 
@@ -68,7 +77,7 @@ Get the type of symbol under cursor." t nil)
 
 \(fn COMMAND &rest ARGS)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb-clang-complete" '("irony-cdb-clang-complete--")))
+(register-definition-prefixes "irony-cdb-clang-complete" '("irony-cdb-clang-complete--"))
 
 ;;;***
 
@@ -107,7 +116,7 @@ even helm by enabling `helm-mode' before calling the function." t nil)
 (autoload 'irony-cdb-json-select-most-recent "irony-cdb-json" "\
 Select CDB that is most recently modified." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb-json" '("irony-cdb-json--")))
+(register-definition-prefixes "irony-cdb-json" '("irony-cdb-json--"))
 
 ;;;***
 
@@ -120,7 +129,7 @@ Select CDB that is most recently modified." t nil)
 
 \(fn COMMAND &rest ARGS)" nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-cdb-libclang" '("irony-cdb-libclang--")))
+(register-definition-prefixes "irony-cdb-libclang" '("irony-cdb-libclang--"))
 
 ;;;***
 
@@ -130,7 +139,7 @@ Select CDB that is most recently modified." t nil)
 
 (autoload 'irony-completion-at-point "irony-completion" nil nil nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-completion" '("irony-")))
+(register-definition-prefixes "irony-completion" '("irony-"))
 
 ;;;***
 
@@ -138,21 +147,21 @@ Select CDB that is most recently modified." t nil)
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from irony-diagnostics.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-diagnostics" '("irony-diagnostics-")))
+(register-definition-prefixes "irony-diagnostics" '("irony-diagnostics-"))
 
 ;;;***
 
 ;;;### (autoloads nil "irony-iotask" "irony-iotask.el" (0 0 0 0))
 ;;; Generated autoloads from irony-iotask.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-iotask" '("irony-iotask-")))
+(register-definition-prefixes "irony-iotask" '("irony-iotask-"))
 
 ;;;***
 
 ;;;### (autoloads nil "irony-snippet" "irony-snippet.el" (0 0 0 0))
 ;;; Generated autoloads from irony-snippet.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "irony-snippet" '("irony-snippet-")))
+(register-definition-prefixes "irony-snippet" '("irony-snippet-"))
 
 ;;;***
 

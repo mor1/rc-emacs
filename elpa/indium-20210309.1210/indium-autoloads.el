@@ -1,4 +1,4 @@
-;;; indium-autoloads.el --- automatically extracted autoloads
+;;; indium-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -10,21 +10,21 @@
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from indium-breakpoint.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-breakpoint" '("indium-breakpoint-")))
+(register-definition-prefixes "indium-breakpoint" '("indium-breakpoint-"))
 
 ;;;***
 
 ;;;### (autoloads nil "indium-chrome" "indium-chrome.el" (0 0 0 0))
 ;;; Generated autoloads from indium-chrome.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-chrome" '("indium-")))
+(register-definition-prefixes "indium-chrome" '("indium-"))
 
 ;;;***
 
 ;;;### (autoloads nil "indium-client" "indium-client.el" (0 0 0 0))
 ;;; Generated autoloads from indium-client.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-client" '("indium-client-")))
+(register-definition-prefixes "indium-client" '("indium-client-"))
 
 ;;;***
 
@@ -32,7 +32,7 @@
 ;;;;;;  0 0))
 ;;; Generated autoloads from indium-debugger.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-debugger" '("indium-debugger-")))
+(register-definition-prefixes "indium-debugger" '("indium-debugger-"))
 
 ;;;***
 
@@ -40,7 +40,7 @@
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from indium-debugger-litable.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-debugger-litable" '("indium-debugger-litable-")))
+(register-definition-prefixes "indium-debugger-litable" '("indium-debugger-litable-"))
 
 ;;;***
 
@@ -48,7 +48,7 @@
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from indium-debugger-locals.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-debugger-locals" '("indium-debugger-locals")))
+(register-definition-prefixes "indium-debugger-locals" '("indium-debugger-locals"))
 
 ;;;***
 
@@ -56,7 +56,7 @@
 ;;;;;;  0 0 0))
 ;;; Generated autoloads from indium-inspector.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-inspector" '("indium-inspector-")))
+(register-definition-prefixes "indium-inspector" '("indium-inspector-"))
 
 ;;;***
 
@@ -70,7 +70,7 @@ Open a new connection to a runtime." t nil)
 (autoload 'indium-launch "indium-interaction" "\
 Start a new process and connect to it." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-interaction" '("indium-")))
+(register-definition-prefixes "indium-interaction" '("indium-"))
 
 ;;;***
 
@@ -84,28 +84,28 @@ Display a list of all resolved sourcemap sources." t nil)
 (autoload 'indium-list-script-sources "indium-list-sources" "\
 Display a list of all resolved script sources." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-list-sources" '("indium-list-sources-")))
+(register-definition-prefixes "indium-list-sources" '("indium-list-sources-"))
 
 ;;;***
 
 ;;;### (autoloads nil "indium-nodejs" "indium-nodejs.el" (0 0 0 0))
 ;;; Generated autoloads from indium-nodejs.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-nodejs" '("indium-")))
+(register-definition-prefixes "indium-nodejs" '("indium-"))
 
 ;;;***
 
 ;;;### (autoloads nil "indium-render" "indium-render.el" (0 0 0 0))
 ;;; Generated autoloads from indium-render.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-render" '("indium-")))
+(register-definition-prefixes "indium-render" '("indium-"))
 
 ;;;***
 
 ;;;### (autoloads nil "indium-repl" "indium-repl.el" (0 0 0 0))
 ;;; Generated autoloads from indium-repl.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-repl" '("company-indium-repl" "indium-")))
+(register-definition-prefixes "indium-repl" '("company-indium-repl" "indium-"))
 
 ;;;***
 
@@ -118,7 +118,7 @@ Pop to the scratch buffer.
 If no scratch buffer exists for the current connection, create
 one first." t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-scratch" '("indium-scratch-")))
+(register-definition-prefixes "indium-scratch" '("indium-scratch-"))
 
 ;;;***
 
@@ -126,7 +126,7 @@ one first." t nil)
 ;;;;;;  0))
 ;;; Generated autoloads from indium-structs.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "indium-structs" '("indium-")))
+(register-definition-prefixes "indium-structs" '("indium-"))
 
 ;;;***
 

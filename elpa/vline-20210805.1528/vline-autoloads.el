@@ -1,4 +1,4 @@
-;;; vline-autoloads.el --- automatically extracted autoloads
+;;; vline-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -12,10 +12,19 @@
 (autoload 'vline-mode "vline" "\
 Display vertical line mode.
 
-If called interactively, enable Vline mode if ARG is positive,
-and disable it if ARG is zero or negative.  If called from Lisp,
-also enable the mode if ARG is omitted or nil, and toggle it if
-ARG is `toggle'; disable the mode otherwise.
+This is a minor mode.  If called interactively, toggle the `VLine
+mode' mode.  If the prefix argument is positive, enable the mode,
+and if it is zero or negative, disable the mode.
+
+If called from Lisp, toggle the mode if ARG is `toggle'.  Enable
+the mode if ARG is nil, omitted, or is a positive number.
+Disable the mode if ARG is a negative number.
+
+To check whether the minor mode is enabled in the current buffer,
+evaluate `vline-mode'.
+
+The mode's hook is called both when the mode is enabled and when
+it is disabled.
 
 \(fn &optional ARG)" t nil)
 
@@ -34,16 +43,20 @@ or call the function `vline-global-mode'.")
 (autoload 'vline-global-mode "vline" "\
 Toggle Vline mode in all buffers.
 With prefix ARG, enable Vline-Global mode if ARG is positive;
-otherwise, disable it.  If called from Lisp, enable the mode if
-ARG is omitted or nil.
+otherwise, disable it.
 
-Vline mode is enabled in all buffers where
-`(lambda nil (unless (minibufferp) (vline-mode 1)))' would do it.
+If called from Lisp, toggle the mode if ARG is `toggle'.
+Enable the mode if ARG is nil, omitted, or is a positive number.
+Disable the mode if ARG is a negative number.
+
+Vline mode is enabled in all buffers where `(lambda nil (unless
+\(minibufferp) (vline-mode 1)))' would do it.
+
 See `vline-mode' for more information on Vline mode.
 
 \(fn &optional ARG)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "vline" '("vline-")))
+(register-definition-prefixes "vline" '("vline-"))
 
 ;;;***
 

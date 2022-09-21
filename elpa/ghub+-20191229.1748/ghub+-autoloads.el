@@ -1,4 +1,4 @@
-;;; ghub+-autoloads.el --- automatically extracted autoloads
+;;; ghub+-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -9,7 +9,7 @@
 ;;;### (autoloads nil "ghub+" "ghub+.el" (0 0 0 0))
 ;;; Generated autoloads from ghub+.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ghub+" '("ghubp-")))
+(register-definition-prefixes "ghub+" '("ghubp-"))
 
 ;;;***
 

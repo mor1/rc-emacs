@@ -1,4 +1,4 @@
-;;; apiwrap-autoloads.el --- automatically extracted autoloads
+;;; apiwrap-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -9,7 +9,7 @@
 ;;;### (autoloads nil "apiwrap" "apiwrap.el" (0 0 0 0))
 ;;; Generated autoloads from apiwrap.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "apiwrap" '("apiwrap-" "apropos-api-endpoint")))
+(register-definition-prefixes "apiwrap" '("apiwrap-" "apropos-api-endpoint"))
 
 ;;;***
 

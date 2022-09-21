@@ -1,4 +1,4 @@
-;;; filladapt-autoloads.el --- automatically extracted autoloads
+;;; filladapt-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -19,7 +19,7 @@ paragraphs are used.
 
 \(fn &optional ARG)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "filladapt" '("filladapt-" "turn-off-filladapt-mode")))
+(register-definition-prefixes "filladapt" '("filladapt-" "turn-off-filladapt-mode"))
 
 ;;;***
 

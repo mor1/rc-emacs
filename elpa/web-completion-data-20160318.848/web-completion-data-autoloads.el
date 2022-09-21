@@ -1,4 +1,4 @@
-;;; web-completion-data-autoloads.el --- automatically extracted autoloads
+;;; web-completion-data-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -10,7 +10,7 @@
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from web-completion-data.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "web-completion-data" '("web-completion-data-")))
+(register-definition-prefixes "web-completion-data" '("web-completion-data-"))
 
 ;;;***
 

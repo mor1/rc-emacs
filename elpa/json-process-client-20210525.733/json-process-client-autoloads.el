@@ -1,4 +1,4 @@
-;;; json-process-client-autoloads.el --- automatically extracted autoloads
+;;; json-process-client-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -10,7 +10,7 @@
 ;;;;;;  (0 0 0 0))
 ;;; Generated autoloads from json-process-client.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "json-process-client" '("json-process-client-")))
+(register-definition-prefixes "json-process-client" '("json-process-client-"))
 
 ;;;***
 

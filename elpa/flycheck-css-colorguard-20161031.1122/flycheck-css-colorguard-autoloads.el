@@ -1,4 +1,4 @@
-;;; flycheck-css-colorguard-autoloads.el --- automatically extracted autoloads
+;;; flycheck-css-colorguard-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -12,9 +12,7 @@
 
 (autoload 'flycheck-css-colorguard-setup "flycheck-css-colorguard" "\
 Setup Flycheck CSS Colorguard.
-Add `css-colorguard' to `flycheck-checkers'.
-
-\(fn)" t nil)
+Add `css-colorguard' to `flycheck-checkers'." t nil)
 
 ;;;***
 
