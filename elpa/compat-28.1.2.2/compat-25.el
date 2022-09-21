@@ -32,7 +32,9 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'compat-macs))
+(require 'compat-macs "compat-macs.el")
+
+(compat-declare-version "25.1")
 
 ;;;; Defined in alloc.c
 
