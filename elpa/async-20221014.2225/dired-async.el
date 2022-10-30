@@ -68,7 +68,7 @@ Should take same args as `message'."
   :risky t
   :type 'sexp)
 
-(defcustom dired-async-skip-fast t
+(defcustom dired-async-skip-fast nil
   "If non-nil, skip async for fast operations.
 Same device renames and copying and renaming files smaller than
 `dired-async-small-file-max' are considered fast."
@@ -195,11 +195,16 @@ See `file-attributes'."
 
 (defsubst dired-async--same-device-p (f1 f2)
   "Return non-nil if F1 and F2 have the same device number."
-  (= (file-attribute-device-number (file-attributes f1))
-     (file-attribute-device-number (file-attributes f2))))
+  ;; file-attribute-device-number may be a cons cell, so use equal for
+  ;; testing (See Emacs bug/58446).
+  (equal (file-attribute-device-number (file-attributes f1))
+         (file-attribute-device-number (file-attributes f2))))
 
 (defun dired-async--small-file-p (file)
-  "Return non-nil if FILE is small (can create quickly)."
+  "Return non-nil if FILE is considered small.
+
+File is considered small if it size is smaller than
+`dired-async-small-file-max'."
   (let ((a (file-attributes file)))
     ;; Directories are always large since we can't easily figure out
     ;; their total size.
@@ -216,20 +221,27 @@ See `dired-create-files' for FILE-CREATOR and NAME-CONSTRUCTOR."
            (let ((new (funcall name-constructor file)))
              (dired-async--same-device-p file (file-name-directory new))))))
 
-(defun dired-async--smart-create-files (old-func file-creator operation fn-list name-constructor
-                                                 &optional marker-char)
+(defun dired-async--smart-create-files (old-func file-creator
+                                        operation fn-list name-constructor
+                                        &optional marker-char)
   "Around advice for `dired-create-files'.
 Uses async like `dired-async-create-files' but skips certain fast
 cases if `dired-async-skip-fast' is non-nil."
   (let (async-list quick-list)
-    (dolist (old fn-list)
-      (if (dired-async--skip-async-p file-creator old name-constructor)
-          (push old quick-list)
-        (push old async-list)))
+    (if (or (eq file-creator 'backup-file)
+            (null dired-async-skip-fast))
+        (setq async-list fn-list)
+      (dolist (old fn-list)
+        (if (dired-async--skip-async-p file-creator old name-constructor)
+            (push old quick-list)
+          (push old async-list))))
     (when async-list
-      (dired-async-create-files file-creator operation (nreverse async-list) name-constructor marker-char))
+      (dired-async-create-files
+       file-creator operation (nreverse async-list)
+       name-constructor marker-char))
     (when quick-list
-      (funcall old-func file-creator operation (nreverse quick-list) name-constructor marker-char))))
+      (funcall old-func file-creator operation
+               (nreverse quick-list) name-constructor marker-char))))
 
 (defvar overwrite-query)
 (defun dired-async-create-files (file-creator operation fn-list name-constructor
