@@ -663,7 +663,7 @@ INSERT-CONTENT-FN is the function that inserts text to be
 displayed in BUFNAME."
   (let ((winconf (current-frame-configuration))
         (hframe (selected-frame)))
-    (helm-log-run-hook 'helm-help-mode-before-hook)
+    (helm-log-run-hook "helm-help-internal" 'helm-help-mode-before-hook)
     (with-selected-frame helm-initial-frame
       (select-frame-set-input-focus helm-initial-frame)
       (unwind-protect
@@ -685,7 +685,7 @@ displayed in BUFNAME."
              (buffer-disable-undo)
              (helm-help-event-loop))
         (raise-frame hframe)
-        (helm-log-run-hook 'helm-help-mode-after-hook)
+        (helm-log-run-hook "helm-help-internal" 'helm-help-mode-after-hook)
         (setq helm-suspend-update-flag nil)
         (set-frame-configuration winconf)))))
 
@@ -933,39 +933,46 @@ hashtable itself."
            unless (string-match-p regexp str)
            collect s))
 
-(defun helm-transform-mapcar (function args)
-  "`mapcar' for candidate-transformer.
+(defun helm-transform-mapcar (fn seq)
+  "Apply function FN on all elements of list SEQ.
+When SEQ is a list of cons cells apply FN on the cdr of each element,
+keeping their car unmodified.
 
-ARGS is (cand1 cand2 ...) or ((disp1 . real1) (disp2 . real2) ...)
+Examples:
 
-\(helm-transform-mapcar \\='upcase \\='(\"foo\" \"bar\"))
-=> (\"FOO\" \"BAR\")
-\(helm-transform-mapcar \\='upcase \\='((\"1st\" . \"foo\") (\"2nd\" . \"bar\")))
-=> ((\"1st\" . \"FOO\") (\"2nd\" . \"BAR\"))
+    (helm-transform-mapcar \\='upcase \\='(\"foo\" \"bar\"))
+    => (\"FOO\" \"BAR\")
+    (helm-transform-mapcar \\='upcase \\='((\"1st\" . \"foo\") (\"2nd\" . \"bar\")))
+    => ((\"1st\" . \"FOO\") (\"2nd\" . \"BAR\"))
 "
-  (cl-loop for arg in args
-        if (consp arg)
-        collect (cons (car arg) (funcall function (cdr arg)))
-        else
-        collect (funcall function arg)))
-
-(defsubst helm-append-1 (elm seq)
-  "Append ELM to SEQ.
-If ELM is not a list transform it in list."
-  (append (helm-mklist elm) seq))
+  (cl-loop for elm in seq
+           if (consp elm)
+           collect (cons (car elm) (funcall fn (cdr elm)))
+           else
+           collect (funcall fn elm)))
 
 (defun helm-append-at-nth (seq elm index)
-  "Append ELM at INDEX in SEQ."
-  (let ((len (length seq)))
-    (setq index (min (max index 0) len))
-    (if (zerop index)
-        (helm-append-1 elm seq)
-      (cl-loop for i in seq
-               for count from 1 collect i
-               when (= count index)
-               if (and (listp elm) (not (functionp elm)))
-               append elm
-               else collect elm))))
+  "Append ELM at INDEX in SEQ.
+When INDEX is > to the SEQ length ELM is added at end of SEQ.
+When INDEX is 0 or negative, ELM is added at beginning of SEQ.
+
+Examples:
+
+    (helm-append-at-nth \\='(a b c d) \\='z 2)
+    =>(a b z c d)
+    (helm-append-at-nth \\='(a b c d) \\='(z) 2)
+    =>(a b z c d)
+    (helm-append-at-nth \\='(a b c d) \\='((x . 1) (y . 2)) 2)
+    =>(a b (x . 1) (y . 2) c d)
+"
+  (setq index (min (max index 0) (length seq))
+        elm   (helm-mklist elm))
+  (if (zerop index)
+      (append elm seq)
+    (let* ((end-part (nthcdr index seq))
+           (len      (length end-part))
+           (beg-part (butlast seq len)))
+      (append beg-part elm end-part))))
 
 (defun helm-take-first-elements (seq n)
   "Return the first N elements of SEQ if SEQ is longer than N.
@@ -1241,6 +1248,12 @@ differently depending of answer:
                      (funcall action elm)
                    (setq dont-ask t)))
             ("q" (throw 'break nil))))))))
+
+(defsubst helm-string-numberp (str)
+  "Return non nil if string STR represent a number."
+  (cl-assert (stringp str) t)
+  (or (cl-loop for c across str always (char-equal c ?0))
+      (not (zerop (string-to-number str)))))
 
 ;;; Symbols routines
 ;;
@@ -1440,6 +1453,30 @@ Argument ALIST is an alist of associated major modes."
             (eq (car (rassq cdr-o-assoc-mode alist))
                 cur-maj-mode)))))
 
+;;; Source processing
+;;
+(defun helm-map-candidates-in-source (src fn pred)
+  "Map over all candidates in SRC and execute FN if PRED returns non nil.
+Arg FN and PRED are functions called with current display part of
+candidate as arg."
+  (declare (indent 1))
+  (save-excursion
+    (goto-char (helm-get-previous-header-pos))
+    (helm-next-line)
+    (let* ((next-head (helm-get-next-header-pos))
+           (end       (and next-head
+                           (save-excursion
+                             (goto-char next-head)
+                             (forward-line -1)
+                             (point))))
+           (maxpoint  (or end (point-max))))
+      (while (< (point) maxpoint)
+        (helm-mark-current-line)
+        (let ((cand (helm-get-selection nil 'withprop src)))
+          (when (funcall pred cand)
+            (funcall fn cand)))
+        (forward-line 1) (end-of-line)))))
+
 ;;; Files routines
 ;;
 (defun helm-file-name-sans-extension (filename)
@@ -1454,9 +1491,7 @@ Argument ALIST is an alist of associated major modes."
 (defsubst helm-file-name-extension (file)
   "Returns FILE extension if it is not a number."
   (helm-aif (file-name-extension file)
-      (and (not (string-match "\\`0+\\'" it))
-           (zerop (string-to-number it))
-           it)))
+      (and (not (helm-string-numberp it)) it)))
 
 (defun helm-basename (fname &optional ext)
   "Print FNAME with any leading directory components removed.
@@ -1823,6 +1858,10 @@ Also `helm-completion-style' settings have no effect here,
                           all)))))
       ;; Ensure circular objects are removed.
       (complete-with-action t compsfn helm-pattern predicate))))
+
+(defun helm-guess-filename-at-point ()
+  (with-helm-current-buffer
+    (run-hook-with-args-until-success 'file-name-at-point-functions)))
 
 ;; Yank text at point.
 ;;
