@@ -55,6 +55,7 @@
 (require 'widget)
 (require 'xref)
 (require 'minibuffer)
+(require 'help-mode)
 (require 'yasnippet nil t)
 (require 'lsp-protocol)
 
@@ -354,6 +355,8 @@ the server has requested that."
     "[/\\\\]build-aux\\'"
     "[/\\\\]autom4te.cache\\'"
     "[/\\\\]\\.reference\\'"
+    ;; Bazel
+    "bazel-[^/\\\\]+\\'"
     ;; Clojure
     "[/\\\\]\\.lsp\\'"
     "[/\\\\]\\.clj-kondo\\'"
@@ -743,6 +746,7 @@ Changes take effect only when a new session is started."
                                         (".*\\.ebuild$" . "shellscript")
                                         (".*/PKGBUILD$" . "shellscript")
                                         (".*\\.ttcn3$" . "ttcn3")
+                                        (".*\\ya?ml$" . "yaml")
                                         (ada-mode . "ada")
                                         (nxml-mode . "xml")
                                         (sql-mode . "sql")
@@ -775,6 +779,7 @@ Changes take effect only when a new session is started."
                                         (xml-mode . "xml")
                                         (c-mode . "c")
                                         (c++-mode . "cpp")
+                                        (cuda-mode . "cuda")
                                         (objc-mode . "objective-c")
                                         (html-mode . "html")
                                         (sgml-mode . "html")
@@ -801,7 +806,7 @@ Changes take effect only when a new session is started."
                                         (swift-mode . "swift")
                                         (elixir-mode . "elixir")
                                         (conf-javaprop-mode . "spring-boot-properties")
-                                        (yaml-mode . "spring-boot-properties-yaml")
+                                        (yaml-mode . "yaml")
                                         (ruby-mode . "ruby")
                                         (enh-ruby-mode . "ruby")
                                         (fortran-mode . "fortran")
@@ -1526,7 +1531,34 @@ return value of `body' or nil if interrupted."
   multi-root
   ;; Initialization options or a function that returns initialization options.
   initialization-options
-  ;; Overrides semantic tokens faces for specific clients
+  ;; `semantic-tokens-faces-overrides’ is a plist that can be used to extend, or
+  ;; completely replace, the faces used for semantic highlighting on a
+  ;; client-by-client basis.
+  ;;
+  ;; It recognizes four members, all of which are optional: `:types’ and
+  ;; `:modifiers’, respectively, should be face definition lists akin to
+  ;; `:lsp-semantic-token-faces’. If specified, each of these face lists will be
+  ;; merged with the default face definition list.
+  ;;
+  ;; Alternatively, if the plist members `:discard-default-types’ or
+  ;; `:discard-default-modifiers' are non-nil, the default `:type' or `:modifiers'
+  ;; face definitions will be replaced entirely by their respective overrides.
+  ;;
+  ;; For example, setting `:semantic-tokens-faces-overrides' to
+  ;; `(:types (("macro" . font-lock-keyword-face)))' will remap "macro" tokens from
+  ;; their default face `lsp-face-semhl-macro' to `font-lock-keyword-face'.
+  ;;
+  ;; `(:types (("macro" . font-lock-keyword-face) ("not-quite-a-macro" . some-face)))'
+  ;; will also remap "macro", but on top of that associate the fictional token type
+  ;; "not-quite-a-macro" with the face named `some-face'.
+  ;;
+  ;; `(:types (("macro" . font-lock-keyword-face))
+  ;;   :modifiers (("declaration" . lsp-face-semhl-interface))
+  ;;   :discard-default-types t
+  ;;   :discard-default-modifiers t)'
+  ;; will discard all default face definitions, hence leaving the client with
+  ;; only one token type "macro", mapped to `font-lock-keyword-face', and one
+  ;; modifier type "declaration", mapped to `lsp-face-semhl-interface'.
   semantic-tokens-faces-overrides
   ;; Provides support for registering LSP Server specific capabilities.
   custom-capabilities
@@ -1890,7 +1922,7 @@ regex in IGNORED-FILES."
   "Helper macro for invoking BODY in WORKSPACE context."
   (declare (debug (form body))
            (indent 1))
-  `(let ((lsp--cur-workspace ,workspace)) ,@body))
+  `(when ,workspace (let ((lsp--cur-workspace ,workspace)) ,@body)))
 
 (defmacro with-lsp-workspaces (workspaces &rest body)
   "Helper macro for invoking BODY against multiple WORKSPACES."
@@ -2812,7 +2844,10 @@ and end-of-string meta-characters."
     (:eval (mapconcat #'lsp--workspace-print lsp--buffer-workspaces "]["))
     (:propertize "Disconnected" face warning))
    "]")
-  :group 'lsp-mode)
+  :group 'lsp-mode
+  (when (and lsp-mode (not lsp--buffer-workspaces))
+    ;; fire up `lsp' when someone calls `lsp-mode' instead of `lsp'
+    (lsp)))
 
 (defvar lsp-mode-menu
   (easy-menu-create-menu
@@ -4023,7 +4058,7 @@ yet."
 
       (when (and lsp-enable-indentation
                  (lsp-feature? "textDocument/rangeFormatting"))
-        (add-function :override (var indent-region-function) #'lsp-format-region))
+        (add-function :override (local 'indent-region-function) #'lsp-format-region))
 
       (when (and lsp-enable-symbol-highlighting
                  (lsp-feature? "textDocument/documentHighlight"))
@@ -4043,12 +4078,12 @@ yet."
   (lsp--remove-overlays 'lsp-color)
 
   (when (advice-function-member-p 'lsp--imenu-create-index imenu-create-index-function)
-    (remove-function (var imenu-create-index-function) #'lsp--imenu-create-index)
+    (remove-function (local 'imenu-create-index-function) #'lsp--imenu-create-index)
     (setq-local imenu-menubar-modified-tick 0)
     (setq-local imenu--index-alist nil)
     (imenu--cleanup))
 
-  (remove-function (var indent-region-function) #'lsp-format-region)
+  (remove-function (local 'indent-region-function) #'lsp-format-region)
 
   (remove-hook 'lsp-on-change-hook #'lsp--document-color t)
   (remove-hook 'lsp-on-idle-hook #'lsp--document-highlight t)
@@ -4262,12 +4297,6 @@ interface TextDocumentEdit {
 
 (lsp-defun lsp--apply-text-edit ((edit &as &TextEdit :range (&RangeToPoint :start :end) :new-text))
   "Apply the edits described in the TextEdit object in TEXT-EDIT."
-  ;; We sort text edits so as to apply edits that modify latter parts of the
-  ;; document first. Furthermore, because the LSP spec dictates that:
-  ;; "If multiple inserts have the same position, the order in the array
-  ;; defines which edit to apply first."
-  ;; We reverse the initial list and sort stably to make sure the order among
-  ;; edits with the same position is preserved.
   (setq new-text (s-replace "\r" "" (or new-text "")))
   (lsp:set-text-edit-new-text edit new-text)
   (goto-char start)
@@ -4391,6 +4420,13 @@ OPERATION is symbol representing the source of this text edit."
                            #'lsp--apply-text-edit)))
         (unwind-protect
             (->> edits
+                 ;; We sort text edits so as to apply edits that modify latter
+                 ;; parts of the document first. Furthermore, because the LSP
+                 ;; spec dictates that: "If multiple inserts have the same
+                 ;; position, the order in the array defines which edit to
+                 ;; apply first."  We reverse the initial list and sort stably
+                 ;; to make sure the order among edits with the same position
+                 ;; is preserved.
                  (nreverse)
                  (seq-sort #'lsp--text-edit-sort-predicate)
                  (mapc (lambda (edit)
@@ -5058,9 +5094,32 @@ If EXCLUDE-DECLARATION is non-nil, request the server to include declarations."
                            :mode 'tick
                            :cancel-token :highlights)))))
 
+(defun lsp--help-open-link (&rest _)
+  "Open markdown link at point via mouse or keyboard."
+  (interactive "P")
+  (let ((buffer-list-update-hook nil))
+    (-let [(buffer point) (if-let* ((valid (and (listp last-input-event)
+                                                (eq (car last-input-event) 'mouse-2)))
+                                    (event (cadr last-input-event))
+                                    (win (posn-window event))
+                                    (buffer (window-buffer win)))
+                              `(,buffer ,(posn-point event))
+                            `(,(current-buffer) ,(point)))]
+      (with-current-buffer buffer
+        ;; Markdown-mode puts the url in 'help-echo
+        (-some-> (get-text-property point 'help-echo)
+          (lsp--document-link-handle-target))))))
+
+(defvar lsp-help-mode-map
+  (-doto (make-sparse-keymap)
+    (define-key [remap markdown-follow-link-at-point] #'lsp--help-open-link))
+  "Keymap for `lsp-help-mode'.")
+
+(define-derived-mode lsp-help-mode help-mode "LspHelp"
+  "Major mode for displaying lsp help.")
+
 (defun lsp-describe-thing-at-point ()
-  "Display the type signature and documentation of the thing at
-point."
+  "Display the type signature and documentation of the thing at point."
   (interactive)
   (let ((contents (-some->> (lsp--text-document-position-params)
                     (lsp--make-request "textDocument/hover")
@@ -5069,6 +5128,7 @@ point."
     (if (and contents (not (equal contents "")))
         (let ((lsp-help-buf-name "*lsp-help*"))
           (with-current-buffer (get-buffer-create lsp-help-buf-name)
+            (lsp-help-mode)
             (with-help-window lsp-help-buf-name
               (insert (string-trim-right (lsp--render-on-hover-content contents t))))))
       (lsp--info "No content at point."))))
@@ -5342,7 +5402,7 @@ RENDER-ALL - nil if only the signature should be rendered."
     (define-key (kbd "M-a") #'lsp-signature-toggle-full-docs)
     (define-key (kbd "C-c C-k") #'lsp-signature-stop)
     (define-key (kbd "C-g") #'lsp-signature-stop))
-  "Keymap for `lsp-signature-mode-map'.")
+  "Keymap for `lsp-signature-mode'.")
 
 (define-minor-mode lsp-signature-mode
   "Mode used to show signature popup."
@@ -6600,6 +6660,14 @@ server. WORKSPACE is the active workspace."
            (lsp--on-notification workspace json-data))
           ('request (lsp--on-request workspace json-data)))))))
 
+(defvar lsp--parsed-messages nil
+  "Stores the message queue that needed to be parsed.")
+(defun lsp--dispatch-messages ()
+  "Dispatch the messages in `lsp--parsed-messages'."
+  (run-at-time 0 nil (lambda ()
+                       (when (cl-rest lsp--parsed-messages) (lsp--dispatch-messages))
+                       (apply #'lsp--parser-on-message (pop lsp--parsed-messages)))))
+
 (defun lsp--create-filter-function (workspace)
   "Make filter for the workspace."
   (let ((body-received 0)
@@ -6609,7 +6677,8 @@ server. WORKSPACE is the active workspace."
                       input
                     (concat leftovers input)))
 
-      (let (messages)
+      (let (messages
+            (empty-queue? (not lsp--parsed-messages)))
         (while (not (s-blank? chunk))
           (if (not body-length)
               ;; Read headers
@@ -6662,8 +6731,9 @@ server. WORKSPACE is the active workspace."
                              (concat leftovers input)
                              err)))))))
         (mapc (lambda (msg)
-                (lsp--parser-on-message msg workspace))
-              (nreverse messages))))))
+                (setq lsp--parsed-messages (nconc lsp--parsed-messages `((,msg ,workspace)))))
+              (nreverse messages))
+        (when (and empty-queue? lsp--parsed-messages) (lsp--dispatch-messages))))))
 
 (defvar-local lsp--line-col-to-point-hash-table nil
   "Hash table with keys (line . col) and values that are either point positions
@@ -6673,6 +6743,11 @@ or markers.")
   "Whether `lsp-imenu' should include signatures.
 This will be ignored if the server doesn't provide the necessary
 information, for example if it doesn't support DocumentSymbols."
+  :group 'lsp-imenu
+  :type 'boolean)
+
+(defcustom lsp-imenu-hide-parent-details t
+  "Whether `lsp-imenu' should hide signatures of parent nodes."
   :group 'lsp-imenu
   :type 'boolean)
 
@@ -6884,7 +6959,8 @@ The result looks like this: ((\"Variables\" . (...)))."
     (-lambda ((sym &as &DocumentSymbol :kind :children?))
       (if (seq-empty-p children?)
           (list (list kind (lsp--symbol->imenu sym)))
-        (let ((parent (lsp-render-symbol sym lsp-imenu-detailed-outline)))
+        (let ((parent (lsp-render-symbol sym (and lsp-imenu-detailed-outline
+                                                  (not lsp-imenu-hide-parent-details)))))
           (cons
            (list kind (lsp--symbol->imenu sym))
            (mapcar (-lambda ((type .  imenu-items))
@@ -7022,7 +7098,7 @@ Return a nested alist keyed by symbol names. e.g.
 (defun lsp-enable-imenu ()
   "Use lsp-imenu for the current buffer."
   (imenu--cleanup)
-  (add-function :override (var imenu-create-index-function) #'lsp--imenu-create-index)
+  (add-function :override (local 'imenu-create-index-function) #'lsp--imenu-create-index)
   (setq-local imenu-menubar-modified-tick -1)
   (setq-local imenu--index-alist nil)
   (when menu-bar-mode
@@ -8334,7 +8410,8 @@ When ALL is t, erase all log buffers of the running session."
   "Describes current `lsp-session'."
   (interactive)
   (let ((session (lsp-session))
-        (buf (get-buffer-create "*lsp session*")))
+        (buf (get-buffer-create "*lsp session*"))
+        (root (lsp-workspace-root)))
     (with-current-buffer buf
       (lsp-browser-mode)
       (let ((inhibit-read-only t))
@@ -8348,7 +8425,11 @@ When ALL is t, erase all log buffers of the running session."
                     (lsp-session-folder->servers)
                     (gethash it)
                     (-map 'lsp--render-workspace)))))))
-    (pop-to-buffer buf)))
+    (pop-to-buffer buf)
+    (goto-char (point-min))
+    (cl-loop for tag = (widget-get (widget-get (widget-at) :node) :tag)
+             until (or (and root (string= tag root)) (eobp))
+             do (goto-char (next-overlay-change (point))))))
 
 (defun lsp--session-workspaces (session)
   "Get all workspaces that are part of the SESSION."
@@ -8696,7 +8777,9 @@ argument ask the user to select which language server to start."
           (when lsp-auto-configure (lsp--auto-configure))
           (setq lsp-buffer-uri (lsp--buffer-uri))
           (lsp--info "Connected to %s."
-                     (apply 'concat (--map (format "[%s]" (lsp--workspace-print it))
+                     (apply 'concat (--map (format "[%s %s]"
+                                                   (lsp--workspace-print it)
+                                                   (lsp--workspace-root it))
                                            lsp--buffer-workspaces)))))
        ;; look for servers which are currently being downloaded.
        ((setq clients (lsp--filter-clients (-andfn #'lsp--supports-buffer?

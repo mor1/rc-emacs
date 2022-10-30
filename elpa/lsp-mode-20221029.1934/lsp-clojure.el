@@ -73,6 +73,11 @@
   :group 'lsp-clojure
   :package-version '(lsp-mode . "8.0.0"))
 
+(defcustom lsp-clojure-trace-enable nil
+  "Enable trace logs between client and clojure-lsp server."
+  :group 'lsp-clojure
+  :type 'boolean)
+
 (defcustom lsp-clojure-workspace-dir (expand-file-name (locate-user-emacs-file "workspace/"))
   "LSP clojure workspace directory."
   :group 'lsp-clojure
@@ -254,14 +259,10 @@ If there are more arguments expected after the line and column numbers."
   (lsp--cur-workspace-check)
   (let* ((log-path (-> (lsp--json-serialize (lsp-request "clojure/serverInfo/raw" nil))
                        (lsp--read-json)
-                       (lsp-get :log-path)))
-         (original-file-log-buffer (find-file-noselect log-path)))
-    (with-current-buffer original-file-log-buffer
-      (add-hook 'after-revert-hook (-partial #'lsp-clojure--server-log-revert-function original-file-log-buffer) nil t)
-      (auto-revert-tail-mode)
-      (read-only-mode))
-    (lsp-clojure--server-log-revert-function original-file-log-buffer)
-    (switch-to-buffer lsp-clojure-server-buffer-name)))
+                       (lsp-get :log-path))))
+    (with-current-buffer (find-file log-path)
+      (read-only-mode)
+      (goto-char (point-max)))))
 
 (defun lsp-clojure-server-info-raw ()
   "Request server info raw data."
@@ -414,6 +415,17 @@ It updates the test tree view data."
       (lsp-clojure--show-test-tree ignore-focus?)
     (error "The package lsp-treemacs is not installed")))
 
+(defun lsp-clojure--build-command ()
+  "Build clojure-lsp start command."
+  (let* ((base-command (or lsp-clojure-custom-server-command
+                           `(,(lsp-clojure--server-executable-path)))))
+    (if lsp-clojure-trace-enable
+        (-map-last #'stringp
+                   (lambda (command)
+                     (concat command " --trace"))
+                   base-command)
+      base-command)))
+
 (lsp-register-client
  (make-lsp-client
   :download-server-fn (lambda (_client callback error-callback _update?)
@@ -422,12 +434,8 @@ It updates the test tree view data."
                                              ("keyword" . clojure-keyword-face)
                                              ("event" . default)))
   :new-connection (lsp-stdio-connection
-                   (lambda ()
-                     (or lsp-clojure-custom-server-command
-                         `(,(lsp-clojure--server-executable-path))))
-                   (lambda ()
-                     (or lsp-clojure-custom-server-command
-                         (lsp-clojure--server-executable-path))))
+                   #'lsp-clojure--build-command
+                   #'lsp-clojure--build-command)
   :major-modes '(clojure-mode clojurec-mode clojurescript-mode)
   :library-folders-fn (lambda (_workspace) (list lsp-clojure-workspace-cache-dir))
   :uri-handlers (lsp-ht ("jar" #'lsp-clojure--file-in-jar))
@@ -444,9 +452,12 @@ It updates the test tree view data."
 
 (defun lsp-clojure-semantic-tokens-refresh (&rest _)
   "Force refresh semantic tokens."
-  (when (and lsp-semantic-tokens-enable
-             (lsp-find-workspace 'clojure-lsp (buffer-file-name)))
-    (lsp-semantic-tokens--enable)))
+  (when-let ((workspace (and lsp-semantic-tokens-enable
+                             (lsp-find-workspace 'clojure-lsp (buffer-file-name)))))
+    (--each (lsp--workspace-buffers workspace)
+      (when (lsp-buffer-live-p it)
+        (lsp-with-current-buffer it
+          (lsp-semantic-tokens--enable))))))
 
 (with-eval-after-load 'cider
   (when lsp-semantic-tokens-enable
