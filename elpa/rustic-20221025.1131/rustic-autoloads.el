@@ -239,11 +239,12 @@ When calling this function from `rustic-popup-mode', always use the value of
 \(fn &optional ARG)" t nil)
 
 (autoload 'rustic-cargo-comint-run-rerun "rustic-comint" "\
-Run 'cargo run' with `rustic-run-comint-arguments'." t nil)
+Run `cargo run' with `rustic-run-comint-arguments'." t nil)
 
 (autoload 'rustic-cargo-plain-run "rustic-comint" "\
-Run 'cargo run' for the current project.
-If running with prefix command `C-u', read whole command from minibuffer.
+Run `cargo run' for the current project.
+Read the full command from the minibuffer when ARG is non-nil or
+when called with a prefix command \\[universal-argument].
 
 \(fn &optional ARG)" t nil)
 
