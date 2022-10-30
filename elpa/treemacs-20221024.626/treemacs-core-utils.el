@@ -166,6 +166,23 @@ itself, the default representation translates to 9999."
       ((integerp ,arg) ,arg)
       (t 999)))))
 
+(defun treemacs--all-buttons-with-depth (depth)
+  "Get all buttons with the given DEPTH."
+  (declare (side-effect-free t))
+  (save-excursion
+    (goto-char (point-min))
+    (let ((current-btn (treemacs-current-button))
+          (result))
+      (when (and current-btn
+                 (= depth (treemacs-button-get current-btn :depth)))
+        (push current-btn result))
+      (while (= 0 (forward-line 1))
+        (setf current-btn (treemacs-current-button))
+        (when (and current-btn
+                   (= depth (treemacs-button-get current-btn :depth)))
+          (push current-btn result)))
+      result)))
+
 (define-inline treemacs--parent-dir (path)
   "Return the parent of PATH is it's a file, or PATH if it is a directory.
 
@@ -1043,9 +1060,9 @@ Will be added to `treemacs-ignored-file-predicates' on Macs."
         ;; workaround for LV windows like spacemacs' transient states preventing
         ;; side windows from popping up right
         ;; see https://github.com/abo-abo/hydra/issues/362
-        (setf (buffer-local-value 'window-size-fixed lv-buffer) nil)
+        (with-current-buffer lv-buffer (setf window-size-fixed nil))
         (treemacs--popup-window)
-        (setf (buffer-local-value 'window-size-fixed lv-buffer) t))
+        (with-current-buffer lv-buffer (setf window-size-fixed t)))
     (treemacs--popup-window))
   (treemacs--forget-last-highlight)
   (set-window-dedicated-p (selected-window) t)
