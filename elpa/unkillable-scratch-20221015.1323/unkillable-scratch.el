@@ -4,8 +4,8 @@
 ;;
 ;; Author: Eric Crosson <eric.s.crosson@utexas.com>
 ;; Version: 1.0.0
-;; Package-Version: 20190309.17
-;; Package-Commit: a484c27516f2ee20e239713a95bd7de4f35f8501
+;; Package-Version: 20221015.1323
+;; Package-Commit: 6c752e4cd4762bb4bcde2b0b96f2e83740efd104
 ;; Keywords: convenience
 ;; URL: https://github.com/EricCrosson/unkillable-scratch
 ;; Package-Requires: ((emacs "24"))
@@ -35,7 +35,7 @@
 ;; being killed.  Any buffer matching a regexp in the list
 ;; `unkillable-buffers' will not be killed.
 
-;; Only one bufer is in `unkillable-buffers' by default: the *scratch*
+;; Only one buffer is in `unkillable-buffers' by default: the *scratch*
 ;; buffer.
 
 ;; The *scratch* buffer is considered specially; in the event of a call to
@@ -58,7 +58,7 @@
 
 ;; - unkillable-scratch-really-kill
 ;;     actually kill the selected buffer at point.  If this buffer was
-;;     the last matching buffer to the regexp(s) keeping him from being
+;;     the last matching buffer to the regexp(s) keeping it from being
 ;;     killed, remove said regexp(s) from `unkillable-buffers'.
 ;;
 
@@ -104,7 +104,7 @@ The following values are recognized:
   "Reset the contents of the *scratch* buffer to `initial-scratch-message'."
   (with-current-buffer "*scratch*"
     (delete-region (point-min) (point-max))
-    (insert (or initial-scratch-message ""))))
+    (insert (or (substitute-command-keys initial-scratch-message) ""))))
 
 (defun unkillable-scratch-buffer ()
   "Apply the `unkillable-scratch-behavior' to the buffer passed to

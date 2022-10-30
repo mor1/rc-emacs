@@ -1,2 +1,0 @@
-;;; Generated package description from unkillable-scratch.el  -*- no-byte-compile: t -*-
-(define-package "unkillable-scratch" "20190309.17" "Disallow the \\*scratch\\* buffer from being killed" '((emacs "24")) :commit "a484c27516f2ee20e239713a95bd7de4f35f8501" :authors '(("Eric Crosson" . "eric.s.crosson@utexas.com")) :maintainer '("Eric Crosson" . "eric.s.crosson@utexas.com") :keywords '("convenience") :url "https://github.com/EricCrosson/unkillable-scratch")
