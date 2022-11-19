@@ -4,8 +4,8 @@
 
 ;; Author: Syohei YOSHIDA <syohex@gmail.com>
 ;; URL: https://github.com/syohex/emacs-terraform-mode
-;; Package-Version: 20210621.1953
-;; Package-Commit: e560caaa9d9a11b0868adf6d9dcae5ebb5055730
+;; Package-Version: 20221117.409
+;; Package-Commit: 80f0433358b79ed4ba88c51829c7359baa1af8b1
 ;; Version: 0.06
 ;; Package-Requires: ((emacs "24.3") (hcl-mode "0.03") (dash "2.17.0"))
 
@@ -105,13 +105,20 @@
 
 (defconst terraform--block-builtins-with-type-and-name--type-highlight-regexp
   (eval `(rx (regexp ,(eval terraform--block-builtins-with-type-and-name--builtin-highlight-regexp))
-	     (group-n 2 (+? (not space)))
+	     (group-n 2 "\"" (+? (not space)) "\"")
 	     (one-or-more space))))
 
 (defconst terraform--block-builtins-with-type-and-name--name-highlight-regexp
   (eval `(rx (regexp ,(eval terraform--block-builtins-with-type-and-name--type-highlight-regexp))
 	     (group-n 3 (+? (not space)))
 	     (or (one-or-more space) "{"))))
+
+(defconst terraform--assignment-statement
+  (rx line-start
+      (zero-or-more space)
+      (group-n 1 (one-or-more any))
+      (zero-or-more space)
+      "="))
 
 (defvar terraform-font-lock-keywords
   `((,terraform--block-builtins-without-name-or-type-regexp 1 font-lock-builtin-face)
@@ -122,6 +129,7 @@
     (,terraform--block-builtins-with-type-and-name--builtin-highlight-regexp 1 font-lock-builtin-face)
     (,terraform--block-builtins-with-type-and-name--type-highlight-regexp 2 terraform--resource-type-face t)
     (,terraform--block-builtins-with-type-and-name--name-highlight-regexp 3 terraform--resource-name-face t)
+    (,terraform--assignment-statement 1 font-lock-variable-name-face t)
     ,@hcl-font-lock-keywords))
 
 (defun terraform-format-buffer ()
