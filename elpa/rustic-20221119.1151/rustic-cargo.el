@@ -65,6 +65,18 @@ If nil then the project is simply created."
   :type 'boolean
   :group 'rustic-cargo)
 
+(defcustom rustic-cargo-use-last-stored-arguments nil
+  "Always rerun cargo commands with stored arguments.
+
+Example:
+When `rustic-cargo-use-last-stored-arguments' is `nil', then
+rustic-cargo-test will always use `rustic-default-test-arguments'.
+
+If you set it to `t', you can reuse the arguments with `rustic-cargo-test'
+instead of applying the default arguments from `rustic-default-test-arguments'."
+  :type 'boolean
+  :group 'rustic-cargo)
+
 (defcustom rustic-default-test-arguments "--benches --tests --all-features"
   "Default arguments when running 'cargo test'."
   :type 'string
@@ -172,7 +184,7 @@ When calling this function from `rustic-popup-mode', always use the value of
   (rustic-cargo-test-run
    (cond (arg
           (setq rustic-test-arguments (read-from-minibuffer "Cargo test arguments: " rustic-default-test-arguments)))
-         ((eq major-mode 'rustic-popup-mode)
+         (rustic-cargo-use-last-stored-arguments
           (if (> (length rustic-test-arguments) 0)
               rustic-test-arguments
             rustic-default-test-arguments))
@@ -600,7 +612,7 @@ When calling this function from `rustic-popup-mode', always use the value of
   (rustic-cargo-run-command
    (cond (arg
           (setq rustic-run-arguments (read-from-minibuffer "Cargo run arguments: " rustic-run-arguments)))
-         ((eq major-mode 'rustic-popup-mode)
+         (rustic-cargo-use-last-stored-arguments
           rustic-run-arguments)
          ((rustic--get-run-arguments))
          (t ""))))
@@ -727,22 +739,17 @@ The documentation is built if necessary."
 (defvar rustic-cargo-dependencies "*cargo-add-dependencies*"
   "Buffer that is used for adding missing dependencies with 'cargo add'.")
 
-(defun rustic-cargo-edit-installed-p ()
-  "Check if cargo-edit is installed. If not, ask the user if he wants to install it."
-  (if (executable-find "cargo-add") t (rustic-cargo-install-crate-p "edit") nil))
-
 ;;;###autoload
 (defun rustic-cargo-add (&optional arg)
   "Add crate to Cargo.toml using 'cargo add'.
 If running with prefix command `C-u', read whole command from minibuffer."
   (interactive "P")
-  (when (rustic-cargo-edit-installed-p)
-    (let* ((command (if arg
-                        (read-from-minibuffer "Cargo add command: "
-                                              (rustic-cargo-bin) " add ")
-                      (concat (rustic-cargo-bin) " add "
-                              (read-from-minibuffer "Crate: ")))))
-      (rustic-run-cargo-command command))))
+  (let* ((command (if arg
+                      (read-from-minibuffer "Cargo add command: "
+                                            (rustic-cargo-bin) " add ")
+                    (concat (rustic-cargo-bin) " add "
+                            (read-from-minibuffer "Crate: ")))))
+    (rustic-run-cargo-command command)))
 
 (defun rustic-cargo-add-missing-dependencies (&optional arg)
   "Lookup and add missing dependencies to Cargo.toml.
@@ -750,15 +757,14 @@ Adds all missing crates by default with latest version using lsp functionality.
 Supports both lsp-mode and egot.
 Use with 'C-u` to open prompt with missing crates."
   (interactive)
-  (when (rustic-cargo-edit-installed-p)
-    (-if-let (deps (rustic-cargo-find-missing-dependencies))
-        (progn
-          (when current-prefix-arg
-            (setq deps (read-from-minibuffer "Add dependencies: " deps)))
-          (rustic-compilation-start
-           (split-string (concat (rustic-cargo-bin) " add " deps))
-           (append (list :buffer rustic-cargo-dependencies))))
-      (message "No missing crates found. Maybe check your lsp server."))))
+  (-if-let (deps (rustic-cargo-find-missing-dependencies))
+      (progn
+        (when current-prefix-arg
+          (setq deps (read-from-minibuffer "Add dependencies: " deps)))
+        (rustic-compilation-start
+         (split-string (concat (rustic-cargo-bin) " add " deps))
+         (append (list :buffer rustic-cargo-dependencies))))
+    (message "No missing crates found. Maybe check your lsp server.")))
 
 (defun rustic-cargo-add-missing-dependencies-hook ()
   "Silently look for missing dependencies in the current buffer and add
@@ -839,25 +845,23 @@ as string."
   "Remove crate from Cargo.toml using 'cargo rm'.
 If running with prefix command `C-u', read whole command from minibuffer."
   (interactive "P")
-  (when (rustic-cargo-edit-installed-p)
-    (let* ((command (if arg
-                        (read-from-minibuffer "Cargo rm command: "
-                                              (rustic-cargo-bin) " rm ")
-                      (concat (rustic-cargo-bin) " rm "
-                              (read-from-minibuffer "Crate: ")))))
-      (rustic-run-cargo-command command))))
+  (let* ((command (if arg
+                      (read-from-minibuffer "Cargo rm command: "
+                                            (rustic-cargo-bin) " rm ")
+                    (concat (rustic-cargo-bin) " rm "
+                            (read-from-minibuffer "Crate: ")))))
+    (rustic-run-cargo-command command)))
 
 ;;;###autoload
 (defun rustic-cargo-upgrade (&optional arg)
   "Upgrade dependencies as specified in the local manifest file using 'cargo upgrade'.
 If running with prefix command `C-u', read whole command from minibuffer."
   (interactive "P")
-  (when (rustic-cargo-edit-installed-p)
-    (let* ((command (if arg
-                        (read-from-minibuffer "Cargo upgrade command: "
-                                              (rustic-cargo-bin) " upgrade ")
-                      (concat (rustic-cargo-bin) " upgrade"))))
-      (rustic-run-cargo-command command))))
+  (let* ((command (if arg
+                      (read-from-minibuffer "Cargo upgrade command: "
+                                            (rustic-cargo-bin) " upgrade ")
+                    (concat (rustic-cargo-bin) " upgrade"))))
+    (rustic-run-cargo-command command)))
 
 ;;;###autoload
 (defun rustic-cargo-update (&optional arg)
