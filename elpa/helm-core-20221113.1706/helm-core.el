@@ -4,7 +4,7 @@
 
 ;; Author: Thierry Volpiatto <thievol@posteo.net>
 ;; URL: https://emacs-helm.github.io/helm/
-;; Version: 3.8.8
+;; Version: 3.9.0
 ;; Package-Requires: ((emacs "25.1") (async "1.9.7"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -4586,7 +4586,8 @@ useful when the order of the candidates is meaningful, e.g. with
   (let* ((pair    (and (consp candidate) candidate))
          (display (helm-stringify (if pair (car pair) candidate)))
          (real    (cdr pair))
-         (host    (and file-comp (get-text-property 0 'host display)))
+         (host    (and file-comp (get-text-property
+                                  (max 0 (1- (length display))) 'host display)))
          (regex   (helm--maybe-get-migemo-pattern pattern diacritics))
          (mpart   (get-text-property 0 'match-part display))
          (mp      (cond ((and mpart (string= display mpart)) nil)

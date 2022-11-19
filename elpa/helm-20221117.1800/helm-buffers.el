@@ -32,6 +32,7 @@
 (declare-function all-the-icons-icon-for-file "ext:all-the-icons.el")
 (declare-function all-the-icons-octicon "ext:all-the-icons.el")
 
+(defvar all-the-icons-mode-icon-alist)
 (defvar dired-buffers)
 (defvar org-directory)
 (defvar helm-ff-default-directory)
@@ -418,12 +419,15 @@ The list is reordered with `helm-buffer-list-reorder-fn'."
    (list
     (let* ((buf-fname (buffer-file-name (get-buffer buf-name)))
            (ext (if buf-fname (helm-file-name-extension buf-fname) ""))
+           (bmode (with-current-buffer buf-name major-mode))
            (icon (when helm-buffers-show-icons
-                   (cond ((eq type 'dired)
-                          (all-the-icons-octicon "file-directory"))
-                         (buf-fname
-                          (all-the-icons-icon-for-file buf-fname))
-                         (t (all-the-icons-octicon "star")))))
+                   (helm-aif (assq bmode all-the-icons-mode-icon-alist)
+                       (apply (cadr it) (cddr it))
+                     (cond ((eq type 'dired)
+                            (all-the-icons-octicon "file-directory"))
+                           (buf-fname
+                            (all-the-icons-icon-for-file buf-fname))
+                           (t (all-the-icons-octicon "star" :v-adjust 0.0))))))
            (buf-name (propertize buf-name 'face face1
                                  'help-echo help-echo
                                  'type type)))
@@ -572,19 +576,22 @@ buffers)."
                            (get-buffer i)))))
 
 (defun helm-buffer--get-preselection (buffer)
-  (let ((bufname (buffer-name buffer)))
+  (let* ((bufname     (buffer-name buffer))
+         (dispbuf     (car (helm-buffer--details buffer)))
+         (len-dispbuf (string-width dispbuf))
+         (len-prefix  (- len-dispbuf (string-width bufname))))
     (when (and bufname
                (file-remote-p (with-current-buffer bufname
                                 default-directory)))
       (setq bufname (concat "@ " (helm-url-unhex-string bufname))))
-    (concat "^"
+    (concat "^[[:multibyte:] ]*"
             (if (and (null helm-buffer-details-flag)
                      (numberp helm-buffer-max-length)
-                     (> (string-width bufname)
-                        helm-buffer-max-length))
+                     (> len-dispbuf helm-buffer-max-length))
                 (regexp-quote
                  (helm-substring-by-width
-                  bufname helm-buffer-max-length
+                  bufname
+                  (- helm-buffer-max-length len-prefix)
                   helm-buffers-end-truncated-string))
               (concat (regexp-quote bufname)
                       (if helm-buffer-details-flag
@@ -619,14 +626,14 @@ buffers)."
 (defun helm-buffers-mark-similar-buffers-1 (&optional type)
   (with-helm-window
     (let* ((src (helm-get-current-source))
-           (type (or type
-                     (get-text-property
-                      0 'type (helm-get-selection nil 'withprop src)))))
+           (sel (helm-get-selection nil 'withprop src))
+           (type (or type (get-text-property
+                           (min 2 (length sel)) 'type sel))))
       (helm-map-candidates-in-source src
         (lambda (_cand) (helm-make-visible-mark))
         (lambda (cand)
           (and (not (helm-this-visible-mark))
-               (eq (get-text-property 0 'type cand) type))))
+               (eq (get-text-property 2 'type cand) type))))
       (helm-mark-current-line)
       (helm-display-mode-line src t)
       (when helm-marked-candidates

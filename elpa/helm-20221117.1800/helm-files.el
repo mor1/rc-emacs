@@ -102,16 +102,19 @@
 (defvar eshell-debug-command)
 (defvar eshell-current-command)
 (defvar tramp-archive-enabled)
+(defvar tramp-tolerate-tilde)
 (defvar password-cache)
 
 
 ;;; Internal vars
 ;;
-(defvar helm-ff-last-expanded-candidate-regexp "^[[:multibyte:] ]*%s$"
+(defvar helm-ff-last-expanded-candidate-regexp "^[[:multibyte:] ]*%s"
   "Regexp that retrieve previous candidate when going up one level.
-The default value matching a multibyte char at bol allows prefixing
-candidate with an icon.  The format part will be replaced by the
-display part of the candidate regexp quoted.")
+The default value matching a multibyte char at bol allows
+prefixing candidate with an icon.  The format part will be
+replaced by the display part of the candidate regexp quoted.
+This should be used for all preselection code for helm-find-files
+to handle icons.")
 
 (defvar helm-find-files-doc-header " (\\<helm-find-files-map>\\[helm-find-files-up-one-level]: Go up one level)"
   "*The doc that is inserted in the Name header of a find-files or dired source.")
@@ -2597,13 +2600,13 @@ extension."
   (with-helm-window
     (let* ((src  (helm-get-current-source))
            (file (helm-get-selection nil 'withprop src))
-           (face (get-text-property 3 'face file))
+           (face (get-text-property (min 2 (length file)) 'face file))
            (ext  (file-name-extension file)))
       (helm-map-candidates-in-source src
         (lambda (_cand) (helm-make-visible-mark))
         (lambda (cand)
           (and (not (helm-this-visible-mark))
-               (eq (get-text-property 3 'face cand) face)
+               (eq (get-text-property (min 2 (length cand)) 'face cand) face)
                (equal ext (file-name-extension cand)))))
       (helm-mark-current-line)
       (helm-display-mode-line src t)
@@ -2810,6 +2813,8 @@ when `helm-pattern' is equal to \"~/\"."
         (let* ((history-p   (string= (assoc-default 'name src)
                                      "Read File Name History"))
                (pat         (helm-ff-set-pattern helm-pattern))
+               ;; Try to shut up persistent tramp error with adb method when
+               ;; adding tilde to path.
                (tramp-tolerate-tilde (equal (file-remote-p pat 'method)
 		                            tramp-adb-method))
                (completed-p (helm-aand (expand-file-name
@@ -4031,8 +4036,8 @@ If SKIP-BORING-CHECK is non nil don't filter boring files."
                       ;; non existing files.
                       (t
                        (add-face-text-property 0 len 'helm-ff-file t disp)
-                       (helm-aif tramp-invalid-fname
-                           (add-text-properties 0 len `(host ,it) disp))
+                       (when tramp-invalid-fname
+                         (add-text-properties 0 len `(host ,tramp-invalid-fname) disp))
                        (cons (helm-ff-prefix-filename
                               disp
                               tramp-invalid-fname
@@ -4158,13 +4163,13 @@ Arg DISP is the display part of the candidate."
 
 (defun helm-ff--is-dir-from-disp (disp)
   "Return the face used for candidate when candidate is a directory."
-  (cl-loop with faces = (helm-mklist (get-text-property 1 'face disp))
+  (cl-loop with faces = (helm-mklist (get-text-property 0 'face disp))
            for face in '(helm-ff-directory helm-ff-dotted-directory)
            thereis (memq face faces)))
 
 (defun helm-ff--is-file-from-disp (disp)
   "Return the face used for file's candidate or dotted-symlink dirs."
-  (cl-loop with faces = (helm-mklist (get-text-property 1 'face disp))
+  (cl-loop with faces = (helm-mklist (get-text-property 0 'face disp))
            for face in '(helm-ff-file
                          helm-ff-suid
                          helm-ff-executable
