@@ -14,7 +14,7 @@ Bind KEY-NAME to COMMAND in KEYMAP (`global-map' if not passed).
 
 KEY-NAME may be a vector, in which case it is passed straight to
 `define-key'. Or it may be a string to be interpreted as
-spelled-out keystrokes, e.g., \"C-c C-z\". See documentation of
+spelled-out keystrokes, e.g., `C-c C-z'. See documentation of
 `edmacro-mode' for details.
 
 COMMAND must be an interactive function or lambda form.
