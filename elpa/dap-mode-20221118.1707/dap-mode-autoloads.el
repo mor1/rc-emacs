@@ -397,16 +397,7 @@ evaluate python in the context of the debugee, ...." t nil)
 
 ;;;***
 
-;;;### (autoloads nil "dapui" "dapui.el" (0 0 0 0))
-;;; Generated autoloads from dapui.el
-
-(autoload 'dapui-loaded-sources "dapui" nil t nil)
-
-(register-definition-prefixes "dapui" '("dapui-"))
-
-;;;***
-
-;;;### (autoloads nil nil ("dap-mode-pkg.el") (0 0 0 0))
+;;;### (autoloads nil nil ("dap-mode-pkg.el" "dapui.el") (0 0 0 0))
 
 ;;;***
 
