@@ -8878,7 +8878,7 @@ the BUFFER that was checked respectively."
   :command ("ember-template-lint"
             (config-file "--config-path" flycheck-ember-template-lintrc)
             "--filename" source-original
-            "--json")
+            "--format=json")
   :standard-input t
   :error-parser flycheck-ember-template--parse-error
   :modes web-mode
@@ -9915,7 +9915,7 @@ See URL `https://github.com/zaach/jsonlint'."
   :error-filter
   (lambda (errors)
     (flycheck-sanitize-errors (flycheck-increment-error-columns errors)))
-  :modes json-mode)
+  :modes (json-mode js-json-mode))
 
 (flycheck-define-checker json-python-json
   "A JSON syntax checker using Python json.tool module.
@@ -9930,7 +9930,7 @@ See URL `https://docs.python.org/3.5/library/json.html#command-line-interface'."
           ;; Ignore the rest of the line which shows the char position.
           (one-or-more not-newline)
           line-end))
-  :modes json-mode
+  :modes (json-mode js-json-mode)
   ;; The JSON parser chokes if the buffer is empty and has no JSON inside
   :predicate flycheck-buffer-nonempty-p)
 
@@ -9949,7 +9949,7 @@ See URL `https://stedolan.github.io/jq/'."
           (optional "parse error: ")
           (message) "at line " line ", column " column
           (zero-or-more not-newline) line-end))
-  :modes json-mode)
+  :modes (json-mode js-json-mode))
 
 (flycheck-define-checker jsonnet
   "A Jsonnet syntax checker using the jsonnet binary.
@@ -10828,11 +10828,12 @@ See URL https://github.com/microsoft/pyright."
   :package-version '(flycheck . "32"))
 
 (flycheck-define-checker python-mypy
-  "Mypy syntax and type checker.  Requires mypy>=0.580.
+  "Mypy syntax and type checker.  Requires mypy>=0.730.
 
 See URL `http://mypy-lang.org/'."
   :command ("mypy"
             "--show-column-numbers"
+            "--no-pretty"
             (config-file "--config-file" flycheck-python-mypy-config)
             (option "--cache-dir" flycheck-python-mypy-cache-dir)
             source-original)
