@@ -4,8 +4,8 @@
 
 ;; Author: Wilfred Hughes <me@wilfred.me.uk>
 ;; Version: 2.4
-;; Package-Version: 20220911.1544
-;; Package-Commit: cdc76669a5032c42a2b9f7cddcbc33c5deeb6beb
+;; Package-Version: 20221031.705
+;; Package-Commit: ef768ccdeb8159814628ab0e2714e7dc8d9674fa
 ;; Keywords: hash table, hash map, hash
 ;; Package-Requires: ((dash "2.12.0"))
 
@@ -327,8 +327,11 @@ Does not compare equality predicates."
         (sentinel (make-symbol "ht-sentinel")))
     (and (equal (length keys1) (length keys2))
          (--all?
-          (equal (ht-get table1 it)
-                 (ht-get table2 it sentinel))
+          (if (ht-p (ht-get table1 it))
+              (ht-equal-p (ht-get table1 it)
+                          (ht-get table2 it))
+            (equal (ht-get table1 it)
+                 (ht-get table2 it sentinel)))
           keys1))))
 
 (defalias 'ht-equal-p 'ht-equal?)
