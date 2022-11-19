@@ -686,7 +686,7 @@ it is disabled.
 ;;;### (autoloads nil "lsp-nix" "lsp-nix.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-nix.el
 
-(register-definition-prefixes "lsp-nix" '("lsp-nix-server-path"))
+(register-definition-prefixes "lsp-nix" '("lsp-nix-"))
 
 ;;;***
 
