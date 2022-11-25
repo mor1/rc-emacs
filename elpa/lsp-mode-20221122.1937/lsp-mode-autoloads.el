@@ -693,7 +693,7 @@ it is disabled.
 ;;;### (autoloads nil "lsp-ocaml" "lsp-ocaml.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-ocaml.el
 
-(register-definition-prefixes "lsp-ocaml" '("lsp-ocaml-l"))
+(register-definition-prefixes "lsp-ocaml" '("lsp-"))
 
 ;;;***
 
@@ -1016,8 +1016,8 @@ it is disabled.
 
 ;;;***
 
-;;;### (autoloads nil nil ("lsp-cmake.el" "lsp-d.el" "lsp-dhall.el"
-;;;;;;  "lsp-mode-pkg.el" "lsp.el") (0 0 0 0))
+;;;### (autoloads nil nil ("lsp-astro.el" "lsp-cmake.el" "lsp-d.el"
+;;;;;;  "lsp-dhall.el" "lsp-mode-pkg.el" "lsp.el") (0 0 0 0))
 
 ;;;***
 
