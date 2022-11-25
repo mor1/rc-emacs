@@ -2041,7 +2041,7 @@ PATH has to be relative to the super-repository."
                ;; directory instead of the worktree, which isn't
                ;; what it is supposed to do and not what we want.
                ;; However, if the worktree has been removed, then
-               ;; we want to return it anway; instead of nil.
+               ;; we want to return it anyway; instead of nil.
                (setq path (or (magit-toplevel path) path))
                (setq worktree (list path nil nil nil))
                (push worktree worktrees)))
@@ -2178,8 +2178,8 @@ Return a list of two integers: (A>B B>A)."
                                (concat "--format=" format) args
                                (if rev (magit--rev-dereference rev) "HEAD")
                                "--")))
-    (unless (string-equal str "")
-      str)))
+    (and (not (string-equal str ""))
+         str)))
 
 (defun magit-rev-insert-format (format &optional rev args)
   ;; Prefer `git log --no-walk' to `git show --no-patch' because it
