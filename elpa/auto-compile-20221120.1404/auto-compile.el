@@ -5,9 +5,9 @@
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
-;; Package-Commit: b204e2f85aaa4d41af4eb1819633c9613f5172bf
+;; Package-Commit: f9b7fbd45077780ed0573a13ac96164f0fbdd9d1
 
-;; Package-Version: 20220517.1501
+;; Package-Version: 20221120.1404
 ;; Package-X-Original-Version: 1.7.1
 ;; Package-Requires: ((emacs "25.1") (compat "28.1.1.0") (packed "3.0.3"))
 
@@ -582,7 +582,8 @@ pretend the byte code file exists.")
            (setq success nil)))
         (when (and auto-compile-update-autoloads
                    (setq loaddefs (packed-loaddefs-file)))
-          (require 'autoload)
+          (with-suppressed-warnings ((obsolete autoload))
+            (require 'autoload))
           (condition-case nil
               (packed-with-loaddefs loaddefs
                 (let ((autoload-modified-buffers nil))
