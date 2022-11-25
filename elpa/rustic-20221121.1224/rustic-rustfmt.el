@@ -70,6 +70,13 @@ to 'on-save."
                  (const :tag "Don't fix automatically." nil))
   :group 'rustic)
 
+(defcustom rustic-use-rust-save-some-buffers nil
+  "Use `rustic-save-some-buffers' when calling `save-some-buffers' in rust
+projects. It allows you to use automatic formatting for this function.
+https://github.com/brotzeit/rustic/issues/450"
+  :type 'boolean
+  :group 'rustic)
+
 ;;; _
 
 (defvar rustic-format-process-name "rustic-rustfmt-process"
@@ -472,7 +479,9 @@ non-nil."
 (defun rustic-save-some-buffers-advice (orig-fun &rest args)
   "Use `rustic-save-some-buffers' instead when called in rust project.
 Otherwise turn off rustic format functionality and run `save-some-buffers'."
+  ;; TODO: fix issue #450
   (if (and
+       rustic-use-rust-save-some-buffers
        (rustic-buffer-crate t)
        (let ((pred (nth 1 args)))
          (if (functionp pred) (funcall pred) t)))
