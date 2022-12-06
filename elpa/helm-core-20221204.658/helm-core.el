@@ -4832,8 +4832,7 @@ emacs-27 to provide such scoring in emacs<27."
            ;; display a list of  candidates even with an empty
            ;; pattern.
            (helm--initialize-one-by-one-candidates
-            (helm-take-first-elements
-             (helm-get-cached-candidates source) limit)
+            (helm-take (helm-get-cached-candidates source) limit)
             source)
          ;; Compute candidates according to pattern with their match
          ;; fns.
@@ -7077,15 +7076,21 @@ splitting inconditionally, it is unused actually."
              (attr-val (if (eq attr 'persistent-action-if)
                            (funcall (assoc-default attr source) selection)
                          (assoc-default attr source)))
-             ;; If attr value is a cons, use its car as persistent function
-             ;; and its car to decide if helm window should be splitted.
+             ;; If attr value is a cons, use its car as persistent function.
              (fn       (if (and (consp attr-val)
                                 ;; maybe a lambda.
                                 (not (functionp attr-val)))
                            (car attr-val) attr-val))
+             ;; And its cdr to decide if helm window should be splitted.
              (no-split (and (consp attr-val)
                             (not (functionp attr-val))
                             (cdr attr-val)))
+             ;; Is next-window (from helm-window) a suitable window for PA?
+             (no-suitable-win
+              (helm-aand (not helm--buffer-in-new-frame-p)
+                         (get-buffer-window helm-current-buffer)
+                         (or (window-dedicated-p it)
+                             (window-parameter it 'window-side))))
              (cursor-in-echo-area t)
              mode-line-in-non-selected-windows)
         (progn
@@ -7097,10 +7102,11 @@ splitting inconditionally, it is unused actually."
           (when source
             (with-helm-window
               (save-selected-window
+                ;; FIXME: Simplify SPLIT behavior, it is a mess actually. 
                 (if no-split
                     (helm-select-persistent-action-window :split 'never)
                   (helm-select-persistent-action-window
-                   :split (or split helm-onewindow-p)))
+                   :split (or split helm-onewindow-p no-suitable-win)))
                 (helm-log "helm-execute-persistent-action"
                           "current-buffer = %S" (current-buffer))
                 (let ((helm-in-persistent-action t)
@@ -7138,8 +7144,14 @@ The symbol `never' is kept for backward compatibility."
                                    (get-buffer-window-list helm-buffer))))
                  helm-persistent-action-display-window)
                 ((and helm--buffer-in-new-frame-p helm-initial-frame)
-                 (with-selected-frame helm-initial-frame (selected-window)))
-                ((and split (not (eq split 'never))) (split-window))
+                 (with-selected-frame helm-initial-frame
+                   (let ((win (selected-window)))
+                     (if (or (window-dedicated-p win)
+                             (window-parameter win 'window-side))
+                         (next-window win 1)
+                       win))))
+                ((and split (not (eq split 'never)))
+                 (split-window))
                 ((get-buffer-window helm-current-buffer))
                 (t (previous-window (selected-window) 1))))))
 
