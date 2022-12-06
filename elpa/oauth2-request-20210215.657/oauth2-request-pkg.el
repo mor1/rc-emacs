@@ -1,2 +1,0 @@
-;;; Generated package description from oauth2-request.el  -*- no-byte-compile: t -*-
-(define-package "oauth2-request" "20210215.657" "OAuth2 request package interface" '((emacs "26.1") (oauth2 "0.14") (request "0.3")) :stars '("") :commit "86ff048635e002b00e23d6bed2ec6f36c17bca8e" :authors '(("Naoya Yamashita" . "conao3@gmail.com")) :maintainer '("Naoya Yamashita" . "conao3@gmail.com") :keywords '("convenience") :url "https://github.com/conao3/oauth2-request.el")
