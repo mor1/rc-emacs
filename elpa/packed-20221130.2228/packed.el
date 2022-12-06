@@ -1,12 +1,12 @@
-;;; packed.el --- Package manager agnostic Emacs Lisp package utilities  -*- lexical-binding:t -*-
+;;; packed.el --- [DEPRECATED] Package manager agnostic Emacs Lisp package utilities  -*- lexical-binding:t -*-
 
 ;; Copyright (C) 2012-2022 Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/packed
 ;; Keywords: lisp
-;; Package-Version: 20221120.1407
-;; Package-Commit: c0d075fa02424b39bd5a3492167f914b8522f686
+;; Package-Version: 20221130.2228
+;; Package-Commit: 169064f7acfe198cc7dd43d02518b773691e1314
 
 ;; Package-Requires: ((emacs "25.1") (compat "28.1.1.0"))
 
@@ -26,6 +26,11 @@
 ;; along with this file.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
+
+;; [DEPRECATED] This library has been deprecated.
+;;     Only a subset of the functionality provided by this library
+;;     turned out to be useful.  Those parts have been moved to the
+;;     `elx' package.
 
 ;; Packed provides some package manager agnostic utilities to work
 ;; with Emacs Lisp packages.  As far as Packed is concerned packages
