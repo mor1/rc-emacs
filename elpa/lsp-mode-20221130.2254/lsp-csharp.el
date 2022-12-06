@@ -108,7 +108,8 @@ Usually this is to be set in your .dir-locals.el on the project root directory."
 (lsp-dependency
  'omnisharp-roslyn
  `(:download :url lsp-csharp-omnisharp-roslyn-download-url
-             :store-path lsp-csharp-omnisharp-roslyn-store-path))
+   :store-path lsp-csharp-omnisharp-roslyn-store-path)
+ '(:system "OmniSharp"))
 
 (defun lsp-csharp--omnisharp-download-server (_client callback error-callback _update?)
   "Download zip package for omnisharp-roslyn and install it.
@@ -126,12 +127,13 @@ Will invoke CALLBACK on success, ERROR-CALLBACK on error."
 
 (defun lsp-csharp--language-server-path ()
   "Resolve path to use to start the server."
-  (if lsp-csharp-server-path
-      (executable-find lsp-csharp-server-path)
-    (let ((server-dir lsp-csharp-omnisharp-roslyn-server-dir))
-      (when (f-exists? server-dir)
-        (f-join server-dir (cond ((eq system-type 'windows-nt) "OmniSharp.exe")
-                                 (t "OmniSharp")))))))
+  (let ((executable-name (if (eq system-type 'windows-nt)
+                             "OmniSharp.exe"
+                           "OmniSharp")))
+    (or (and lsp-csharp-server-path
+             (executable-find lsp-csharp-server-path))
+        (executable-find executable-name)
+        (lsp-package-path 'omnisharp-roslyn))))
 
 (defun lsp-csharp-open-project-file ()
   "Open corresponding project file  (.csproj) for the current file."
@@ -211,7 +213,7 @@ PRESENT-BUFFER will make the buffer be presented to the user."
       (erase-buffer)))
 
   (when present-buffer
-      (display-buffer lsp-csharp-test-run-buffer-name)))
+    (display-buffer lsp-csharp-test-run-buffer-name)))
 
 (defun lsp-csharp--start-tests (test-method-framework test-method-names)
   "Run test(s) identified by TEST-METHOD-NAMES using TEST-METHOD-FRAMEWORK."
@@ -341,7 +343,7 @@ using the `textDocument/references' request."
                    #'(lambda ()
                        (when-let ((binary (lsp-csharp--language-server-path)))
                          (f-exists? binary))))
-                  :major-modes '(csharp-mode csharp-tree-sitter-mode)
+                  :major-modes '(csharp-mode csharp-tree-sitter-mode csharp-ts-mode)
                   :server-id 'omnisharp
                   :priority -1
                   :action-handlers (ht ("omnisharp/client/findReferences" 'lsp-csharp--action-client-find-references))
@@ -428,8 +430,8 @@ filename is returned so lsp-mode can display this file."
                                (t nil)))
 
         (csharp-ls-exec (or (executable-find "csharp-ls")
-                                 (f-join (or (getenv "USERPROFILE") (getenv "HOME"))
-                                         ".dotnet" "tools" "csharp-ls")))
+                            (f-join (or (getenv "USERPROFILE") (getenv "HOME"))
+                                    ".dotnet" "tools" "csharp-ls")))
 
         (solution-file-params (when lsp-csharp-solution-file
                                 (list "-s" lsp-csharp-solution-file))))
@@ -457,7 +459,7 @@ Will update if UPDATE? is t"
                                                         #'lsp-csharp--cls-test-csharp-ls-present)
                   :priority -2
                   :server-id 'csharp-ls
-                  :major-modes '(csharp-mode csharp-tree-sitter-mode)
+                  :major-modes '(csharp-mode csharp-tree-sitter-mode csharp-ts-mode)
                   :before-file-open-fn #'lsp-csharp--cls-before-file-open
                   :uri-handlers (ht ("csharp" #'lsp-csharp--cls-metadata-uri-handler))
                   :download-server-fn #'lsp-csharp--cls-download-server))

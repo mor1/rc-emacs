@@ -357,6 +357,8 @@ the server has requested that."
     "[/\\\\]\\.reference\\'"
     ;; Bazel
     "bazel-[^/\\\\]+\\'"
+    ;; CSharp
+    "[/\\\\]\\.meta\\'"
     ;; Clojure
     "[/\\\\]\\.lsp\\'"
     "[/\\\\]\\.clj-kondo\\'"
@@ -760,15 +762,18 @@ Changes take effect only when a new session is started."
                                         (clojurec-mode . "clojure")
                                         (clojurescript-mode . "clojurescript")
                                         (java-mode . "java")
+                                        (java-ts-mode . "java")
                                         (jdee-mode . "java")
                                         (groovy-mode . "groovy")
                                         (python-mode . "python")
+                                        (python-ts-mode . "python")
                                         (cython-mode . "python")
                                         (lsp--render-markdown . "markdown")
                                         (rust-mode . "rust")
                                         (rustic-mode . "rust")
                                         (kotlin-mode . "kotlin")
                                         (css-mode . "css")
+                                        (css-ts-mode . "css")
                                         (less-mode . "less")
                                         (less-css-mode . "less")
                                         (lua-mode . "lua")
@@ -778,7 +783,9 @@ Changes take effect only when a new session is started."
                                         (scad-mode . "openscad")
                                         (xml-mode . "xml")
                                         (c-mode . "c")
+                                        (c-ts-mode . "c")
                                         (c++-mode . "cpp")
+                                        (c++-ts-mode . "cpp")
                                         (cuda-mode . "cuda")
                                         (objc-mode . "objective-c")
                                         (html-mode . "html")
@@ -794,11 +801,14 @@ Changes take effect only when a new session is started."
                                         (powershell-mode . "powershell")
                                         (powershell-mode . "PowerShell")
                                         (json-mode . "json")
+                                        (json-ts-mode . "json")
                                         (jsonc-mode . "jsonc")
                                         (rjsx-mode . "javascript")
                                         (js2-mode . "javascript")
                                         (js-mode . "javascript")
+                                        (js-ts-mode . "javascript")
                                         (typescript-mode . "typescript")
+                                        (typescript-ts-mode . "typescript")
                                         (fsharp-mode . "fsharp")
                                         (reason-mode . "reason")
                                         (caml-mode . "ocaml")
@@ -817,6 +827,7 @@ Changes take effect only when a new session is started."
                                         (dockerfile-mode . "dockerfile")
                                         (csharp-mode . "csharp")
                                         (csharp-tree-sitter-mode . "csharp")
+                                        (csharp-ts-mode . "csharp")
                                         (plain-tex-mode . "plaintex")
                                         (latex-mode . "latex")
                                         (v-mode . "v")
@@ -3199,7 +3210,7 @@ workspace->result.
 If NO-WAIT is non-nil send the request as notification."
   (if no-wait
       (lsp-notify method params)
-    (let* ((send-time (time-to-seconds (current-time)))
+    (let* ((send-time (float-time))
            ;; max time by which we must get a response
            (expected-time
             (and
@@ -3221,7 +3232,7 @@ If NO-WAIT is non-nil send the request as notification."
                   (accept-process-output
                    nil
                    (if expected-time (- expected-time send-time) 1))))
-              (setq send-time (time-to-seconds (current-time)))
+              (setq send-time (float-time))
               (when (and expected-time (< expected-time send-time))
                 (error "Timeout while waiting for response.  Method: %s" method)))
             (setq done? t)
@@ -3238,7 +3249,7 @@ If NO-WAIT is non-nil send the request as notification."
   "Send request METHOD with PARAMS and waits until there is no input.
 Return same value as `lsp--while-no-input' and respecting `non-essential'."
   (if non-essential
-    (let* ((send-time (time-to-seconds (current-time)))
+    (let* ((send-time (float-time))
            ;; max time by which we must get a response
            (expected-time
             (and
@@ -3256,7 +3267,7 @@ Return same value as `lsp--while-no-input' and respecting `non-essential'."
                 (catch 'lsp-done
                   (sit-for
                    (if expected-time (- expected-time send-time) 1)))
-                (setq send-time (time-to-seconds (current-time)))
+                (setq send-time (float-time))
                 (when (and expected-time (< expected-time send-time))
                   (error "Timeout while waiting for response.  Method: %s" method)))
               (setq done? (or resp-error resp-result))
@@ -5796,6 +5807,7 @@ Request codeAction/resolve for more info if server supports."
     (c++-mode                   . c-basic-offset)                   ; C++
     (csharp-mode                . c-basic-offset)                   ; C#
     (csharp-tree-sitter-mode    . csharp-tree-sitter-indent-offset) ; C#
+    (csharp-ts-mode             . csharp-ts-mode-indent-offset)     ; C# (tree-sitter, Emacs29)
     (d-mode                     . c-basic-offset)                   ; D
     (java-mode                  . c-basic-offset)                   ; Java
     (jde-mode                   . c-basic-offset)                   ; Java (JDE)
@@ -5815,6 +5827,7 @@ Request codeAction/resolve for more info if server supports."
     (nxml-mode                  . nxml-child-indent)                ; XML
     (pascal-mode                . pascal-indent-level)              ; Pascal
     (typescript-mode            . typescript-indent-level)          ; Typescript
+    (typescript-ts-mode         . typescript-ts-mode-indent-offset) ; Typescript (tree-sitter, Emacs29)
     (sh-mode                    . sh-basic-offset)                  ; Shell Script
     (ruby-mode                  . ruby-indent-level)                ; Ruby
     (enh-ruby-mode              . enh-ruby-indent-level)            ; Ruby
@@ -6462,6 +6475,10 @@ PARAMS are the `workspace/configuration' request params"
                      section))))))
        (apply #'vector)))
 
+(defun lsp--ms-since (timestamp)
+  "Integer number of milliseconds since TIMESTAMP.  Fractions discarded."
+  (floor (* 1000 (float-time (time-since timestamp)))))
+
 (defun lsp--send-request-response (workspace recv-time request response)
   "Send the RESPONSE for REQUEST in WORKSPACE and log if needed."
   (-let* (((&JSONResponse :params :method :id) request)
@@ -6471,7 +6488,7 @@ PARAMS are the `workspace/configuration' request params"
                           (lsp--make-log-entry method id params 'incoming-req)))
           (resp-entry (and lsp-log-io
                            (lsp--make-log-entry method id response 'outgoing-resp
-                                                (/ (nth 2 (time-since recv-time)) 1000)))))
+                                                (lsp--ms-since recv-time)))))
     ;; Send response to the server.
     (when (lsp--log-io-p method)
       (lsp--log-entry-new req-entry workspace)
@@ -6650,7 +6667,7 @@ server. WORKSPACE is the active workspace."
              (when (lsp--log-io-p method)
                (lsp--log-entry-new
                 (lsp--make-log-entry method id data 'incoming-resp
-                                     (/ (nth 2 (time-since before-send)) 1000))
+                                     (lsp--ms-since before-send))
                 workspace))
              (when callback
                (remhash id (lsp--client-response-handlers client))
@@ -6661,7 +6678,7 @@ server. WORKSPACE is the active workspace."
              (when (lsp--log-io-p method)
                (lsp--log-entry-new
                 (lsp--make-log-entry method id (lsp:json-response-error-error json-data)
-                                     'incoming-resp (/ (nth 2 (time-since before-send)) 1000))
+                                     'incoming-resp (lsp--ms-since before-send))
                 workspace))
              (when callback
                (remhash id (lsp--client-response-handlers client))

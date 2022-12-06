@@ -35,6 +35,13 @@
 
 ;;;***
 
+;;;### (autoloads nil "lsp-astro" "lsp-astro.el" (0 0 0 0))
+;;; Generated autoloads from lsp-astro.el
+
+(register-definition-prefixes "lsp-astro" '("lsp-astro--get-initialization-options"))
+
+;;;***
+
 ;;;### (autoloads nil "lsp-bash" "lsp-bash.el" (0 0 0 0))
 ;;; Generated autoloads from lsp-bash.el
 
@@ -1016,8 +1023,8 @@ it is disabled.
 
 ;;;***
 
-;;;### (autoloads nil nil ("lsp-astro.el" "lsp-cmake.el" "lsp-d.el"
-;;;;;;  "lsp-dhall.el" "lsp-mode-pkg.el" "lsp.el") (0 0 0 0))
+;;;### (autoloads nil nil ("lsp-cmake.el" "lsp-d.el" "lsp-dhall.el"
+;;;;;;  "lsp-mode-pkg.el" "lsp.el") (0 0 0 0))
 
 ;;;***
 
