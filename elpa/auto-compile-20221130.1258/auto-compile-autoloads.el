@@ -97,10 +97,10 @@ multiple files is toggled as follows:
   removed.  If `auto-compile-deletes-stray-dest' is non-nil this
   even includes byte code files for which no source file exists.
 
-* When _creating_ byte code files only do so for source files
-  that are actual libraries.  Source files that provide the
-  correct feature are considered to be libraries; see
-  `packed-library-p'.
+* When _creating_ byte code files then only compile files for
+  which `auto-compile-predicate-function' returns non-nil.  By
+  default that includes all files that look like source files,
+  based solely on their filenames.
 
 * Note that non-libraries can still be automatically compiled,
   you just cannot _recursively_ turn on automatic compilation
@@ -110,9 +110,8 @@ multiple files is toggled as follows:
   affected source files even when the respective source files are
   up-to-date.  Do so even for non-library source files.
 
-* Only enter subdirectories for which `packed-ignore-directory-p'
-  returns nil; i.e. don't enter hidden directories or directories
-  containing a file named \".nosearch\".
+* Compile libraries in subdirectories, except for files in hidden
+  directories and directories containing a file named \".nosearch\".
 
 \(fn FILE ACTION)" t nil)
 
