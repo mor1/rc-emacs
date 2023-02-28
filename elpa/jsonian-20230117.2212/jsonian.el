@@ -4,8 +4,8 @@
 
 ;; Author: Ian Wahbe
 ;; URL: https://github.com/iwahbe/jsonian
-;; Package-Version: 20221121.522
-;; Package-Commit: 1d226db4da79d48427b623c2825e499030a6d50f
+;; Package-Version: 20230117.2212
+;; Package-Commit: d0583a890a8e43845935c31de9f069192011451e
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1"))
 
@@ -77,6 +77,11 @@ nil means that `jsonian-mode' will infer the correct indentation."
   "A major mode for editing JSON with comments."
   :prefix "jsonian-c-" :group 'jsonian)
 
+;; Hoisted because it must be declared before use.
+(defvar-local jsonian--cache nil
+  "The buffer local cache of known locations in the current JSON file.
+`jsonian--cache' is invalidated on buffer change.")
+
 
 ;; Manipulating and verifying JSON paths.
 ;;
@@ -116,6 +121,25 @@ b. leveraging C code whenever possible."
           (kill-new display))
         result))))
 
+(defun jsonian--cached-path (head allow-tags stop-at-valid)
+  "Compute `jsonian-path' with assistance from `jsonian--cache'.
+HEAD is the current nearest known path segment at `point'.  See
+the docstring for `jsonian-path' for behavior of ALLOW-TAGS and
+STOP-AT-VALID."
+  (jsonian--ensure-cache)
+  (if (and (not allow-tags) (not stop-at-valid))
+      ;; We are in the tag state where we accept cached values
+      (if-let* ((p (point))
+                (node (gethash p (jsonian--cache-locations jsonian--cache))))
+          ;; We have retrieved a cached value, so return it
+          (reverse (jsonian--cached-node-path node))
+        ;; Else cache the value and return it
+        (let ((r (cons head (jsonian--path allow-tags stop-at-valid))))
+          (jsonian--cache-node p (reverse r))
+          r))
+    ;; Otherwise performed the un-cached compute
+    (cons head (jsonian--path allow-tags stop-at-valid))))
+
 (defun jsonian--path (allow-tags stop-at-valid)
   "Helper function for `jsonian-path'.
 Will pick up object level tags at the current level of if
@@ -124,40 +148,44 @@ ALLOW-TAGS is non nil.  When STOP-AT-VALID is non-nil,
 Otherwise it will parse back to the beginning of the file."
   ;; The number of previously encountered objects in this list (if we
   ;; are in a list).
-  (let ((index 0) close)
+  (let ((index 0))
     ;; We are not in the middle of a string, so we can now safely check for
     ;; the string property without false positives.
     (cl-loop 'while (not (bobp))
              (jsonian--backward-to-significant-char)
              (cond
+              ;;
               ;; Enclosing object
               ((eq (char-before) ?\{)
-               (cl-return (cons 'object
-                                (unless stop-at-valid
-                                  (backward-char)
-                                  (jsonian--path t stop-at-valid)))))
+               (if stop-at-valid
+                   (cl-return nil)
+                 (backward-char)
+                 (setq index 0
+                       allow-tags t)))
               ;; Enclosing array
               ((eq (char-before) ?\[)
-               (cl-return (cons index
-                                (unless stop-at-valid
-                                  (backward-char)
-                                  (jsonian--path t stop-at-valid)))))
+               (cl-return
+                (if stop-at-valid
+                   (list index)
+                  (backward-char)
+                  (jsonian--cached-path index t stop-at-valid))))
+              ;;
               ;; Skipping over a complete node (either a array or a object)
               ((or
                 (eq (char-before) ?\])
                 (eq (char-before) ?\}))
                (backward-char)
-               (setq close (1- (scan-lists (point) 1 1)))
-               (when (< close (line-end-position))
-                 (goto-char (1+ close))
-                 (backward-list))
+               (let ((close (1- (scan-lists (point) 1 1))))
+                 (when (< close (line-end-position))
+                   (goto-char (1+ close))
+                   (backward-list)))
                (backward-char))
-
+              ;;
               ;; In a list or object
               ((eq (char-before) ?,)
                (backward-char)
                (setq index (1+ index)))
-
+              ;;
               ;; Object tag
               ((eq (char-before) ?:)
                (backward-char)
@@ -171,27 +199,28 @@ Otherwise it will parse back to the beginning of the file."
                    (error "Could not find tag"))
                  (when (= (car tag-region) (point-min))
                    (user-error "Before tag '\"%s\"' expected something, found beginning of buffer" tag-text))
-                 (goto-char (1- (car tag-region)))
                  (when allow-tags
                    ;; To avoid blowing the recursion limit, we only collect tags
                    ;; (and recurse on them) when we need to.
-                   (cl-return (cons tag-text (jsonian--path nil stop-at-valid))))))
+                   (cl-return (jsonian--cached-path tag-text nil stop-at-valid)))))
+              ;;
               ;; Found a string value, ignore
               ((eq (char-before) ?\")
                (jsonian--backward-string 'font-lock-string-face))
-
               ;; NOTE: I'm making a choice to parse non-string literals instead of ignoring
               ;; other characters. This ensures the partial parse is strict.
-
+              ;;
               ;; Found a number value, ignore
-              ((and (char-before) (<= (char-before) ?9) (>= (char-before) ?0))
-               (jsonian--backward-number))
+              ((jsonian--backward-number))
+              ;;
               ;; Boolean literal: true
               ((and (eq (char-before) ?e)
                     (eq (char-before (1- (point))) ?u))
                (jsonian--backward-true))
+              ;;
               ;; Boolean literal: false
               ((eq (char-before) ?e) (jsonian--backward-false))
+              ;;
               ;; null literal
               ((eq (char-before) ?l) (jsonian--backward-null))
               ((bobp) (cl-return nil))
@@ -274,17 +303,11 @@ A segment is considered simple if and only if it does not contain any
 
 (defun jsonian--reconstruct-path (input)
   "Cleanup INPUT as the result of `jsonian--path'."
-  (let (path seen-key)
+  (let (path)
     (seq-do (lambda (element)
-              (cond
-               ((stringp element)
-                (unless seen-key (setq path (cons element path)
-                                       seen-key t)))
-               ((equal element 'object) ;; A marker element, does nothing
-                (setq seen-key nil))
-               (t
-                (setq seen-key nil
-                      path (cons element path)))))
+              (if (or (stringp element) (numberp element))
+                  (setq path (cons element path))
+                (error "Unexpected element %s of type %s" element (type-of element))))
             input)
     path))
 
@@ -356,11 +379,10 @@ If ARG is not nil, move to the ARGth enclosing item."
 (defun jsonian--enclosing-object-or-array ()
   "Go to the enclosing object/array of `point'."
   (jsonian--correct-starting-point)
-  (let ((result (car-safe (jsonian--path nil t))))
-    (when (or (numberp result)
-              (equal result 'object))
-      (unless (bobp) (backward-char))
-      result)))
+  (jsonian--path nil t)
+  (when (member (char-before) '(?\[ ?\{))
+    (unless (bobp) (backward-char))
+    t))
 
 (defmacro jsonian--defun-predicate-traversal (name arg-list predicate)
   "Define `jsonian--forward-NAME' and `jsonian--backward-NAME'.
@@ -435,9 +457,134 @@ and ARG2."
       (= x ?\n)
       (= x ?\r)))
 
-(jsonian--defun-traverse number (x)
-  (and (<= x ?9)
-       (>= x ?0)))
+(defun jsonian--forward-number ()
+  "Parse a JSON number forward.
+
+For the definition of a number, see https://www.json.org/json-en.html"
+  (let ((point (point)) (valid t))
+    (when (equal (char-after point) ?-) (setq point (1+ point))) ;; Sign
+    ;; Whole number
+    (if (equal (char-after point) ?0)
+        (setq point (1+ point)) ;; Found a zero, the whole part is done
+      (if (and (char-after point)
+               (>= (char-after point) ?1)
+               (<= (char-after point) ?9))
+          (setq point (1+ point)) ;; If valid, increment over the first number.
+        (setq valid nil)) ;; Otherwise, the number is not valid.
+      ;; Parse the remaining whole part of the number
+      (while (and (char-after point)
+                  (>= (char-after point) ?0)
+                  (<= (char-after point) ?9))
+        (setq point (1+ point))))
+    ;; Fractional
+    (when (equal (char-after point) ?.)
+      (setq point (1+ point))
+      (unless (and (char-after point)
+                   (>= (char-after point) ?0)
+                   (<= (char-after point) ?9))
+        (setq valid nil))
+      (while (and (char-after point)
+                  (>= (char-after point) ?0)
+                  (<= (char-after point) ?9))
+        (setq point (1+ point))))
+    ;; Exponent
+    (when (member (char-after point) '(?e ?E))
+      (setq point (1+ point))
+      (when (member (char-after point) '(?- ?+)) ;; Exponent sign
+        (setq point (1+ point)))
+      (unless (and (char-after point)
+                   (>= (char-after point) ?0)
+                   (<= (char-after point) ?9))
+        (setq valid nil))
+      (while (and (char-after point)
+                  (>= (char-after point) ?0)
+                  (<= (char-after point) ?9))
+        (setq point (1+ point))))
+    (when valid
+      (goto-char point)
+      t)))
+
+(defun jsonian--backward-number ()
+  "Parse a JSON number backward.
+
+Here we execute the reverse of the flow chart described at
+https://www.json.org/json-en.html:
+
+                                     +------+    !=====!    !===!    !===!
+>>--+-----+------------------+------>| 0-9* |--->| 1-9 |--->| - |<---| 0 |
+    |     |                  |       +------+    !=====!    !===!    !===!
+    |     |                  |          |           ^                  ^
+    |     v                  |          v           |                  |
+    |  +------+  +-----+  +-----+     +---+     +------+               |
+    |  | 0-9* |->| +|- |->| e|E |  +--| . |---->| 0-9* |               |
+    |  +------+  +-----+  +-----+  |  +---+     +------+               |
+    |                              |                                   |
+    |       exponent component     |  fraction component    sign       |
+    |  --------------------------  | --------------------  ------      |
+    |                              v                                   |
+    +------------------------------+-----------------------------------+
+
+The above diagram denotes valid stopping locations with boxes
+outlined with = and !.  The flow starts with the >> at the middle
+left."
+  (when-let ((valid-stops
+              (seq-filter
+               #'identity
+               (list
+                (jsonian--backward-exponent (point))
+                (jsonian--backward-fraction (point))
+                (jsonian--backward-integer (point))))))
+    (goto-char (seq-min valid-stops))))
+
+(defun jsonian--backward-exponent (point)
+  "Parse backward from POINT assuming an exponent segment of a JSON number."
+  (let (found-number done)
+    (while (and (not done) (char-before point)
+                (<= (char-before point) ?9)
+                (>= (char-before point) ?0))
+      (if (= point (1+ (point-min)))
+          (setq done t)
+        (setq point (1- point)
+              found-number t)))
+    (when found-number ;; We need to see a number for an exponent
+      (when (member (char-before point) '(?+ ?-))
+        (setq point (1- point)))
+      (when (member (char-before point) '(?e ?E))
+        (or (jsonian--backward-fraction (1- point))
+            (jsonian--backward-integer (1- point)))))))
+
+(defun jsonian--backward-fraction (point)
+  "Parse backward from POINT assuming no exponent segment of a JSON number."
+  (let (found-number done)
+    (while (and (not done) (char-before point)
+                (<= (char-before point) ?9)
+                (>= (char-before point) ?0))
+      (if (= point (1+ (point-min)))
+          (setq done t)
+        (setq point (1- point)
+              found-number t)))
+    (when (and found-number (= (char-before point) ?.))
+      (jsonian--backward-integer (1- point)))))
+
+(defun jsonian--backward-integer (point)
+  "Parse backward from POINT assuming you will only find a simple integer."
+  (let (found-number done leading-valid)
+    (when (equal (char-before point) ?0)
+      (setq leading-valid (1- point)))
+    (while (and (not done) (char-before point)
+                (<= (char-before point) ?9)
+                (>= (char-before point) ?0))
+      (setq found-number (char-before point))
+      (unless (eq found-number ?0)
+        (setq leading-valid (1- point)))
+      (if (= point (1+ (point-min)))
+          (setq done t)
+        (setq point (1- point))))
+    (when leading-valid
+      (if (and (char-before leading-valid)
+               (eq (char-before leading-valid) ?-))
+          (1- leading-valid)
+        leading-valid))))
 
 (defun jsonian--enclosing-comment-p (pos)
   "Check if POS is inside comment delimiters.
@@ -728,7 +875,7 @@ PROPERTY defaults to `face'."
        ((eq (char-after) ?n) (jsonian--forward-null))
        ((eq (char-after) ?\{) (forward-list))
        ((eq (char-after) ?\[) (forward-list))
-       ((and (char-after) (>= (char-after) ?0) (<= (char-after) ?9)) (jsonian--forward-number))
+       ((jsonian--forward-number))
        ((eq (char-after) ?,) (setq n (1- n)) (forward-char) (jsonian--forward-to-significant-char))
        ((or (eq (char-after) ?\]) (eq (char-after) ?\})) (setq done t))
        (t (jsonian--unexpected-char :forward "the beginning of a JSON value"))))
@@ -908,10 +1055,6 @@ It should *not* be toggled manually."
 ;; All cached data is stored in the buffer local variable `jsonian--cache'.  It
 ;; is invalidated after the buffer is changed.
 
-(defvar-local jsonian--cache nil
-  "The buffer local cache of known locations in the current JSON file.
-`jsonian--cache' is invalidated on buffer change.")
-
 (defun jsonian--handle-change (&rest args)
   "Handle a change in the buffer.
 `jsonian--handle-change' is designed to be called from the
@@ -919,7 +1062,7 @@ It should *not* be toggled manually."
   (ignore args)
   (setq jsonian--cache nil))
 
-(cl-defstruct jsonian--cache
+(cl-defstruct (jsonian--cache (:copier nil))
   "The jsonian node cache.  O(1) lookup is supported via either location or path."
   (locations (make-hash-table :test 'eql)   :documentation "A map of locations to nodes.")
   (paths     (make-hash-table :test 'equal) :documentation "A map of paths to locations."))
@@ -929,7 +1072,9 @@ It should *not* be toggled manually."
   (children nil :documentation "A list of the locations of child nodes.
 If non-nil, the child nodes should exist in cache.
 If the node is a leaf node, CHILDREN may be set to `'leaf'.")
-  (segment nil :documentation "The last segment in the path to this node.")
+  (path nil :documentation "The full path to this node.")
+  (segment nil :documentation "The last segment in the path to this node. `segment' should
+be equal to the last element of `path'.")
   (type nil :documentation "The type of the node (as a string), used for display purposes.")
   (preview nil :documentation "A preview of the value, containing test properties."))
 
@@ -951,7 +1096,7 @@ PREVIEW is a (fontified) string preview of the node."
   (let ((existing (or
                    (gethash location
                             (jsonian--cache-locations jsonian--cache))
-                   (make-jsonian--cached-node))))
+                   (make-jsonian--cached-node :path path))))
   (when children
     (setf (jsonian--cached-node-children existing) (mapcar #'cdr children)))
   (if segment
