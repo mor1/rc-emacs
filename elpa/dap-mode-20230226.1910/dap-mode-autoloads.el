@@ -96,7 +96,7 @@ Run `dap-hydra/body'." t nil)
 ;;;### (autoloads nil "dap-kotlin" "dap-kotlin.el" (0 0 0 0))
 ;;; Generated autoloads from dap-kotlin.el
 
-(register-definition-prefixes "dap-kotlin" '("dap-kotlin-populate-"))
+(register-definition-prefixes "dap-kotlin" '("dap-kotlin-"))
 
 ;;;***
 
@@ -111,6 +111,13 @@ Run `dap-hydra/body'." t nil)
 ;;; Generated autoloads from dap-lldb.el
 
 (register-definition-prefixes "dap-lldb" '("dap-lldb-"))
+
+;;;***
+
+;;;### (autoloads nil "dap-magik" "dap-magik.el" (0 0 0 0))
+;;; Generated autoloads from dap-magik.el
+
+(register-definition-prefixes "dap-magik" '("dap-magik-"))
 
 ;;;***
 
