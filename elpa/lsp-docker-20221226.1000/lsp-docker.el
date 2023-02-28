@@ -4,8 +4,8 @@
 
 ;; Author: Ivan Yonchovski <yyoncho@gmail.com>
 ;; URL: https://github.com/emacs-lsp/lsp-docker
-;; Package-Version: 20221204.2022
-;; Package-Commit: 7c8cff5103595e1341f4aaa512c833dbc58d6886
+;; Package-Version: 20221226.1000
+;; Package-Commit: 1e1f33ed729c220485c16e6597738d8e416f31b7
 ;; Keywords: languages langserver
 ;; Version: 1.0.0
 ;; Package-Requires: ((emacs "26.1") (dash "2.14.1") (lsp-mode "6.2.1") (f "0.20.0") (s "1.13.0") (yaml "0.2.0") (ht "2.0"))
@@ -140,7 +140,7 @@ Argument SERVER-COMMAND the command to execute inside the running container."
     lsp-go
     lsp-html
     lsp-javascript
-    lsp-pyls)
+    lsp-pylsp)
   "Default list of client packages to load.")
 
 (defvar lsp-docker-default-client-configs
@@ -151,7 +151,7 @@ Argument SERVER-COMMAND the command to execute inside the running container."
    (list :server-id 'dockerfile-ls :docker-server-id 'dockerfilels-docker :server-command "docker-langserver --stdio")
    (list :server-id 'gopls :docker-server-id 'gopls-docker :server-command "gopls")
    (list :server-id 'html-ls :docker-server-id 'htmls-docker :server-command "html-languageserver --stdio")
-   (list :server-id 'pyls :docker-server-id 'pyls-docker :server-command "pyls")
+   (list :server-id 'pylsp :docker-server-id 'pyls-docker :server-command "pylsp")
    (list :server-id 'ts-ls :docker-server-id 'tsls-docker :server-command "typescript-language-server --stdio"))
   "Default list of client configurations.")
 
