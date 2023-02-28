@@ -1,0 +1,2 @@
+;;; Generated package description from unfill.el  -*- no-byte-compile: t -*-
+(define-package "unfill" "20210106.222" "Do the opposite of fill-paragraph or fill-region" '((emacs "24.1")) :stars '(#("31" 0 2 (font-lock-face paradox-star-face))) :commit "8375d87ec184fbe964189e2f9b7263cdb1396694" :authors '(("Steve Purcell" . "steve@sanityinc.com")) :maintainer '("Steve Purcell" . "steve@sanityinc.com") :keywords '("convenience") :url "https://github.com/purcell/unfill")
