@@ -383,25 +383,25 @@ visiting a project." t nil)
 ;;; Generated autoloads from rustic-lsp.el
 
 (autoload 'rustic-analyzer-macro-expand "rustic-lsp" "\
-Default method for displaying macro expansion results.
+Default method for displaying macro expansion RESULT .
 
-\(fn RESULT)" t nil)
+\(fn RESULT)" nil nil)
 
 (register-definition-prefixes "rustic-lsp" '("rustic-"))
 
 ;;;***
 
-;;;### (autoloads nil "rustic-playpen" "rustic-playpen.el" (0 0 0
-;;;;;;  0))
-;;; Generated autoloads from rustic-playpen.el
+;;;### (autoloads nil "rustic-playground" "rustic-playground.el"
+;;;;;;  (0 0 0 0))
+;;; Generated autoloads from rustic-playground.el
 
-(autoload 'rustic-playpen "rustic-playpen" "\
+(autoload 'rustic-playground "rustic-playground" "\
 Create a shareable URL for the contents of the current region,
-src-block or buffer on the Rust playpen.
+src-block or buffer on the Rust playground.
 
 \(fn BEGIN END)" t nil)
 
-(register-definition-prefixes "rustic-playpen" '("rustic-"))
+(register-definition-prefixes "rustic-playground" '("rustic-"))
 
 ;;;***
 

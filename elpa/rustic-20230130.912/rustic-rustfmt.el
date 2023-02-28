@@ -105,40 +105,41 @@ When COMMAND is non-nil, it replaces the default command.
 When COMMAND is a string, it is the program file name.
 When COMMAND is a list, it's `car' is the program file name
 and it's `cdr' is a list of arguments."
-  (let* ((err-buf (get-buffer-create rustic-format-buffer-name))
-         (inhibit-read-only t)
-         (dir (funcall rustic-compile-directory-method))
-         (buffer (plist-get args :buffer))
-         (string (plist-get args :stdin))
-         (files  (plist-get args :files))
-         (files (if (listp files) files (list files)))
-         (command (or (plist-get args :command)
-                      (rustic-compute-rustfmt-args)))
-         (command (if (listp command) command (list command)))
-         (cur-buf (current-buffer)))
-    (setq rustic-save-pos (set-marker (make-marker) (point) (current-buffer)))
-    (rustic-compilation-setup-buffer err-buf dir 'rustic-format-mode t)
-    (--each files
-      (unless (file-exists-p it)
-        (error (format "File %s does not exist." it))))
-    (with-current-buffer err-buf
-      (let* ((c `(,(rustic-rustfmt-bin)
-                  ,@(split-string rustic-rustfmt-args)
-                  ,@command "--" ,@files))
-             (proc (rustic-make-process :name rustic-format-process-name
-                                        :buffer err-buf
-                                        :command (remove "" c)
-                                        :filter #'rustic-compilation-filter
-                                        :sentinel sentinel
-                                        :file-handler t)))
-        (setq next-error-last-buffer buffer)
-        (when string
-          (process-put proc 'command-buf cur-buf)
-          (while (not (process-live-p proc))
-            (sleep-for 0.01))
-          (process-send-string proc (concat string "\n"))
-          (process-send-eof proc))
-        proc))))
+  (rustic--inheritenv
+   (let* ((err-buf (get-buffer-create rustic-format-buffer-name))
+          (inhibit-read-only t)
+          (dir (funcall rustic-compile-directory-method))
+          (buffer (plist-get args :buffer))
+          (string (plist-get args :stdin))
+          (files  (plist-get args :files))
+          (files (if (listp files) files (list files)))
+          (command (or (plist-get args :command)
+                       (rustic-compute-rustfmt-args)))
+          (command (if (listp command) command (list command)))
+          (cur-buf (current-buffer)))
+     (setq rustic-save-pos (set-marker (make-marker) (point) (current-buffer)))
+     (rustic-compilation-setup-buffer err-buf dir 'rustic-format-mode t)
+     (--each files
+       (unless (file-exists-p it)
+         (error (format "File %s does not exist." it))))
+     (with-current-buffer err-buf
+       (let* ((c `(,(rustic-rustfmt-bin)
+                   ,@(split-string rustic-rustfmt-args)
+                   ,@command "--" ,@files))
+              (proc (rustic-make-process :name rustic-format-process-name
+                                         :buffer err-buf
+                                         :command (remove "" c)
+                                         :filter #'rustic-compilation-filter
+                                         :sentinel sentinel
+                                         :file-handler t)))
+         (setq next-error-last-buffer buffer)
+         (when string
+           (process-put proc 'command-buf cur-buf)
+           (while (not (process-live-p proc))
+             (sleep-for 0.01))
+           (process-send-string proc (concat string "\n"))
+           (process-send-eof proc))
+         proc)))))
 
 (defun rustic-compute-rustfmt-args ()
   "Compute the arguments to rustfmt from `rustic-rustfmt-config-alist'."
@@ -198,28 +199,6 @@ and it's `cdr' is a list of arguments."
                 (goto-char (point-min)))))
           (message warnings))))))
 
-(defun rustic-format-macro-sentinel (proc output)
-  "Format buffer and remove decorations that we create for rustfmt"
-  (rustic-format-sentinel proc output)
-  (with-current-buffer next-error-last-buffer
-    (save-excursion
-      (read-only-mode -1)
-      ;; remove fn __main() {
-      (goto-char (point-min))
-      (delete-region (point-min) (line-end-position))
-      (delete-blank-lines)
-      (goto-char (point-max))
-      ;; remove } from fn __main()
-      (forward-line -1)
-      (delete-region (line-beginning-position) (point-max))
-      ;; reindent buffer to left
-      (indent-region (point-min) (point-max))
-      (goto-char (point-max))
-      ;; clean blanked line
-      ;; (delete-blank-lines)
-      (delete-trailing-whitespace (point-min) (point-max)))))
-
-
 (defun rustic-format-file-sentinel (proc output)
   "Sentinel for rustfmt processes when formatting a file."
   (ignore-errors
@@ -228,7 +207,7 @@ and it's `cdr' is a list of arguments."
         (if (string-match-p "^finished" output)
             (and
              (with-current-buffer next-error-last-buffer
-               (revert-buffer t t))
+               (revert-buffer t t t))
              (kill-buffer proc-buffer))
           (sit-for 0.1)
           (with-current-buffer next-error-last-buffer
@@ -275,7 +254,7 @@ and it's `cdr' is a list of arguments."
                           (funcall rustic-list-project-buffers-function))))
             (dolist (b buffers)
               (with-current-buffer b
-                (revert-buffer t t)))))
+                (revert-buffer t t t)))))
         (kill-buffer proc-buffer)
         (message "Workspace formatted with cargo-fmt.")))))
 
@@ -313,7 +292,7 @@ This operation requires a nightly version of rustfmt.
                                ;; turn off mark after region was formatted
                                ;; successfully
                                (setq mark-active nil)
-                               (revert-buffer t t))
+                               (revert-buffer t t t))
                              (kill-buffer proc-buffer))))))
            (command (append (list (rustic-cargo-bin) "+nightly" "fmt" "--")
                             (rustic-compute-rustfmt-file-lines-args file
@@ -337,17 +316,6 @@ This operation requires a nightly version of rustfmt.
     (rustic-format-start-process 'rustic-format-sentinel
                                  :buffer (current-buffer)
                                  :stdin (buffer-string))))
-
-(defun rustic-format-macro-buffer ()
-  "Format the current buffer using rustfmt, and theh remove first and last lines."
-  (interactive)
-  (unless (or (eq major-mode 'rustic-mode)
-              (eq major-mode 'rustic-macro-expansion-mode))
-    (error "Not a rustic-mode buffer."))
-  (rustic-compilation-process-live t)
-  (rustic-format-start-process 'rustic-format-macro-sentinel
-                               :buffer (current-buffer)
-                               :stdin (buffer-string)))
 
 ;;;###autoload
 (defun rustic-format-file (&optional file)
