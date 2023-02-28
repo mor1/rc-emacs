@@ -1,15 +1,15 @@
 ;;; auto-compile.el --- Automatically compile Emacs Lisp libraries  -*- lexical-binding:t -*-
 
-;; Copyright (C) 2008-2022 Jonas Bernoulli
+;; Copyright (C) 2008-2023 Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
-;; Package-Commit: 7c6a942bcb0ed30177841bd8d2f4184e419eb59d
+;; Package-Commit: 4cbd304698a897baf438400c9a2b31d3dfb3a7f9
 
-;; Package-Version: 20221130.1258
+;; Package-Version: 20230117.1612
 ;; Package-X-Original-Version: 1.7.2.50-git
-;; Package-Requires: ((emacs "25.1") (compat "28.1.1.0"))
+;; Package-Requires: ((emacs "25.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -130,7 +130,6 @@
 
 (require 'bytecomp)
 (require 'cl-lib)
-(require 'compat)
 
 (eval-when-compile (require 'subr-x))
 
@@ -491,7 +490,7 @@ multiple files is toggled as follows:
              (auto-compile-source-file-p f))
         (auto-compile-delete-dest (byte-compile-dest-file f)))
        ((and auto-compile-delete-stray-dest
-             (equal (file-name-extension f) "elc")
+             (string-match "\\.elc$" f)
              (not (auto-compile--byte-compile-source-file f t)))
         (auto-compile-delete-dest f))))))
 
@@ -513,12 +512,25 @@ Optionaly that suffix may be followed by one listed in
   (string-match-p (format "\\.el%s\\'" (regexp-opt load-file-rep-suffixes))
                   file))
 
+(cl-eval-when (compile load eval)
+  (if (fboundp 'file-name-with-extension)
+      ;; Added in Emacs 28.1.
+      (defalias 'auto-compile--file-name-with-extension
+        #'file-name-with-extension)
+    (defun auto-compile--file-name-with-extension (filename extension)
+      (let ((extn (string-trim-left extension "[.]")))
+        (cond ((string-empty-p filename)
+               (error "Empty filename"))
+              ((string-empty-p extn)
+               (error "Malformed extension: %s" extension))
+              ((directory-name-p filename)
+               (error "Filename is a directory: %s" filename))
+              (t
+               (concat (file-name-sans-extension filename) "." extn)))))))
+
 (defun auto-compile--byte-compile-source-file (file &optional must-exist)
-  (let ((standard (concat (file-name-sans-extension
-                           (if (fboundp 'byte-compiler-base-file-name)
-                               (byte-compiler-base-file-name file)
-                             (file-name-sans-extension file)))
-                          ".el"))
+  (let ((standard (auto-compile--file-name-with-extension
+                   (byte-compiler-base-file-name file) ".el"))
         (suffixes load-file-rep-suffixes)
         (file nil))
     (while (and (not file) suffixes)
