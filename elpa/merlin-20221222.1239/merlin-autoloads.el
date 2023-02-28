@@ -59,7 +59,7 @@ Merlin: use the custom imenu feature from Merlin" t nil)
 (autoload 'merlin-xref-backend "merlin-xref" "\
 Merlin backend for Xref." nil nil)
 
-(register-definition-prefixes "merlin-xref" '("merlin-xref--line"))
+(register-definition-prefixes "merlin-xref" '("merlin-xref--"))
 
 ;;;***
 
