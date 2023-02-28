@@ -1,4 +1,4 @@
-(define-package "org-gcal" "20221129.1844" "Org sync with Google Calendar"
+(define-package "org-gcal" "20221212.1817" "Org sync with Google Calendar"
   '((aio "1.0")
     (alert "1.2")
     (elnode "20190702.1509")
@@ -7,7 +7,7 @@
     (persist "0.4")
     (request "20190901")
     (request-deferred "20181129"))
-  :commit "3cc48a989ac859a97d25964c28874317a6e1672a" :authors
+  :commit "9bb3720525ad1c45823abab8ce910dd1225e7dcd" :authors
   '(("myuhe <yuhei.maeda_at_gmail.com>"))
   :maintainer
   '("Raimon Grau" . "raimonster@gmail.com")
