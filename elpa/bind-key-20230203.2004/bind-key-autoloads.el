@@ -13,11 +13,12 @@
 Bind KEY-NAME to COMMAND in KEYMAP (`global-map' if not passed).
 
 KEY-NAME may be a vector, in which case it is passed straight to
-`define-key'. Or it may be a string to be interpreted as
-spelled-out keystrokes, e.g., `C-c C-z'. See documentation of
-`edmacro-mode' for details.
+`define-key'.  Or it may be a string to be interpreted as
+spelled-out keystrokes, e.g., \"C-c C-z\".  See the documentation
+of `edmacro-mode' for details.
 
-COMMAND must be an interactive function or lambda form.
+COMMAND must be an interactive function, lambda form, or a cons
+`(STRING . DEFN)'.
 
 KEYMAP, if present, should be a keymap variable or symbol.
 For example:
@@ -77,7 +78,11 @@ function symbol (unquoted).
 \(fn &rest ARGS)" nil t)
 
 (autoload 'bind-keys* "bind-key" "\
+Bind multiple keys at once, in `override-global-map'.
+Accepts the same keyword arguments as `bind-keys' (which see).
 
+This binds keys in such a way that bindings are not overridden by
+other modes.  See `override-global-mode'.
 
 \(fn &rest ARGS)" nil t)
 
