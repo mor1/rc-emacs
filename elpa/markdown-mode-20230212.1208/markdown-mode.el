@@ -7,8 +7,8 @@
 ;; Maintainer: Jason R. Blevins <jblevins@xbeta.org>
 ;; Created: May 24, 2007
 ;; Version: 2.6-alpha
-;; Package-Version: 20221105.236
-;; Package-Commit: c338cdff80012893e64ba62a199281f430db7021
+;; Package-Version: 20230212.1208
+;; Package-Commit: c765b73b370f0fcaaa3cee28b2be69652e2d2c39
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: Markdown, GitHub Flavored Markdown, itex
 ;; URL: https://jblevins.org/projects/markdown-mode/
@@ -277,7 +277,7 @@ cause lag when typing on slower machines."
 
 (defcustom markdown-uri-types
   '("acap" "cid" "data" "dav" "fax" "file" "ftp"
-    "gopher" "http" "https" "imap" "ldap" "mailto"
+    "geo" "gopher" "http" "https" "imap" "ldap" "mailto"
     "mid" "message" "modem" "news" "nfs" "nntp"
     "pop" "prospero" "rtsp" "service" "sip" "tel"
     "telnet" "tip" "urn" "vemmi" "wais")
@@ -6410,7 +6410,7 @@ following section."
       (while (and (not found)
                   (not (bobp))
                   (re-search-backward markdown-regex-header nil 'move))
-        (when (not (markdown-code-block-at-pos (match-beginning 0))))
+        (markdown-code-block-at-pos (match-beginning 0))
         (setq found (match-beginning 0)))
       (setq arg (1- arg)))
     ;; Move forward with negative argument.
@@ -6419,7 +6419,7 @@ following section."
       (while (and (not found)
                   (not (eobp))
                   (re-search-forward markdown-regex-header nil 'move))
-        (when (not (markdown-code-block-at-pos (match-beginning 0))))
+        (markdown-code-block-at-pos (match-beginning 0))
         (setq found (match-beginning 0)))
       (setq arg (1+ arg)))
     (when found
@@ -7543,8 +7543,17 @@ This is the inverse of `markdown-live-preview-buffer'.")
 (defun markdown-live-preview-window-eww (file)
   "Preview FILE with eww.
 To be used with `markdown-live-preview-window-function'."
+  (when (and (bound-and-true-p eww-auto-rename-buffer)
+             markdown-live-preview-buffer)
+    (kill-buffer markdown-live-preview-buffer))
   (eww-open-file file)
-  (get-buffer "*eww*"))
+  ;; #737 if `eww-auto-rename-buffer' is non-nil, the buffer name is not  "*eww*"
+  ;; Try to find the buffer whose name ends with "eww*"
+  (if (bound-and-true-p eww-auto-rename-buffer)
+      (cl-loop for buf in (buffer-list)
+               when (string-match-p "eww\\*\\'" (buffer-name buf))
+               return buf)
+    (get-buffer "*eww*")))
 
 (defun markdown-visual-lines-between-points (beg end)
   (save-excursion
@@ -8598,7 +8607,8 @@ This can be toggled with `markdown-toggle-inline-images'
 or \\[markdown-toggle-inline-images]."
   (interactive)
   (mapc #'delete-overlay markdown-inline-image-overlays)
-  (setq markdown-inline-image-overlays nil))
+  (setq markdown-inline-image-overlays nil)
+  (when (fboundp 'clear-image-cache) (clear-image-cache)))
 
 (defcustom markdown-display-remote-images nil
   "If non-nil, download and display remote images.
@@ -8747,10 +8757,16 @@ mode to use is `tuareg-mode'."
 LANG is a string, and the returned major mode is a symbol."
   (cl-find-if
    'fboundp
-   (list (cdr (assoc lang markdown-code-lang-modes))
-         (cdr (assoc (downcase lang) markdown-code-lang-modes))
-         (intern (concat lang "-mode"))
-         (intern (concat (downcase lang) "-mode")))))
+   (nconc (list (cdr (assoc lang markdown-code-lang-modes))
+                (cdr (assoc (downcase lang) markdown-code-lang-modes)))
+          (and (fboundp 'treesit-language-available-p)
+               (list (and (treesit-language-available-p (intern lang))
+                          (intern (concat lang "-ts-mode")))
+                     (and (treesit-language-available-p (intern (downcase lang)))
+                          (intern (concat (downcase lang) "-ts-mode")))))
+          (list
+           (intern (concat lang "-mode"))
+           (intern (concat (downcase lang) "-mode"))))))
 
 (defun markdown-fontify-code-blocks-generic (matcher last)
   "Add text properties to next code block from point to LAST.
@@ -9188,6 +9204,11 @@ This function assumes point is on a table."
         (push (buffer-substring-no-properties cur (point-max)) ret))
       (nreverse ret))))
 
+(defsubst markdown--is-delimiter-row (line)
+  (and (string-match-p "\\`[ \t]*|[ \t]*[-:]" line)
+       (cl-loop for c across line
+                always (member c '(?| ?- ?: ?\t ? )))))
+
 (defun markdown-table-align ()
   "Align table at point.
 This function assumes point is on a table."
@@ -9200,9 +9221,10 @@ This function assumes point is on a table."
             ;; Store table indent
             (indent (progn (looking-at "[ \t]*") (match-string 0)))
             ;; Split table in lines and save column format specifier
-            (lines (mapcar (lambda (l)
-                             (if (string-match-p "\\`[ \t]*|[ \t]*[-:]" l)
-                                 (progn (setq fmtspec (or fmtspec l)) nil) l))
+            (lines (mapcar (lambda (line)
+                             (if (markdown--is-delimiter-row line)
+                                 (progn (setq fmtspec (or fmtspec line)) nil)
+                               line))
                            (markdown--split-string (buffer-substring begin end) "\n")))
             ;; Split lines in cells
             (cells (mapcar (lambda (l) (markdown--table-line-to-columns l))
