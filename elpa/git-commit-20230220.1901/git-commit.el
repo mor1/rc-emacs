@@ -1,6 +1,6 @@
 ;;; git-commit.el --- Edit Git commit messages  -*- lexical-binding:t; coding:utf-8 -*-
 
-;; Copyright (C) 2008-2022 The Magit Project Contributors
+;; Copyright (C) 2008-2023 The Magit Project Contributors
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;;     Sebastian Wiesner <lunaryorn@gmail.com>
@@ -14,7 +14,7 @@
 ;; Package-Version: 3.3.0.50-git
 ;; Package-Requires: (
 ;;     (emacs "25.1")
-;;     (compat "28.1.1.2")
+;;     (compat "29.1.3.4")
 ;;     (transient "0.3.6")
 ;;     (with-editor "3.0.5"))
 
@@ -117,9 +117,8 @@
 
 ;;; Code:
 
-(require 'seq)
+(require 'compat)
 (require 'subr-x)
-
 (require 'log-edit)
 (require 'ring)
 (require 'rx)
@@ -128,15 +127,15 @@
 (require 'with-editor)
 
 ;; For historic reasons Magit isn't a hard dependency.
-(unless (and (require 'magit-base nil t)
-             (require 'magit-git nil t))
-  (declare-function magit-completing-read "magit-base"
-                    ( prompt collection &optional predicate require-match
-                      initial-input hist def fallback))
-  (declare-function magit-expand-git-file-name "magit-git" (filename))
-  (declare-function magit-git-lines "magit-git" (&rest args))
-  (declare-function magit-hook-custom-get "magit-base" (symbol))
-  (declare-function magit-list-local-branch-names "magit-git" ()))
+(require 'magit-base nil t)
+(require 'magit-git nil t)
+(declare-function magit-completing-read "magit-base"
+                  ( prompt collection &optional predicate require-match
+                    initial-input hist def fallback))
+(declare-function magit-expand-git-file-name "magit-git" (filename))
+(declare-function magit-git-lines "magit-git" (&rest args))
+(declare-function magit-hook-custom-get "magit-base" (symbol))
+(declare-function magit-list-local-branch-names "magit-git" ())
 
 (defvar diff-default-read-only)
 (defvar flyspell-generic-check-word-predicate)
@@ -230,10 +229,10 @@ to edit a commit message.  If a commit is created without the
 user typing a message into a buffer, then this hook is not run.
 
 This hook is not run until the new commit has been created.  If
-doing so takes Git longer than one second, then this hook isn't
-run at all.  For certain commands such as `magit-rebase-continue'
-this hook is never run because doing so would lead to a race
-condition.
+that takes Git longer than `git-commit-post-finish-hook-timeout'
+seconds, then this hook isn't run at all.  For certain commands
+such as `magit-rebase-continue' this hook is never run because
+doing so would lead to a race condition.
 
 This hook is only run if `magit' is available.
 
@@ -241,6 +240,17 @@ Also see `magit-post-commit-hook'."
   :group 'git-commit
   :type 'hook
   :get (and (featurep 'magit-base) #'magit-hook-custom-get))
+
+(defcustom git-commit-post-finish-hook-timeout 1
+  "Time in seconds to wait for git to create a commit.
+
+The hook `git-commit-post-finish-hook' (which see) is run only
+after git is done creating a commit.  If it takes longer than
+`git-commit-post-finish-hook-timeout' seconds to create the
+commit, then the hook is not run at all."
+  :group 'git-commit
+  :safe 'numberp
+  :type 'number)
 
 (defcustom git-commit-finish-query-functions
   '(git-commit-check-style-conventions)
@@ -400,24 +410,22 @@ This is only used if Magit is available."
 
 ;;; Keymap
 
-(defvar git-commit-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "M-p")     #'git-commit-prev-message)
-    (define-key map (kbd "M-n")     #'git-commit-next-message)
-    (define-key map (kbd "C-c M-p") #'git-commit-search-message-backward)
-    (define-key map (kbd "C-c M-n") #'git-commit-search-message-forward)
-    (define-key map (kbd "C-c C-i") #'git-commit-insert-pseudo-header)
-    (define-key map (kbd "C-c C-a") #'git-commit-ack)
-    (define-key map (kbd "C-c M-i") #'git-commit-suggested)
-    (define-key map (kbd "C-c C-m") #'git-commit-modified)
-    (define-key map (kbd "C-c C-o") #'git-commit-cc)
-    (define-key map (kbd "C-c C-p") #'git-commit-reported)
-    (define-key map (kbd "C-c C-r") #'git-commit-review)
-    (define-key map (kbd "C-c C-s") #'git-commit-signoff)
-    (define-key map (kbd "C-c C-t") #'git-commit-test)
-    (define-key map (kbd "C-c M-s") #'git-commit-save-message)
-    map)
-  "Key map used by `git-commit-mode'.")
+(defvar-keymap git-commit-mode-map
+  :doc "Key map used by `git-commit-mode'."
+  "M-p"     #'git-commit-prev-message
+  "M-n"     #'git-commit-next-message
+  "C-c M-p" #'git-commit-search-message-backward
+  "C-c M-n" #'git-commit-search-message-forward
+  "C-c C-i" #'git-commit-insert-pseudo-header
+  "C-c C-a" #'git-commit-ack
+  "C-c M-i" #'git-commit-suggested
+  "C-c C-m" #'git-commit-modified
+  "C-c C-o" #'git-commit-cc
+  "C-c C-p" #'git-commit-reported
+  "C-c C-r" #'git-commit-review
+  "C-c C-s" #'git-commit-signoff
+  "C-c C-t" #'git-commit-test
+  "C-c M-s" #'git-commit-save-message)
 
 ;;; Menu
 
@@ -519,17 +527,6 @@ to recover older messages")
     ;; That library declares this functions without loading
     ;; magit-process.el, which defines it.
     (require 'magit-process nil t))
-  (when git-commit-major-mode
-    (let ((auto-mode-alist (list (cons (concat "\\`"
-                                               (regexp-quote buffer-file-name)
-                                               "\\'")
-                                       git-commit-major-mode)))
-          ;; The major-mode hook might want to consult these minor
-          ;; modes, while the minor-mode hooks might want to consider
-          ;; the major mode.
-          (git-commit-mode t)
-          (with-editor-mode t))
-      (normal-mode t)))
   ;; Pretend that git-commit-mode is a major-mode,
   ;; so that directory-local settings can be used.
   (let ((default-directory
@@ -546,6 +543,17 @@ to recover older messages")
           (major-mode 'git-commit-mode)) ; trick dir-locals-collect-variables
       (hack-dir-local-variables)
       (hack-local-variables-apply)))
+  (when git-commit-major-mode
+    (let ((auto-mode-alist (list (cons (concat "\\`"
+                                               (regexp-quote buffer-file-name)
+                                               "\\'")
+                                       git-commit-major-mode)))
+          ;; The major-mode hook might want to consult these minor
+          ;; modes, while the minor-mode hooks might want to consider
+          ;; the major mode.
+          (git-commit-mode t)
+          (with-editor-mode t))
+      (normal-mode t)))
   ;; Show our own message using our hook.
   (setq with-editor-show-usage nil)
   (setq with-editor-usage-message git-commit-usage-message)
@@ -596,7 +604,8 @@ to recover older messages")
              (fboundp 'magit-rev-parse))
     (cl-block nil
       (let ((break (time-add (current-time)
-                             (seconds-to-time 1))))
+                             (seconds-to-time
+                              git-commit-post-finish-hook-timeout))))
         (while (equal (magit-rev-parse "HEAD") previous)
           (if (time-less-p (current-time) break)
               (sit-for 0.01)
