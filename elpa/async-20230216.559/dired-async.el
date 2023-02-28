@@ -6,7 +6,7 @@
 ;;          Thierry Volpiatto <thievol@posteo.net>
 
 ;; Keywords: dired async network
-;; X-URL: https://github.com/jwiegley/dired-async
+;; X-URL: https://github.com/jwiegley/emacs-async
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -73,13 +73,13 @@ Should take same args as `message'."
 Same device renames and copying and renaming files smaller than
 `dired-async-small-file-max' are considered fast."
   :risky t
-  :type 'bool)
+  :type 'boolean)
 
 (defcustom dired-async-small-file-max 5000000
   "Files smaller than this in bytes are considered fast to copy
 or rename for `dired-async-skip-fast'."
   :risky t
-  :type 'int)
+  :type 'integer)
 
 (defface dired-async-message
     '((t (:foreground "yellow")))
