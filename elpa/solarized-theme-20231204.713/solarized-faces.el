@@ -46,7 +46,7 @@
                                 :foreground ,s-header-line-fg
                                 :background ,s-header-line-bg
                                 :box (:line-width 2 :color ,s-header-line-bg
-                                                  :style unspecified)))))
+                                                  :style nil)))))
      `(highlight ((,class (:background ,base02))))
      `(lazy-highlight ((,class (:foreground ,base03 :background ,yellow
                                             :weight normal))))
@@ -63,7 +63,7 @@
                                 :foreground ,s-mode-line-fg
                                 :background ,s-mode-line-bg
                                 :box (:line-width 1 :color ,s-mode-line-bg
-                                                  :style unspecified)))))
+                                                  :style nil)))))
      `(mode-line-buffer-id ((,class (:foreground ,s-mode-line-buffer-id-fg :weight bold))))
      `(mode-line-inactive
        ((,class (:inverse-video unspecified
@@ -72,7 +72,7 @@
                                 :foreground ,s-mode-line-inactive-fg
                                 :background ,s-mode-line-inactive-bg
                                 :box (:line-width 1 :color ,s-mode-line-inactive-bg
-                                                  :style unspecified)))))
+                                                  :style nil)))))
      `(region
        ((,class (,@(and (>= emacs-major-version 27) '(:extend t))
                  :foreground ,base03
@@ -260,7 +260,6 @@
      `(spaceline-all-the-icons-info-face ((,class (:foreground ,blue))))
      `(spaceline-all-the-icons-sunrise-face ((,class (:foreground ,yellow))))
      `(spaceline-all-the-icons-sunrise-face ((,class (:foreground ,orange))))
-     `(all-the-icons-dired-dir-face ((,class (:foreground ,base0))))
      `(all-the-icons-red ((,class (:foreground ,red))))
      `(all-the-icons-lred ((,class (:foreground ,red-lc))))
      `(all-the-icons-dred ((,class (:foreground ,red-hc))))
@@ -433,6 +432,11 @@
      `(company-tooltip-search ((,class (:foreground ,magenta))))
      `(company-tooltip-search-selection ((,class (:foreground ,magenta :weight bold))))
      `(company-tooltip-selection ((,class (:weight bold))))
+;;;;; corfu
+     `(corfu-default ((,class (:foreground ,base1 :background ,base02))))
+     `(corfu-current ((,class (:inherit corfu-default :weight bold :inverse-video t))))
+     `(corfu-bar ((,class (:background ,base0))))
+     `(corfu-border ((,class (:background ,base02))))
 ;;;;; consult
      `(consult-preview-insertion ((,class (:background ,base02))))
      `(consult-preview-line ((,class (:background ,base02))))
@@ -1051,10 +1055,10 @@
      `(ledger-font-reconciler-pending-face ((t (:foreground ,yellow :weight normal))))
      `(ledger-font-report-clickable-face ((t (:foreground ,yellow :weight normal))))
 ;;;;; linum-mode
-     `(linum ((,class (:weight thin :underline nil :foreground ,s-fringe-fg :background ,s-fringe-bg))))
+     `(linum ((,class (:weight extra-light :underline nil :foreground ,s-fringe-fg :background ,s-fringe-bg))))
      `(linum-relative-current-face ((,class (:inherit linum))))
 ;;;;; display-line-number-mode
-     `(line-number ((,class (:weight thin :underline nil :foreground ,s-fringe-fg :background ,s-fringe-bg))))
+     `(line-number ((,class (:weight extra-light :underline nil :foreground ,s-fringe-fg :background ,s-fringe-bg))))
      `(line-number-minor-tick ((,class (:inherit line-number :weight normal))))
      `(line-number-major-tick ((,class (:inherit line-number-minor-tick :weight bold))))
      `(line-number-current-line ((,class (:inherit line-number :background ,base03 :foreground ,base0))))
@@ -1823,9 +1827,9 @@
      `(term-color-cyan ((t (:foreground ,cyan :background ,cyan))))
      `(term-color-white ((t (:foreground ,base2 :background ,base2))))
 ;;;;; terraform-mode
-     `(terraform--resource-name-face ((,class (:foreground ,green))))
-     `(terraform--resource-type-face ((,class (:foreground ,yellow))))
-
+     `(terraform-resource-name-face ((,class (:foreground ,green))))
+     `(terraform-resource-type-face ((,class (:foreground ,yellow))))
+     `(terraform-builtin-face ((,class (:inherit font-lock-builtin-face))))
 ;;;;; todotxt
      `(todotxt-priority-a-face ((,class (:foreground ,orange))))
      `(todotxt-priority-b-face ((,class (:foreground ,yellow))))
