@@ -4,10 +4,10 @@
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Homepage: https://github.com/purcell/unfill
-;; Package-Version: 20210106.222
+;; Package-Version: 20230227.1349
 ;; Package-X-Original-Version: 0
 ;; Package-Requires: ((emacs "24.1"))
-;; Package-Commit: 8375d87ec184fbe964189e2f9b7263cdb1396694
+;; Package-Commit: 075052ce0b4451d7d3ede013ce5a77e6a7a92360
 ;; Keywords: convenience
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -56,7 +56,8 @@ This command does the inverse of `fill-region'."
 
 ;;;###autoload
 (defun unfill-toggle ()
-  "Toggle filling/unfilling of the current region, or current paragraph if no region active."
+  "Toggle filling/unfilling of the current region.
+Operates on the current paragraph if no region is active."
   (interactive)
   (let (deactivate-mark
         (fill-column

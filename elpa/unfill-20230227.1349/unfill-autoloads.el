@@ -1,4 +1,4 @@
-;;; unfill-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
+;;; unfill-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
 
@@ -20,7 +20,8 @@ This command does the inverse of `fill-region'.
 \(fn START END)" t nil)
 
 (autoload 'unfill-toggle "unfill" "\
-Toggle filling/unfilling of the current region, or current paragraph if no region active." t nil)
+Toggle filling/unfilling of the current region.
+Operates on the current paragraph if no region is active." t nil)
 
 (define-obsolete-function-alias 'toggle-fill-unfill 'unfill-toggle "0.2")
 
