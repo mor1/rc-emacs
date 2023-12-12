@@ -17,12 +17,13 @@
 
 ;;; Commentary:
 
-;; This file provides *internal* macros, which are used by Compat to
-;; facilitate the definition of compatibility functions, macros and
-;; variables.  The `compat-macs' feature should never be loaded at
-;; runtime in your Emacs and will only be used during byte
-;; compilation.  Every definition provided here should be considered
-;; internal and may change any time between Compat releases.
+;; WARNING: This file provides *internal* macros.  The macros are used
+;; by Compat to facilitate the definition of compatibility functions,
+;; compatibility macros and compatibility variables.  The
+;; `compat-macs' feature should never be loaded at runtime in your
+;; Emacs and will only be used during byte compilation.  Every
+;; definition provided here is internal, may change any time between
+;; Compat releases and must not be used by other packages.
 
 ;;; Code:
 
@@ -110,10 +111,9 @@ REST are attributes and the function BODY."
       ;; Remove unsupported declares.  It might be possible to set these
       ;; properties otherwise.  That should be looked into and implemented
       ;; if it is the case.
-      (when (and (listp (car-safe body)) (eq (caar body) 'declare))
-        (when (<= emacs-major-version 25)
-          (delq (assq 'side-effect-free (car body)) (car body))
-          (delq (assq 'pure (car body)) (car body))))
+      (when (and (listp (car-safe body)) (eq (caar body) 'declare) (<= emacs-major-version 25))
+        (setcar body (assq-delete-all 'pure (assq-delete-all
+                                             'side-effect-free (car body)))))
       ;; Use `:extended' name if the function is already defined.
       (let* ((defname (if (and extended (fboundp name))
                           (intern (format "compat--%s" name))

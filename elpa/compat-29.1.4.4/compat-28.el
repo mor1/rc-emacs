@@ -21,16 +21,20 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'compat-macs))
+(eval-when-compile (load "compat-macs.el" nil t t))
 (compat-require compat-27 "27.1")
 
 (compat-version "28.1")
+
+;;;; Defined in comp.c
+
+(compat-defalias native-comp-available-p ignore) ;; <compat-tests:native-comp-available-p>
 
 ;;;; Defined in fns.c
 
 ;; FIXME Should handle multibyte regular expressions
 (compat-defun string-search (needle haystack &optional start-pos) ;; <compat-tests:string-search>
-  "Search for the string NEEDLE in the strign HAYSTACK.
+  "Search for the string NEEDLE in the string HAYSTACK.
 
 The return value is the position of the first occurrence of
 NEEDLE in HAYSTACK, or nil if no match was found.
@@ -48,9 +52,8 @@ issues are inherited."
   (when (and start-pos (or (< (length haystack) start-pos)
                            (< start-pos 0)))
     (signal 'args-out-of-range (list start-pos)))
-  (save-match-data
-    (let ((case-fold-search nil))
-      (string-match (regexp-quote needle) haystack start-pos))))
+  (let (case-fold-search)
+    (string-match-p (regexp-quote needle) haystack start-pos)))
 
 (compat-defun length= (sequence length) ;; [[compat-tests:length=]]
   "Returns non-nil if SEQUENCE has a length equal to LENGTH."
@@ -62,7 +65,7 @@ issues are inherited."
          t))
    ((arrayp sequence)
     (= (length sequence) length))
-   ((signal 'wrong-type-argument sequence))))
+   (t (signal 'wrong-type-argument (list 'sequencep sequence)))))
 
 (compat-defun length< (sequence length) ;; [[compat-tests:length<]]
   "Returns non-nil if SEQUENCE is shorter than LENGTH."
@@ -72,7 +75,7 @@ issues are inherited."
     (null (nthcdr (1- length) sequence)))
    ((arrayp sequence)
     (< (length sequence) length))
-   ((signal 'wrong-type-argument sequence))))
+   (t (signal 'wrong-type-argument (list 'sequencep sequence)))))
 
 (compat-defun length> (sequence length) ;; [[compat-tests:length>]]
   "Returns non-nil if SEQUENCE is longer than LENGTH."
@@ -81,7 +84,7 @@ issues are inherited."
     (and (nthcdr length sequence) t))
    ((arrayp sequence)
     (> (length sequence) length))
-   ((signal 'wrong-type-argument sequence))))
+   (t (signal 'wrong-type-argument (list 'sequencep sequence)))))
 
 ;;;; Defined in fileio.c
 
@@ -132,7 +135,7 @@ inserted before contatenating."
       (setf (nthcdr count files) nil))
     files))
 
-(compat-defun directory-files-and-attributes (directory &optional full match nosort id-format count) ;; <compat-tests:directory-files-and-attributs>
+(compat-defun directory-files-and-attributes (directory &optional full match nosort id-format count) ;; <compat-tests:directory-files-and-attributes>
   "Handle additional optional argument COUNT."
   :extended t
   (let ((files (directory-files-and-attributes directory full match nosort id-format)))
@@ -221,9 +224,11 @@ and BLUE, is normalized to have its value in [0,65535]."
 (compat-defun make-separator-line (&optional length) ;; <compat-tests:make-separator-line>
   "Make a string appropriate for usage as a visual separator line.
 If LENGTH is nil, use the window width."
-    (concat (propertize (make-string (or length (1- (window-width))) ?-)
-                        'face 'separator-line)
-            "\n"))
+  (if (display-graphic-p)
+      (if length
+          (concat (propertize (make-string length ?\s) 'face '(:underline t)) "\n")
+        (propertize "\n" 'face '(:extend t :height 0.1 :inverse-video t)))
+    (concat (make-string (or length (1- (window-width))) ?-) "\n")))
 
 ;;;; Defined in subr.el
 
@@ -349,11 +354,10 @@ REPLACEMENT can use the following special elements:
 (compat-defun buffer-local-boundp (symbol buffer) ;; <compat-tests:buffer-local-boundp>
   "Return non-nil if SYMBOL is bound in BUFFER.
 Also see `local-variable-p'."
-  (catch 'fail
-    (condition-case nil
-        (buffer-local-value symbol buffer)
-      (void-variable nil (throw 'fail nil)))
-    t))
+  (condition-case nil
+      (progn (buffer-local-value symbol buffer)
+             t)
+    (void-variable nil)))
 
 (compat-defmacro with-existing-directory (&rest body) ;; <compat-tests:with-existing-directory>
   "Execute BODY with `default-directory' bound to an existing directory.
@@ -832,6 +836,17 @@ function will never return nil."
 
 ;; Obsolete Alias since 29
 (compat-defalias button-buttonize buttonize :obsolete t) ;; <compat-tests:button-buttonize>
+
+;;;; Defined in wid-edit.el
+
+(compat-guard t ;; <compat-tests:widget-natnum>
+  :feature wid-edit
+  (define-widget 'natnum 'restricted-sexp
+    "A nonnegative integer."
+    :tag "Integer (positive)"
+    :value 0
+    :type-error "This field should contain a nonnegative integer"
+    :match-alternatives '(natnump)))
 
 (provide 'compat-28)
 ;;; compat-28.el ends here

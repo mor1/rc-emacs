@@ -21,7 +21,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'compat-macs))
+(eval-when-compile (load "compat-macs.el" nil t t))
 
 (compat-version "25.1")
 
@@ -55,7 +55,7 @@ usage: (bool-vector &rest OBJECTS)"
         (aset seq i (car p))
         (setq i (1+ i) p (cdr p)))
       (apply #'vector list)))
-   ((signal 'wrong-type-argument 'list-or-vector-p))))
+   (t (signal 'wrong-type-argument (list 'list-or-vector-p seq)))))
 
 ;;;; Defined in editfns.c
 
