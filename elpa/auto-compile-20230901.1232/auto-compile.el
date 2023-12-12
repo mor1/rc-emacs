@@ -5,10 +5,8 @@
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
-;; Package-Commit: 4cbd304698a897baf438400c9a2b31d3dfb3a7f9
 
-;; Package-Version: 20230117.1612
-;; Package-X-Original-Version: 1.7.2.50-git
+;; Package-Version: 1.8.2
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -77,7 +75,7 @@
 ;;     (auto-compile-on-save-mode)
 
 ;; You might want to set the file-local value of `no-byte-compile' to
-;; t, e.g. by adding "-*- no-byte-compile: t -*-" (without the quotes)
+;; t, e.g., by adding "-*- no-byte-compile: t -*-" (without the quotes)
 ;; at the end of the very first line.  That way all user files benefit
 ;; from the protection offered by `load-prefer-newer' and the modes
 ;; that are defined here, otherwise `init.el' is the only exception.
@@ -103,14 +101,14 @@
 ;; only ever _update_ byte code files, toggling automatic compilation
 ;; is done simply by either creating the byte code file or by removing
 ;; it.  `toggle-auto-compile' can also toggle automatic compilation of
-;; multiple files at once; see its doc-string for more information.
+;; multiple files at once; see its docstring for more information.
 
 ;; Customization
 ;; -------------
 
 ;; Constantly having the *Compile-Log* buffer pop up when a file is
 ;; being saved can quickly become annoying.  Obviously the first thing
-;; you should do to about that is to actually fix outstanding issues.
+;; you should do about that is to actually fix outstanding issues.
 
 ;; Once you have done that you might also want to keep that buffer
 ;; from being automatically displayed and instead only show the number
@@ -123,7 +121,7 @@
 ;; on the counter in the mode-line.
 
 ;; Using `auto-compile-inhibit-compile-hook' it is possible to inhibit
-;; automatic compilation under certain circumstances; e.g. when HEAD
+;; automatic compilation under certain circumstances; e.g., when HEAD
 ;; is detached inside a Git repository (useful during rebase sessions).
 
 ;;; Code:
@@ -133,12 +131,6 @@
 
 (eval-when-compile (require 'subr-x))
 
-(declare-function autoload-rubric "autoload")
-(declare-function autoload-find-destination "autoload")
-(declare-function autoload-file-load-name "autoload")
-(declare-function autoload-generate-file-autoloads "autoload")
-
-(defvar autoload-modified-buffers)
 (defvar warning-minimum-level)
 
 (defvar auto-compile-use-mode-line)
@@ -278,12 +270,12 @@ non-nil."
 
 (defun auto-compile--tree-member (elt tree)
   ;; Also known as keycast--tree-member.
-  (or (member elt tree)
-      (catch 'found
-        (dolist (sub tree)
-          (when-let ((found (and (listp sub)
-                                 (auto-compile--tree-member elt sub))))
-            (throw 'found found))))))
+  (and (listp tree)
+       (or (member elt tree)
+           (catch 'found
+             (dolist (sub tree)
+               (when-let ((found (auto-compile--tree-member elt sub)))
+                 (throw 'found found)))))))
 
 (defun auto-compile-modify-mode-line (after)
   (let ((format (default-value 'mode-line-format)))
@@ -381,7 +373,7 @@ When this is non-nil and saving a source buffer causes the file
 to be created (as opposed to being overwritten) while its byte
 code file already exists (because the source already existed and
 was compiled in the past), then remove the latter (instead of
-updating it by recompiling the source).  This can e.g. happen
+updating it by recompiling the source).  This can e.g., happen
 when switching git branches."
   :group 'auto-compile
   :type 'boolean)
@@ -389,7 +381,7 @@ when switching git branches."
 ;;; Toggle and Perform Compilation
 
 ;;;###autoload
-(defun toggle-auto-compile (file action)
+(defun toggle-auto-compile (file action &optional interactive)
   "Toggle automatic compilation of an Emacs Lisp source file or files.
 
 Read a file or directory name from the minibuffer defaulting to
@@ -434,7 +426,9 @@ multiple files is toggled as follows:
   up-to-date.  Do so even for non-library source files.
 
 * Compile libraries in subdirectories, except for files in hidden
-  directories and directories containing a file named \".nosearch\"."
+  directories and directories containing a file named \".nosearch\".
+
+\(fn FILE ACTION)"
   (interactive
    (let* ((file (and (eq major-mode 'emacs-lisp-mode)
                      (buffer-file-name)))
@@ -459,12 +453,12 @@ multiple files is toggled as follows:
                            (and file (file-name-directory file))
                            nil t
                            (and file (file-name-nondirectory file)))
-           action)))
+           action t)))
   (if (file-regular-p file)
       (pcase action
         ('start (auto-compile-byte-compile file t))
         ('quit  (auto-compile-delete-dest (byte-compile-dest-file file))))
-    (when (called-interactively-p 'any)
+    (when interactive
       (let ((buffer (get-buffer byte-compile-log-buffer)))
         (when (buffer-live-p buffer)
           (kill-buffer buffer))))
@@ -507,7 +501,7 @@ multiple files is toggled as follows:
 
 (defun auto-compile-source-file-p (file)
   "Return non-nil if FILE ends with the suffix \".el\".
-Optionaly that suffix may be followed by one listed in
+Optionally that suffix may be followed by one listed in
 `load-file-rep-suffixes'."
   (string-match-p (format "\\.el%s\\'" (regexp-opt load-file-rep-suffixes))
                   file))
