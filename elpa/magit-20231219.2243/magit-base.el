@@ -54,7 +54,7 @@
 
 (require 'magit-section)
 
-(eval-when-compile (require 'ido))
+(eval-when-compile (require 'info))
 (declare-function Info-get-token "info" (pos start all &optional errorstring))
 
 (eval-when-compile (require 'vc-git))
@@ -1267,6 +1267,17 @@ Like `message', except that `message-log-max' is bound to nil."
                 (char-to-string ellipsis)
               ellipsis)))
       (user-error "Variable magit-ellipsis is invalid"))))
+
+(defun magit--ext-regexp-quote (str)
+  "Like `reqexp-quote', but for Extended Regular Expressions."
+  (let ((special (string-to-list "[*.\\?+^$({"))
+        (quoted nil))
+    (mapc (lambda (c)
+            (when (memq c special)
+              (push ?\\ quoted))
+            (push c quoted))
+          str)
+    (concat (nreverse quoted))))
 
 ;;; _
 (provide 'magit-base)
