@@ -1,6 +1,6 @@
 ;;; company.el --- Modular text completion framework  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2009-2023  Free Software Foundation, Inc.
+;; Copyright (C) 2009-2024  Free Software Foundation, Inc.
 
 ;; Author: Nikolaj Schumacher
 ;; Maintainer: Dmitry Gutov <dmitry@gutov.dev>
@@ -691,7 +691,9 @@ treated as if it was on this list."
 (defcustom company-continue-commands '(not save-buffer save-some-buffers
                                            save-buffers-kill-terminal
                                            save-buffers-kill-emacs
-                                           completion-at-point)
+                                           completion-at-point
+                                           complete-symbol
+                                           completion-help-at-point)
   "A list of commands that are allowed during completion.
 If this is t, or if `company-begin-commands' is t, any command is allowed.
 Otherwise, the value must be a list of symbols.  If it starts with `not',
@@ -1106,7 +1108,7 @@ Matching is limited to the current line."
 (defun company-grab-symbol ()
   "If point is at the end of a symbol, return it.
 Otherwise, if point is not inside a symbol, return an empty string."
-  (if (looking-at "\\_>")
+  (if (looking-at-p "\\_>")
       (buffer-substring (point) (save-excursion (skip-syntax-backward "w_")
                                                 (point)))
     (unless (and (char-after) (memq (char-syntax (char-after)) '(?w ?_)))
@@ -1115,7 +1117,7 @@ Otherwise, if point is not inside a symbol, return an empty string."
 (defun company-grab-word ()
   "If point is at the end of a word, return it.
 Otherwise, if point is not inside a symbol, return an empty string."
-  (if (looking-at "\\>")
+  (if (looking-at-p "\\>")
       (buffer-substring (point) (save-excursion (skip-syntax-backward "w")
                                                 (point)))
     (unless (and (char-after) (eq (char-syntax (char-after)) ?w))
@@ -1311,9 +1313,8 @@ be recomputed when this value changes."
            ((and prefix-len
                  (not (eq len t))
                  (equal str (company--prefix-str prefix))
-                 (or (null len)
-                     (eq prefix-len t)
-                     (> prefix-len len)))
+                 (or (eq prefix-len t)
+                     (> prefix-len (or len (length str)))))
             (setq len prefix-len))))))
     (if (and str len)
         (cons str len)
@@ -2186,7 +2187,8 @@ For more details see `company-insertion-on-trigger' and
       (if company-abort-manual-when-too-short
           ;; Must not be less than minimum or initial length.
           (min company-minimum-prefix-length
-               (length company--manual-prefix))
+               (or (cdr-safe company--manual-prefix)
+                   (length company--manual-prefix)))
         0)
     company-minimum-prefix-length))
 
@@ -3480,7 +3482,9 @@ If SHOW-VERSION is non-nil, show the version in the echo area."
                ;; We shouldn't get any of these, but sometimes we might.
                ;; The official "replacement character" is not supported by some fonts.
                ;;"\ufffd"
-               "?"
+               (if (equal match "\n")
+                   (propertize "\\\\n" 'face 'font-lock-escape-face)
+                 "?")
                )
               ((match-beginning 2)
                ;; Zero-width non-breakable space.
