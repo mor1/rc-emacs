@@ -1,6 +1,6 @@
 ;;; git-commit.el --- Edit Git commit messages  -*- lexical-binding:t; coding:utf-8 -*-
 
-;; Copyright (C) 2008-2023 The Magit Project Contributors
+;; Copyright (C) 2008-2024 The Magit Project Contributors
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;;     Sebastian Wiesner <lunaryorn@gmail.com>
@@ -141,6 +141,11 @@
 (defvar font-lock-beg)
 (defvar font-lock-end)
 (defvar recentf-exclude)
+
+(define-obsolete-variable-alias
+  'git-commit-known-pseudo-headers
+  'git-commit-trailers
+  "git-commit 4.0.0")
 
 ;;; Options
 ;;;; Variables
@@ -670,16 +675,21 @@ turning on `orglink-mode'."
 
 (defun git-commit-turn-on-flyspell ()
   "Unconditionally turn on Flyspell mode.
-Also prevent comments from being checked and
-finally check current non-comment text."
+Also check text that is already in the buffer, while avoiding to check
+most text that Git will strip from the final message, such as the last
+comment and anything below the cut line (\"--- >8 ---\")."
   (require 'flyspell)
   (turn-on-flyspell)
   (setq flyspell-generic-check-word-predicate
         #'git-commit-flyspell-verify)
-  (let ((end)
+  (let ((end nil)
+        ;; The "cut line" is defined in "git/wt-status.c".  It appears
+        ;; in the commit message when `commit.verbose' is set to true.
+        (cut-line-regex (format "^%s -\\{8,\\} >8 -\\{8,\\}$" comment-start))
         (comment-start-regex (format "^\\(%s\\|$\\)" comment-start)))
     (save-excursion
-      (goto-char (point-max))
+      (goto-char (or (re-search-forward cut-line-regex nil t)
+                     (point-max)))
       (while (and (not (bobp)) (looking-at comment-start-regex))
         (forward-line -1))
       (unless (looking-at comment-start-regex)
@@ -1230,10 +1240,6 @@ Elisp doc-strings, including this one.  Unlike in doc-strings,
 (define-obsolete-function-alias
   'git-commit-insert-header
   'git-commit--insert-ident-trailer
-  "git-commit 4.0.0")
-(define-obsolete-variable-alias
-  'git-commit-known-pseudo-headers
-  'git-commit-trailer
   "git-commit 4.0.0")
 (define-obsolete-face-alias
  'git-commit-pseudo-header
