@@ -1,16 +1,14 @@
 ;;; visual-fill-column.el --- fill-column for visual-line-mode  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2015-2023 Joost Kremers
+;; Copyright (C) 2015-2024 Joost Kremers
 ;; Copyright (C) 2016 Martin Rudalics
 ;; All rights reserved.
 
 ;; Author: Joost Kremers <joostkremers@fastmail.fm>
 ;; Maintainer: Joost Kremers <joostkremers@fastmail.fm>
 ;; URL: https://codeberg.org/joostkremers/visual-fill-column
-;; Package-Version: 20230102.1830
-;; Package-Commit: 695a59789209c42fa08a5bce92963ee32f4455be
 ;; Created: 2015
-;; Version: 2.5.1
+;; Version: 2.6.0
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -44,7 +42,7 @@
 
 ;;; Code:
 
-(defgroup visual-fill-column nil "Wrap lines according to `fill-column' in `visual-line-mode'."
+(defgroup visual-fill-column nil "Wrap lines according to `fill-column'."
   :group 'text
   :prefix "visual-fill-column-")
 
@@ -145,7 +143,13 @@ the text scale factor, so that the text is wrapped at
 
 ;;;###autoload
 (define-minor-mode visual-fill-column-mode
-  "Wrap lines according to `fill-column' in `visual-line-mode'."
+  "Soft-wrap lines according to `fill-column'.
+This minor mode narrows the text area.  Its primary use is in
+conjunction with `visual-line-mode', to enable soft word-wrapping
+of long lines, but it can also be used in other contexts, e.g.,
+to center the text in a window.  To activate it together with
+`visual-line-mode', it is usually best to use
+`visual-line-fill-column-mode'."
   :init-value nil :lighter nil :global nil
   (if visual-fill-column-mode
       (visual-fill-column-mode--enable)
@@ -156,10 +160,22 @@ the text scale factor, so that the text is wrapped at
   :require 'visual-fill-column-mode
   :group 'visual-fill-column)
 
+;;;###autoload
+(define-minor-mode visual-line-fill-column-mode
+  "Enable `visual-line-mode' and soft-wrap lines according to `fill-column'.
+Use this mode to activate and deactivate `visual-line-mode' and
+`visual-fill-column-mode' in conjunction."
+  :init-value nil :lighter nil :global nil
+  (cond (visual-line-fill-column-mode
+	 (visual-fill-column-mode 1)
+	 (visual-line-mode 1))
+	(t
+	 (visual-fill-column-mode -1)
+	 (visual-line-mode -1))))
+
 (defun turn-on-visual-fill-column-mode ()
   "Turn on `visual-fill-column-mode'.
 Note that `visual-fill-column-mode' is only turned on in buffers
-in which Visual Line mode is active as well, and only in buffers
 that actually visit a file."
   (when buffer-file-name
     (visual-fill-column-mode 1)))
