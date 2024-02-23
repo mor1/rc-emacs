@@ -1,7 +1,7 @@
-(define-package "yasnippet" "20230914.1400" "Yet another snippet extension for Emacs"
+(define-package "yasnippet" "20240215.1909" "Yet another snippet extension for Emacs"
   '((cl-lib "0.5")
     (emacs "24.4"))
-  :commit "52a1c5031912243c791c55e0fe345d04f219b507" :maintainers
+  :commit "1ec7e3b6f79de076133f16da61e3d99f16668048" :maintainers
   '(("Noam Postavsky" . "npostavs@gmail.com"))
   :maintainer
   '("Noam Postavsky" . "npostavs@gmail.com")
