@@ -6,8 +6,6 @@
 ;; Author: Ryan C. Thompson <rct@thompsonclan.org>
 ;; Created: Sat Apr  4 13:41:20 2015 (-0700)
 ;; Version: 4.14
-;; Package-Version: 20210529.1318
-;; Package-Commit: 00674721e4fce283c918f7316f1158da1d469910
 ;; Package-Requires: ((emacs "24.4") (seq "0.5") (memoize "1.1"))
 ;; URL: https://github.com/DarwinAwardWinner/ido-completing-read-plus
 ;; Keywords: ido, completion, convenience
@@ -778,10 +776,19 @@ See `completing-read' for the meaning of the arguments."
                     ;; Reset this for recursive calls to ido-cr+
                     (ido-cr+-assume-static-collection nil))
                 (unwind-protect
-                    (ido-completing-read
-                     prompt collection
-                     predicate require-match initial-input hist def
-                     inherit-input-method)
+                    (let ((return-value
+                           (ido-completing-read
+                            prompt collection
+                            predicate require-match initial-input hist def
+                            inherit-input-method)))
+                      ;; Functions like `read-from-kill-ring' add
+                      ;; display properties for things like ellipses,
+                      ;; which need to be removed. (Somehow
+                      ;; `completing-read-default' removes these
+                      ;; properties from its return value, though I
+                      ;; don't understand how.)
+                      (remove-text-properties 0 (length return-value) '(display) return-value)
+                      return-value)
                   (when ido-cr+-dynamic-update-timer
                     (cancel-timer ido-cr+-dynamic-update-timer)
                     (setq ido-cr+-dynamic-update-timer nil))))
