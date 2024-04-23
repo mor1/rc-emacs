@@ -1,6 +1,6 @@
-(define-package "visual-fill-column" "20240222.1517" "fill-column for visual-line-mode"
+(define-package "visual-fill-column" "20240411.656" "fill-column for visual-line-mode"
   '((emacs "25.1"))
-  :commit "57a72c9101ca21b61dadbc13d661416384ec22ea" :authors
+  :commit "e04d3521b6dc2435de4c4a4b9cac5feb194f0d5b" :authors
   '(("Joost Kremers" . "joostkremers@fastmail.fm"))
   :maintainers
   '(("Joost Kremers" . "joostkremers@fastmail.fm"))

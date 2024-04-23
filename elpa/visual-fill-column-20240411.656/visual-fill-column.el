@@ -8,7 +8,7 @@
 ;; Maintainer: Joost Kremers <joostkremers@fastmail.fm>
 ;; URL: https://codeberg.org/joostkremers/visual-fill-column
 ;; Created: 2015
-;; Version: 2.6.0
+;; Version: 2.6.3
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -198,8 +198,7 @@ that actually visit a file."
    ((= emacs-major-version 27)
     (add-hook 'window-size-change-functions #'visual-fill-column--adjust-window 'append 'local)
     (setq visual-fill-column--use-split-window-parameter t))
-
-   ((< 27 emacs-major-version)
+   ((> emacs-major-version 27)
     (add-hook 'window-state-change-functions #'visual-fill-column--adjust-window 'append 'local)
     (setq visual-fill-column--use-min-margins t)))
 
@@ -215,11 +214,10 @@ that actually visit a file."
       (remove-hook 'window-size-change-functions #'visual-fill-column--adjust-frame))
      ((= emacs-major-version 27)
       (remove-hook 'window-size-change-functions #'visual-fill-column--adjust-window 'local))
-
-     ((< 27 emacs-major-version)
+     ((> emacs-major-version 27)
       (remove-hook 'window-state-change-functions #'visual-fill-column--adjust-window 'local)
-      (set-window-margins window 0 0)
       (set-window-parameter window 'min-margins nil)))
+    (set-window-margins window 0 0)
     (set-window-fringes window nil)))
 
 (defun visual-fill-column-split-window (&optional window size side)
@@ -318,10 +316,14 @@ and `text-scale-mode-step'."
                     (with-current-buffer buffer
                       (expt text-scale-mode-step
                             text-scale-mode-amount))
-                  1.0)))
-    (truncate (/ (+ (window-width window)
-                    (or (car margins) 0)
-                    (or (cdr margins) 0))
+                  1.0))
+         (remap-scale
+          (if (>= emacs-major-version 29)
+              (/ (window-width window 'remap) (float (window-width window)))
+            1.0)))
+    (truncate (/ (+ (window-width window (and (>= emacs-major-version 29) 'remap))
+                    (* (or (car margins) 0) remap-scale)
+                    (* (or (cdr margins) 0) remap-scale))
                  (float scale)))))
 
 (defun visual-fill-column--add-extra-width (left right add-width)
@@ -336,11 +338,15 @@ cell of the new margins, which will never be less than zero."
   "Set window margins for WINDOW."
   ;; Calculate left & right margins.
   (let* ((total-width (visual-fill-column--window-max-text-width window))
+         (remap-scale
+          (if (>= emacs-major-version 29)
+              (/ (window-width window 'remap) (float (window-width window)))
+            1.0))
          (width (or visual-fill-column-width
                     fill-column))
          (margins (if (< (- total-width width) 0) ; margins must be >= 0
                       0
-                    (- total-width width)))
+                    (round (/ (- total-width width) remap-scale))))
          (left (if visual-fill-column-center-text
                    (/ margins 2)
                  0))
