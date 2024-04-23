@@ -2,12 +2,12 @@
 
 ;; Copyright (C) 2008-2024 Jonas Bernoulli
 
-;; Author: Jonas Bernoulli <jonas@bernoul.li>
+;; Author: Jonas Bernoulli <emacs.auto-compile@jonas.bernoulli.dev>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
 
-;; Package-Version: 1.8.2
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Version: 2.0.0
+;; Package-Requires: ((emacs "26.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -154,13 +154,14 @@ not exist do nothing.  Therefore to disable automatic compilation
 remove the byte code file.  See command `toggle-auto-compile' for
 a convenient way to do so.
 
-This mode should be enabled globally, using it's globalized
+This mode should be enabled globally, using its globalized
 variant `auto-compile-on-save-mode'.  Also see the related
 `auto-compile-on-load-mode'."
   :lighter auto-compile-mode-lighter
   :group 'auto-compile
   (unless (derived-mode-p 'emacs-lisp-mode)
-    (user-error "This mode only makes sense with emacs-lisp-mode"))
+    (setq auto-compile-mode nil)
+    (user-error "`auto-compile-mode' only makes sense in `emacs-lisp-mode'"))
   (if auto-compile-mode
       (add-hook  'after-save-hook #'auto-compile-byte-compile nil t)
     (remove-hook 'after-save-hook #'auto-compile-byte-compile t)))
@@ -268,20 +269,25 @@ non-nil."
   :group 'auto-compile
   :type 'boolean)
 
-(defun auto-compile--tree-member (elt tree)
+(defun auto-compile--tree-member (elt tree &optional delete)
   ;; Also known as keycast--tree-member.
   (and (listp tree)
-       (or (member elt tree)
-           (catch 'found
-             (dolist (sub tree)
-               (when-let ((found (auto-compile--tree-member elt sub)))
-                 (throw 'found found)))))))
+       (if-let* ((pos (cl-position elt tree))
+                 (mem (nthcdr pos tree)))
+           (cond ((not delete) mem)
+                 ((cdr mem)
+                  (setcar mem (cadr mem))
+                  (setcdr mem (cddr mem))
+                  nil)
+                 ((nbutlast tree) nil))
+         (catch 'found
+           (dolist (sub tree)
+             (when-let ((found (auto-compile--tree-member elt sub delete)))
+               (throw 'found found)))))))
 
 (defun auto-compile-modify-mode-line (after)
   (let ((format (default-value 'mode-line-format)))
-    (when-let ((mem (auto-compile--tree-member 'mode-line-auto-compile format)))
-      (setcar mem (cadr mem))
-      (setcdr mem (cddr mem)))
+    (auto-compile--tree-member 'mode-line-auto-compile format 'delete)
     (when after
       (if-let ((mem (auto-compile--tree-member after format)))
           (push 'mode-line-auto-compile (cdr mem))
@@ -327,18 +333,18 @@ to include `mode-line-auto-compile'."
 (defcustom auto-compile-toggle-recompiles t
   "Whether to recompile all source files when turning on compilation.
 
-When turning on auto compilation for multiple files at once
-recompile source files even if their byte code file already
-exist and are up-to-date.  It's advisable to keep this enabled
-to ensure changes to macros are picked up."
+When turning on auto compilation for multiple files at once,
+recompile source files even if the corresponding byte code files
+already exist and are up-to-date.  It's advisable to keep this
+enabled to ensure changes to macros are picked up."
   :group 'auto-compile
   :type 'boolean)
 
 (defcustom auto-compile-predicate-function 'auto-compile-source-file-p
   "Function used to determine if a file should be compiled.
 
-The default, `auto-compile-source-file-p', returns t for all
-files whose filename ends with the \".el\" suffix, optionally
+The default, `auto-compile-source-file-p', returns non-nil for
+all files whose filename ends with the \".el\" suffix, optionally
 followed by one of the suffixes in `load-file-rep-suffixes'.
 
 Another useful value is `elx-library-p' from the `elx' package,
@@ -798,7 +804,7 @@ This is especially useful during rebase sessions."
   "Before loading a library recompile it if it needs recompilation.
 
 A library needs to be recompiled if the source file is newer than
-it's byte-compile destination.  Without this advice the outdated
+its byte-compile destination.  Without this advice the outdated
 byte code file would be loaded instead.
 
 Also see the related `auto-compile-on-save-mode'."
@@ -816,8 +822,15 @@ Also see the related `auto-compile-on-save-mode'."
 If `auto-compile-on-load-mode' isn't enabled, then do nothing.
 It needs recompilation if it is newer than the byte-code file.
 Without this advice the outdated source file would get loaded."
-  (when auto-compile-on-load-mode
-    (auto-compile-on-load file nosuffix)))
+  (cond ((not auto-compile-on-load-mode))
+        ((eq user-init-file t)
+         ;; We are loading the init file during startup.  If we have to
+         ;; compile it, then that would load additional files.  Prevent
+         ;; the first recursive `load' invocation from believing it is
+         ;; loading the init file, by suspending the special value.
+         (let ((user-init-file nil))
+           (auto-compile-on-load file nosuffix)))
+        ((auto-compile-on-load file nosuffix))))
 
 (define-advice require
     (:before (feature &optional filename _noerror) auto-compile)

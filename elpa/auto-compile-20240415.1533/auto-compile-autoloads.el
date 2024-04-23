@@ -20,7 +20,7 @@ not exist do nothing.  Therefore to disable automatic compilation
 remove the byte code file.  See command `toggle-auto-compile' for
 a convenient way to do so.
 
-This mode should be enabled globally, using it's globalized
+This mode should be enabled globally, using its globalized
 variant `auto-compile-on-save-mode'.  Also see the related
 `auto-compile-on-load-mode'.
 
@@ -120,7 +120,7 @@ for a description of this minor mode.")
 Before loading a library recompile it if it needs recompilation.
 
 A library needs to be recompiled if the source file is newer than
-it's byte-compile destination.  Without this advice the outdated
+its byte-compile destination.  Without this advice the outdated
 byte code file would be loaded instead.
 
 Also see the related `auto-compile-on-save-mode'.
