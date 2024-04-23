@@ -2,11 +2,11 @@
 
 ;; Copyright (C) 2008-2024 The Magit Project Contributors
 
-;; Author: Jonas Bernoulli <jonas@bernoul.li>
+;; Author: Jonas Bernoulli <emacs.magit@jonas.bernoulli.dev>
 ;;     Sebastian Wiesner <lunaryorn@gmail.com>
 ;;     Florian Ragwitz <rafl@debian.org>
 ;;     Marius Vollmer <marius.vollmer@gmail.com>
-;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+;; Maintainer: Jonas Bernoulli <emacs.magit@jonas.bernoulli.dev>
 
 ;; Homepage: https://github.com/magit/magit
 ;; Keywords: git tools vc
@@ -175,13 +175,22 @@ full loading."
   :type 'boolean
   :global t
   :init-value t
-  :initialize (lambda (symbol exp)
-                (custom-initialize-default symbol exp)
-                (when global-git-commit-mode
-                  (add-hook 'find-file-hook #'git-commit-setup-check-buffer)))
-  (if global-git-commit-mode
-      (add-hook  'find-file-hook #'git-commit-setup-check-buffer)
-    (remove-hook 'find-file-hook #'git-commit-setup-check-buffer)))
+  :initialize
+  (lambda (symbol exp)
+    (custom-initialize-default symbol exp)
+    (when global-git-commit-mode
+      (add-hook 'find-file-hook #'git-commit-setup-check-buffer)
+      (remove-hook 'after-change-major-mode-hook
+                   #'git-commit-setup-font-lock-in-buffer)))
+  (cond
+   (global-git-commit-mode
+    (add-hook 'find-file-hook #'git-commit-setup-check-buffer)
+    (add-hook 'after-change-major-mode-hook
+              #'git-commit-setup-font-lock-in-buffer))
+   (t
+    (remove-hook 'find-file-hook #'git-commit-setup-check-buffer)
+    (remove-hook 'after-change-major-mode-hook
+                 #'git-commit-setup-font-lock-in-buffer))))
 
 (defcustom git-commit-major-mode #'text-mode
   "Major mode used to edit Git commit messages.
@@ -323,6 +332,26 @@ Magit isn't available, then setting this to a non-nil value has
 no effect."
   :group 'git-commit
   :safe 'booleanp
+  :type 'boolean)
+
+(defcustom git-commit-cd-to-toplevel nil
+  "Whether to set `default-directory' to the worktree in message buffer.
+
+Editing a commit message is done by visiting a file located in the git
+directory, usually \"COMMIT_EDITMSG\".  As is done when visiting any
+file, the local value of `default-directory' is set to the directory
+that contains the file.
+
+If this option is non-nil, then the local `default-directory' is changed
+to the working tree from which the commit command was invoked.  You may
+wish to do that, to make it easier to open a file that is located in the
+working tree, directly from the commit message buffer.
+
+If the git variable `safe.bareRepository' is set to \"explicit\", then
+you have to enable this, to be able to commit at all.  See issue #5100.
+
+This option only has an effect if the commit was initiated from Magit."
+  :group 'git-commit
   :type 'boolean)
 
 ;;;; Faces
@@ -477,8 +506,6 @@ the redundant bindings, then set this to nil, before loading
              (string-match-p git-commit-filename-regexp buffer-file-name))
     (git-commit-setup-font-lock)))
 
-(add-hook 'after-change-major-mode-hook #'git-commit-setup-font-lock-in-buffer)
-
 (defun git-commit-setup-check-buffer ()
   (when (and buffer-file-name
              (string-match-p git-commit-filename-regexp buffer-file-name))
@@ -539,27 +566,36 @@ Used as the local value of `header-line-format', in buffer using
   (setq git-commit-usage-message nil) ; show a shorter message")
 
 (defun git-commit-setup ()
-  (when (fboundp 'magit-toplevel)
-    ;; `magit-toplevel' is autoloaded and defined in magit-git.el,
-    ;; That library declares this functions without loading
-    ;; magit-process.el, which defines it.
-    (require 'magit-process nil t))
-  ;; Pretend that git-commit-mode is a major-mode,
-  ;; so that directory-local settings can be used.
-  (let ((default-directory
-         (or (and (not (file-exists-p ".dir-locals.el"))
-                  ;; When $GIT_DIR/.dir-locals.el doesn't exist,
-                  ;; fallback to $GIT_WORK_TREE/.dir-locals.el,
-                  ;; because the maintainer can use the latter
-                  ;; to enforce conventions, while s/he has no
-                  ;; control over the former.
-                  (fboundp 'magit-toplevel)  ; silence byte-compiler
-                  (magit-toplevel))
-             default-directory)))
-    (let ((buffer-file-name nil)         ; trick hack-dir-local-variables
-          (major-mode 'git-commit-mode)) ; trick dir-locals-collect-variables
-      (hack-dir-local-variables)
-      (hack-local-variables-apply)))
+  (let ((gitdir default-directory)
+        (cd nil))
+    (when (and (fboundp 'magit-toplevel)
+               (boundp 'magit--separated-gitdirs))
+      ;; `magit-toplevel' is autoloaded and defined in magit-git.el.  That
+      ;; library declares this function without loading magit-process.el,
+      ;; which defines it.
+      (require 'magit-process nil t)
+      (when git-commit-cd-to-toplevel
+        (setq cd (or (car (rassoc default-directory magit--separated-gitdirs))
+                     (magit-toplevel)))))
+    ;; Pretend that git-commit-mode is a major-mode,
+    ;; so that directory-local settings can be used.
+    (let ((default-directory
+           (or (and (not (file-exists-p
+                          (expand-file-name ".dir-locals.el" gitdir)))
+                    ;; When $GIT_DIR/.dir-locals.el doesn't exist,
+                    ;; fallback to $GIT_WORK_TREE/.dir-locals.el,
+                    ;; because the maintainer can use the latter
+                    ;; to enforce conventions, while s/he has no
+                    ;; control over the former.
+                    (fboundp 'magit-toplevel)
+                    (or cd (magit-toplevel)))
+               gitdir)))
+      (let ((buffer-file-name nil)         ; trick hack-dir-local-variables
+            (major-mode 'git-commit-mode)) ; trick dir-locals-collect-variables
+        (hack-dir-local-variables)
+        (hack-local-variables-apply)))
+    (when cd
+      (setq default-directory cd)))
   (when git-commit-major-mode
     (let ((auto-mode-alist
            ;; `set-auto-mode--apply-alist' removes the remote part from
