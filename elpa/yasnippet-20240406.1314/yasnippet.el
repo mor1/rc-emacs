@@ -824,6 +824,10 @@ which decides on the snippet to expand.")
                             ;; Prevent sharing the tail.
                             (append lists '(()) )))))))
 
+(defun yas--flush-all-parents (mode)
+  (if (get mode 'yas--all-parents)
+      (put mode 'yas--all-parents nil)))
+
 (defun yas--all-parents (mode)
   "Like `derived-mode-all-parents' but obeying `yas--parents'."
   (or (get mode 'yas--all-parents) ;; FIXME: Use `with-memoization'?
@@ -844,18 +848,19 @@ which decides on the snippet to expand.")
                             (cons (if (eq mode 'fundamental-mode) ()
                                     (append (cdr ap) '(fundamental-mode)))
                                   extras))))
-                 (cons mode
-                       (yas--merge-ordered-lists
-                        (mapcar #'yas--all-parents
-                                (remq nil
-                                      `(,(or (get mode 'derived-mode-parent)
-                                             ;; Consider `fundamental-mode'
-                                             ;; as ultimate ancestor.
-                                             'fundamental-mode)
-                                        ,(let ((alias (symbol-function mode)))
-                                           (when (symbolp alias) alias))
-                                        ,@(get mode 'derived-mode-extra-parents)
-                                        ,@(gethash mode yas--parents)))))))))
+                 (delete-dups
+                  (cons mode
+                        (yas--merge-ordered-lists
+                         (mapcar #'yas--all-parents
+                                 (remq nil
+                                       `(,(or (get mode 'derived-mode-parent)
+                                              ;; Consider `fundamental-mode'
+                                              ;; as ultimate ancestor.
+                                              'fundamental-mode)
+                                         ,(let ((alias (symbol-function mode)))
+                                            (when (symbolp alias) alias))
+                                         ,@(get mode 'derived-mode-extra-parents)
+                                         ,@(gethash mode yas--parents))))))))))
           (dolist (parent all-parents)
             (cl-pushnew mode (get parent 'yas--cached-children)))
           (put mode 'yas--all-parents all-parents)))))
@@ -2010,6 +2015,9 @@ prefix argument."
                                (with-current-buffer buffer
                                  yas--editing-template))
                              (buffer-list))))
+
+      (mapatoms #'yas--flush-all-parents)
+
       ;; Warn if there are buffers visiting snippets, since reloading will break
       ;; any on-line editing of those buffers.
       ;;
