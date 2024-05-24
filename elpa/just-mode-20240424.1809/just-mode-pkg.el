@@ -1,6 +1,6 @@
-(define-package "just-mode" "20240422.32" "Justfile editing mode"
+(define-package "just-mode" "20240424.1809" "Justfile editing mode"
   '((emacs "26.1"))
-  :commit "80b0dcb63694721f67814a51dc648f7d9f0f5435" :authors
+  :commit "4c0df4cc4b8798f1a7e99fb78b79c4bf7eec12c1" :authors
   '(("Leon Barrett" . "leon@barrettnexus.com"))
   :maintainers
   '(("Leon Barrett" . "leon@barrettnexus.com"))
