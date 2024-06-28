@@ -6,7 +6,7 @@
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
 
-;; Package-Version: 2.0.0
+;; Package-Version: 2.0.2
 ;; Package-Requires: ((emacs "26.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -629,10 +629,12 @@ pretend the byte code file exists.")
       success)))
 
 (defun auto-compile--byte-compile-file (file)
-  (let ((after-change-major-mode-hook nil)
+  (let ((after-change-major-mode-hook
+         (and (fboundp 'global-font-lock-mode-enable-in-buffer)
+              (list 'global-font-lock-mode-enable-in-buffer)))
         (prog-mode-hook nil)
         (emacs-lisp-mode-hook nil))
-  (byte-compile-file file)))
+    (byte-compile-file file)))
 
 (defun auto-compile-delete-dest (dest &optional failurep)
   (unless failurep
