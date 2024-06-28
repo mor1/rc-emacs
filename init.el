@@ -63,11 +63,6 @@
     use-package-expand-minimally t)
   )
 
-;; add homebrew site-lisp directories to the load-path
-(let ((default-directory "/usr/local/share/emacs/site-lisp/"))
-  (normal-top-level-add-subdirs-to-load-path)
-  )
-
 ;; server
 (load "server")
 (setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))

@@ -140,13 +140,10 @@ All *.elc files are systematically deleted before proceeding."
             (memq cur-package (async-bytecomp--get-package-deps
                                async-bytecomp-allowed-packages)))
         (progn
-          ;; FIXME: Why do we use (eq cur-package 'async) once
-          ;; and (string= cur-package "async") afterwards?
           (when (eq cur-package 'async)
-            (fmakunbound 'async-byte-recompile-directory))
-          ;; Add to `load-path' the latest version of async and
-          ;; reload it when reinstalling async.
-          (when (string= cur-package "async")
+            (fmakunbound 'async-byte-recompile-directory)
+            ;; Add to `load-path' the latest version of async and
+            ;; reload it when reinstalling async.
             (cl-pushnew pkg-dir load-path)
             (load "async-bytecomp"))
           ;; `async-byte-recompile-directory' will add directory
@@ -194,7 +191,8 @@ Same as `byte-compile-file' but asynchronous."
      `(lambda ()
         (require 'bytecomp)
         ,(async-inject-variables async-bytecomp-load-variable-regexp)
-        (let ((default-directory ,(file-name-directory file)))
+        (let ((default-directory ,(file-name-directory file))
+              error-data)
           (add-to-list 'load-path default-directory)
           (byte-compile-file ,file)
           (when (get-buffer byte-compile-log-buffer)
