@@ -1,6 +1,6 @@
-(define-package "auto-compile" "20240623.931" "Automatically compile Emacs Lisp libraries"
+(define-package "auto-compile" "20240628.2027" "Automatically compile Emacs Lisp libraries"
   '((emacs "26.1"))
-  :commit "a495b3b92a555953b58ec4b6a8ab8411c337ea3d" :authors
+  :commit "8f6d708d7021559e0d4577f77b5d42afb3a6cb4f" :authors
   '(("Jonas Bernoulli" . "emacs.auto-compile@jonas.bernoulli.dev"))
   :maintainers
   '(("Jonas Bernoulli" . "emacs.auto-compile@jonas.bernoulli.dev"))
