@@ -6,8 +6,8 @@
 ;; Homepage: https://github.com/magit/with-editor
 ;; Keywords: processes terminals
 
-;; Package-Version: 3.3.4
-;; Package-Requires: ((emacs "25.1") (compat "30.0.0.0"))
+;; Package-Version: 3.4.1
+;; Package-Requires: ((emacs "26.1") (compat "30.0.0.0"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -413,11 +413,15 @@ And some tools that do not handle $EDITOR properly also break."
 (define-minor-mode with-editor-mode
   "Edit a file as the $EDITOR of an external process."
   :lighter with-editor-mode-lighter
-  ;; Protect the user from killing the buffer without using
-  ;; either `with-editor-finish' or `with-editor-cancel',
-  ;; and from removing the key bindings for these commands.
-  (unless with-editor-mode
-    (user-error "With-Editor mode cannot be turned off"))
+  ;; Protect the user from enabling or disabling the mode interactively.
+  ;; Manually enabling the mode is dangerous because canceling the buffer
+  ;; deletes the visited file.  The mode must not be disabled manually,
+  ;; either `with-editor-finish' or `with-editor-cancel' must be used.
+  :interactive nil                    ; >= 28.1
+  (when (called-interactively-p 'any) ; <  28.1
+    (setq with-editor-mode (not with-editor-mode))
+    (user-error "With-Editor mode is not intended for interactive use"))
+  ;; The buffer must also not be killed using regular kill commands.
   (add-hook 'kill-buffer-query-functions
             #'with-editor-kill-buffer-noop nil t)
   ;; `server-execute' displays a message which is not
@@ -743,7 +747,7 @@ This works in `shell-mode', `term-mode', `eshell-mode' and
       (process-send-string
        process (format " export %s=%s\n" envvar
                        (shell-quote-argument with-editor-sleeping-editor)))
-      (while (accept-process-output process 0.1))
+      (while (accept-process-output process 1 nil t))
       (if (derived-mode-p 'term-mode)
           (with-editor-set-process-filter process #'with-editor-emulate-terminal)
         (add-hook 'comint-output-filter-functions #'with-editor-output-filter
@@ -759,7 +763,7 @@ This works in `shell-mode', `term-mode', `eshell-mode' and
         (let ((with-editor--envvar envvar)
               (process-environment process-environment))
           (with-editor--setup)
-          (while (accept-process-output vterm--process 0.1))
+          (while (accept-process-output vterm--process 1 nil t))
           (when-let ((v (getenv envvar)))
             (vterm-send-string (format " export %s=%S" envvar v))
             (vterm-send-return))
