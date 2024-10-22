@@ -7,19 +7,6 @@
 
 (add-to-list 'load-path (or (and load-file-name (directory-file-name (file-name-directory load-file-name))) (car load-path)))
 
-
-
-;;; Generated autoloads from git-commit.el
-
-(put 'git-commit-major-mode 'safe-local-variable
-    (lambda (val)
-      (memq val '(text-mode
-                  markdown-mode
-                  org-mode
-                  fundamental-mode
-                  git-commit-elisp-text-mode))))
-(register-definition-prefixes "git-commit" '("git-commit-" "global-git-commit-mode"))
-
 
 ;;; End of scraped data
 
