@@ -3,12 +3,11 @@
 ;; Copyright (C) 2018-2021 Henrik Lissner
 ;;
 ;; Author: Henrik Lissner <http://github/hlissner>
-;; Maintainer: Henrik Lissner <git@henrik.io>
+;; Maintainer: Henrik Lissner <contact@henrik.io>
 ;; Created: March 01, 2018
 ;; Modified: November 12, 2021
-;; Version: 1.0.3
-;; Package-Version: 20211112.1400
-;; Package-Commit: bc5d293576c5e08c29e694078b96a5ed85631942
+;; Package-Version: 20240828.2322
+;; Package-Revision: ddd154f1e04d
 ;; Keywords: frames mode-line
 ;; URL: https://github.com/hlissner/emacs-hide-mode-line
 ;; Package-Requires: ((emacs "24.4"))
@@ -58,6 +57,11 @@
 ;;;###autoload
 (define-globalized-minor-mode global-hide-mode-line-mode
   hide-mode-line-mode turn-on-hide-mode-line-mode
+  (if global-hide-mode-line-mode
+      (setq-default hide-mode-line--old-format (default-value 'mode-line-format)
+                    mode-line-format nil)
+    (setq-default mode-line-format (default-value 'hide-mode-line--old-format)
+                  hide-mode-line--old-format nil))
   (redraw-display))
 
 ;;;###autoload
