@@ -1,6 +1,6 @@
 ;;; solarized-faces.el --- the faces definitions for solarized theme  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2021 Bozhidar Batsov
+;; Copyright (C) 2011-2025 Bozhidar Batsov
 
 ;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 ;; Author: Thomas Frössman <thomasf@jossystem.se>
@@ -236,6 +236,7 @@
        ((,class (:foreground ,base01 :slant ,s-maybe-italic))))
      `(font-lock-comment-face ((,class (:foreground ,base01))))
      `(font-lock-constant-face ((,class (:foreground ,blue :weight bold))))
+     `(font-lock-number-face ((,class (:foreground ,(if solarized-highlight-numbers violet 'unspecified)))))
      `(font-lock-doc-face ((,class (:foreground ,(if solarized-distinct-doc-face violet cyan)
                                                 :slant ,s-maybe-italic))))
      `(font-lock-function-name-face ((,class (:foreground ,blue))))
@@ -650,6 +651,19 @@
                              :background ,(if solarized-emphasize-indicators
                                               blue-lc s-fringe-bg) :weight bold))))
 ;;;;; flymake
+     `(flymake-error
+       ((,(append '((supports :underline (:style wave))) class)
+         (:underline (:style wave :color ,red) :inherit unspecified))
+        (,class (:foreground ,red-hc :background ,red-lc :weight bold :underline t))))
+     `(flymake-warning
+       ((,(append '((supports :underline (:style wave))) class)
+         (:underline (:style wave :color ,yellow) :inherit unspecified))
+        (,class (:foreground ,yellow-hc :background ,yellow-lc :weight bold :underline t))))
+     `(flymake-note
+       ((,(append '((supports :underline (:style wave))) class)
+         (:underline (:style wave :color ,(if solarized-emphasize-indicators
+                                              blue base03)) :inherit unspecified))
+        (,class (:foreground ,blue-hc :background ,blue-lc :weight bold :underline t))))
      `(flymake-errline
        ((,(append '((supports :underline (:style wave))) class)
          (:underline (:style wave :color ,red) :inherit unspecified
@@ -906,7 +920,7 @@
      `(highlight-indentation-face ((,class (:background ,base02))))
      `(highlight-indentation-current-column-face((,class (:background ,base02))))
 ;;;;; highlight-numbers
-     `(highlight-numbers-number ((,class (:foreground ,violet :bold nil))))
+     `(highlight-numbers-number ((,class (:inherit font-lock-number-face))))
 ;;;;; highlight-symbol
      `(highlight-symbol-face ((,class (:foreground ,magenta))))
 ;;;;; hl-line-mode
