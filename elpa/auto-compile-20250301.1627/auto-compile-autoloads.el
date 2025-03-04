@@ -58,7 +58,7 @@ Enable the mode if ARG is nil, omitted, or is a positive number.
 Disable the mode if ARG is a negative number.
 
 Auto-Compile mode is enabled in all buffers where
-`turn-on-auto-compile-mode' would do it.
+`auto-compile-mode--turn-on' would do it.
 
 See `auto-compile-mode' for more information on Auto-Compile mode.
 
@@ -141,7 +141,7 @@ The mode's hook is called both when the mode is enabled and when
 it is disabled.
 
 (fn &optional ARG)" t)
-(register-definition-prefixes "auto-compile" '("auto-compile-" "byte-compile-log-warning" "load" "mode-line-" "require" "save-buffers-kill-" "turn-on-auto-compile-mode"))
+(register-definition-prefixes "auto-compile" '("auto-compile-" "byte-compile-log-warning" "load" "mode-line-" "require" "save-buffers-kill-"))
 
 ;;; End of scraped data
 
