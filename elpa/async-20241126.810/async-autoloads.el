@@ -113,6 +113,9 @@ Byte compile asynchronously packages installed with package.el.
 
 Async compilation of packages can be controlled by
 `async-bytecomp-allowed-packages'.
+NOTE: Use this mode only if you install/upgrade etc... your packages
+synchronously, if you use a package manager like helm-package.el which
+by default is async you don't need this.
 
 This is a global minor mode.  If called interactively, toggle the
 `Async-Bytecomp-Package mode' mode.  If the prefix argument is
