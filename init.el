@@ -1,5 +1,8 @@
-;; Copyright (C) 2000--2021 Richard Mortier <mort@cantab.net> except where
-;; noted. All Rights Reserved.
+;; (set-time-zone-rule "Europe/London")
+;; (set-time-zone-rule "Europe/Paris")
+
+;; Copyright (C) Richard Mortier <mort@cantab.net> except where noted. All
+;; Rights Reserved.
 ;;
 ;; Permission to use, copy, modify, and distribute this software for any
 ;; purpose with or without fee is hereby granted, provided that the above
@@ -96,6 +99,17 @@
 ;; packages
 ;;
 
+                                        ;(use-package auto-package-update
+                                        ;  :ensure t
+                                        ;  :config
+                                        ;  (setq
+                                        ;   ;; auto-package-update-delete-old-versions t
+                                        ;   auto-package-update-interval 4
+                                        ;   ;; auto-package-update-excluded-packages '("mu4e")
+                                        ;   )
+                                        ;  (auto-package-update-maybe)
+                                        ;  )
+
 (use-package auto-compile
   :init
   (setq
@@ -127,14 +141,6 @@
     c-default-style "linux"
     ))
 
-(use-package coffee-mode
-  :hook
-  ((coffee-mode . coffee-cos-mode))
-  :config
-  (setq
-    coffee-tab-width 2
-    ))
-
 (use-package company
   :ensure
   :defer t
@@ -157,32 +163,13 @@
           ("M->". company-select-last))
   )
 
-(use-package css-mode
-  :config
-  (setq
-    css-indent-offset 2
-    ))
-
-(use-package csv-mode
-  :config
-  (setq
-    indent-tabs-mode 't
-    ))
-
-(use-package dap-mode
-  :ensure t
-  :defer t
-  :after lsp-mode
-  :config
-  (dap-auto-configure-mode)
-  )
-
 (use-package direnv
   :config
   (direnv-mode)
   )
 
 (use-package dockerfile-mode
+  :mode "Dockerfile"
   )
 
 (use-package eldoc
@@ -190,6 +177,10 @@
   :hook
   ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
   )
+
+(use-package elisp-autofmt
+  :commands (elisp-autofmt-mode elisp-autofmt-buffer)
+  :hook (emacs-lisp-mode . elisp-autofmt-mode))
 
 (use-package exec-path-from-shell ;; set exec path
   :config
@@ -201,16 +192,7 @@
   (prog-mode . fci-mode)
   )
 
-;; (use-package flycheck
-;;   ;; flycheck -- on the fly checking
-;;   :ensure t
-;;   :init
-;;   (global-flycheck-mode)
-;;   :hook (python-mode . (lambda () (flycheck-mode)))
-;;   )
-
-(use-package flyspell
-  ;; flyspell -- on the fly spell checking
+(use-package flyspell ;; on the fly spell checking
   :commands (flyspell-prog-mode flyspell-mode)
   :hook
   ((text-mode . flyspell-mode)
@@ -219,25 +201,14 @@
   :config
   (setq
     ispell-dictionary "british"
-    ))
+    )
+  )
 
 (use-package git-ps1-mode
   :hook find-file
   )
 
-(use-package go-mode
-  :hook
-  ((before-save . gofmt-before-save)
-    (go-mode . go-eldoc-setup)
-    )
-  :config
-  (setq
-    gofmt-command "goimports"
-    go-eldoc-gocode "/Users/mort/me/external/docker/bin/gocode"
-    ))
-
-(use-package ido-completing-read+
-  ;; Display possible completions at all places
+(use-package ido-completing-read+ ;; Display possible completions at all places
   :ensure t
   :diminish nil
   :config
@@ -253,55 +224,8 @@
     ido-use-virtual-buffers t
     ))
 
-(use-package lisp-mode
-  :mode "dune\\'"
+(use-package just-mode
   )
-
-(use-package lsp-mode
-  :ensure t
-  :defer t
-  :commands (lsp lsp-deferred)
-  :hook
-  ((lsp-mode . lsp-ui-mode)
-    (python-mode . lsp-deferred))
-  :config
-  (setq
-    lsp-eldoc-render-all t
-    lsp-idle-delay 1.0
-    lsp-keymap-prefix "C-c l"
-    lsp-rust-analyzer-cargo-watch-command "clippy"
-    lsp-rust-analyzer-server-display-inlay-hints nil
-    ))
-
-(use-package lsp-pyright
-  :ensure t
-  :defer t
-  :config
-  (setq
-    lsp-pyright-disable-language-services nil
-    lsp-pyright-disable-organize-imports nil
-    lsp-pyright-auto-import-completions t
-    lsp-pyright-use-library-code-for-types t
-    )
-  :hook
-  ((python-mode . (lambda ()
-                    (require 'lsp-pyright)
-                    (lsp-deferred))
-     )))
-
-(use-package lsp-ui
-  :ensure
-  :commands lsp-ui-mode
-  :bind (:map lsp-ui-mode-map
-          ("C-c i" . lsp-ui-imenu))
-  :hook (lsp-mode . lsp-ui-mode)
-  :config
-  (setq
-    lsp-ui-peek-always-show nil
-    lsp-ui-sideline-show-hover t
-    ;; lsp-ui-doc-enable nil
-    lsp-ui-doc-delay 2
-    ))
 
 (use-package magit
   :ensure t
@@ -349,93 +273,58 @@
 (use-package mu4e
   :config
   (setq
-    mu4e-maildir       "~/me/mail" ;; top-level Maildir
-    mu4e-sent-folder   "/sent"     ;; folder for sent messages
-    mu4e-drafts-folder "/drafts"   ;; unfinished messages
-    mu4e-trash-folder  "/trash"    ;; trashed messages
-    mu4e-refile-folder "/archive"  ;; saved messages
+    mu4e-attachment-dir "~/Downloads"
+    mu4e-drafts-folder "/drafts"  ;; unfinished messages
+    mu4e-maildir "~/u/me/mail"    ;; top-level Maildir
+    mu4e-mu-binary (executable-find "mu")
+    mu4e-refile-folder "/archive" ;; saved messages
+    mu4e-sent-folder "/sent"      ;; folder for sent messages
+    mu4e-trash-folder "/trash"    ;; trashed messages
+    mu4e-use-fancy-chars t
+    mu4e-view-show-images t
     ))
-
-;; ocaml
-
-;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
-(require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
-;; ## end of OPAM user-setup addition for emacs / base ## keep this line
-
-(use-package python
-  :ensure t
-  :config
-  (setq
-    python-indent-guess-indent-offset-verbose nil
-    python-shell-interpreter "python3"
-    ))
-
-(use-package python-mode
-  :mode "\\.py\''"
-  :custom
-  (python-indent-offset 2)
-  )
-
-(use-package inferior-python-mode
-  :ensure nil
-  :hook (inferior-python-mode . hide-mode-line-mode)
-  )
 
 (use-package hide-mode-line
   :ensure t
   :defer t
   )
 
+;; OCaml
+(use-package eglot
+  :ensure t)
 (use-package tuareg
-  :init
-  (let ((opam-share (ignore-errors
-                      (car (process-lines "opam" "config" "var" "share")))))
-    (when (and opam-share (file-directory-p opam-share))
-      ;; Register Merlin
-      (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))
-      (autoload 'merlin-mode "merlin" nil t nil)
-      ;; Use opam switch to lookup ocamlmerlin binary
-      (setq merlin-command 'opam)
-      ))
+  :ensure t
+  :mode (("\\.ocamlinit\\'" . tuareg-mode))
+  )
+(use-package ocaml-eglot
+  :ensure t
+  :after tuareg
   :hook
-  (((tuareg-mode caml-mode) . merlin-mode)
-    (utop-mode . (lambda ()
-                   (local-set-key (kbd "M-<right>") utop-history-goto-next)
-                   (local-set-key (kbd "M-<left>") utop-history-goto-prev)
-                   )))
-  :bind (:map tuareg-mode-map
-          ("C-S-<up>" . merlin-type-enclosing-go-up)
-          ("C-S-<down>" . merlin-type-enclosing-go-down)
-          )
-  :mode
-  ( ("\\.ml[iylp]?\\'" . tuareg-mode)
-    ("\\.fs[ix]?\\'" . tuareg-mode)
-    ("i?ocamlinit\\'" . tuareg-mode)
-    )
-  :config
-  (setq
-    merlin-use-auto-complete-mode 'easy
-    ;; indent-line-function 'ocp-indent-line
-    ;; indent-region-function 'ocp-indent-region
-    utop-command "opam config exec -- utop -emacs"
-    ))
+  (tuareg-mode . ocaml-eglot)
+  (ocaml-eglot . eglot-ensure)
+  )
+;;
 
 (use-package org-gcal
   :after org
   :defer t
   :hook
-  ( (org-agenda-mode . (lambda () (org-gcal-sync)))
+  ( ;; (org-agenda-mode . (lambda () (org-gcal-sync)))
     (org-capture-after-finalize . (lambda () (org-gcal-sync)))
     )
   :config
   (setq
+    plstore-cache-passphrase-for-symmetric-encryption t
+    ;; epa-file-cache-passphrase-for-symmetric-encryption t
     org-gcal-auto-archive nil
-    org-gcal-client-id "8131340798-fgd3rln4o8f1uvktvi62mbgdar5usftf.apps.googleusercontent.com"
-    org-gcal-client-secret "qYwGpyB9RY8Y37TYO13-myXk"
+
+    org-gcal-client-id "XXX"
+    org-gcal-client-secret "XXX"
     org-gcal-file-alist
-    '(("o3sbrj8ud1hagvtonj9k9q55vo@group.calendar.google.com" . "~/Dropbox/people/family.org/richard/richard.org")
-       ("hiq7rr4gpllhrk84agrg585p357m5qtp@import.calendar.google.com" . "~/Dropbox/people/family.org/richard/tripit.org")
+    '(("XXX@group.calendar.google.com" . "~/Dropbox/calendar/richard.org")
+       ("XXX@import.calendar.google.com" . "~/Dropbox/calendar/richard-tripit.org")
        )
+
     org-gcal-local-timezone "Europe/London"
     org-gcal-managed-newly-fetched-mode "gcal"
     org-gcal-managed-post-at-point-update-existing 'prompt
@@ -451,9 +340,6 @@
           ("<M-S-down>" . org-metadown)
           )
 
-  :init
-  (add-to-list 'file-coding-system-alist '("\\.org\\'" . utf-8-unix))
-
   :hook
   ((org-agenda-mode
      . (lambda ()
@@ -462,25 +348,15 @@
 
   :config
   (setq
-    org-basedir "~/Dropbox/people/family.org/"
-    org-agenda-files (mapcar
-                       (lambda (f) (expand-file-name f org-basedir))
-                       '( "richard/richard.org"
-                          "richard/incoming.org"
-                          "richard/tripit.org"
-                          "zhome/home.org"
-                          "zhome/birthdays.org"
-                          "angela/angela.org"
-                          "eleanor/eleanor.org"
-                          "david/david.org"
-                          "william/william.org"
-                          ))
+    org-agenda-files "~/Dropbox/calendar/index"
+    org-basedir "~/Dropbox/calendar/"
     revert-without-query (mapcar
                            (lambda (f) (expand-file-name f org-basedir))
-                           '("richard/incoming.org"))
+                           '( "richard-incoming.org"
+                              "richard-tripit.org"
+                              ))
     org-agenda-loop-over-headlines-in-active-region nil
     org-agenda-todo-ignore-scheduled 'all
-    ;; org-clock-continuously t
     org-adapt-indentation t
     org-hide-leading-stars t
     )
@@ -503,27 +379,6 @@
   ;; customise my agenda options
   (setq org-agenda-custom-commands
     '(
-       ;;        ;; ("a" "Week agenda" ((agenda "" ((org-agenda-span 8)))
-       ;;        ;;                      (alltodo ""))
-       ;;        ;;   ((org-agenda-compact-blocks t)
-       ;;        ;;     (org-agenda-tag-filter-preset '("-kids"))
-       ;;        ;;     (org-agenda-include-diary t)
-       ;;        ;;     (org-agenda-log-mode-items (quote (closed clock)))
-       ;;        ;;     (org-agenda-ndays 7)
-       ;;        ;;     (org-agenda-repeating-timestamp-show-all t)
-       ;;        ;;     (org-agenda-show-all-dates t)
-       ;;        ;;     (org-agenda-skip-deadline-if-done t)
-       ;;        ;;     (org-agenda-skip-scheduled-if-done t)
-       ;;        ;;     (org-agenda-skip-timestamp-if-done t)
-       ;;        ;;     (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
-       ;;        ;;     (org-agenda-start-on-weekday 1)
-       ;;        ;;     (org-agenda-time-grid nil)
-       ;;        ;;     (org-deadline-warning-days 15)
-       ;;        ;;     (org-default-notes-file "~/me/todo/notes.org")
-       ;;        ;;     (org-fast-tag-selection-single-key (quote expert))
-       ;;        ;;     (org-remember-store-without-prompt t)
-       ;;        ;;     ))
-
        ("a" "Week agenda" agenda ""
          ( (org-agenda-compact-blocks t)
            (org-agenda-include-diary t)
@@ -537,25 +392,25 @@
            (org-deadline-warning-days 15)
            ))
 
-       ("c" "Calendar" agenda ""
-         ((org-agenda-span 7)
-           (org-agenda-start-on-weekday 1)
-           (org-agenda-time-grid nil)
-           (org-agenda-repeating-timestamp-show-all t)
-           (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
-           (org-agenda-category-filter-preset '("-a/nosho"))
-           ))
+       ;; ("c" "Calendar" agenda ""
+       ;;   ((org-agenda-span 7)
+       ;;     (org-agenda-start-on-weekday 1)
+       ;;     (org-agenda-time-grid nil)
+       ;;     (org-agenda-repeating-timestamp-show-all t)
+       ;;     (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
+       ;;     (org-agenda-category-filter-preset '("-a/nosho"))
+       ;;     ))
 
-       ("d" "Upcoming deadlines" agenda ""
-         ((org-agenda-span 60)
-           (org-agenda-time-grid nil)
-           (org-deadline-warning-days 365)
-           (org-agenda-entry-types '(:deadline))
-           ))
+       ;; ("d" "Upcoming deadlines" agenda ""
+       ;;   ((org-agenda-span 60)
+       ;;     (org-agenda-time-grid nil)
+       ;;     (org-deadline-warning-days 365)
+       ;;     (org-agenda-entry-types '(:deadline))
+       ;;     ))
 
        ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
          ((org-agenda-compact-blocks t)
-           (org-agenda-category-filter-preset '("-a/nosho"))
+           (org-agenda-category-filter-preset '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
            (org-agenda-include-diary t)
            (org-agenda-log-mode-items (quote (closed clock)))
            (org-agenda-ndays 31)
@@ -573,22 +428,28 @@
            (org-remember-store-without-prompt t)
            ))
 
-       ("n" "Agenda and all TODOs"
-         ( (agenda ""
-             ((org-agenda-skip-function
-                '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
-             )
-           (alltodo "")
-           ))
+       ;; ("n" "Agenda and all TODOs"
+       ;;   ( (agenda ""
+       ;;       ((org-agenda-skip-function
+       ;;          '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
+       ;;       )
+       ;;     (alltodo "")
+       ;;     ))
 
        ("t" "Today"
          ( (agenda ""
              ((org-agenda-span 1)
                ))
-           (alltodo "")
-           )
-         ( (org-agenda-tag-filter-preset '("-kids"))
-           (org-agenda-category-filter-preset '("-a/nosho"))
+           (alltodo ""
+             ;; ((org-agenda-sorting-strategy '(tag-up)))
+             ))
+
+         ( (org-agenda-category-filter-preset '( "-a" "-a/m-taxi" "-a/in" "-a/appt"
+                                                 "-e" "-e/clubs"
+                                                 "-w" "-w/clubs"
+                                                 "-d"
+                                                 "-house" "-home"))
+           (org-agenda-include-diary t)
            ))
        ))
 
@@ -649,14 +510,19 @@
       (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
 
 
-  (defun da-easter-gregorian (year)
-    (calendar-gregorian-from-absolute (da-easter year)))
-
   (defun calendar-days-from-easter ()
     "When used in a diary sexp, this function will calculate how many days
   are between the current date (DATE) and Easter Sunday."
     (- (calendar-absolute-from-gregorian date)
       (da-easter (calendar-extract-year date))))
+
+  ;; Now we can schedule the public holidays associated with Easter as recurring
+  ;; events. Good Friday is 2 days before "Easter", Easter Monday is one day
+  ;; after.
+
+  ;; *** Good Friday
+  ;; <%%(= -2 (calendar-days-from-easter))>
+
   )
 
 (use-package outline
@@ -668,7 +534,7 @@
   :init
   (setq
     paradox-github-token t
-    paradox-execute-asynchronously t
+    ;; paradox-execute-asynchronously t
     paradox-automatically-star t
     ))
 
@@ -680,24 +546,11 @@
     show-paren-style (quote expression)
     ))
 
-(use-package lsp-pyright
-  :ensure t
-  :hook
-  (python-mode . (lambda () (require 'lsp-pyright)))
-  :init
-  (when (executable-find "python3")
-    (setq lsp-pyright-python-executable-cmd "pdm run python3"))
-  :config
-  (setq
-    python-indent-offset 2
-    ))
-
 (use-package rainbow-mode
   :hook prog-mode
   )
 
-(use-package recentf
-  ;; Recent buffers in a new Emacs session
+(use-package recentf ;; Recent buffers in a new Emacs session
   :diminish nil
   :config
   (recentf-mode t)
@@ -705,32 +558,6 @@
     recentf-auto-cleanup 'never
     recentf-max-saved-items 1000
     recentf-save-file (concat user-emacs-directory ".recentf")
-    ))
-
-(use-package rjsx-mode
-  :mode
-  ( ("\\.json\\'" . rjsx-mode)
-    ("\\.js\\'" . rjsx-mode)
-    )
-  :config
-  (setq
-    js-indent-level 2
-    ))
-
-(use-package rustic
-  :ensure
-  :bind (:map rustic-mode-map
-          ("M-j" . lsp-ui-imenu)
-          ("M-?" . lsp-find-references)
-          ("C-c C-c l" . flycheck-list-errors)
-          ("C-c C-c a" . lsp-execute-code-action)
-          ("C-c C-c r" . lsp-rename)
-          ("C-c C-c q" . lsp-workspace-restart)
-          ("C-c C-c Q" . lsp-workspace-shutdown)
-          ("C-c C-c s" . lsp-rust-analyzer-status))
-  :config
-  (setq
-    rustic-format-on-save t
     ))
 
 (use-package saveplace ;; save cursor position in file after close
@@ -786,16 +613,17 @@
     global-subword-mode t
     ))
 
-(use-package tex
+(use-package latex
   :ensure auctex
   :mode
-  ( ("\\.tex\\'" . TeX-latex-mode)
-    ("\\.latex\\'" . TeX-latex-mode)
+  ( ("\\.tex\\'" . latex-mode)
+    ("\\.latex\\'" . latex-mode)
     ("\\.bibtex\\'" . bibtex-mode)
     )
   :hook
   ((LaTeX-mode . LaTeX-math-mode)
     (LaTeX-mode . turn-on-reftex)
+    (LaTeX-mode . TeX-fold-mode)
     )
   :config
   (use-package latex)
@@ -843,37 +671,6 @@
           ( "C-c b" . (lambda () (interactive "*")
                         (tex-enclose-word "\\textbf{" "}")))
           )
-  )
-
-(use-package typescript-mode
-  :mode "\\.ts\\'"
-  :config
-  (setq
-    typescript-indent-level 2
-    ))
-
-(use-package web-mode
-  :mode
-  ( ("\\.html\\'" . web-mode)
-    ("\\.css\\'" . web-mode)
-    )
-  :magic
-  ("\\`<\\?xml" . web-mode)
-  :config
-  (setq
-    web-mode-markup-indent-offset 2
-    web-mode-code-indent-offset 2
-    web-mode-css-indent-offset 2
-    web-mode-sql-indent-offset 2
-    web-mode-enable-current-column-highlight t
-    web-mode-enable-current-element-highlight t
-    )
-  (set (make-local-variable 'company-backends)
-    '(company-css company-web-html company-yasnippet company-files)
-    ))
-
-(use-package visual-fill-column
-  :hook (text-mode . visual-fill-column-mode)
   )
 
 (use-package whitespace
@@ -931,10 +728,10 @@
   (interactive)
   (unwind-protect
     (progn
-      (linum-mode 1)
+      (display-line-numbers-mode 1)
       (goto-line (read-number "Goto line: "))
       )
-    (linum-mode -1)
+    (display-line-numbers-mode -1)
     ))
 (global-set-key [remap goto-line] 'goto-line-with-feedback)
 
@@ -973,14 +770,15 @@
     (message "Aborted"))
   )
 
-(defun todo ()  (interactive) (find-file "~/Dropbox/people/family.org/richard/richard.org"))
-(defun notes () (interactive) (find-file "~/me/todo/notes.org"))
+(defun todo ()  (interactive) (find-file "~/Dropbox/calendar/richard.org"))
+(defun notes () (interactive) (find-file "~/u/me/todo/notes.org"))
 
 ;;
 ;; mode hooks
 ;;
 
-;; (require 'filladapt)                    ; not a package :(
+;; ;; not a package :(
+;; (require 'filladapt)
 ;; (add-hook 'text-mode-hook '(lambda () (filladapt-mode t)))
 
 ;;
