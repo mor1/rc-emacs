@@ -11,7 +11,7 @@
 
 ;;; Generated autoloads from eldoc.el
 
-(defvar eldoc-minor-mode-string (purecopy " ElDoc") "\
+(defvar eldoc-minor-mode-string " ElDoc" "\
 String to display in mode line when ElDoc Mode is enabled; nil for none.")
 (custom-autoload 'eldoc-minor-mode-string "eldoc" t)
 (autoload 'eldoc-mode "eldoc" "\
@@ -24,19 +24,19 @@ displays the first line of that variable's doc string.  Otherwise
 it displays the argument list of the function called in the
 expression point is on.
 
-This is a minor mode.  If called interactively, toggle the `Eldoc
-mode' mode.  If the prefix argument is positive, enable the mode,
-and if it is zero or negative, disable the mode.
+This is a minor mode.  If called interactively, toggle the `Eldoc mode'
+mode.  If the prefix argument is positive, enable the mode, and if it is
+zero or negative, disable the mode.
 
-If called from Lisp, toggle the mode if ARG is `toggle'.  Enable
-the mode if ARG is nil, omitted, or is a positive number.
-Disable the mode if ARG is a negative number.
+If called from Lisp, toggle the mode if ARG is `toggle'.  Enable the
+mode if ARG is nil, omitted, or is a positive number.  Disable the mode
+if ARG is a negative number.
 
 To check whether the minor mode is enabled in the current buffer,
-evaluate `eldoc-mode'.
+evaluate the variable `eldoc-mode'.
 
-The mode's hook is called both when the mode is enabled and when
-it is disabled.
+The mode's hook is called both when the mode is enabled and when it is
+disabled.
 
 (fn &optional ARG)" t)
 (put 'global-eldoc-mode 'globalized-minor-mode t)
@@ -50,15 +50,14 @@ or call the function `global-eldoc-mode'." :set #'custom-set-minor-mode :initial
 (custom-autoload 'global-eldoc-mode "eldoc" nil)
 (autoload 'global-eldoc-mode "eldoc" "\
 Toggle Eldoc mode in all buffers.
-With prefix ARG, enable Global Eldoc mode if ARG is positive;
-otherwise, disable it.
+With prefix ARG, enable Global Eldoc mode if ARG is positive; otherwise, disable
+it.
 
 If called from Lisp, toggle the mode if ARG is `toggle'.
 Enable the mode if ARG is nil, omitted, or is a positive number.
 Disable the mode if ARG is a negative number.
 
-Eldoc mode is enabled in all buffers where `turn-on-eldoc-mode' would
-do it.
+Eldoc mode is enabled in all buffers where `turn-on-eldoc-mode' would do it.
 
 See `eldoc-mode' for more information on Eldoc mode.
 
