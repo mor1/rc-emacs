@@ -24,27 +24,26 @@
 (defconst emacs-start-time (current-time))
 
 (setq gc-cons-threshold 64000000)
-(add-hook 'after-init-hook
-  #'(lambda ()
-      (setq gc-cons-threshold 800000)) ; restore after startup
-  )
+(add-hook
+ 'after-init-hook
+ #'(lambda ()
+     (setq gc-cons-threshold 800000)) ; restore after startup
+ )
 
 ;; package management
 ;; per http://cachestocaches.com/2015/8/getting-started-use-package/
 (require 'package)
 (setq
-  gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"
-  package-enable-at-startup nil
-  package-archives '(("melpa" . "https://melpa.org/packages/")
-                      ("gnu" . "https://elpa.gnu.org/packages/")
-                      )
-  )
+ gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"
+ package-enable-at-startup nil
+ package-archives
+ '(("melpa" . "https://melpa.org/packages/")
+   ("gnu" . "https://elpa.gnu.org/packages/")))
 (package-initialize)
 
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
-  (package-install 'use-package)
-  )
+  (package-install 'use-package))
 
 (eval-when-compile
   (require 'use-package))
@@ -53,23 +52,22 @@
 
 ;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
 (if init-file-debug
-  (progn
-    (message "DEBUGGING ON")
-    (setq
-      use-package-verbose t
-      use-package-expand-minimally nil
-      use-package-compute-statistics t
-      debug-on-error t)
-    )
+    (progn
+      (message "DEBUGGING ON")
+      (setq
+       use-package-verbose t
+       use-package-expand-minimally nil
+       use-package-compute-statistics t
+       debug-on-error t))
   (setq
-    use-package-verbose nil
-    use-package-expand-minimally t)
-  )
+   use-package-verbose nil
+   use-package-expand-minimally t))
 
 ;; server
 (load "server")
 (setq server-socket-dir (format "/tmp/emacs-%s" (user-login-name)))
-(unless (server-running-p) (server-start))
+(unless (server-running-p)
+  (server-start))
 
 ;; codings
 (prefer-coding-system 'utf-8)
@@ -84,13 +82,12 @@
 
 ;; scrolling
 (setq
-  scroll-conservatively 101
-  scroll-preserve-screen-position t
-  scroll-step 1
-  scroll-step 1
-  scroll-conservatively 10000
-  auto-window-vscroll nil
-  )
+ scroll-conservatively 101
+ scroll-preserve-screen-position t
+ scroll-step 1
+ scroll-step 1
+ scroll-conservatively 10000
+ auto-window-vscroll nil)
 
 ;; reverting buffers
 (global-auto-revert-mode t)
@@ -99,624 +96,584 @@
 ;; packages
 ;;
 
-                                        ;(use-package auto-package-update
-                                        ;  :ensure t
-                                        ;  :config
-                                        ;  (setq
-                                        ;   ;; auto-package-update-delete-old-versions t
-                                        ;   auto-package-update-interval 4
-                                        ;   ;; auto-package-update-excluded-packages '("mu4e")
-                                        ;   )
-                                        ;  (auto-package-update-maybe)
-                                        ;  )
+;(use-package auto-package-update
+;  :ensure t
+;  :config
+;  (setq
+;   ;; auto-package-update-delete-old-versions t
+;   auto-package-update-interval 4
+;   ;; auto-package-update-excluded-packages '("mu4e")
+;   )
+;  (auto-package-update-maybe)
+;  )
 
-(use-package auto-compile
-  :init
-  (setq
-    auto-compile-display-buffer nil
-    auto-compile-mode-line-counter t
-    ))
+(use-package
+ auto-compile
+ :init
+ (setq
+  auto-compile-display-buffer nil
+  auto-compile-mode-line-counter t))
 (auto-compile-on-load-mode)
 
-(use-package calendar
-  :config
-  (setq
-    calendar-bahai-all-holidays-flag nil
-    calendar-christian-all-holidays-flag t
-    calendar-date-style (quote iso)
-    calendar-mark-holidays-flag t
-    )
-  (calendar-set-date-style 'iso)
-  (defun insert-current-date (&optional omit-day-of-week-p)
-    (interactive "P*")
-    (insert
-      (calendar-date-string (calendar-current-date) t omit-day-of-week-p)
-      ))
-  )
+(use-package
+ calendar
+ :config
+ (setq
+  calendar-bahai-all-holidays-flag nil
+  calendar-christian-all-holidays-flag t
+  calendar-date-style (quote iso)
+  calendar-mark-holidays-flag t)
+ (calendar-set-date-style 'iso)
+ (defun insert-current-date (&optional omit-day-of-week-p)
+   (interactive "P*")
+   (insert
+    (calendar-date-string (calendar-current-date) t omit-day-of-week-p))))
 
-(use-package cc-mode
-  :config
-  (setq
-    c-basic-offset 2
-    c-default-style "linux"
-    ))
+(use-package
+ cc-mode
+ :config
+ (setq
+  c-basic-offset 2
+  c-default-style "linux"))
 
-(use-package company
-  :ensure
-  :defer t
-  :diminish
-  :custom
-  (company-idle-delay 0.5) ;; how long to wait until popup
-  ;; (company-begin-commands nil) ;; uncomment to disable popup
-  :config
-  (setq
-    company-dabbrev-other-buffers t
-    company-dabbrev-code-other-buffers t
-    )
-  :hook ((text-mode . company-mode)
-          (prog-mode . company-mode)
-          )
-  :bind (:map company-active-map
-          ("C-n". company-select-next)
-          ("C-p". company-select-previous)
-          ("M-<". company-select-first)
-          ("M->". company-select-last))
-  )
+(use-package
+ company
+ :ensure
+ :defer t
+ :diminish
+ :custom
+ (company-idle-delay 0.5) ;; how long to wait until popup
+ ;; (company-begin-commands nil) ;; uncomment to disable popup
+ :config
+ (setq
+  company-dabbrev-other-buffers t
+  company-dabbrev-code-other-buffers t)
+ :hook ((text-mode . company-mode) (prog-mode . company-mode))
+ :bind
+ (:map
+  company-active-map
+  ("C-n" . company-select-next)
+  ("C-p" . company-select-previous)
+  ("M-<" . company-select-first)
+  ("M->" . company-select-last)))
 
-(use-package direnv
-  :config
-  (direnv-mode)
-  )
+(use-package direnv :config (direnv-mode))
 
-(use-package dockerfile-mode
-  :mode "Dockerfile"
-  )
+(use-package dockerfile-mode :mode "Dockerfile")
 
-(use-package eldoc
-  :diminish
-  :hook
-  ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode)
-  )
+(use-package
+ eldoc
+ :diminish
+ :hook
+ ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode))
 
-(use-package elisp-autofmt
-  :commands (elisp-autofmt-mode elisp-autofmt-buffer)
-  :hook (emacs-lisp-mode . elisp-autofmt-mode))
+(use-package
+ elisp-autofmt
+ :commands (elisp-autofmt-mode elisp-autofmt-buffer)
+ :hook (emacs-lisp-mode . elisp-autofmt-mode))
 
-(use-package exec-path-from-shell ;; set exec path
-  :config
-  (exec-path-from-shell-initialize)
-  )
+(use-package
+ exec-path-from-shell ;; set exec path
+ :config (exec-path-from-shell-initialize))
 
-(use-package fill-column-indicator
-  :hook
-  (prog-mode . fci-mode)
-  )
+(use-package fill-column-indicator :hook (prog-mode . fci-mode))
 
-(use-package flyspell ;; on the fly spell checking
-  :commands (flyspell-prog-mode flyspell-mode)
-  :hook
-  ((text-mode . flyspell-mode)
-    (prog-mode . flyspell-prog-mode)
-    )
-  :config
-  (setq
-    ispell-dictionary "british"
-    )
-  )
+(use-package
+ flyspell ;; on the fly spell checking
+ :commands (flyspell-prog-mode flyspell-mode)
+ :hook ((text-mode . flyspell-mode) (prog-mode . flyspell-prog-mode))
+ :config (setq ispell-dictionary "british"))
 
-(use-package git-ps1-mode
-  :hook find-file
-  )
+(use-package git-ps1-mode :hook find-file)
 
-(use-package ido-completing-read+ ;; Display possible completions at all places
-  :ensure t
-  :diminish nil
-  :config
-  ;; This enables ido in all contexts where it could be useful, not just for
-  ;; selecting buffer and file names
-  (ido-mode t)
-  (ido-everywhere t)
-  ;; This allows partial matches, e.g. "uzh" will match "Ustad Zakir Hussain"
-  (setq
-    ido-enable-flex-matching t
-    ido-use-filename-at-point nil
-    ;; Includes buffer names of recently opened files, even if not open now.
-    ido-use-virtual-buffers t
-    ))
+(use-package
+ ido-completing-read+ ;; Display possible completions at all places
+ :ensure t
+ :diminish nil
+ :config
+ ;; This enables ido in all contexts where it could be useful, not just for
+ ;; selecting buffer and file names
+ (ido-mode t) (ido-everywhere t)
+ ;; This allows partial matches, e.g. "uzh" will match "Ustad Zakir Hussain"
+ (setq
+  ido-enable-flex-matching t
+  ido-use-filename-at-point nil
+  ;; Includes buffer names of recently opened files, even if not open now.
+  ido-use-virtual-buffers t))
 
-(use-package just-mode
-  )
+(use-package just-mode)
 
-(use-package magit
-  :ensure t
-  :bind ("C-x g" . magit-status)
-  :bind (:map magit-status-mode-map ("q" . magit-quit-session))
-  :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
-  :config
-  (setq
-    magit-commit-arguments (quote ("--signoff"))
-    magit-diff-refine-hunk (quote all)
-    magit-process-popup-time 5
-    magit-set-upstream-on-push t
-    )
-  ;; full screen magit-status
-  (defadvice magit-status (around magit-fullscreen activate)
-    (window-configuration-to-register :magit-fullscreen)
-    ad-do-it
-    (delete-other-windows)
-    )
-  (defun magit-quit-session ()
-    "Restores the previous window configuration and kills the magit buffer"
-    (interactive)
-    (kill-buffer)
-    (jump-to-register :magit-fullscreen)
-    )
-  )
+(use-package
+ magit
+ :ensure t
+ :bind ("C-x g" . magit-status)
+ :bind (:map magit-status-mode-map ("q" . magit-quit-session))
+ :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
+ :config
+ (setq
+  magit-commit-arguments (quote ("--signoff"))
+  magit-diff-refine-hunk (quote all)
+  magit-process-popup-time 5
+  magit-set-upstream-on-push t)
+ ;; full screen magit-status
+ (defadvice magit-status (around magit-fullscreen activate)
+   (window-configuration-to-register :magit-fullscreen)
+   ad-do-it
+   (delete-other-windows))
+ (defun magit-quit-session ()
+   "Restores the previous window configuration and kills the magit buffer"
+   (interactive)
+   (kill-buffer)
+   (jump-to-register :magit-fullscreen)))
 
-(use-package make-mode
-  )
+(use-package make-mode)
 
-(use-package markdown-mode
-  :commands (markdown-mode gfm-mode)
-  :mode
-  ( ("\\.md\\'" . markdown-mode)
-    ("\\.markdown\\'" . markdown-mode)
-    ("README.md\\'" . gfm-mode)
-    )
-  :magic
-  ("\\`==\\+==" . markdown-mode)
-  :init
-  (setq
-    markdown-command "multimarkdown"
-    ))
+(use-package
+ markdown-mode
+ :commands (markdown-mode gfm-mode)
+ :mode
+ (("\\.md\\'" . markdown-mode)
+  ("\\.markdown\\'" . markdown-mode)
+  ("README.md\\'" . gfm-mode))
+ :magic ("\\`==\\+==" . markdown-mode)
+ :init (setq markdown-command "multimarkdown"))
 
-(use-package mu4e
-  :config
-  (setq
-    mu4e-attachment-dir "~/Downloads"
-    mu4e-drafts-folder "/drafts"  ;; unfinished messages
-    mu4e-maildir "~/u/me/mail"    ;; top-level Maildir
-    mu4e-mu-binary (executable-find "mu")
-    mu4e-refile-folder "/archive" ;; saved messages
-    mu4e-sent-folder "/sent"      ;; folder for sent messages
-    mu4e-trash-folder "/trash"    ;; trashed messages
-    mu4e-use-fancy-chars t
-    mu4e-view-show-images t
-    ))
+(use-package
+ mu4e
+ :config
+ (setq
+  mu4e-attachment-dir "~/Downloads"
+  mu4e-drafts-folder "/drafts" ;; unfinished messages
+  mu4e-maildir "~/u/me/mail" ;; top-level Maildir
+  mu4e-mu-binary (executable-find "mu")
+  mu4e-refile-folder "/archive" ;; saved messages
+  mu4e-sent-folder "/sent" ;; folder for sent messages
+  mu4e-trash-folder "/trash" ;; trashed messages
+  mu4e-use-fancy-chars t
+  mu4e-view-show-images t))
 
-(use-package hide-mode-line
-  :ensure t
-  :defer t
-  )
+(use-package hide-mode-line :ensure t :defer t)
 
 ;; OCaml
-(use-package eglot
-  :ensure t)
-(use-package tuareg
-  :ensure t
-  :mode (("\\.ocamlinit\\'" . tuareg-mode))
-  )
-(use-package ocaml-eglot
-  :ensure t
-  :after tuareg
-  :hook
-  (tuareg-mode . ocaml-eglot)
-  (ocaml-eglot . eglot-ensure)
-  )
+(use-package eglot :ensure t)
+(use-package tuareg :ensure t :mode (("\\.ocamlinit\\'" . tuareg-mode)))
+(use-package
+ ocaml-eglot
+ :ensure t
+ :after tuareg
+ :hook
+ (tuareg-mode . ocaml-eglot)
+ (ocaml-eglot . eglot-ensure))
 ;;
 
-(use-package org-gcal
-  :after org
-  :defer t
-  :hook
-  ( ;; (org-agenda-mode . (lambda () (org-gcal-sync)))
-    (org-capture-after-finalize . (lambda () (org-gcal-sync)))
-    )
-  :config
-  (setq
-    plstore-cache-passphrase-for-symmetric-encryption t
-    ;; epa-file-cache-passphrase-for-symmetric-encryption t
-    org-gcal-auto-archive nil
+(use-package
+ org-gcal
+ :after org
+ :defer t
+ :hook
+ ( ;; (org-agenda-mode . (lambda () (org-gcal-sync)))
+  (org-capture-after-finalize . (lambda () (org-gcal-sync))))
+ :config
+ (setq
+  plstore-cache-passphrase-for-symmetric-encryption t
+  ;; epa-file-cache-passphrase-for-symmetric-encryption t
+  org-gcal-auto-archive nil
 
-    org-gcal-client-id "XXX"
-    org-gcal-client-secret "XXX"
-    org-gcal-file-alist
-    '(("XXX@group.calendar.google.com" . "~/Dropbox/calendar/richard.org")
-       ("XXX@import.calendar.google.com" . "~/Dropbox/calendar/richard-tripit.org")
-       )
+  org-gcal-client-id "XXX"
+  org-gcal-client-secret "XXX"
+  org-gcal-file-alist
+  '(("XXX@group.calendar.google.com" . "~/Dropbox/calendar/richard.org")
+    ("XXX@import.calendar.google.com"
+     .
+     "~/Dropbox/calendar/richard-tripit.org"))
 
-    org-gcal-local-timezone "Europe/London"
-    org-gcal-managed-newly-fetched-mode "gcal"
-    org-gcal-managed-post-at-point-update-existing 'prompt
-    org-gcal-managed-update-existing-mode "org"
-    org-gcal-recurring-events-mode 'nested
-    ))
+  org-gcal-local-timezone "Europe/London"
+  org-gcal-managed-newly-fetched-mode "gcal"
+  org-gcal-managed-post-at-point-update-existing 'prompt
+  org-gcal-managed-update-existing-mode "org"
+  org-gcal-recurring-events-mode 'nested))
 
-(use-package org
-  :defer t
-  :bind (:map org-mode-map
-          ("C-c a" . org-agenda)
-          ("<M-S-up>" . org-metaup)
-          ("<M-S-down>" . org-metadown)
-          )
+(use-package
+ org
+ :defer t
+ :bind
+ (:map
+  org-mode-map
+  ("C-c a" . org-agenda)
+  ("<M-S-up>" . org-metaup)
+  ("<M-S-down>" . org-metadown))
 
-  :hook
-  ((org-agenda-mode
-     . (lambda ()
-         (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today)
-         )))
+ :hook
+ ((org-agenda-mode
+   .
+   (lambda () (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today))))
 
-  :config
-  (setq
-    org-agenda-files "~/Dropbox/calendar/index"
-    org-basedir "~/Dropbox/calendar/"
-    revert-without-query (mapcar
-                           (lambda (f) (expand-file-name f org-basedir))
-                           '( "richard-incoming.org"
-                              "richard-tripit.org"
-                              ))
-    org-agenda-loop-over-headlines-in-active-region nil
-    org-agenda-todo-ignore-scheduled 'all
-    org-adapt-indentation t
-    org-hide-leading-stars t
-    )
+ :config
+ (setq
+  org-agenda-files "~/Dropbox/calendar/index"
+  org-basedir "~/Dropbox/calendar/"
+  revert-without-query
+  (mapcar
+   (lambda (f) (expand-file-name f org-basedir))
+   '("richard-incoming.org" "richard-tripit.org"))
+  org-agenda-loop-over-headlines-in-active-region nil
+  org-agenda-todo-ignore-scheduled 'all
+  org-adapt-indentation t
+  org-hide-leading-stars t)
 
-  ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
-  (defun org-archive-completed-tasks ()
-    (interactive)
-    (org-map-entries
-      (lambda ()
-        (org-archive-subtree)
-        (setq org-map-continue-from (outline-previous-heading)))
-      "/+DONE|+CANCELLED" 'tree)
-    )
+ ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
+ (defun org-archive-completed-tasks ()
+   (interactive)
+   (org-map-entries
+    (lambda ()
+      (org-archive-subtree)
+      (setq org-map-continue-from (outline-previous-heading)))
+    "/+DONE|+CANCELLED" 'tree))
 
-  ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
-  (defadvice org-prepare-agenda (after org-fix-split)
-    (toggle-window-split))
-  (ad-activate 'org-prepare-agenda)
+ ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
+ (defadvice org-prepare-agenda (after org-fix-split)
+   (toggle-window-split))
+ (ad-activate 'org-prepare-agenda)
 
-  ;; customise my agenda options
-  (setq org-agenda-custom-commands
-    '(
-       ("a" "Week agenda" agenda ""
-         ( (org-agenda-compact-blocks t)
-           (org-agenda-include-diary t)
-           (org-agenda-log-mode-items (quote (closed clock)))
-           (org-agenda-repeating-timestamp-show-all t)
-           (org-agenda-skip-deadline-if-done t)
-           (org-agenda-skip-scheduled-if-done t)
-           (org-agenda-skip-timestamp-if-done t)
-           (org-agenda-span 7)
-           (org-agenda-start-on-weekday 1)
-           (org-deadline-warning-days 15)
-           ))
+ ;; customise my agenda options
+ (setq
+  org-agenda-custom-commands
+  '(("a" "Week agenda" agenda ""
+     ((org-agenda-compact-blocks t)
+      (org-agenda-include-diary t)
+      (org-agenda-log-mode-items (quote (closed clock)))
+      (org-agenda-repeating-timestamp-show-all t)
+      (org-agenda-skip-deadline-if-done t)
+      (org-agenda-skip-scheduled-if-done t)
+      (org-agenda-skip-timestamp-if-done t)
+      (org-agenda-span 7)
+      (org-agenda-start-on-weekday 1)
+      (org-deadline-warning-days 15)))
 
-       ;; ("c" "Calendar" agenda ""
-       ;;   ((org-agenda-span 7)
-       ;;     (org-agenda-start-on-weekday 1)
-       ;;     (org-agenda-time-grid nil)
-       ;;     (org-agenda-repeating-timestamp-show-all t)
-       ;;     (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
-       ;;     (org-agenda-category-filter-preset '("-a/nosho"))
-       ;;     ))
+    ;; ("c" "Calendar" agenda ""
+    ;;   ((org-agenda-span 7)
+    ;;     (org-agenda-start-on-weekday 1)
+    ;;     (org-agenda-time-grid nil)
+    ;;     (org-agenda-repeating-timestamp-show-all t)
+    ;;     (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
+    ;;     (org-agenda-category-filter-preset '("-a/nosho"))
+    ;;     ))
 
-       ;; ("d" "Upcoming deadlines" agenda ""
-       ;;   ((org-agenda-span 60)
-       ;;     (org-agenda-time-grid nil)
-       ;;     (org-deadline-warning-days 365)
-       ;;     (org-agenda-entry-types '(:deadline))
-       ;;     ))
+    ;; ("d" "Upcoming deadlines" agenda ""
+    ;;   ((org-agenda-span 60)
+    ;;     (org-agenda-time-grid nil)
+    ;;     (org-deadline-warning-days 365)
+    ;;     (org-agenda-entry-types '(:deadline))
+    ;;     ))
 
-       ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
-         ((org-agenda-compact-blocks t)
-           (org-agenda-category-filter-preset '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
-           (org-agenda-include-diary t)
-           (org-agenda-log-mode-items (quote (closed clock)))
-           (org-agenda-ndays 31)
-           (org-agenda-repeating-timestamp-show-all t)
-           (org-agenda-show-all-dates t)
-           (org-agenda-skip-deadline-if-done t)
-           (org-agenda-skip-scheduled-if-done t)
-           (org-agenda-skip-timestamp-if-done t)
-           (org-agenda-sorting-strategy '(habit-up time-up deadline-up priority-down todo-state-down))
-           (org-agenda-start-on-weekday 1)
-           (org-agenda-time-grid nil)
-           (org-deadline-warning-days 15)
-           (org-default-notes-file "~/me/todo/notes.org")
-           (org-fast-tag-selection-single-key (quote expert))
-           (org-remember-store-without-prompt t)
-           ))
+    ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
+     ((org-agenda-compact-blocks t)
+      (org-agenda-category-filter-preset '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
+      (org-agenda-include-diary t)
+      (org-agenda-log-mode-items (quote (closed clock)))
+      (org-agenda-ndays 31)
+      (org-agenda-repeating-timestamp-show-all t)
+      (org-agenda-show-all-dates t)
+      (org-agenda-skip-deadline-if-done t)
+      (org-agenda-skip-scheduled-if-done t)
+      (org-agenda-skip-timestamp-if-done t)
+      (org-agenda-sorting-strategy
+       '(habit-up time-up deadline-up priority-down todo-state-down))
+      (org-agenda-start-on-weekday 1)
+      (org-agenda-time-grid nil)
+      (org-deadline-warning-days 15)
+      (org-default-notes-file "~/me/todo/notes.org")
+      (org-fast-tag-selection-single-key (quote expert))
+      (org-remember-store-without-prompt t)))
 
-       ;; ("n" "Agenda and all TODOs"
-       ;;   ( (agenda ""
-       ;;       ((org-agenda-skip-function
-       ;;          '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
-       ;;       )
-       ;;     (alltodo "")
-       ;;     ))
+    ;; ("n" "Agenda and all TODOs"
+    ;;   ( (agenda ""
+    ;;       ((org-agenda-skip-function
+    ;;          '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
+    ;;       )
+    ;;     (alltodo "")
+    ;;     ))
 
-       ("t" "Today"
-         ( (agenda ""
-             ((org-agenda-span 1)
-               ))
-           (alltodo ""
-             ;; ((org-agenda-sorting-strategy '(tag-up)))
-             ))
-
-         ( (org-agenda-category-filter-preset '( "-a" "-a/m-taxi" "-a/in" "-a/appt"
-                                                 "-e" "-e/clubs"
-                                                 "-w" "-w/clubs"
-                                                 "-d"
-                                                 "-house" "-home"))
-           (org-agenda-include-diary t)
-           ))
+    ("t" "Today"
+     ((agenda "" ((org-agenda-span 1)))
+      (alltodo
+       ""
+       ;; ((org-agenda-sorting-strategy '(tag-up)))
        ))
 
-  ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
-  (defun holiday-new-year-bank-holiday ()
-    (let ((m displayed-month)
-           (y displayed-year))
-      (calendar-increment-month m y 1)
-      (when (<= m 3)
-        (let ((d (calendar-day-of-week (list 1 1 y))))
-          (cond ((= d 6)
-                  (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
-            ((= d 0)
-              (list (list (list 1 2 y) "New Year's Day Bank Holiday")))
-            )))))
+     ((org-agenda-category-filter-preset
+       '("-a"
+         "-a/m-taxi"
+         "-a/in"
+         "-a/appt"
+         "-e"
+         "-e/clubs"
+         "-w"
+         "-w/clubs"
+         "-d"
+         "-house"
+         "-home"))
+      (org-agenda-include-diary t)))))
 
-  (defun holiday-christmas-bank-holidays ()
-    (let ((m displayed-month)
-           (y displayed-year))
-      (calendar-increment-month m y -1)
-      (when (>= m 10)
-        (let ((d (calendar-day-of-week (list 12 25 y))))
-          (cond ((= d 5)
-                  (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
-            ((= d 6)
-              (list (list (list 12 27 y) "Boxing Day Bank Holiday")
-                (list (list 12 28 y) "Christmas Day Bank Holiday")))
-            ((= d 0)
-              (list (list (list 12 27 y) "Christmas Day Bank Holiday")))
-            )))))
+ ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
+ (defun holiday-new-year-bank-holiday ()
+   (let ((m displayed-month)
+         (y displayed-year))
+     (calendar-increment-month m y 1)
+     (when (<= m 3)
+       (let ((d (calendar-day-of-week (list 1 1 y))))
+         (cond
+          ((= d 6)
+           (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
+          ((= d 0)
+           (list (list (list 1 2 y) "New Year's Day Bank Holiday"))))))))
 
-  ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
-  (defun org-agenda-reschedule-to-today (&optional arg)
-    "Bulk reschedule selected tasks for today."
-    (interactive "P")
-    (org-agenda-schedule arg ".")
-    )
+ (defun holiday-christmas-bank-holidays ()
+   (let ((m displayed-month)
+         (y displayed-year))
+     (calendar-increment-month m y -1)
+     (when (>= m 10)
+       (let ((d (calendar-day-of-week (list 12 25 y))))
+         (cond
+          ((= d 5)
+           (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
+          ((= d 6)
+           (list
+            (list (list 12 27 y) "Boxing Day Bank Holiday")
+            (list (list 12 28 y) "Christmas Day Bank Holiday")))
+          ((= d 0)
+           (list (list (list 12 27 y) "Christmas Day Bank Holiday"))))))))
 
-  ;; some Easter related helpers
+ ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
+ (defun org-agenda-reschedule-to-today (&optional arg)
+   "Bulk reschedule selected tasks for today."
+   (interactive "P")
+   (org-agenda-schedule arg "."))
 
-  (defun da-easter (year)
-    "Calculate the date for Easter Sunday in YEAR. Returns the date in the
+ ;; some Easter related helpers
+
+ (defun da-easter (year)
+   "Calculate the date for Easter Sunday in YEAR. Returns the date in the
   Gregorian calendar, ie (MM DD YY) format."
-    (let* ((century (1+ (/ year 100)))
-            (shifted-epact (% (+ 14 (* 11 (% year 19))
-                                (- (/ (* 3 century) 4))
-                                (/ (+ 5 (* 8 century)) 25)
-                                (* 30 century))
-                             30))
-            (adjusted-epact (if (or (= shifted-epact 0)
-                                  (and (= shifted-epact 1)
-                                    (< 10 (% year 19))))
-                              (1+ shifted-epact)
-                              shifted-epact))
-            (paschal-moon (- (calendar-absolute-from-gregorian
-                               (list 4 19 year))
-                            adjusted-epact)))
-      (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
+   (let* ((century (1+ (/ year 100)))
+          (shifted-epact
+           (% (+ 14 (* 11 (% year 19))
+                 (- (/ (* 3 century) 4))
+                 (/ (+ 5 (* 8 century)) 25)
+                 (* 30 century))
+              30))
+          (adjusted-epact
+           (if (or (= shifted-epact 0)
+                   (and (= shifted-epact 1) (< 10 (% year 19))))
+               (1+ shifted-epact)
+             shifted-epact))
+          (paschal-moon
+           (- (calendar-absolute-from-gregorian (list 4 19 year))
+              adjusted-epact)))
+     (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
 
 
-  (defun calendar-days-from-easter ()
-    "When used in a diary sexp, this function will calculate how many days
+ (defun calendar-days-from-easter ()
+   "When used in a diary sexp, this function will calculate how many days
   are between the current date (DATE) and Easter Sunday."
-    (- (calendar-absolute-from-gregorian date)
+   (- (calendar-absolute-from-gregorian date)
       (da-easter (calendar-extract-year date))))
 
-  ;; Now we can schedule the public holidays associated with Easter as recurring
-  ;; events. Good Friday is 2 days before "Easter", Easter Monday is one day
-  ;; after.
+ ;; Now we can schedule the public holidays associated with Easter as recurring
+ ;; events. Good Friday is 2 days before "Easter", Easter Monday is one day
+ ;; after.
 
-  ;; *** Good Friday
-  ;; <%%(= -2 (calendar-days-from-easter))>
+ ;; *** Good Friday
+ ;; <%%(= -2 (calendar-days-from-easter))>
+ )
 
-  )
+(use-package
+ outline
+ :diminish outline-minor-mode
+ :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode))
 
-(use-package outline
-  :diminish outline-minor-mode
-  :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode)
-  )
+(use-package
+ paradox
+ :init
+ (setq
+  paradox-github-token t
+  ;; paradox-execute-asynchronously t
+  paradox-automatically-star t))
 
-(use-package paradox
-  :init
-  (setq
-    paradox-github-token t
-    ;; paradox-execute-asynchronously t
-    paradox-automatically-star t
-    ))
+(use-package
+ paren
+ :hook (find-file . show-paren-mode)
+ :config
+ (setq
+  show-paren-mode t
+  show-paren-style (quote expression)))
 
-(use-package paren
-  :hook (find-file . show-paren-mode)
-  :config
-  (setq
-    show-paren-mode t
-    show-paren-style (quote expression)
-    ))
+(use-package rainbow-mode :hook prog-mode)
 
-(use-package rainbow-mode
-  :hook prog-mode
-  )
+(use-package
+ recentf ;; Recent buffers in a new Emacs session
+ :diminish nil
+ :config (recentf-mode t)
+ (setq
+  recentf-auto-cleanup 'never
+  recentf-max-saved-items 1000
+  recentf-save-file (concat user-emacs-directory ".recentf")))
 
-(use-package recentf ;; Recent buffers in a new Emacs session
-  :diminish nil
-  :config
-  (recentf-mode t)
-  (setq
-    recentf-auto-cleanup 'never
-    recentf-max-saved-items 1000
-    recentf-save-file (concat user-emacs-directory ".recentf")
-    ))
+(use-package
+ saveplace ;; save cursor position in file after close
+ :unless noninteractive
+ :config (save-place-mode t))
 
-(use-package saveplace ;; save cursor position in file after close
-  :unless noninteractive
-  :config (save-place-mode t)
-  )
+(use-package
+ sh-script
+ :mode (("bash_" . sh-mode) ("APKBUILD\\'" . sh-mode))
+ :config
+ (setq
+  sh-basic-offset 2
+  sh-indentation 2))
 
-(use-package sh-script
-  :mode
-  ( ("bash_" . sh-mode)
-    ( "APKBUILD\\'" . sh-mode)
-    )
-  :config
-  (setq
-    sh-basic-offset 2
-    sh-indentation 2
-    ))
+(use-package
+ solarized-theme
+ :ensure
+ :init
+ (progn
+   (defvar my-color-themes (list 'solarized-dark 'solarized-light))
+   (defvar theme-current my-color-themes)
 
-(use-package solarized-theme
-  :ensure
-  :init
-  (progn
-    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
-    (defvar theme-current my-color-themes)
+   (defun my-theme-set-default ()
+     (interactive)
+     (setq theme-current my-color-themes)
+     (load-theme (car theme-current) t))
 
-    (defun my-theme-set-default ()
-      (interactive)
-      (setq theme-current my-color-themes)
-      (load-theme (car theme-current) t))
+   (defun my-describe-theme () ; Show the current theme
+     (interactive)
+     (message "%s" (car theme-current)))
 
-    (defun my-describe-theme () ; Show the current theme
-      (interactive)
-      (message "%s" (car theme-current)))
+   (defun my-theme-cycle ()
+     (interactive)
+     (setq theme-current (cdr theme-current))
+     (if (null theme-current)
+         (setq theme-current my-color-themes))
+     (load-theme (car theme-current) t)
+     (message "%S" (car theme-current))))
 
-    (defun my-theme-cycle ()
-      (interactive)
-      (setq theme-current (cdr theme-current))
-      (if (null theme-current)
-        (setq theme-current my-color-themes))
-      (load-theme (car theme-current) t)
-      (message "%S" (car theme-current)))
-    )
+ :bind ("C-c t" . my-theme-cycle)
+ :hook (after-init . (lambda () (load-theme 'solarized-dark))))
 
-  :bind
-  ("C-c t" . my-theme-cycle)
-  :hook
-  (after-init . (lambda () (load-theme 'solarized-dark)))
-  )
+(use-package
+ subword ;; subword -- obey CamelCase etc
+ :config (setq global-subword-mode t))
 
-(use-package subword ;; subword -- obey CamelCase etc
-  :config
-  (setq
-    global-subword-mode t
-    ))
+(use-package
+ latex
+ :ensure auctex
+ :mode
+ (("\\.tex\\'" . latex-mode)
+  ("\\.latex\\'" . latex-mode)
+  ("\\.bibtex\\'" . bibtex-mode))
+ :hook
+ ((LaTeX-mode . LaTeX-math-mode)
+  (LaTeX-mode . turn-on-reftex)
+  (LaTeX-mode . TeX-fold-mode))
+ :config (use-package latex)
+ (setq
+  bibtex-dialect 'biblatex
+  TeX-auto-save t
+  TeX-parse-self t
+  TeX-master t
+  reftex-plug-into-AUCTeX t)
 
-(use-package latex
-  :ensure auctex
-  :mode
-  ( ("\\.tex\\'" . latex-mode)
-    ("\\.latex\\'" . latex-mode)
-    ("\\.bibtex\\'" . bibtex-mode)
-    )
-  :hook
-  ((LaTeX-mode . LaTeX-math-mode)
-    (LaTeX-mode . turn-on-reftex)
-    (LaTeX-mode . TeX-fold-mode)
-    )
-  :config
-  (use-package latex)
-  (setq
-    bibtex-dialect 'biblatex
-    TeX-auto-save t
-    TeX-parse-self t
-    TeX-master t
-    reftex-plug-into-AUCTeX t
-    )
+ ;; modified from swiftex.el
+ (defun tex-enclose-word (before after)
+   (interactive "*Mbefore: \nMafter: ")
+   (let* ((oldpoint (point))
+          (start oldpoint)
+          (end oldpoint))
 
-  ;; modified from swiftex.el
-  (defun tex-enclose-word (before after)
-    (interactive "*Mbefore: \nMafter: ")
-    (let* ((oldpoint (point))
-            (start oldpoint)
-            (end oldpoint))
+     ;; get the start and end of the current word
+     (skip-syntax-backward "w")
+     (setq start (point))
+     (goto-char oldpoint)
+     (skip-syntax-forward "w")
+     (setq end (point))
+     (if (and (eq start oldpoint) (eq end oldpoint))
+         ;; insert the command as nothing to enclose
+         (progn
+           (insert before)
+           (insert after)
+           (backward-char))
 
-      ;; get the start and end of the current word
-      (skip-syntax-backward "w")
-      (setq start (point))
-      (goto-char oldpoint)
-      (skip-syntax-forward "w")
-      (setq end (point))
-      (if (and (eq start oldpoint)
-            (eq end oldpoint))
-        ;; insert the command as nothing to enclose
-        (progn (insert before) (insert after) (backward-char))
+       ;; enclose the word with the command
+       (progn
+         (insert after)
+         (goto-char start)
+         (insert before)
+         (goto-char (+ oldpoint (length before)))))))
 
-        ;; enclose the word with the command
-        (progn
-          (insert after)
-          (goto-char start)
-          (insert before)
-          (goto-char (+ oldpoint (length before)))
-          )
-        )))
+ :bind
+ (:map
+  LaTeX-mode-map ("{" . TeX-insert-braces)
+  ("M-[" .
+   (lambda ()
+     (interactive)
+     (insert "{")))
+  ("M-]" .
+   (lambda ()
+     (interactive)
+     (insert "}")))
+  ("C-c m" .
+   (lambda ()
+     (interactive "*")
+     (tex-enclose-word "\\emph{" "}")))
+  ("C-c b" .
+   (lambda ()
+     (interactive "*")
+     (tex-enclose-word "\\textbf{" "}")))))
 
-  :bind (:map LaTeX-mode-map
-          ("{" . TeX-insert-braces)
-          ( "M-[" . (lambda () (interactive) (insert "{")))
-          ( "M-]" . (lambda () (interactive) (insert "}")))
-          ( "C-c m" . (lambda () (interactive "*")
-                        (tex-enclose-word "\\emph{" "}")))
-          ( "C-c b" . (lambda () (interactive "*")
-                        (tex-enclose-word "\\textbf{" "}")))
-          )
-  )
+(use-package
+ whitespace
+ ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
+ :commands (whitespace-buffer whitespace-cleanup whitespace-mode whitespace-turn-off)
+ :preface
+ (defun normalize-file ()
+   (interactive)
+   (save-excursion
+     (goto-char (point-min))
+     (whitespace-cleanup)
+     (delete-trailing-whitespace)
+     (goto-char (point-max))
+     (delete-blank-lines)
+     (set-buffer-file-coding-system 'unix)
+     (goto-char (point-min))
+     (while (re-search-forward "\r$" nil t)
+       (replace-match ""))
+     ;; (set-buffer-file-coding-system 'utf-8)
+     (let ((require-final-newline t))
+       (save-buffer))))
 
-(use-package whitespace
-  ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
-  :commands (whitespace-buffer
-              whitespace-cleanup
-              whitespace-mode
-              whitespace-turn-off)
-  :preface
-  (defun normalize-file ()
-    (interactive)
-    (save-excursion
-      (goto-char (point-min))
-      (whitespace-cleanup)
-      (delete-trailing-whitespace)
-      (goto-char (point-max))
-      (delete-blank-lines)
-      (set-buffer-file-coding-system 'unix)
-      (goto-char (point-min))
-      (while (re-search-forward "\r$" nil t)
-        (replace-match ""))
-      ;; (set-buffer-file-coding-system 'utf-8)
-      (let ((require-final-newline t))
-        (save-buffer))
-      ))
+ (defun maybe-turn-on-whitespace ()
+   (when (not (locate-dominating-file default-directory ".noclean"))
+     (progn
+       (setq whitespace-style
+             '(face
+               trailing
+               tabs
+               lines-tail
+               newline
+               empty
+               space-before-tab
+               tab-mark))
+       (whitespace-mode t))))
 
-  (defun maybe-turn-on-whitespace ()
-    (when (not (locate-dominating-file default-directory ".noclean"))
-      (progn
-        (setq whitespace-style
-          '(face trailing tabs lines-tail newline empty space-before-tab tab-mark))
-        (whitespace-mode t)
-        )))
+ :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
 
-  :hook
-  ( (find-file . maybe-turn-on-whitespace)
-    (prog-mode . whitespace-cleanup)
-    ))
-
-(use-package yasnippet
-  :ensure
-  :config
-  (yas-reload-all)
-  (add-hook 'prog-mode-hook 'yas-minor-mode)
-  (add-hook 'text-mode-hook 'yas-minor-mode)
-  )
+(use-package
+ yasnippet
+ :ensure
+ :config
+ (yas-reload-all)
+ (add-hook 'prog-mode-hook 'yas-minor-mode)
+ (add-hook 'text-mode-hook 'yas-minor-mode))
 
 ;;
 ;; functions
@@ -727,51 +684,63 @@
   "Show line numbers temporarily, while prompting for the line number input."
   (interactive)
   (unwind-protect
-    (progn
-      (display-line-numbers-mode 1)
-      (goto-line (read-number "Goto line: "))
-      )
-    (display-line-numbers-mode -1)
-    ))
+      (progn
+        (display-line-numbers-mode 1)
+        (goto-line (read-number "Goto line: ")))
+    (display-line-numbers-mode -1)))
 (global-set-key [remap goto-line] 'goto-line-with-feedback)
 
-(defun line-to-top-of-window ()    (interactive) (recenter 0))
-(defun line-to-bottom-of-window () (interactive) (recenter -1))
-(defun warp-to-top-of-window ()    (interactive) (move-to-window-line 0))
-(defun warp-to-bottom-of-window () (interactive) (move-to-window-line -1))
+(defun line-to-top-of-window ()
+  (interactive)
+  (recenter 0))
+(defun line-to-bottom-of-window ()
+  (interactive)
+  (recenter -1))
+(defun warp-to-top-of-window ()
+  (interactive)
+  (move-to-window-line 0))
+(defun warp-to-bottom-of-window ()
+  (interactive)
+  (move-to-window-line -1))
 
 (defun reread-dot-emacs ()
   "Re-read initialisation."
   (interactive)
-  (load-file "~/.emacs.d/init.el")
-  )
+  (load-file "~/.emacs.d/init.el"))
 
 (defun match-paren (arg)
   "Go to matching parenthesis if one exists, otherwise insert ARG(=1) %s."
   (interactive "p")
-  (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
-    ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
-    (t (self-insert-command (or arg 1))))
-  )
+  (cond
+   ((looking-at "\\s\(")
+    (forward-list 1)
+    (backward-char 1))
+   ((looking-at "\\s\)")
+    (forward-char 1)
+    (backward-list 1))
+   (t
+    (self-insert-command (or arg 1)))))
 
 (defun my-kill-emacs ()
   "Confirm before 'save-buffers-kill-emacs'."
   (interactive)
   (if (y-or-n-p "Really kill Emacs? ")
-    (save-buffers-kill-emacs)
-    (message "Aborted"))
-  )
+      (save-buffers-kill-emacs)
+    (message "Aborted")))
 
 (defun my-suspend-frame ()
   "Confirm before suspend Emacs."
   (interactive)
   (if (y-or-n-p "Really minimise? ")
-    (suspend-frame)
-    (message "Aborted"))
-  )
+      (suspend-frame)
+    (message "Aborted")))
 
-(defun todo ()  (interactive) (find-file "~/Dropbox/calendar/richard.org"))
-(defun notes () (interactive) (find-file "~/u/me/todo/notes.org"))
+(defun todo ()
+  (interactive)
+  (find-file "~/Dropbox/calendar/richard.org"))
+(defun notes ()
+  (interactive)
+  (find-file "~/u/me/todo/notes.org"))
 
 ;;
 ;; mode hooks
@@ -786,71 +755,80 @@
 ;;
 
 (bind-keys*
-  ("%"          . match-paren)
-  ("C-<return>" . split-line)
-  ("C-<tab>"    . dabbrev-expand)
-  ("C-c ;"      . comment-region)
-  ("C-c C-SPC"  . whitespace-cleanup)
-  ("C-c C-g"    . goto-line)
-  ("C-x C-c"    . my-kill-emacs)
-  ("C-x C-d"    . insert-current-date)
-  ("C-x C-z"    . my-suspend-frame)
-  ("C-x p"      . (lambda () (interactive) (other-window -1)))
-  ("C-x z"      . my-suspend-frame)
-  ("C-z"        . my-suspend-frame)
-  ("M-%"        . replace-regexp)
-  ("M-n"        . next-buffer)
-  ("M-p"        . previous-buffer)
-  ("M-q"        . unfill-toggle)
+ ("%" . match-paren)
+ ("C-<return>" . split-line)
+ ("C-<tab>" . dabbrev-expand)
+ ("C-c ;" . comment-region)
+ ("C-c C-SPC" . whitespace-cleanup)
+ ("C-c C-g" . goto-line)
+ ("C-x C-c" . my-kill-emacs)
+ ("C-x C-d" . insert-current-date)
+ ("C-x C-z" . my-suspend-frame)
+ ("C-x p" .
+  (lambda ()
+    (interactive)
+    (other-window -1)))
+ ("C-x z" . my-suspend-frame)
+ ("C-z" . my-suspend-frame)
+ ("M-%" . replace-regexp)
+ ("M-n" . next-buffer)
+ ("M-p" . previous-buffer)
+ ("M-q" . unfill-toggle)
 
-  ;; | point-to  | previous   | next        |
-  ;; |-----------+------------+-------------|
-  ;; | char      | <left>     | <right>     |
-  ;; | word      | C/M-<left> | C/M-<right> |
-  ;; | line      | <up>       | <down>      |
-  ;; | paragraph | C-<up>     | C-<down>    |
+ ;; | point-to  | previous   | next        |
+ ;; |-----------+------------+-------------|
+ ;; | char      | <left>     | <right>     |
+ ;; | word      | C/M-<left> | C/M-<right> |
+ ;; | line      | <up>       | <down>      |
+ ;; | paragraph | C-<up>     | C-<down>    |
 
-  ;; | point-to | start  | end      |
-  ;; |----------+--------+----------|
-  ;; | line     | C-a    | C-e      |
-  ;; | sentence | M-a    | M-e      |
-  ;; | screen   | M-<up> | M-<down> |
-  ;; | file     | M-\<   | M-\>     |
+ ;; | point-to | start  | end      |
+ ;; |----------+--------+----------|
+ ;; | line     | C-a    | C-e      |
+ ;; | sentence | M-a    | M-e      |
+ ;; | screen   | M-<up> | M-<down> |
+ ;; | file     | M-\<   | M-\>     |
 
-  ;; | window-to | key        |
-  ;; |-----------+------------|
-  ;; | top       | C-M-<down> |
-  ;; | bottom    | C-M-<up>   |
+ ;; | window-to | key        |
+ ;; |-----------+------------|
+ ;; | top       | C-M-<down> |
+ ;; | bottom    | C-M-<up>   |
 
-  ;; | centre-current |     |
-  ;; |----------------+-----|
-  ;; | point          | M-r |
-  ;; | window         | C-l |
+ ;; | centre-current |     |
+ ;; |----------------+-----|
+ ;; | point          | M-r |
+ ;; | window         | C-l |
 
-  ;; for poxy macbook keyboard with only the arrow keys
-  ("C-<up>"     . backward-paragraph)
-  ("C-<down>"   . forward-paragraph)
-  ("M-<up>"     . warp-to-top-of-window)
-  ("M-<down>"   . warp-to-bottom-of-window)
-  ("C-M-<down>" . line-to-top-of-window)
-  ("C-M-<up>"   . line-to-bottom-of-window)
+ ;; for poxy macbook keyboard with only the arrow keys
+ ("C-<up>" . backward-paragraph)
+ ("C-<down>" . forward-paragraph)
+ ("M-<up>" . warp-to-top-of-window)
+ ("M-<down>" . warp-to-bottom-of-window)
+ ("C-M-<down>" . line-to-top-of-window)
+ ("C-M-<up>" . line-to-bottom-of-window)
 
-  ;; for a sensible pc keyboard with pgup|pgdn|home|end
-  ("C-<prior>" . warp-to-top-of-window)
-  ("C-<next>"  . warp-to-bottom-of-window)
-  ("C-<home>"  . line-to-top-of-window)
-  ("C-<end>"   . line-to-bottom-of-window)
-  ("<home>"    . beginning-of-buffer)    ; M-<
-  ("<end>"     . end-of-buffer)          ; M->
-  )
+ ;; for a sensible pc keyboard with pgup|pgdn|home|end
+ ("C-<prior>" . warp-to-top-of-window)
+ ("C-<next>" . warp-to-bottom-of-window)
+ ("C-<home>" . line-to-top-of-window)
+ ("C-<end>" . line-to-bottom-of-window)
+ ("<home>" . beginning-of-buffer) ; M-<
+ ("<end>" . end-of-buffer) ; M->
+ )
 
 ;; Horizontal scrolling mouse events should actually scroll left and right.
-(global-set-key (kbd "<mouse-6>")
-  (lambda () (interactive) (if truncate-lines (scroll-right 1)))
-  )
-(global-set-key (kbd "<mouse-7>")
-  (lambda () (interactive) (if truncate-lines (scroll-left 1)))
-  )
+(global-set-key
+ (kbd "<mouse-6>")
+ (lambda ()
+   (interactive)
+   (if truncate-lines
+       (scroll-right 1))))
+(global-set-key
+ (kbd "<mouse-7>")
+ (lambda ()
+   (interactive)
+   (if truncate-lines
+       (scroll-left 1))))
 
 ;;
 ;; load customisations
@@ -864,17 +842,16 @@
 ;; ...and we're done
 ;;
 
-(let ((elapsed (float-time (time-subtract (current-time)
-                             emacs-start-time))))
+(let ((elapsed (float-time (time-subtract (current-time) emacs-start-time))))
   (message "Loading %s...done (%.3fs)" load-file-name elapsed))
 
-(add-hook
-  'after-init-hook
-  `(lambda ()
-     (let ((elapsed
-             (float-time
-               (time-subtract (current-time) emacs-start-time))))
-       (message "Loading %s...done (%.3fs) [after-init]"
-         ,load-file-name elapsed)))
-  t)
+(add-hook 'after-init-hook
+          `(lambda ()
+             (let ((elapsed
+                    (float-time
+                     (time-subtract (current-time) emacs-start-time))))
+               (message "Loading %s...done (%.3fs) [after-init]"
+                        ,load-file-name
+                        elapsed)))
+          t)
 (put 'scroll-left 'disabled nil)
