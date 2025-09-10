@@ -38,7 +38,8 @@
  package-enable-at-startup nil
  package-archives
  '(("melpa" . "https://melpa.org/packages/")
-   ("gnu" . "https://elpa.gnu.org/packages/")))
+   ("gnu" . "https://elpa.gnu.org/packages/")
+   ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 (package-initialize)
 
 (unless (package-installed-p 'use-package)
@@ -49,6 +50,26 @@
   (require 'use-package))
 (require 'diminish) ;; if you use :diminish
 (require 'bind-key) ;; if you use any :bind variant
+
+;; ALTERNATIVE TO package.el, ABOVE
+;; ;; straight.el, https://github.com/radian-software/straight.el
+;; (defvar bootstrap-version)
+;; (let ((bootstrap-file
+;;        (expand-file-name
+;;         "straight/repos/straight.el/bootstrap.el"
+;;         (or (bound-and-true-p straight-base-dir) user-emacs-directory)))
+;;       (bootstrap-version 7))
+;;   (unless (file-exists-p bootstrap-file)
+;;     (with-current-buffer
+;;         (url-retrieve-synchronously
+;;          "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+;;          'silent
+;;          'inhibit-cookies)
+;;       (goto-char (point-max))
+;;       (eval-print-last-sexp)))
+;;   (load bootstrap-file nil 'nomessage))
+
+;; (straight-use-package 'use-package)
 
 ;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
 (if init-file-debug
@@ -240,6 +261,7 @@
 
 (use-package
  mu4e
+
  :config
  (setq
   mu4e-attachment-dir "~/Downloads"
@@ -629,6 +651,16 @@
    (lambda ()
      (interactive "*")
      (tex-enclose-word "\\textbf{" "}")))))
+
+(use-package
+ typst-ts-mode
+ :ensure t ;; (:type git :host codeberg :repo "meow_king/typst-ts-mode")
+ :mode (("\\.typ\\'" . typst-ts-mode))
+ :custom (typst-ts-watch-options "--open")
+ (typst-ts-mode-grammar-location
+  (expand-file-name "tree-sitter/libtree-sitter-typst.so" user-emacs-directory))
+ (typst-ts-mode-enable-raw-blocks-highlight t)
+ :config (keymap-set typst-ts-mode-map "C-c C-c" #'typst-ts-tmenu))
 
 (use-package
  whitespace
