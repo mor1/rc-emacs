@@ -1,6 +1,7 @@
 *~
 .DS_Store
 .cache
+.last-package-update-day
 .lsp-session-*
 .org-generic-id-locations
 .org-id-locations
@@ -8,6 +9,8 @@
 archive-contents
 async-bytecomp.log
 auto-save-list/
+elisp-autofmt-cache/
+eln-cache
 elpa/*-readme.txt
 elpa/archives/
 elpa/gnupg/
@@ -23,4 +26,3 @@ scrap/
 transient/
 url/
 vimish-fold/
-eln-cache
