@@ -42,15 +42,6 @@
    ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 (package-initialize)
 
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
-
-(eval-when-compile
-  (require 'use-package))
-(require 'diminish) ;; if you use :diminish
-(require 'bind-key) ;; if you use any :bind variant
-
 ;; ALTERNATIVE TO package.el, ABOVE
 ;; ;; straight.el, https://github.com/radian-software/straight.el
 ;; (defvar bootstrap-version)
@@ -82,6 +73,7 @@
        debug-on-error t))
   (setq
    use-package-verbose nil
+   use-package-always-defer t
    use-package-expand-minimally t))
 
 ;; server
@@ -117,595 +109,608 @@
 ;; packages
 ;;
 
-;(use-package auto-package-update
-;  :ensure t
-;  :config
-;  (setq
-;   ;; auto-package-update-delete-old-versions t
-;   auto-package-update-interval 4
-;   ;; auto-package-update-excluded-packages '("mu4e")
-;   )
-;  (auto-package-update-maybe)
-;  )
+;; (use-package auto-package-update
+;;   :config
+;;   (setq
+;;    ;; auto-package-update-delete-old-versions t
+;;    auto-package-update-interval 4
+;;    ;; auto-package-update-excluded-packages '("mu4e")
+;;    )
+;;   (auto-package-update-maybe))
 
-(use-package
- auto-compile
- :init
- (setq
-  auto-compile-display-buffer nil
-  auto-compile-mode-line-counter t))
+(use-package auto-compile
+  :init
+  (setq
+   auto-compile-display-buffer nil
+   auto-compile-mode-line-counter t))
 (auto-compile-on-load-mode)
 
-(use-package
- calendar
- :config
- (setq
-  calendar-bahai-all-holidays-flag nil
-  calendar-christian-all-holidays-flag t
-  calendar-date-style (quote iso)
-  calendar-mark-holidays-flag t)
- (calendar-set-date-style 'iso)
- (defun insert-current-date (&optional omit-day-of-week-p)
-   (interactive "P*")
-   (insert
-    (calendar-date-string (calendar-current-date) t omit-day-of-week-p))))
+(use-package calendar
+  :config
+  (setq
+   calendar-bahai-all-holidays-flag nil
+   calendar-christian-all-holidays-flag t
+   calendar-date-style (quote iso)
+   calendar-mark-holidays-flag t)
+  (calendar-set-date-style 'iso)
+  (defun insert-current-date (&optional omit-day-of-week-p)
+    (interactive "P*")
+    (insert
+     (calendar-date-string (calendar-current-date) t omit-day-of-week-p))))
 
-(use-package
- cc-mode
- :config
- (setq
-  c-basic-offset 2
-  c-default-style "linux"))
+(use-package cc-mode
+  :config
+  (setq
+   c-basic-offset 2
+   c-default-style "linux"))
 
-(use-package
- company
- :ensure
- :defer t
- :diminish
- :custom
- (company-idle-delay 0.5) ;; how long to wait until popup
- ;; (company-begin-commands nil) ;; uncomment to disable popup
- :config
- (setq
-  company-dabbrev-other-buffers t
-  company-dabbrev-code-other-buffers t)
- :hook ((text-mode . company-mode) (prog-mode . company-mode))
- :bind
- (:map
-  company-active-map
-  ("C-n" . company-select-next)
-  ("C-p" . company-select-previous)
-  ("M-<" . company-select-first)
-  ("M->" . company-select-last)))
+(use-package company
+  :diminish
+  :hook (after-init . global-company-mode)
+  :custom
+  (company-idle-delay 0.2) ;; how long to wait until popup
+  ;; (company-begin-commands nil) ;; uncomment to disable popup
+  :config
+  (setq
+   company-dabbrev-other-buffers t
+   company-dabbrev-code-other-buffers t)
+  ;; :hook ((text-mode . company-mode) (prog-mode . company-mode))
+  :bind
+  (:map
+   company-active-map
+   ("C-n" . company-select-next)
+   ("C-p" . company-select-previous)
+   ("M-<" . company-select-first)
+   ("M->" . company-select-last)))
 
-(use-package direnv :config (direnv-mode))
+(use-package direnv
+  :config (direnv-mode))
 
-(use-package dockerfile-mode :mode "Dockerfile")
+(use-package dockerfile-mode
+  :mode "Dockerfile")
 
-(use-package
- eldoc
- :diminish
- :hook
- ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode))
+(use-package eglot)
 
-(use-package
- elisp-autofmt
- :commands (elisp-autofmt-mode elisp-autofmt-buffer)
- :hook (emacs-lisp-mode . elisp-autofmt-mode))
+(use-package eldoc
+  :diminish
+  :hook ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode))
 
-(use-package
- exec-path-from-shell ;; set exec path
- :config (exec-path-from-shell-initialize))
+(use-package elisp-autofmt
+  :commands (elisp-autofmt-mode elisp-autofmt-buffer)
+  :hook (emacs-lisp-mode . elisp-autofmt-mode))
 
-(use-package fill-column-indicator :hook (prog-mode . fci-mode))
+(use-package exec-path-from-shell
+  ;; set exec path
+  :config (exec-path-from-shell-initialize))
 
-(use-package
- flyspell ;; on the fly spell checking
- :commands (flyspell-prog-mode flyspell-mode)
- :hook ((text-mode . flyspell-mode) (prog-mode . flyspell-prog-mode))
- :config (setq ispell-dictionary "british"))
+(use-package fill-column-indicator
+  :hook (prog-mode . fci-mode))
 
-(use-package git-ps1-mode :hook find-file)
+(use-package flyspell
+  ;; on the fly spell checking
+  :commands (flyspell-prog-mode flyspell-mode)
+  :hook ((text-mode . flyspell-mode) (prog-mode . flyspell-prog-mode))
+  :config (setq ispell-dictionary "british"))
 
-(use-package
- ido-completing-read+ ;; Display possible completions at all places
- :ensure t
- :diminish nil
- :config
- ;; This enables ido in all contexts where it could be useful, not just for
- ;; selecting buffer and file names
- (ido-mode t) (ido-everywhere t)
- ;; This allows partial matches, e.g. "uzh" will match "Ustad Zakir Hussain"
- (setq
-  ido-enable-flex-matching t
-  ido-use-filename-at-point nil
-  ;; Includes buffer names of recently opened files, even if not open now.
-  ido-use-virtual-buffers t))
+(use-package git-ps1-mode
+  :hook find-file)
+
+(use-package ido-completing-read+
+  ;; display possible completions at all places
+  :config
+  (ido-mode t)
+  (ido-everywhere t)
+  (setq
+   ido-enable-flex-matching t
+   ido-use-filename-at-point nil
+   ido-use-virtual-buffers t))
 
 (use-package just-mode)
 
-(use-package
- magit
- :ensure t
- :bind ("C-x g" . magit-status)
- :bind (:map magit-status-mode-map ("q" . magit-quit-session))
- :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
- :config
- (setq
-  magit-commit-arguments (quote ("--signoff"))
-  magit-diff-refine-hunk (quote all)
-  magit-process-popup-time 5
-  magit-set-upstream-on-push t)
- ;; full screen magit-status
- (defadvice magit-status (around magit-fullscreen activate)
-   (window-configuration-to-register :magit-fullscreen)
-   ad-do-it
-   (delete-other-windows))
- (defun magit-quit-session ()
-   "Restores the previous window configuration and kills the magit buffer"
-   (interactive)
-   (kill-buffer)
-   (jump-to-register :magit-fullscreen)))
+(use-package magit
+  :bind ("C-x g" . magit-status)
+  :bind (:map magit-status-mode-map ("q" . magit-quit-session))
+  :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
+  :config
+  (setq
+   magit-commit-arguments (quote ("--signoff"))
+   magit-diff-refine-hunk (quote all)
+   magit-process-popup-time 5
+   magit-set-upstream-on-push t)
+  ;; full screen magit-status
+  (defadvice magit-status (around magit-fullscreen activate)
+    (window-configuration-to-register :magit-fullscreen)
+    ad-do-it
+    (delete-other-windows))
+  (defun magit-quit-session ()
+    "Restores the previous window configuration and kills the magit buffer"
+    (interactive)
+    (kill-buffer)
+    (jump-to-register :magit-fullscreen)))
 
 (use-package make-mode)
 
-(use-package
- markdown-mode
- :commands (markdown-mode gfm-mode)
- :mode
- (("\\.md\\'" . markdown-mode)
-  ("\\.markdown\\'" . markdown-mode)
-  ("README.md\\'" . gfm-mode))
- :magic ("\\`==\\+==" . markdown-mode)
- :init (setq markdown-command "multimarkdown"))
+(use-package markdown-mode
+  :commands (markdown-mode gfm-mode)
+  :mode
+  (("\\.md\\'" . markdown-mode)
+   ("\\.markdown\\'" . markdown-mode)
+   ("README.md\\'" . gfm-mode))
+  :magic ("\\`==\\+==" . markdown-mode)
+  :init (setq markdown-command "multimarkdown"))
 
-(use-package
- mu4e
+(use-package mu4e
+  :config
+  (setq
+   mu4e-attachment-dir "~/Downloads"
+   mu4e-drafts-folder "/drafts" ;; unfinished messages
+   mu4e-maildir "~/u/me/mail" ;; top-level Maildir
+   mu4e-mu-binary (executable-find "mu")
+   mu4e-refile-folder "/archive" ;; saved messages
+   mu4e-sent-folder "/sent" ;; folder for sent messages
+   mu4e-trash-folder "/trash" ;; trashed messages
+   mu4e-use-fancy-chars t
+   mu4e-view-show-images t))
 
- :config
- (setq
-  mu4e-attachment-dir "~/Downloads"
-  mu4e-drafts-folder "/drafts" ;; unfinished messages
-  mu4e-maildir "~/u/me/mail" ;; top-level Maildir
-  mu4e-mu-binary (executable-find "mu")
-  mu4e-refile-folder "/archive" ;; saved messages
-  mu4e-sent-folder "/sent" ;; folder for sent messages
-  mu4e-trash-folder "/trash" ;; trashed messages
-  mu4e-use-fancy-chars t
-  mu4e-view-show-images t))
-
-(use-package hide-mode-line :ensure t :defer t)
+(use-package hide-mode-line)
 
 ;; OCaml
-(use-package eglot :ensure t)
-(use-package tuareg :ensure t :mode (("\\.ocamlinit\\'" . tuareg-mode)))
-(use-package
- ocaml-eglot
- :ensure t
- :after tuareg
- :hook
- (tuareg-mode . ocaml-eglot)
- (ocaml-eglot . eglot-ensure))
+(use-package tuareg
+  :mode (("\\.ocamlinit\\'" . tuareg-mode)))
+(use-package ocaml-eglot
+  :after tuareg
+  :hook
+  (tuareg-mode . ocaml-eglot)
+  (ocaml-eglot . eglot-ensure))
 ;;
 
-(use-package
- org-gcal
- :after org
- :defer t
- :hook
- ( ;; (org-agenda-mode . (lambda () (org-gcal-sync)))
-  (org-capture-after-finalize . (lambda () (org-gcal-sync))))
- :config
- (setq
-  plstore-cache-passphrase-for-symmetric-encryption t
-  ;; epa-file-cache-passphrase-for-symmetric-encryption t
-  org-gcal-auto-archive nil
+(use-package org
+  :bind
+  (:map
+   org-mode-map
+   ("C-c a" . org-agenda)
+   ("<M-S-up>" . org-metaup)
+   ("<M-S-down>" . org-metadown))
 
-  org-gcal-client-id "XXX"
-  org-gcal-client-secret "XXX"
-  org-gcal-file-alist
-  '(("XXX@group.calendar.google.com" . "~/Dropbox/calendar/richard.org")
-    ("XXX@import.calendar.google.com"
-     .
-     "~/Dropbox/calendar/richard-tripit.org"))
+  :hook
+  ((org-agenda-mode
+    .
+    (lambda () (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today))))
 
-  org-gcal-local-timezone "Europe/London"
-  org-gcal-managed-newly-fetched-mode "gcal"
-  org-gcal-managed-post-at-point-update-existing 'prompt
-  org-gcal-managed-update-existing-mode "org"
-  org-gcal-recurring-events-mode 'nested))
+  :config
+  (setq
+   org-agenda-files "~/Dropbox/calendar/index"
+   org-basedir "~/Dropbox/calendar/"
+   revert-without-query
+   (mapcar
+    (lambda (f) (expand-file-name f org-basedir))
+    '("richard-incoming.org" "richard-tripit.org"))
+   org-agenda-loop-over-headlines-in-active-region nil
+   org-agenda-todo-ignore-scheduled 'all
+   org-adapt-indentation t
+   org-hide-leading-stars t)
 
-(use-package
- org
- :defer t
- :bind
- (:map
-  org-mode-map
-  ("C-c a" . org-agenda)
-  ("<M-S-up>" . org-metaup)
-  ("<M-S-down>" . org-metadown))
+  ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
+  (defun org-archive-completed-tasks ()
+    (interactive)
+    (org-map-entries
+     (lambda ()
+       (org-archive-subtree)
+       (setq org-map-continue-from (outline-previous-heading)))
+     "/+DONE|+CANCELLED" 'tree))
 
- :hook
- ((org-agenda-mode
-   .
-   (lambda () (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today))))
+  ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
+  (defadvice org-prepare-agenda (after org-fix-split)
+    (toggle-window-split))
+  (ad-activate 'org-prepare-agenda)
 
- :config
- (setq
-  org-agenda-files "~/Dropbox/calendar/index"
-  org-basedir "~/Dropbox/calendar/"
-  revert-without-query
-  (mapcar
-   (lambda (f) (expand-file-name f org-basedir))
-   '("richard-incoming.org" "richard-tripit.org"))
-  org-agenda-loop-over-headlines-in-active-region nil
-  org-agenda-todo-ignore-scheduled 'all
-  org-adapt-indentation t
-  org-hide-leading-stars t)
+  ;; customise my agenda options
+  (setq
+   org-agenda-custom-commands
+   '(("a" "Week agenda" agenda ""
+      ((org-agenda-compact-blocks t)
+       (org-agenda-include-diary t)
+       (org-agenda-log-mode-items (quote (closed clock)))
+       (org-agenda-repeating-timestamp-show-all t)
+       (org-agenda-skip-deadline-if-done t)
+       (org-agenda-skip-scheduled-if-done t)
+       (org-agenda-skip-timestamp-if-done t)
+       (org-agenda-span 7)
+       (org-agenda-start-on-weekday 1)
+       (org-deadline-warning-days 15)))
 
- ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
- (defun org-archive-completed-tasks ()
-   (interactive)
-   (org-map-entries
-    (lambda ()
-      (org-archive-subtree)
-      (setq org-map-continue-from (outline-previous-heading)))
-    "/+DONE|+CANCELLED" 'tree))
+     ;; ("c" "Calendar" agenda ""
+     ;;   ((org-agenda-span 7)
+     ;;     (org-agenda-start-on-weekday 1)
+     ;;     (org-agenda-time-grid nil)
+     ;;     (org-agenda-repeating-timestamp-show-all t)
+     ;;     (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
+     ;;     (org-agenda-category-filter-preset '("-a/nosho"))
+     ;;     ))
 
- ;; use vertical splitting, http://orgmode.org/worg/org-hacks.html
- (defadvice org-prepare-agenda (after org-fix-split)
-   (toggle-window-split))
- (ad-activate 'org-prepare-agenda)
+     ;; ("d" "Upcoming deadlines" agenda ""
+     ;;   ((org-agenda-span 60)
+     ;;     (org-agenda-time-grid nil)
+     ;;     (org-deadline-warning-days 365)
+     ;;     (org-agenda-entry-types '(:deadline))
+     ;;     ))
 
- ;; customise my agenda options
- (setq
-  org-agenda-custom-commands
-  '(("a" "Week agenda" agenda ""
-     ((org-agenda-compact-blocks t)
-      (org-agenda-include-diary t)
-      (org-agenda-log-mode-items (quote (closed clock)))
-      (org-agenda-repeating-timestamp-show-all t)
-      (org-agenda-skip-deadline-if-done t)
-      (org-agenda-skip-scheduled-if-done t)
-      (org-agenda-skip-timestamp-if-done t)
-      (org-agenda-span 7)
-      (org-agenda-start-on-weekday 1)
-      (org-deadline-warning-days 15)))
+     ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
+      ((org-agenda-compact-blocks t)
+       (org-agenda-category-filter-preset '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
+       (org-agenda-include-diary t)
+       (org-agenda-log-mode-items (quote (closed clock)))
+       (org-agenda-ndays 31)
+       (org-agenda-repeating-timestamp-show-all t)
+       (org-agenda-show-all-dates t)
+       (org-agenda-skip-deadline-if-done t)
+       (org-agenda-skip-scheduled-if-done t)
+       (org-agenda-skip-timestamp-if-done t)
+       (org-agenda-sorting-strategy
+        '(habit-up time-up deadline-up priority-down todo-state-down))
+       (org-agenda-start-on-weekday 1)
+       (org-agenda-time-grid nil)
+       (org-deadline-warning-days 15)
+       (org-default-notes-file "~/me/todo/notes.org")
+       (org-fast-tag-selection-single-key (quote expert))
+       (org-remember-store-without-prompt t)))
 
-    ;; ("c" "Calendar" agenda ""
-    ;;   ((org-agenda-span 7)
-    ;;     (org-agenda-start-on-weekday 1)
-    ;;     (org-agenda-time-grid nil)
-    ;;     (org-agenda-repeating-timestamp-show-all t)
-    ;;     (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
-    ;;     (org-agenda-category-filter-preset '("-a/nosho"))
-    ;;     ))
+     ;; ("n" "Agenda and all TODOs"
+     ;;   ( (agenda ""
+     ;;       ((org-agenda-skip-function
+     ;;          '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
+     ;;       )
+     ;;     (alltodo "")
+     ;;     ))
 
-    ;; ("d" "Upcoming deadlines" agenda ""
-    ;;   ((org-agenda-span 60)
-    ;;     (org-agenda-time-grid nil)
-    ;;     (org-deadline-warning-days 365)
-    ;;     (org-agenda-entry-types '(:deadline))
-    ;;     ))
+     ("t" "Today"
+      ((agenda "" ((org-agenda-span 1)))
+       (alltodo
+        ""
+        ;; ((org-agenda-sorting-strategy '(tag-up)))
+        ))
 
-    ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
-     ((org-agenda-compact-blocks t)
-      (org-agenda-category-filter-preset '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
-      (org-agenda-include-diary t)
-      (org-agenda-log-mode-items (quote (closed clock)))
-      (org-agenda-ndays 31)
-      (org-agenda-repeating-timestamp-show-all t)
-      (org-agenda-show-all-dates t)
-      (org-agenda-skip-deadline-if-done t)
-      (org-agenda-skip-scheduled-if-done t)
-      (org-agenda-skip-timestamp-if-done t)
-      (org-agenda-sorting-strategy
-       '(habit-up time-up deadline-up priority-down todo-state-down))
-      (org-agenda-start-on-weekday 1)
-      (org-agenda-time-grid nil)
-      (org-deadline-warning-days 15)
-      (org-default-notes-file "~/me/todo/notes.org")
-      (org-fast-tag-selection-single-key (quote expert))
-      (org-remember-store-without-prompt t)))
+      ((org-agenda-category-filter-preset
+        '("-a"
+          "-a/m-taxi"
+          "-a/in"
+          "-a/appt"
+          "-e"
+          "-e/clubs"
+          "-w"
+          "-w/clubs"
+          "-d"
+          "-house"
+          "-home"))
+       (org-agenda-include-diary t)))))
 
-    ;; ("n" "Agenda and all TODOs"
-    ;;   ( (agenda ""
-    ;;       ((org-agenda-skip-function
-    ;;          '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
-    ;;       )
-    ;;     (alltodo "")
-    ;;     ))
+  ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
+  (defun holiday-new-year-bank-holiday ()
+    (let ((m displayed-month)
+          (y displayed-year))
+      (calendar-increment-month m y 1)
+      (when (<= m 3)
+        (let ((d (calendar-day-of-week (list 1 1 y))))
+          (cond
+           ((= d 6)
+            (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
+           ((= d 0)
+            (list (list (list 1 2 y) "New Year's Day Bank Holiday"))))))))
 
-    ("t" "Today"
-     ((agenda "" ((org-agenda-span 1)))
-      (alltodo
-       ""
-       ;; ((org-agenda-sorting-strategy '(tag-up)))
-       ))
+  (defun holiday-christmas-bank-holidays ()
+    (let ((m displayed-month)
+          (y displayed-year))
+      (calendar-increment-month m y -1)
+      (when (>= m 10)
+        (let ((d (calendar-day-of-week (list 12 25 y))))
+          (cond
+           ((= d 5)
+            (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
+           ((= d 6)
+            (list
+             (list (list 12 27 y) "Boxing Day Bank Holiday")
+             (list (list 12 28 y) "Christmas Day Bank Holiday")))
+           ((= d 0)
+            (list (list (list 12 27 y) "Christmas Day Bank Holiday"))))))))
 
-     ((org-agenda-category-filter-preset
-       '("-a"
-         "-a/m-taxi"
-         "-a/in"
-         "-a/appt"
-         "-e"
-         "-e/clubs"
-         "-w"
-         "-w/clubs"
-         "-d"
-         "-house"
-         "-home"))
-      (org-agenda-include-diary t)))))
+  ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
+  (defun org-agenda-reschedule-to-today (&optional arg)
+    "Bulk reschedule selected tasks for today."
+    (interactive "P")
+    (org-agenda-schedule arg "."))
 
- ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
- (defun holiday-new-year-bank-holiday ()
-   (let ((m displayed-month)
-         (y displayed-year))
-     (calendar-increment-month m y 1)
-     (when (<= m 3)
-       (let ((d (calendar-day-of-week (list 1 1 y))))
-         (cond
-          ((= d 6)
-           (list (list (list 1 3 y) "New Year's Day Bank Holiday")))
-          ((= d 0)
-           (list (list (list 1 2 y) "New Year's Day Bank Holiday"))))))))
+  ;; some Easter related helpers
 
- (defun holiday-christmas-bank-holidays ()
-   (let ((m displayed-month)
-         (y displayed-year))
-     (calendar-increment-month m y -1)
-     (when (>= m 10)
-       (let ((d (calendar-day-of-week (list 12 25 y))))
-         (cond
-          ((= d 5)
-           (list (list (list 12 28 y) "Boxing Day Bank Holiday")))
-          ((= d 6)
-           (list
-            (list (list 12 27 y) "Boxing Day Bank Holiday")
-            (list (list 12 28 y) "Christmas Day Bank Holiday")))
-          ((= d 0)
-           (list (list (list 12 27 y) "Christmas Day Bank Holiday"))))))))
-
- ;; https://www.reddit.com/r/emacs/comments/5wj76n/orgagendarescheduletotoday/
- (defun org-agenda-reschedule-to-today (&optional arg)
-   "Bulk reschedule selected tasks for today."
-   (interactive "P")
-   (org-agenda-schedule arg "."))
-
- ;; some Easter related helpers
-
- (defun da-easter (year)
-   "Calculate the date for Easter Sunday in YEAR. Returns the date in the
+  (defun da-easter (year)
+    "Calculate the date for Easter Sunday in YEAR. Returns the date in the
   Gregorian calendar, ie (MM DD YY) format."
-   (let* ((century (1+ (/ year 100)))
-          (shifted-epact
-           (% (+ 14 (* 11 (% year 19))
-                 (- (/ (* 3 century) 4))
-                 (/ (+ 5 (* 8 century)) 25)
-                 (* 30 century))
-              30))
-          (adjusted-epact
-           (if (or (= shifted-epact 0)
-                   (and (= shifted-epact 1) (< 10 (% year 19))))
-               (1+ shifted-epact)
-             shifted-epact))
-          (paschal-moon
-           (- (calendar-absolute-from-gregorian (list 4 19 year))
-              adjusted-epact)))
-     (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
+    (let* ((century (1+ (/ year 100)))
+           (shifted-epact
+            (% (+ 14 (* 11 (% year 19))
+                  (- (/ (* 3 century) 4))
+                  (/ (+ 5 (* 8 century)) 25)
+                  (* 30 century))
+               30))
+           (adjusted-epact
+            (if (or (= shifted-epact 0)
+                    (and (= shifted-epact 1) (< 10 (% year 19))))
+                (1+ shifted-epact)
+              shifted-epact))
+           (paschal-moon
+            (- (calendar-absolute-from-gregorian (list 4 19 year))
+               adjusted-epact)))
+      (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
 
-
- (defun calendar-days-from-easter ()
-   "When used in a diary sexp, this function will calculate how many days
+  (defun calendar-days-from-easter ()
+    "When used in a diary sexp, this function will calculate how many days
   are between the current date (DATE) and Easter Sunday."
-   (- (calendar-absolute-from-gregorian date)
-      (da-easter (calendar-extract-year date))))
+    (- (calendar-absolute-from-gregorian date)
+       (da-easter (calendar-extract-year date))))
 
- ;; Now we can schedule the public holidays associated with Easter as recurring
- ;; events. Good Friday is 2 days before "Easter", Easter Monday is one day
- ;; after.
+  ;; Now we can schedule the public holidays associated with Easter as recurring
+  ;; events. Good Friday is 2 days before "Easter", Easter Monday is one day
+  ;; after.
 
- ;; *** Good Friday
- ;; <%%(= -2 (calendar-days-from-easter))>
- )
+  ;; *** Good Friday
+  ;; <%%(= -2 (calendar-days-from-easter))>
+  )
 
-(use-package
- outline
- :diminish outline-minor-mode
- :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode))
+(use-package org-gcal
+  :after org
+  :hook
+  ( ;; (org-agenda-mode . (lambda () (org-gcal-sync)))
+   (org-capture-after-finalize . (lambda () (org-gcal-sync))))
+  :config
+  (setq
+   plstore-cache-passphrase-for-symmetric-encryption t
+   ;; epa-file-cache-passphrase-for-symmetric-encryption t
+   org-gcal-auto-archive nil
 
-(use-package
- paradox
- :init
- (setq
-  paradox-github-token t
-  ;; paradox-execute-asynchronously t
-  paradox-automatically-star t))
+   org-gcal-client-id "XXX"
+   org-gcal-client-secret "XXX"
+   org-gcal-file-alist
+   '(("XXX@group.calendar.google.com" . "~/Dropbox/calendar/richard.org")
+     ("XXX@import.calendar.google.com"
+      .
+      "~/Dropbox/calendar/richard-tripit.org"))
 
-(use-package
- paren
- :hook (find-file . show-paren-mode)
- :config
- (setq
-  show-paren-mode t
-  show-paren-style (quote expression)))
+   org-gcal-local-timezone "Europe/London"
+   org-gcal-managed-newly-fetched-mode "gcal"
+   org-gcal-managed-post-at-point-update-existing 'prompt
+   org-gcal-managed-update-existing-mode "org"
+   org-gcal-recurring-events-mode 'nested))
 
-(use-package rainbow-mode :hook prog-mode)
+(use-package outline
+  :diminish outline-minor-mode
+  :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode))
 
-(use-package
- recentf ;; Recent buffers in a new Emacs session
- :diminish nil
- :config (recentf-mode t)
- (setq
-  recentf-auto-cleanup 'never
-  recentf-max-saved-items 1000
-  recentf-save-file (concat user-emacs-directory ".recentf")))
+(use-package paradox
+  :init
+  (setq
+   paradox-github-token t
+   paradox-automatically-star t))
 
-(use-package
- saveplace ;; save cursor position in file after close
- :unless noninteractive
- :config (save-place-mode t))
+(use-package paren
+  :hook (find-file . show-paren-mode)
+  :config
+  (setq
+   show-paren-mode t
+   show-paren-style (quote expression)))
 
-(use-package
- sh-script
- :mode (("bash_" . sh-mode) ("APKBUILD\\'" . sh-mode))
- :config
- (setq
-  sh-basic-offset 2
-  sh-indentation 2))
+(use-package rainbow-mode
+  :diminish
+  :hook prog-mode)
 
-(use-package
- solarized-theme
- :ensure
- :init
- (progn
-   (defvar my-color-themes (list 'solarized-dark 'solarized-light))
-   (defvar theme-current my-color-themes)
+(use-package recentf
+  ;; recent buffers in a new Emacs session
+  ;; :diminish nil
+  :config
+  (recentf-mode t)
+  (setq
+   recentf-auto-cleanup 'never
+   recentf-max-saved-items 1000
+   recentf-save-file (concat user-emacs-directory ".recentf")))
 
-   (defun my-theme-set-default ()
+(use-package saveplace
+  ;; save cursor position in file after close
+  :unless noninteractive
+  :config (save-place-mode t))
+
+(use-package sh-script
+  :mode (("bash_" . sh-mode) ("APKBUILD\\'" . sh-mode))
+  :config
+  (setq
+   sh-basic-offset 2
+   sh-indentation 2))
+
+(use-package solarized-theme
+  ;; :ensure
+  :init
+  (progn
+    (defvar my-color-themes (list 'solarized-dark 'solarized-light))
+    (defvar theme-current my-color-themes)
+
+    (defun my-theme-set-default ()
+      (interactive)
+      (setq theme-current my-color-themes)
+      (load-theme (car theme-current) t))
+
+    (defun my-describe-theme () ; Show the current theme
+      (interactive)
+      (message "%s" (car theme-current)))
+
+    (defun my-theme-cycle ()
+      (interactive)
+      (setq theme-current (cdr theme-current))
+      (if (null theme-current)
+          (setq theme-current my-color-themes))
+      (load-theme (car theme-current) t)
+      (message "%S" (car theme-current))))
+
+  :bind ("C-c t" . my-theme-cycle)
+  :hook (after-init . (lambda () (load-theme 'solarized-dark))))
+
+(use-package subword
+  ;; obey CamelCase etc
+  :config (setq global-subword-mode t))
+
+(use-package latex
+  :ensure auctex
+  :mode
+  (("\\.tex\\'" . latex-mode)
+   ("\\.latex\\'" . latex-mode)
+   ("\\.bibtex\\'" . bibtex-mode))
+  :hook
+  ((LaTeX-mode . LaTeX-math-mode)
+   (LaTeX-mode . turn-on-reftex)
+   (LaTeX-mode . TeX-fold-mode))
+  :config
+  (use-package latex)
+  (setq
+   bibtex-dialect 'biblatex
+   TeX-auto-save t
+   TeX-parse-self t
+   TeX-master t
+   reftex-plug-into-AUCTeX t)
+
+  ;; modified from swiftex.el
+  (defun tex-enclose-word (before after)
+    (interactive "*Mbefore: \nMafter: ")
+    (let* ((oldpoint (point))
+           (start oldpoint)
+           (end oldpoint))
+
+      ;; get the start and end of the current word
+      (skip-syntax-backward "w")
+      (setq start (point))
+      (goto-char oldpoint)
+      (skip-syntax-forward "w")
+      (setq end (point))
+      (if (and (eq start oldpoint) (eq end oldpoint))
+          ;; insert the command as nothing to enclose
+          (progn
+            (insert before)
+            (insert after)
+            (backward-char))
+
+        ;; enclose the word with the command
+        (progn
+          (insert after)
+          (goto-char start)
+          (insert before)
+          (goto-char (+ oldpoint (length before)))))))
+
+  :bind
+  (:map
+   LaTeX-mode-map ("{" . TeX-insert-braces)
+   ("M-[" .
+    (lambda ()
+      (interactive)
+      (insert "{")))
+   ("M-]" .
+    (lambda ()
+      (interactive)
+      (insert "}")))
+   ("C-c m" .
+    (lambda ()
+      (interactive "*")
+      (tex-enclose-word "\\emph{" "}")))
+   ("C-c b" .
+    (lambda ()
+      (interactive "*")
+      (tex-enclose-word "\\textbf{" "}")))))
+
+(use-package typst-ts-mode
+  :after eglot
+  :mode (("\\.typ\\'" . typst-ts-mode))
+  :hook (typst-ts-mode . eglot-ensure)
+  :bind ("C-c C-x" . #'typst-ts-tinymist-preview)
+  :custom
+  (typst-ts-lsp-download-path
+   (string-trim (shell-command-to-string "which tinymist")))
+  (typst-ts-mode-grammar-location
+   (expand-file-name "tree-sitter/libtree-sitter-typst.so"
+                     user-emacs-directory))
+  (typst-ts-mode-enable-raw-blocks-highlight t)
+  :config
+  ((keymap-set typst-ts-mode-map "C-c C-c" #'typst-ts-tmenu)
+   (add-to-list
+    'eglot-server-programs
+    `((typst-ts-mode)
+      .
+      ,(eglot-alternatives
+        `(,typst-ts-lsp-download-path "tinymist" "typst-lsp"))))
+
+   (defun typst-ts-tinymist-preview ()
+     "Run `tinymist preview` on the current file."
      (interactive)
-     (setq theme-current my-color-themes)
-     (load-theme (car theme-current) t))
+     (let ((file (buffer-file-name)))
+       (if file
+           (compile (format "tinymist preview %s" (shell-quote-argument file)))
+         (user-error "Buffer is not visiting a file"))))))
 
-   (defun my-describe-theme () ; Show the current theme
-     (interactive)
-     (message "%s" (car theme-current)))
+;; python
+(use-package python-mode
+  :after (eglot reformatter)
+  :hook
+  ((python-mode . eglot-ensure)
+   (python-mode . ruff-format-on-save-mode)
+   (python-mode . dd/ruff-sort-on-save-mode))
+  :config (add-to-list 'eglot-server-programs '(python-mode . ("ruff" "server")))
+  :preface
+  ;; per https://ddavis.io/blog/python-emacs-4/
+  (reformatter-define
+   dd/ruff-sort
+   :program "ruff"
+   :args
+   `("check" "--select" "I" "--fix" "--stdin-filename" ,buffer-file-name "-")))
+(use-package uv-mode
+  :after eglot
+  :hook (python-mode . uv-mode-auto-activate-hook))
+;;
 
-   (defun my-theme-cycle ()
-     (interactive)
-     (setq theme-current (cdr theme-current))
-     (if (null theme-current)
-         (setq theme-current my-color-themes))
-     (load-theme (car theme-current) t)
-     (message "%S" (car theme-current))))
+(use-package whitespace
+  ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
+  :diminish
+  :commands (whitespace-buffer whitespace-cleanup whitespace-mode whitespace-turn-off)
+  :preface
+  (defun normalize-file ()
+    (interactive)
+    (save-excursion
+      (goto-char (point-min))
+      (whitespace-cleanup)
+      (delete-trailing-whitespace)
+      (goto-char (point-max))
+      (delete-blank-lines)
+      (set-buffer-file-coding-system 'unix)
+      (goto-char (point-min))
+      (while (re-search-forward "\r$" nil t)
+        (replace-match ""))
+      ;; (set-buffer-file-coding-system 'utf-8)
+      (let ((require-final-newline t))
+        (save-buffer))))
 
- :bind ("C-c t" . my-theme-cycle)
- :hook (after-init . (lambda () (load-theme 'solarized-dark))))
+  (defun maybe-turn-on-whitespace ()
+    (when (not (locate-dominating-file default-directory ".noclean"))
+      (progn
+        (setq whitespace-style
+              '(face
+                trailing
+                tabs
+                lines-tail
+                newline
+                empty
+                space-before-tab
+                tab-mark))
+        (whitespace-mode t))))
 
-(use-package
- subword ;; subword -- obey CamelCase etc
- :config (setq global-subword-mode t))
+  :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
 
-(use-package
- latex
- :ensure auctex
- :mode
- (("\\.tex\\'" . latex-mode)
-  ("\\.latex\\'" . latex-mode)
-  ("\\.bibtex\\'" . bibtex-mode))
- :hook
- ((LaTeX-mode . LaTeX-math-mode)
-  (LaTeX-mode . turn-on-reftex)
-  (LaTeX-mode . TeX-fold-mode))
- :config (use-package latex)
- (setq
-  bibtex-dialect 'biblatex
-  TeX-auto-save t
-  TeX-parse-self t
-  TeX-master t
-  reftex-plug-into-AUCTeX t)
-
- ;; modified from swiftex.el
- (defun tex-enclose-word (before after)
-   (interactive "*Mbefore: \nMafter: ")
-   (let* ((oldpoint (point))
-          (start oldpoint)
-          (end oldpoint))
-
-     ;; get the start and end of the current word
-     (skip-syntax-backward "w")
-     (setq start (point))
-     (goto-char oldpoint)
-     (skip-syntax-forward "w")
-     (setq end (point))
-     (if (and (eq start oldpoint) (eq end oldpoint))
-         ;; insert the command as nothing to enclose
-         (progn
-           (insert before)
-           (insert after)
-           (backward-char))
-
-       ;; enclose the word with the command
-       (progn
-         (insert after)
-         (goto-char start)
-         (insert before)
-         (goto-char (+ oldpoint (length before)))))))
-
- :bind
- (:map
-  LaTeX-mode-map ("{" . TeX-insert-braces)
-  ("M-[" .
-   (lambda ()
-     (interactive)
-     (insert "{")))
-  ("M-]" .
-   (lambda ()
-     (interactive)
-     (insert "}")))
-  ("C-c m" .
-   (lambda ()
-     (interactive "*")
-     (tex-enclose-word "\\emph{" "}")))
-  ("C-c b" .
-   (lambda ()
-     (interactive "*")
-     (tex-enclose-word "\\textbf{" "}")))))
-
-(use-package
- typst-ts-mode
- :ensure t ;; (:type git :host codeberg :repo "meow_king/typst-ts-mode")
- :mode (("\\.typ\\'" . typst-ts-mode))
- :custom (typst-ts-watch-options "--open")
- (typst-ts-mode-grammar-location
-  (expand-file-name "tree-sitter/libtree-sitter-typst.so" user-emacs-directory))
- (typst-ts-mode-enable-raw-blocks-highlight t)
- :config (keymap-set typst-ts-mode-map "C-c C-c" #'typst-ts-tmenu))
-
-(use-package
- whitespace
- ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
- :commands (whitespace-buffer whitespace-cleanup whitespace-mode whitespace-turn-off)
- :preface
- (defun normalize-file ()
-   (interactive)
-   (save-excursion
-     (goto-char (point-min))
-     (whitespace-cleanup)
-     (delete-trailing-whitespace)
-     (goto-char (point-max))
-     (delete-blank-lines)
-     (set-buffer-file-coding-system 'unix)
-     (goto-char (point-min))
-     (while (re-search-forward "\r$" nil t)
-       (replace-match ""))
-     ;; (set-buffer-file-coding-system 'utf-8)
-     (let ((require-final-newline t))
-       (save-buffer))))
-
- (defun maybe-turn-on-whitespace ()
-   (when (not (locate-dominating-file default-directory ".noclean"))
-     (progn
-       (setq whitespace-style
-             '(face
-               trailing
-               tabs
-               lines-tail
-               newline
-               empty
-               space-before-tab
-               tab-mark))
-       (whitespace-mode t))))
-
- :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
-
-(use-package
- yasnippet
- :ensure
- :config
- (yas-reload-all)
- (add-hook 'prog-mode-hook 'yas-minor-mode)
- (add-hook 'text-mode-hook 'yas-minor-mode))
+(use-package yasnippet
+  :config
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode))
 
 ;;
 ;; functions
@@ -773,14 +778,6 @@
 (defun notes ()
   (interactive)
   (find-file "~/u/me/todo/notes.org"))
-
-;;
-;; mode hooks
-;;
-
-;; ;; not a package :(
-;; (require 'filladapt)
-;; (add-hook 'text-mode-hook '(lambda () (filladapt-mode t)))
 
 ;;
 ;; keybindings
@@ -887,3 +884,7 @@
                         elapsed)))
           t)
 (put 'scroll-left 'disabled nil)
+
+;; Local variables:
+;; elisp-autofmt-load-packages-local: ("use-package" "use-package-core")
+;; end:
