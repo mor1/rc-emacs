@@ -1,11 +1,11 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "marginalia" "20250920.852"
+(define-package "marginalia" "20251006.1126"
   "Enrich existing commands with completion annotations."
   '((emacs  "29.1")
     (compat "30"))
   :url "https://github.com/minad/marginalia"
-  :commit "3c7fc3557c57205b23ecd7a214a982196c1c56dc"
-  :revdesc "3c7fc3557c57"
+  :commit "18d2d02cdb6689d7d08cd6c41b497117eeeba728"
+  :revdesc "18d2d02cdb66"
   :keywords '("docs" "help" "matching" "completion")
   :authors '(("Omar Antolín Camarena" . "omar@matem.unam.mx")
              ("Daniel Mendler" . "mail@daniel-mendler.de"))

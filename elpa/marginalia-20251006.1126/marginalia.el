@@ -5,8 +5,8 @@
 ;; Author: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2020
-;; Package-Version: 20250920.852
-;; Package-Revision: 3c7fc3557c57
+;; Package-Version: 20251006.1126
+;; Package-Revision: 18d2d02cdb66
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/marginalia
 ;; Keywords: docs, help, matching, completion
@@ -84,9 +84,6 @@ The first match group is displayed instead of the detailed file
 attribute information.  For Tramp paths, the protocol is
 displayed instead."
   :type '(repeat regexp))
-
-(define-obsolete-variable-alias 'marginalia-annotator-registry
-  'marginalia-annotators "2.0")
 
 (defcustom marginalia-annotators
   (mapcar
@@ -1134,10 +1131,6 @@ These annotations are skipped for remote paths."
       (put-text-property 0 1 'marginalia--library-doc doc file))
     doc))
 
-(defun marginalia-annotate-theme (cand)
-  "Annotate theme CAND with documentation and path."
-  (marginalia-annotate-library (concat cand "-theme")))
-
 (defun marginalia-annotate-library (cand)
   "Annotate library CAND with documentation and path."
   (setq cand (marginalia--library-name cand))
@@ -1153,6 +1146,15 @@ These annotations are skipped for remote paths."
       :truncate 1.0 :face 'marginalia-documentation)
      ((abbreviate-file-name (file-name-directory file))
       :truncate -0.5 :face 'marginalia-file-name))))
+
+(defun marginalia-annotate-theme (cand)
+  "Annotate theme CAND with documentation and path."
+  (when-let (file (gethash (concat cand "-theme") (marginalia--library-cache)))
+    (marginalia--fields
+     ((marginalia--library-doc file)
+      :truncate 1.0 :face 'marginalia-documentation)
+     ((abbreviate-file-name (file-name-directory file))
+      :truncate -1.0 :face 'marginalia-file-name))))
 
 (defun marginalia-annotate-tab (cand)
   "Annotate named tab CAND with tab index, window and buffer information."
