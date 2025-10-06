@@ -15,26 +15,27 @@
 Soft-wrap lines according to `fill-column'.
 
 This minor mode narrows the text area.  Its primary use is in
-conjunction with `visual-line-mode', to enable soft word-wrapping
-of long lines, but it can also be used in other contexts, e.g.,
-to center the text in a window.  To activate it together with
-`visual-line-mode', it is usually best to use
-`visual-line-fill-column-mode'.
+conjunction with `visual-line-mode', to enable soft word-wrapping of
+long lines, but it can also be used in other contexts, e.g., to center
+the text in a window.
+
+Note: to activate and deactivate `visual-fill-column-mode' together with
+`visual-line-mode', add the function `visual-fill-column' to
+`visual-line-mode-hook'.
 
 This is a minor mode.  If called interactively, toggle the
-`Visual-Fill-Column mode' mode.  If the prefix argument is
-positive, enable the mode, and if it is zero or negative, disable
-the mode.
+`Visual-Fill-Column mode' mode.  If the prefix argument is positive,
+enable the mode, and if it is zero or negative, disable the mode.
 
-If called from Lisp, toggle the mode if ARG is `toggle'.  Enable
-the mode if ARG is nil, omitted, or is a positive number.
-Disable the mode if ARG is a negative number.
+If called from Lisp, toggle the mode if ARG is `toggle'.  Enable the
+mode if ARG is nil, omitted, or is a positive number.  Disable the mode
+if ARG is a negative number.
 
 To check whether the minor mode is enabled in the current buffer,
-evaluate `visual-fill-column-mode'.
+evaluate the variable `visual-fill-column-mode'.
 
-The mode's hook is called both when the mode is enabled and when
-it is disabled.
+The mode's hook is called both when the mode is enabled and when it is
+disabled.
 
 (fn &optional ARG)" t)
 (put 'global-visual-fill-column-mode 'globalized-minor-mode t)
@@ -48,8 +49,8 @@ or call the function `global-visual-fill-column-mode'.")
 (custom-autoload 'global-visual-fill-column-mode "visual-fill-column" nil)
 (autoload 'global-visual-fill-column-mode "visual-fill-column" "\
 Toggle Visual-Fill-Column mode in all buffers.
-With prefix ARG, enable Global Visual-Fill-Column mode if ARG is
-positive; otherwise, disable it.
+With prefix ARG, enable Global Visual-Fill-Column mode if ARG is positive;
+otherwise, disable it.
 
 If called from Lisp, toggle the mode if ARG is `toggle'.
 Enable the mode if ARG is nil, omitted, or is a positive number.
@@ -58,30 +59,30 @@ Disable the mode if ARG is a negative number.
 Visual-Fill-Column mode is enabled in all buffers where
 `turn-on-visual-fill-column-mode' would do it.
 
-See `visual-fill-column-mode' for more information on
-Visual-Fill-Column mode.
+See `visual-fill-column-mode' for more information on Visual-Fill-Column mode.
 
 (fn &optional ARG)" t)
+(autoload 'visual-fill-column-for-vline "visual-fill-column" "\
+Hook function for `visual-line-mode-hook'.
+Use this function to enable and disable `visual-fill-column-mode' in
+conjunction with `visual-line-mode'.")
 (autoload 'visual-line-fill-column-mode "visual-fill-column" "\
 Enable `visual-line-mode' and soft-wrap lines according to `fill-column'.
 
-Use this mode to activate and deactivate `visual-line-mode' and
-`visual-fill-column-mode' in conjunction.
-
 This is a minor mode.  If called interactively, toggle the
 `Visual-Line-Fill-Column mode' mode.  If the prefix argument is
-positive, enable the mode, and if it is zero or negative, disable
-the mode.
+positive, enable the mode, and if it is zero or negative, disable the
+mode.
 
-If called from Lisp, toggle the mode if ARG is `toggle'.  Enable
-the mode if ARG is nil, omitted, or is a positive number.
-Disable the mode if ARG is a negative number.
+If called from Lisp, toggle the mode if ARG is `toggle'.  Enable the
+mode if ARG is nil, omitted, or is a positive number.  Disable the mode
+if ARG is a negative number.
 
 To check whether the minor mode is enabled in the current buffer,
-evaluate `visual-line-fill-column-mode'.
+evaluate the variable `visual-line-fill-column-mode'.
 
-The mode's hook is called both when the mode is enabled and when
-it is disabled.
+The mode's hook is called both when the mode is enabled and when it is
+disabled.
 
 (fn &optional ARG)" t)
 (autoload 'visual-fill-column-split-window-sensibly "visual-fill-column" "\
