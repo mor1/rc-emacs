@@ -1,10 +1,10 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "auto-compile" "20250301.1627"
+(define-package "auto-compile" "20250901.1341"
   "Automatically compile Emacs Lisp libraries."
-  '((emacs "26.1"))
+  '((emacs "27.1"))
   :url "https://github.com/emacscollective/auto-compile"
-  :commit "5304e2f8a69ed9610b2392b846471f43b28b773b"
-  :revdesc "5304e2f8a69e"
+  :commit "20744a681ba5f0584695973a5ece3a794026ff76"
+  :revdesc "20744a681ba5"
   :keywords '("compile" "convenience" "lisp")
   :authors '(("Jonas Bernoulli" . "emacs.auto-compile@jonas.bernoulli.dev"))
   :maintainers '(("Jonas Bernoulli" . "emacs.auto-compile@jonas.bernoulli.dev")))
