@@ -15,8 +15,7 @@
 Major mode for editing standard Justfiles.
 
 (fn)" t)
-(add-to-list 'auto-mode-alist '("/[Jj]ustfile\\'" . just-mode))
-(add-to-list 'auto-mode-alist '("\\.[Jj]ust\\(file\\)?\\'" . just-mode))
+(add-to-list 'auto-mode-alist '("/\\(?:\\.\\)?[jJ][uU][sS][tT][fF][iI][lL][eE]\\'" . just-mode))
 (register-definition-prefixes "just-mode" '("just-"))
 
 ;;; End of scraped data
