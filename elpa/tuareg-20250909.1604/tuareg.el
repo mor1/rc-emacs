@@ -13,8 +13,8 @@
 ;; Maintainer: Christophe Troestler <Christophe.Troestler@umons.ac.be>
 ;;      Stefan Monnier <monnier@iro.umontreal.ca>
 ;; Created: 8 Jan 1997
-;; Package-Version: 20250228.257
-;; Package-Revision: 1600fdad28bd
+;; Package-Version: 20250909.1604
+;; Package-Revision: de9572f537b7
 ;; Package-Requires: ((emacs "26.3") (caml "4.8"))
 ;; Keywords: ocaml languages
 ;; Homepage: https://github.com/ocaml/tuareg
@@ -95,11 +95,11 @@
 
 (defun tuareg-editing-ls3 ()
   "Tell whether we are editing Lucid Synchrone syntax."
-  (string-match-p "\\.ls\\'" (or buffer-file-name (buffer-name))))
+  (string-suffix-p ".ls" (or buffer-file-name (buffer-name))))
 
 (defun tuareg-editing-ocamllex ()
   "Tell whether we are editing OCamlLex syntax."
-  (string-match-p "\\.mll\\'" (or buffer-file-name (buffer-name))))
+  (string-suffix-p ".mll" (or buffer-file-name (buffer-name))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    Import types and help features
@@ -663,7 +663,7 @@ Regexp match data 0 points to the chars."
     ;; used outside of font-lock.
     ("\\_<\\('\\)\\(?:[^'\\\n]\\|\\\\.[^\\'\n \")]*\\)\\('\\)"
      (1 "\"") (2 "\""))
-    ("\\({\\)[a-z_]*|"
+    ("\\({\\)[[:lower:]_]*|"
      (1 (prog1 "|" (tuareg--syntax-quotation end))))
     )
    (point) end))
@@ -683,7 +683,7 @@ Regexp match data 0 points to the chars."
          (let ((id (save-excursion
                      (goto-char (1+ (nth 8 ppss)))
                      (buffer-substring (point)
-                                       (progn (skip-chars-forward "a-z_")
+                                       (progn (skip-chars-forward "[:lower:]_")
                                               (point))))))
            (when (search-forward (concat "|" id "}") end 'move)
              (put-text-property (1- (point)) (point)
@@ -797,7 +797,7 @@ delimiting the region of interest. "
                               '("param" "raise" "before"))
                       (looking-at (rx (+ space)
                                       (group
-                                       (+ (in "a-zA-Z0-9" "_.'-"))))))
+                                       (+ (in alpha "0-9" "_.'-"))))))
              (put-text-property (match-beginning 1) (match-end 1) 'face
                                 tuareg-font-lock-doc-code-face)
              (goto-char (match-end 0))))
@@ -808,7 +808,7 @@ delimiting the region of interest. "
                       "exception" "attribute" "method" "section" "const"
                       "recfield")
                   ":")
-                (group (* (in "a-zA-Z0-9" "_.'"))))
+                (group (* (in alpha "0-9" "_.'"))))
            (put-text-property start (match-beginning group) 'face
                               'tuareg-font-lock-doc-markup-face)
            ;; Use code face for the reference.
@@ -837,7 +837,7 @@ delimiting the region of interest. "
                             ;; Section header with optional label.
                             (seq (+ digit)
                                  (? ":"
-                                    (+ (in "a-zA-Z0-9" "_"))))))
+                                    (+ (in alpha "0-9" "_"))))))
                    "}"
                    ;; HTML-style tags
                    (seq "<" (? "/")
@@ -887,11 +887,11 @@ delimiting the region of interest. "
   ;; N spaces in N+1 different ways :-(
   " *\\(?:[\t\n] *\\)?")
 
-(defconst tuareg--id-re "\\_<[A-Za-z_][A-Za-z0-9_']*\\_>"
+(defconst tuareg--id-re "\\_<[[:alpha:]_][[:alpha:]0-9_']*\\_>"
   "Regular expression for identifiers.")
-(defconst tuareg--lid-re "\\_<[a-z_][A-Za-z0-9_']*\\_>"
+(defconst tuareg--lid-re "\\_<[[:lower:]_][[:alpha:]0-9_']*\\_>"
   "Regular expression for variable names.")
-(defconst tuareg--uid-re "\\_<[A-Z][A-Za-z0-9_']*\\_>"
+(defconst tuareg--uid-re "\\_<[[:upper:]][[:alpha:]0-9_']*\\_>"
   "Regular expression for module and constructor names.")
 
 (defun tuareg--install-font-lock (&optional interactive-p)
@@ -900,7 +900,7 @@ for the interactive mode."
   (let* ((id tuareg--id-re)
          (lid tuareg--lid-re)
          (uid tuareg--uid-re)
-         (attr-id1 "\\<[A-Za-z_][A-Za-z0-9_']*\\>")
+         (attr-id1 "\\<[[:alpha:]_][[:alpha:]0-9_']*\\>")
          (attr-id (concat attr-id1 "\\(?:\\." attr-id1 "\\)*"))
          (maybe-infix-extension (concat "\\(?:%" attr-id "\\)?")); at most 1
          ;; Matches braces balanced on max 3 levels.
@@ -923,7 +923,7 @@ for the interactive mode."
                     "\\|[!$%&*+-./:<=>?@^|][!$%&*+-./:<=>?@^|~]*" end-op
                     ;; Operator or label starting with ~
                     "\\|~\\(?:[!$%&*+-./:<=>?@^|~]+" end-op
-                    "\\|[a-z][a-zA-Z0-9]*[: ]\\)"
+                    "\\|[[:lower:]][[:alpha:]0-9]*[: ]\\)"
                     "\\|(" braces e)))
          (balanced-brackets
           (let ((b "\\(?:[^][]\\|\\[")
@@ -937,12 +937,12 @@ for the interactive mode."
          (module-path (concat uid "\\(?:\\." uid "\\)*"))
          (typeconstr (concat "\\(?:" module-path "\\.\\)?" lid))
          (extended-module-name
-          (concat uid "\\(?: *([ A-Z]" balanced-braces ")\\)*"))
+          (concat uid "\\(?: *([ [:upper:]]" balanced-braces ")\\)*"))
          (extended-module-path
           (concat extended-module-name
                   "\\(?: *\\. *" extended-module-name "\\)*"))
          (modtype-path (concat "\\(?:" extended-module-path "\\.\\)*" id))
-         (typevar "'[A-Za-z_][A-Za-z0-9_']*\\>")
+         (typevar "'[[:alpha:]_][[:alpha:]0-9_']*\\>")
          (typeparam (concat "\\(?:[+-]?" typevar "\\|_\\)"))
          (typeparams (concat "\\(?:" typeparam "\\|( *"
                              typeparam " *\\(?:, *" typeparam " *\\)*)\\)"))
@@ -1013,7 +1013,7 @@ for the interactive mode."
             (":[\n]? *\\(\\<type\\>\\)"
              (1 'font-lock-keyword-face))
             ;; (lid: t), before function definitions
-            (,(concat "(" lid " *:\\(['_A-Za-z]"
+            (,(concat "(" lid " *:\\(['_[:alpha:]]"
                       balanced-braces-no-string "\\))")
              1 'font-lock-type-face keep)
             ;; "module type of" module-expr (here "of" is a governing
@@ -1099,7 +1099,7 @@ for the interactive mode."
             ;; already highlighted (let x : t = u in ...) but before
             ;; module paths (expr : X.t).
             (,(concat "(" balanced-braces-no-end-operator ":>? *\\(?:\n *\\)?"
-                      "\\(['_A-Za-z]" balanced-braces-no-string
+                      "\\(['_[:alpha:]]" balanced-braces-no-string
                       "\\|(" balanced-braces-no-string ")"
                       balanced-braces-no-string"\\))")
              1 'font-lock-type-face)
@@ -1219,7 +1219,7 @@ for the interactive mode."
                      'symbols)
         (0 'font-lock-builtin-face))
        ("\\[[ \t]*\\]" . tuareg-font-lock-constructor-face) ; []
-       ("[])a-zA-Z0-9 \t]\\(::\\)[[(a-zA-Z0-9 \t]" ; :: (not not ::…)
+       ("[])[:alpha:]0-9 \t]\\(::\\)[[([:alpha:]0-9 \t]" ; :: (not not ::…)
         1 'tuareg-font-lock-constructor-face)
        ;; Constructors
        (,(concat "\\(" uid "\\)[^.]")  1 'tuareg-font-lock-constructor-face)
@@ -1354,7 +1354,7 @@ It must not be used outside fontification purposes."
                     nil)) ; If braces are not balanced, stop.
                  ((char-equal ?: (char-after))
                   ;; Make sure it is not a label
-                  (skip-chars-backward "a-zA-Z0-9_'")
+                  (skip-chars-backward "[:alpha:]0-9_'")
                   (if (not (memq (char-before) '(?~ ??)))
                       (setq tuareg--pattern-matcher-limit (1- pos)))
                   (goto-char pos)
@@ -1400,7 +1400,7 @@ It must not be used outside fontification purposes."
     tuareg--pattern-matcher-limit))
 
 (defun tuareg--pattern-equal-matcher (limit)
-  "Find \"=\" and \"+=\" and remove its highlithing."
+  "Find \"=\" and \"+=\" and remove its highlighting."
   (unless (tuareg--font-lock-in-string-or-comment)
     (let (pos)
       (while (and
@@ -1872,7 +1872,7 @@ For use on `electric-indent-functions'."
           ;; Watch out for floats!
           (pcase (char-before)
             ((or `?- `?+)
-             (and (memq (char-after) '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9 ?0))
+             (and (memq (char-after) '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9))
                   (save-excursion
                     (forward-char -1) (skip-syntax-backward "w_")
                     (looking-at tuareg-smie--float-re))
@@ -1888,7 +1888,7 @@ For use on `electric-indent-functions'."
       (cond
        ((memq (char-after) '(?\; ?,)) nil) ; ".;" is not a token.
        ((and (eq (char-after) ?\.)
-             (memq (char-before) '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9 ?0)))
+             (memq (char-before) '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)))
         (skip-chars-backward "0-9"))    ; A float number!
        (t ;; The "." char is given symbol property so that "M.x" is
         ;; considered as a single symbol, but in reality, it's part of
@@ -2892,7 +2892,7 @@ This function moves the point."
            (if in-doc-comment
                (concat paragraph-start
                        "\\|"
-                       (rx (* (in " \t")) "@" (+ (in "a-z")) symbol-end))
+                       (rx (* (in " \t")) "@" (+ lower) symbol-end))
              paragraph-start)))
       (save-restriction
         (narrow-to-region content-start com-end)
@@ -2912,7 +2912,7 @@ This function moves the point."
                (let ((col
                       (if (and in-doc-comment
                                (looking-at-p
-                                (rx "@" (+ (in "a-z")) symbol-end)))
+                                (rx "@" (+ lower) symbol-end)))
                           ;; Indent two spaces under @tag.
                           (+ 2 (current-column))
                         (current-column))))
@@ -3019,7 +3019,7 @@ or indent all lines in the current phrase."
       (replace-regexp-in-string "\n  " "\n" sig))))
 
 (defun tuareg--ff-file-created-hook ()
-  (when (and (string-match "\\.mli\\'" (buffer-file-name))
+  (when (and (string-suffix-p ".mli" (buffer-file-name))
              (y-or-n-p "Try to generate interface?"))
     (if (require 'merlin nil t)
         (let* (ml-buf ty)
@@ -3157,7 +3157,7 @@ file outside _build? "))
                           (and in-doc-comment
                                (looking-at-p
                                 (rx (* (in " \t"))
-                                    "@" (+ (in "a-z")) symbol-end))))
+                                    "@" (+ lower) symbol-end))))
                     (skip-chars-backward " \t\n" com-start)
                     (goto-char (max com-start (line-beginning-position)))
                     (when (looking-at (rx "(*" (* "*")))
@@ -3165,7 +3165,7 @@ file outside _build? "))
                     (skip-chars-forward " \t")
                     (when (and in-doc-comment
                                (not tag-starts-line)
-                               (looking-at-p (rx "@" (+ (in "a-z")) " ")))
+                               (looking-at-p (rx "@" (+ lower) " ")))
                       (forward-char 2)))
                   (current-column))))
            (indent-line-to indent-col)

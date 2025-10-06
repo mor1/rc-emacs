@@ -1,11 +1,11 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "tuareg" "20250228.257"
+(define-package "tuareg" "20250909.1604"
   "OCaml mode."
   '((emacs "26.3")
     (caml  "4.8"))
   :url "https://github.com/ocaml/tuareg"
-  :commit "1600fdad28bdd2c55e52a87e7987713c6d5d1718"
-  :revdesc "1600fdad28bd"
+  :commit "de9572f537b71c5e67b6ad676e1f7e42e8180878"
+  :revdesc "de9572f537b7"
   :keywords '("ocaml" "languages")
   :authors '(("Albert Cohen" . "Albert.Cohen@inria.fr")
              ("Sam Steingold" . "sds@gnu.org")
