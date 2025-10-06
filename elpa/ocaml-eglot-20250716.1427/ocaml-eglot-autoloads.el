@@ -11,6 +11,10 @@
 
 ;;; Generated autoloads from ocaml-eglot.el
 
+(autoload 'ocaml-eglot-setup "ocaml-eglot" "\
+Setup OCaml-eglot.")
+(autoload 'ocaml-eglot-clean "ocaml-eglot" "\
+Clean registered hooks and advice.")
 (autoload 'ocaml-eglot "ocaml-eglot" "\
 Minor mode for interacting with `ocaml-lsp-server' using `eglot' as a client.
 
@@ -30,6 +34,8 @@ evaluate the variable `ocaml-eglot'.
 
 The mode's hook is called both when the mode is enabled and when it is
 disabled.
+
+\\{ocaml-eglot-map}
 
 (fn &optional ARG)" t)
 (autoload 'ocaml-eglot-objinfo-handler "ocaml-eglot" "\
@@ -51,6 +57,11 @@ Display the result of `ocamlobjinfo` instead of file contents.")
 ;;; Generated autoloads from ocaml-eglot-util.el
 
 (register-definition-prefixes "ocaml-eglot-util" '("ocaml-eglot-util-"))
+
+
+;;; Generated autoloads from ocaml-eglot-xref.el
+
+(register-definition-prefixes "ocaml-eglot-xref" '("ocaml-eglot-"))
 
 ;;; End of scraped data
 
