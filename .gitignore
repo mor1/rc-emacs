@@ -9,6 +9,7 @@ eln-cache/
 elpa/archives/
 elpa/gnupg/
 elpa/neocaml/
+flycheck_init.el
 history
 oauth2-auto.plist
 persist/
