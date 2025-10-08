@@ -35,8 +35,6 @@ evaluate the variable `ocaml-eglot'.
 The mode's hook is called both when the mode is enabled and when it is
 disabled.
 
-\\{ocaml-eglot-map}
-
 (fn &optional ARG)" t)
 (autoload 'ocaml-eglot-objinfo-handler "ocaml-eglot" "\
 Display the result of `ocamlobjinfo` instead of file contents.")

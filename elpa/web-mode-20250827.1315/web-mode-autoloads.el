@@ -23,7 +23,6 @@ Major mode for editing web templates.
 
 (fn)" t)
 (register-definition-prefixes "web-mode" '("web-mode-"))
-
 
 ;;; End of scraped data
 

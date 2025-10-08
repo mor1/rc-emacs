@@ -48,11 +48,9 @@ Enable the mode if ARG is nil, omitted, or is a positive number.
 Disable the mode if ARG is a negative number.
 
 Flycheck-Eglot mode is enabled in all buffers where `(lambda nil (when
-(flycheck-eglot--eglot-available-p) (flycheck-eglot-mode 1)))' would
-do it.
+(flycheck-eglot--eglot-available-p) (flycheck-eglot-mode 1)))' would do it.
 
-See `flycheck-eglot-mode' for more information on Flycheck-Eglot
-mode.
+See `flycheck-eglot-mode' for more information on Flycheck-Eglot mode.
 
 (fn &optional ARG)" t)
 (register-definition-prefixes "flycheck-eglot" '("flycheck-eglot-"))

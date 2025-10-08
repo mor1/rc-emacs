@@ -59,7 +59,6 @@ disabled.
 
 (fn &optional ARG)" t)
 (register-definition-prefixes "opam-switch-mode" '("opam-switch-"))
-
 
 ;;; End of scraped data
 

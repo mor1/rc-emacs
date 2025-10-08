@@ -15,7 +15,6 @@
  (autoload 'nixfmt-region "nixfmt" nil t)
  (autoload 'nixfmt-on-save-mode "nixfmt" nil t)
 (register-definition-prefixes "nixfmt" '("nixfmt-command"))
-
 
 ;;; End of scraped data
 

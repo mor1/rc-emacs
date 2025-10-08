@@ -3,9 +3,8 @@
 ;; Copyright (C) 2010-2016 SAKURAI Masashi
 
 ;; Author: SAKURAI Masashi <m.sakurai at kiwanami.net>
-;; Version: 0.5.1
 ;; Package-Version: 20170901.1330
-;; Package-Commit: 2239671d94b38d92e9b28d4e12fd79814cfb9c16
+;; Package-Revision: 2239671d94b3
 ;; Keywords: deferred, async
 ;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/kiwanami/emacs-deferred

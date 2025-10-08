@@ -32,7 +32,6 @@ Run tests in the current directory and promote the current buffer." t)
 ;;; Generated autoloads from dune-watch.el
 
 (register-definition-prefixes "dune-watch" '("dune-watch-" "start-dune-watch"))
-
 
 ;;; End of scraped data
 
