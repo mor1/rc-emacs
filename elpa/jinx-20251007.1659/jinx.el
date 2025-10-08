@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2023
-;; Package-Version: 20250920.956
-;; Package-Revision: 55c844066601
+;; Package-Version: 20251007.1659
+;; Package-Revision: 618e1a5c7ad8
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/jinx
 ;; Keywords: convenience, text
@@ -707,14 +707,8 @@ See `isearch-open-necessary-overlays' and `isearch-open-overlay-temporary'."
 
 (defun jinx--correct-setup ()
   "Setup minibuffer for correction."
-  (use-local-map (make-composed-keymap (list jinx-correct-map) (current-local-map)))
-  ;; TODO Use `eager-display' on Emacs 31
-  (when (and (eq completing-read-function #'completing-read-default)
-             (not (bound-and-true-p vertico-mode))
-             (not (bound-and-true-p icomplete-mode)))
-    (let ((message-log-max nil)
-          (inhibit-message t))
-      (minibuffer-completion-help))))
+  (use-local-map
+   (make-composed-keymap (list jinx-correct-map) (current-local-map))))
 
 (defun jinx--add-suggestion (list ht word group)
   "Add suggestion WORD to LIST and HT.
@@ -821,6 +815,7 @@ Optionally show prompt INFO and insert INITIAL input."
                        (jinx--table-with-metadata
                         (jinx--correct-suggestions word)
                         `((category . jinx)
+                          (eager-display . t)
                           (display-sort-function . ,#'identity)
                           (cycle-sort-function . ,#'identity)
                           (group-function . ,#'jinx--group)
