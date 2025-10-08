@@ -1,6 +1,3 @@
-;; (set-time-zone-rule "Europe/London")
-;; (set-time-zone-rule "Europe/Paris")
-
 ;; Copyright (C) Richard Mortier <mort@cantab.net> except where noted. All
 ;; Rights Reserved.
 ;;
@@ -16,34 +13,17 @@
 ;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 ;; IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-;; time emacs startup; updated to new (current-time)
-;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
-
-;;; Code:
-
 (defconst emacs-start-time (current-time))
 
-(setq gc-cons-threshold 64000000)
-(add-hook
- 'after-init-hook
- #'(lambda ()
-     (setq gc-cons-threshold 800000)) ; restore after startup
- )
+;; ;; quelpa
+;; (unless (package-installed-p 'quelpa)
+;;   (with-temp-buffer
+;;     (url-insert-file-contents
+;;      "https://raw.githubusercontent.com/quelpa/quelpa/master/quelpa.el")
+;;     (eval-buffer)
+;;     (quelpa-self-upgrade)))
 
-;; package management
-;; per http://cachestocaches.com/2015/8/getting-started-use-package/
-(require 'package)
-(setq
- gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"
- package-enable-at-startup nil
- package-archives
- '(("melpa" . "https://melpa.org/packages/")
-   ("gnu" . "https://elpa.gnu.org/packages/")
-   ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
-(package-initialize)
-
-;; ALTERNATIVE TO package.el, ABOVE
-;; ;; straight.el, https://github.com/radian-software/straight.el
+;; ;; straight
 ;; (defvar bootstrap-version)
 ;; (let ((bootstrap-file
 ;;        (expand-file-name
@@ -59,22 +39,38 @@
 ;;       (goto-char (point-max))
 ;;       (eval-print-last-sexp)))
 ;;   (load bootstrap-file nil 'nomessage))
-
 ;; (straight-use-package 'use-package)
+
+;; package management
+(require 'package)
+(require 'use-package-ensure)
+(use-package package
+  :ensure nil
+  :config (package-initialize)
+  :custom
+  (package-enable-at-startup nil)
+  (package-native-compile t)
+  (package-archives
+   '(("melpa" . "https://melpa.org/packages/")
+     ("gnu" . "https://elpa.gnu.org/packages/")
+     ("nongnu" . "https://elpa.nongnu.org/nongnu/"))))
 
 ;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
 (if init-file-debug
     (progn
       (message "DEBUGGING ON")
       (setq
-       use-package-verbose t
-       use-package-expand-minimally nil
        use-package-compute-statistics t
+       use-package-expand-minimally nil
+       use-package-verbose t
        debug-on-error t))
   (setq
-   use-package-verbose nil
    use-package-always-defer t
-   use-package-expand-minimally t))
+   use-package-always-demand nil
+   use-package-always-ensure t
+   use-package-enable-imenu-support t
+   use-package-expand-minimally t
+   use-package-verbose nil))
 
 ;; server
 (load "server")

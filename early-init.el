@@ -1,4 +1,3 @@
-(defconst emacs-start-time (current-time))
 (setq initial-gc-threshold gc-cons-threshold)
 (setq gc-cons-threshold 10000000)
 (add-hook
