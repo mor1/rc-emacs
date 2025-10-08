@@ -8,8 +8,8 @@
 ;; Homepage: https://github.com/magit/magit
 ;; Keywords: tools
 
-;; Package-Version: 20250919.2134
-;; Package-Revision: f9dd4a3e5105
+;; Package-Version: 20251006.1840
+;; Package-Revision: b828afbb4b45
 ;; Package-Requires: (
 ;;     (emacs   "28.1")
 ;;     (compat  "30.1")
