@@ -4,8 +4,8 @@
 
 ;; Author: Hongyu Ding <rainstormstudio@yahoo.com>, Vincent Zhang <seagle0128@gmail.com>
 ;; Keywords: lisp
-;; Package-Version: 20251006.121
-;; Package-Revision: a4f905718b92
+;; Package-Version: 20251008.1720
+;; Package-Revision: 418f137faac9
 ;; Package-Requires: ((emacs "24.3"))
 ;; URL: https://github.com/rainstormstudio/nerd-icons.el
 ;; Keywords: convenient, lisp
@@ -282,8 +282,8 @@
     ("ts"             nerd-icons-mdicon "nf-md-language_typescript"  :face nerd-icons-blue-alt)
     ("js"             nerd-icons-devicon "nf-dev-javascript"     :face nerd-icons-yellow)
     ("es"             nerd-icons-devicon "nf-dev-javascript"     :face nerd-icons-yellow)
-    ("jsx"            nerd-icons-devicon "nf-dev-javascript"     :face nerd-icons-cyan-alt)
-    ("tsx"            nerd-icons-mdicon "nf-md-language_typescript"  :face nerd-icons-blue-alt)
+    ("jsx"            nerd-icons-devicon "nf-dev-react"          :face nerd-icons-lblue)
+    ("tsx"            nerd-icons-devicon "nf-dev-react"          :face nerd-icons-lblue)
     ("njs"            nerd-icons-mdicon "nf-md-nodejs"           :face nerd-icons-lgreen)
     ("vue"            nerd-icons-sucicon "nf-seti-vue"           :face nerd-icons-lgreen)
 
@@ -677,14 +677,14 @@
     (ledger-mode                       nerd-icons-mdicon "nf-md-file_table_box_multiple"   :face nerd-icons-green)
     (typescript-mode                   nerd-icons-mdicon "nf-md-language_typescript"  :face nerd-icons-blue-alt)
     (typescript-ts-mode                nerd-icons-mdicon "nf-md-language_typescript"  :face nerd-icons-blue-alt)
-    (typescript-tsx-mode               nerd-icons-mdicon "nf-md-language_typescript"  :face nerd-icons-blue-alt)
-    (tsx-ts-mode                       nerd-icons-mdicon "nf-md-language_typescript"  :face nerd-icons-blue-alt)
+    (typescript-tsx-mode               nerd-icons-devicon "nf-dev-react"              :face nerd-icons-lblue)
+    (tsx-ts-mode                       nerd-icons-devicon "nf-dev-react"              :face nerd-icons-lblue)
     (js-mode                           nerd-icons-devicon "nf-dev-javascript"         :face nerd-icons-yellow)
     (js-ts-mode                        nerd-icons-devicon "nf-dev-javascript"         :face nerd-icons-yellow)
-    (js-jsx-mode                       nerd-icons-devicon "nf-dev-javascript"         :face nerd-icons-yellow)
+    (js-jsx-mode                       nerd-icons-devicon "nf-dev-react"              :face nerd-icons-lblue)
     (js2-mode                          nerd-icons-devicon "nf-dev-javascript"         :face nerd-icons-yellow)
     (js3-mode                          nerd-icons-devicon "nf-dev-javascript"         :face nerd-icons-yellow)
-    (rjsx-mode                         nerd-icons-devicon "nf-dev-javascript"         :face nerd-icons-cyan-alt)
+    (rjsx-mode                         nerd-icons-devicon "nf-dev-react"              :face nerd-icons-lblue)
     (vue-mode                          nerd-icons-sucicon "nf-seti-vue"               :face nerd-icons-lgreen)
     (term-mode                         nerd-icons-devicon "nf-dev-terminal")
     (vterm-mode                        nerd-icons-devicon "nf-dev-terminal")
