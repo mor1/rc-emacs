@@ -952,6 +952,104 @@
           t)
 (put 'scroll-left 'disabled nil)
 
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(default
+   ((t
+     (:inherit
+      unspecified
+      :extend unspecified
+      :stipple unspecified
+      :background unspecified
+      :foreground unspecified
+      :inverse-video unspecified
+      :box unspecified
+      :strike-through unspecified
+      :overline unspecified
+      :underline unspecified
+      :slant normal
+      :weight regular
+      :height 90
+      :width normal
+      :foundry "PfEd"
+      :family "Atkinson Hyperlegible Mono"))))
+ '(ediff-current-diff-C ((t (:background "yellow1"))))
+ '(flyspell-duplicate ((t (:underline (:color "#b58900" :style wave)))))
+ '(flyspell-incorrect
+   ((t
+     (:background
+      "#aa0000"
+      :foreground "gray75"
+      :underline (:color "#dc322f" :style wave)))))
+ '(highlight ((t (:background "dark slate gray"))))
+ '(smerge-base ((t (:background "lavender"))))
+ '(whitespace-line ((t (:foreground unspecified :underline "OrangeRed3"))))
+ '(whitespace-tab ((t (:foreground "burlywood4" :inverse-video t)))))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   '(auto-compile
+     avy
+     cape
+     com-css-sort
+     corfu
+     corfu-terminal
+     css-eldoc
+     diff-hl
+     direnv
+     dirvish
+     dune
+     eglot-booster
+     elisp-autofmt
+     exec-path-from-shell
+     fill-column-indicator
+     flycheck-eglot
+     gcmh
+     git-ps1-mode
+     hide-mode-line
+     inheritenv
+     jinx
+     just-mode
+     kind-icon
+     magit
+     marginalia
+     mu4e
+     neocaml
+     nerd-icons
+     nerd-icons-completion
+     nerd-icons-corfu
+     nix-ts-mode
+     nixfmt
+     ocaml-eglot
+     ocp-indent
+     opam-switch-mode
+     org-gcal
+     pretty-sha-path
+     python-mode
+     rainbow-mode
+     rg
+     rustic
+     shfmt
+     solarized-theme
+     tree-sitter-langs
+     treesit-auto
+     treesit-fold
+     tuareg
+     typst-ts-mode
+     uv-mode
+     vertico
+     web-mode-edit-element)
+   nil nil "Customized with use-package emacs")
+ '(package-vc-selected-packages
+   '((treesit-fold :url "https://github.com/emacs-tree-sitter/treesit-fold")
+     (neocaml :url "https://github.com/bbatsov/neocaml")
+     (eglot-booster :url "https://github.com/jdtsmith/eglot-booster"))))
 ;; Local variables:
 ;; elisp-autofmt-load-packages-local: ("use-package" "use-package-core")
 ;; end:
