@@ -860,6 +860,10 @@
   :hook (python-mode . uv-mode-auto-activate-hook))
 ;;
 
+(use-package which-key
+  :diminish
+  :commands (which-key-mode)
+  :init (which-key-mode))
 (use-package whitespace
   ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
   :diminish
