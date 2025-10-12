@@ -420,13 +420,35 @@
 ;;
 
 ;; OCaml
+(use-package neocaml
+  :vc (:url "https://github.com/bbatsov/neocaml" :rev :newest)
+  :after eglot
+  :hook (neocaml-mode . neocaml-repl-minor-mode)
+  :config
+  (add-to-list
+   'eglot-server-programs '((neocaml-mode :language-id "ocaml") . ("ocamllsp")))
+
+  :custom
+  (neocaml-repl-program-name "utop")
+  (neocaml-repl-program-args '("-emacs"))
+  (neocaml-use-prettify-symbols t))
 (use-package tuareg
   :mode (("\\.ocamlinit\\'" . tuareg-mode)))
 (use-package ocaml-eglot
   :after tuareg
   :hook
   (tuareg-mode . ocaml-eglot)
-  (ocaml-eglot . eglot-ensure))
+  (ocaml-eglot . eglot-ensure)
+  (ocaml-eglot . (lambda () (add-hook #'before-save-hook #'eglot-format nil t)))
+  (eglot-managed-mode . (lambda () (flycheck-eglot-mode 1)))
+  :config (setq ocaml-eglot-syntax-checker 'flycheck))
+(use-package dune)
+(use-package opam-switch-mode
+  :after tuareg
+  :hook (tuareg-mode . opam-switch-mode))
+(use-package ocp-indent
+  :after ocaml-eglot
+  :hook (ocaml-eglot . ocp-setup-indent))
 ;;
 
 (use-package org
