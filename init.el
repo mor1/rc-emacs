@@ -840,24 +840,7 @@
            (compile (format "tinymist preview %s" (shell-quote-argument file)))
          (user-error "Buffer is not visiting a file"))))))
 
-;; python
-(use-package python-mode
-  :after (eglot reformatter)
   :hook
-  ((python-mode . eglot-ensure)
-   (python-mode . ruff-format-on-save-mode)
-   (python-mode . dd/ruff-sort-on-save-mode))
-  :config (add-to-list 'eglot-server-programs '(python-mode . ("ruff" "server")))
-  :preface
-  ;; per https://ddavis.io/blog/python-emacs-4/
-  (reformatter-define
-   dd/ruff-sort
-   :program "ruff"
-   :args
-   `("check" "--select" "I" "--fix" "--stdin-filename" ,buffer-file-name "-")))
-(use-package uv-mode
-  :after eglot
-  :hook (python-mode . uv-mode-auto-activate-hook))
 ;;
 
 (use-package which-key
@@ -903,6 +886,33 @@
 
 (use-package yaml-ts-mode
   :mode "\\.ya?ml\\'")
+
+;; python
+(use-package python-mode
+  :after (eglot reformatter)
+  :hook
+  ((python-base-mode . eglot-ensure)
+   (python-base-mode . ruff-format-on-save-mode)
+   (python-base-mode . dd/ruff-sort-on-save-mode))
+  :config
+  (add-to-list
+   'eglot-server-programs
+   `(python-mode
+     .
+     ,(eglot-alternatives
+       '(("basedpyright-langserver" "--stdio") ("ruff" "server")))))
+  :preface
+  ;; per https://ddavis.io/blog/python-emacs-4/
+  (reformatter-define
+   dd/ruff-sort
+   :program "ruff"
+   :args
+   `("check" "--select" "I" "--fix" "--stdin-filename" ,buffer-file-name "-")))
+(use-package uv-mode
+  :after (eglot python-base-mode)
+  :hook (python-base-mode . uv-mode-auto-activate-hook))
+;;
+
 
 ;;
 ;; functions
