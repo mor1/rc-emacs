@@ -840,7 +840,117 @@
            (compile (format "tinymist preview %s" (shell-quote-argument file)))
          (user-error "Buffer is not visiting a file"))))))
 
+;; interactive menus, minibuffer, completion
+(use-package vertico
   :hook
+  ((rfn-eshadow-update-overlay . vertico-directory-tidy)
+   (minibuffer-setup . vertico-repeat-save))
+  :bind
+  (:map
+   vertico-map
+   ("RET" . vertico-directory-enter)
+   ("DEL" . vertico-directory-delete-char)
+   ("M-DEL" . vertico-directory-delete-word))
+  :custom
+  (vertico-scroll-margin 0)
+  (vertico-count 20)
+  (vertico-resize t)
+  (vertico-cycle t)
+  (read-file-name-completion-ignore-case t)
+  (read-buffer-completion-ignore-case t)
+  (completion-ignore-case t)
+  :init (vertico-mode))
+(use-package savehist
+  :init (savehist-mode))
+(use-package marginalia
+  :after vertico
+  :custom
+  (marginalia-annotators
+   '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  (marginalia-max-relative-age 0)
+  (marginalia-align 'right)
+  :init (marginalia-mode))
+(use-package nerd-icons-completion
+  :hook (marginalia-mode . nerd-icons-completion-marginalia-setup)
+  :config (nerd-icons-completion-mode))
+(use-package emacs
+  :custom
+  ;; TAB cycle if there are only few candidates
+  (completion-cycle-threshold 3)
+
+  ;; Enable indentation+completion using the TAB key. `completion-at-point' is
+  ;; often bound to M-TAB.
+  (tab-always-indent 'complete)
+
+  ;; Emacs 30 and newer: Disable Ispell completion function.
+  ;; Try `cape-dict' as an alternative.
+  (text-mode-ispell-word-completion nil)
+
+  (treesit-font-lock-level 4))
+(use-package corfu
+  ;; completion in region popups
+  :custom
+  (corfu-cycle t) ;; Enable cycling for `corfu-next/previous'
+  (corfu-on-exact-match nil) ;; Configure handling of exact matches
+  (corfu-preselect 'first) ;; Preselect the prompt
+  (corfu-preview-current nil) ;; Disable current candidate preview
+  (corfu-quit-at-boundary nil) ;; Never quit at completion boundary
+  (corfu-quit-no-match nil) ;; Never quit, even if there is no match
+
+  (corfu-auto t)
+  (corfu-auto-delay 0.0)
+  (corfu-auto-prefix 1)
+  (completion-auto-help t)
+
+  :config
+  (corfu-history-mode 1)
+  (savehist-mode 1)
+  (add-to-list 'savehist-additional-variables 'corfu-history)
+
+  :init
+  (global-corfu-mode)
+  (corfu-popupinfo-mode)
+  (corfu-echo-mode)
+
+  :bind
+  (:map
+   corfu-map
+   ("TAB" . corfu-next)
+   ([tab] . corfu-next)
+   ("S-TAB" . corfu-previous)
+   ([backtab] . corfu-previous)))
+(use-package corfu-terminal
+  :after corfu
+  :init
+  (unless (display-graphic-p)
+    (corfu-terminal-mode +1)))
+(use-package kind-icon
+  :after corfu
+  :custom
+  (kind-icon-blend-background t)
+  (kind-icon-default-face 'corfu-default) ; only needed with blend-background
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter)
+  (add-hook
+   'my-completion-ui-mode-hook
+   (lambda ()
+     (setq completion-in-region-function
+           (kind-icon-enhance-completion completion-in-region-function)))))
+(use-package cape
+  :after corfu
+  :bind ("C-c c" . cape-prefix-map)
+  :init
+  ;; (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  ;; (add-hook 'completion-at-point-functions #'cape-file)
+  ;; (add-hook 'completion-at-point-functions #'cape-elisp-symbol)
+  ;; (add-hook 'completion-at-point-functions #'cape-keyword)
+  ;; (add-hook 'completion-at-point-functions #'cape-sgml)
+  ;; (add-hook 'completion-at-point-functions #'cape-tex)
+  ;; (add-hook 'completion-at-point-functions #'cape-history)
+  ;; ...
+  (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster))
+;;
+
 ;;
 
 (use-package which-key
