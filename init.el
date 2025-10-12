@@ -160,11 +160,12 @@
   (whitespace-line-column nil))
 
 (use-package auto-compile
-  :init
-  (setq
-   auto-compile-display-buffer nil
-   auto-compile-mode-line-counter t))
+  :custom
+  (auto-compile-display-buffer nil)
+  (auto-compile-mode-line-counter t))
 (auto-compile-on-load-mode)
+
+(use-package avy)
 
 (use-package calendar
   :config
