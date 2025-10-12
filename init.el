@@ -230,6 +230,14 @@
   (("\\Dockerfile\\'" . dockerfile-ts-mode)
    ("\\.dockerignore\\'" . dockerfile-ts-mode)))
 
+(use-package shfmt
+  :hook ((sh-mode . shfmt-on-save-mode) (bash-ts-mode . shfmt-on-save-mode))
+  :custom
+  (sh-basic-offset 2)
+  (sh-indendentation 2)
+  (shfmt-respect-sh-basic-offset t)
+  (shfmt-arguments
+   '("--simplify" "--binary-next-line" "--case-indent" "--space-redirects")))
 
 (use-package eglot)
 
@@ -252,6 +260,8 @@
   :commands (flyspell-prog-mode flyspell-mode)
   :hook ((text-mode . flyspell-mode) (prog-mode . flyspell-prog-mode))
   :config (setq ispell-dictionary "british"))
+(use-package gcmh
+  :config (gcmh-mode 1))
 
 (use-package git-ps1-mode
   :hook find-file)
@@ -265,6 +275,18 @@
    ido-enable-flex-matching t
    ido-use-filename-at-point nil
    ido-use-virtual-buffers t))
+(use-package hide-mode-line)
+
+(use-package jinx
+  :diminish
+  :hook (emacs-startup . global-jinx-mode)
+  :bind (("C-;" . jinx-correct) ("C-M-$" . jinx-languages))
+  ;; :config
+  ;; (vertico-multiform-mode)
+  ;; (add-to-list
+  ;;  'vertico-multiform-categories
+  ;;  '(jinx grid (vertico-grid-annotate . 20) (vertico-count . 4)))
+  )
 
 (use-package just-mode)
 
@@ -335,6 +357,13 @@
      "rmm@cs.nott.ac.uk"))
   (mu4e-view-show-addresses t)
   (mu4e-view-show-images t))
+
+;; Nix
+(use-package nixfmt
+  :hook (nix-ts-mode . nixfmt-on-save-mode))
+(use-package nix-ts-mode
+  :mode "\\.nix\\'")
+;;
 
 ;; OCaml
 (use-package tuareg
@@ -585,15 +614,7 @@
   :unless noninteractive
   :config (save-place-mode t))
 
-(use-package sh-script
-  :mode (("bash_" . sh-mode) ("APKBUILD\\'" . sh-mode))
-  :config
-  (setq
-   sh-basic-offset 2
-   sh-indentation 2))
-
 (use-package solarized-theme
-  ;; :ensure
   :init
   (progn
     (defvar my-color-themes (list 'solarized-dark 'solarized-light))
