@@ -320,15 +320,6 @@
 (use-package git-ps1-mode
   :hook find-file)
 
-(use-package ido-completing-read+
-  ;; display possible completions at all places
-  :config
-  (ido-mode t)
-  (ido-everywhere t)
-  (setq
-   ido-enable-flex-matching t
-   ido-use-filename-at-point nil
-   ido-use-virtual-buffers t))
 (use-package hide-mode-line)
 
 (use-package jinx
@@ -841,7 +832,16 @@
          (user-error "Buffer is not visiting a file"))))))
 
 ;; interactive menus, minibuffer, completion
-(use-package vertico
+
+;; REPLACING
+;; (use-package ido-completing-read+
+;;   ;; display possible completions at all places
+;;   :config
+;;   (ido-mode t)
+;;   (ido-everywhere t)
+;;   :custom (ido-enable-flex-matching t (ido-use-filename-at-point nil)))
+
+((use-package vertico
   :hook
   ((rfn-eshadow-update-overlay . vertico-directory-tidy)
    (minibuffer-setup . vertico-repeat-save))
