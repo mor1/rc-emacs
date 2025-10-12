@@ -198,6 +198,11 @@
 (use-package diff-hl
   :init (global-diff-hl-mode))
 
+;; CLI environments
+(use-package direnv)
+(use-package inheritenv)
+;;
+
 (use-package dirvish
   :custom
   (dirvish-bookmarks-alist
@@ -220,17 +225,16 @@
    ([remap dired-do-copy] . dirvish-yank)
    ([remap mode-line-other-buffer] . dirvish-other-buffer)))
 
-(use-package direnv
-  :config (direnv-mode))
+(use-package dockerfile-ts-mode
+  :mode
+  (("\\Dockerfile\\'" . dockerfile-ts-mode)
+   ("\\.dockerignore\\'" . dockerfile-ts-mode)))
 
-(use-package dockerfile-mode
-  :mode "Dockerfile")
 
 (use-package eglot)
 
 (use-package eldoc
-  :diminish
-  :hook ((c-mode-common emacs-lisp-mode lisp-interaction-mode) . eldoc-mode))
+  :init (global-eldoc-mode))
 
 (use-package elisp-autofmt
   :commands (elisp-autofmt-mode elisp-autofmt-buffer)
@@ -690,6 +694,8 @@
     (lambda ()
       (interactive "*")
       (tex-enclose-word "\\textbf{" "}")))))
+(use-package toml-ts-mode
+  :mode "\\.toml\\'")
 
 (use-package typst-ts-mode
   :after eglot
@@ -777,11 +783,8 @@
 
   :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
 
-(use-package yasnippet
-  :config
-  (yas-reload-all)
-  (add-hook 'prog-mode-hook 'yas-minor-mode)
-  (add-hook 'text-mode-hook 'yas-minor-mode))
+(use-package yaml-ts-mode
+  :mode "\\.ya?ml\\'")
 
 ;;
 ;; functions
