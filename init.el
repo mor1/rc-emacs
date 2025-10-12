@@ -687,6 +687,8 @@
   (recentf-max-saved-items 1000)
   (recentf-save-file (concat user-emacs-directory ".recentf")))
 
+(use-package rg
+  :init (rg-enable-default-bindings))
 
 (use-package saveplace
   ;; save cursor position in file after close
