@@ -239,7 +239,59 @@
   (shfmt-arguments
    '("--simplify" "--binary-next-line" "--case-indent" "--space-redirects")))
 
-(use-package eglot)
+;; LSP support
+(use-package eglot
+  ;; per https://justinbarclay.ca/posts/from-zero-to-ide-with-emacs-and-lsp/
+  :config
+  (setq-default eglot-workspace-configuration
+                '((:pylsp
+                   .
+                   (:plugins
+                    (:basedpyright
+                     ()
+                     :basedpyright.analysis
+                     (:typeCheckingMode
+                      "recommended"
+                      :autoImportCompletions t
+                      ;; :inlayHints
+                      ;; (:variableTypes
+                      ;;  t
+                      ;;  :callArgumentNames t
+                      ;;  :functionReturnTypes t
+                      ;;  :genericTypes t)
+                      ))))))
+
+  ;; :custom
+  ;; (eglot-ignored-server-capabilities
+  ;;  '(:hoverProvider
+  ;;    :documentHighlightProvider
+  ;;    :documentFormattingProvider
+  ;;    :documentRangeFormattingProvider
+  ;;    :documentOnTypeFormattingProvider
+  ;;    :colorProvider
+  ;;    :foldingRangeProvider))
+  :hook
+  (eglot-managed-mode . eglot-inlay-hints-mode)
+  (sh-mode . eglot-ensure)
+  (bash-ts-mode . eglot-ensure)
+  :bind
+  (:map
+   eglot-mode-map
+   ("C-c c a" . eglot-code-actions)
+   ("C-c c o" . eglot-code-actions-organize-imports)
+   ("C-c c r" . eglot-rename)
+   ("C-c c f" . eglot-format)))
+(use-package eglot-booster
+  :vc (:url "https://github.com/jdtsmith/eglot-booster")
+  :after eglot
+  :config (eglot-booster-mode))
+(use-package emacs
+  :after eglot
+  :config
+  (add-to-list
+   'eglot-server-programs
+   '((sh-mode bash-ts-mode) . ("bash-language-server" "start"))))
+;;
 
 (use-package eldoc
   :init (global-eldoc-mode))
@@ -255,11 +307,13 @@
   :hook (prog-mode . fci-mode)
   :custom (fci-rule-width 2))
 
-(use-package flyspell
-  ;; on the fly spell checking
-  :commands (flyspell-prog-mode flyspell-mode)
-  :hook ((text-mode . flyspell-mode) (prog-mode . flyspell-prog-mode))
-  :config (setq ispell-dictionary "british"))
+(use-package flycheck
+  :init (global-flycheck-mode))
+
+(use-package flycheck-eglot
+  :after (flycheck eglot)
+  :config (global-flycheck-eglot-mode 1))
+
 (use-package gcmh
   :config (gcmh-mode 1))
 
@@ -589,6 +643,14 @@
   (setq
    paradox-github-token t
    paradox-automatically-star t))
+;; tree-sitters
+(use-package tree-sitter-langs
+  :after tree-sitter)
+(use-package treesit-auto
+  :config (global-treesit-auto-mode))
+(use-package treesit-fold
+  :vc (:url "https://github.com/emacs-tree-sitter/treesit-fold"))
+;;
 
 (use-package paren
   :hook (find-file . show-paren-mode)
