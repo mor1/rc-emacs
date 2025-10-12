@@ -6,28 +6,28 @@ Emacs lisp auto formatter.
 '''
 
 from __future__ import annotations
-from collections.abc import (
-    Callable,
-    Generator,
-    Iterable,
-    Sequence,
-
-)
 from typing import (
     Any,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
     NamedTuple,
+    Optional,
+    Set,
+    Sequence,
     TextIO,
+    Tuple,
+    Union,
 )
 
 import sys
 import os
 import argparse
 
-HintType = dict[
-    str,
-    str | int | tuple[int, int],
-]
-NdSexp_WrapState = tuple[bool, ...]
+HintType = Dict[str, Union[str, int, Tuple[int, int]]]
+NdSexp_WrapState = Tuple[bool, ...]
 
 __all__ = (
     'main',
@@ -98,7 +98,7 @@ def calc_over_long_line_score(data: str, fill_column: int, trailing_parens: int,
     # return a better (lower) score than a single line that overflows.
 
     # Step over `\n` characters instead of `data.split('\n')`
-    # so consecutive newlines can be handled separately.
+    # so multiple characters are handled separately.
     line_step = 0
     i = 0
 
@@ -141,10 +141,6 @@ def calc_over_long_line_score(data: str, fill_column: int, trailing_parens: int,
 def calc_over_long_line_length_test(data: str, fill_column: int, trailing_parens: int, line_terminate: int) -> int:
     '''
     Return zero when all lines are within the ``fill_column``, otherwise 1.
-
-    Even though this logically returns a boolean,
-    use an int type since this is used by logic that calculates a score,
-    and the return value from this function is part of that score.
     '''
 
     # Step over `\n` characters instead of `data.split('\n')`
@@ -287,9 +283,7 @@ def apply_relaxed_wrap(node_parent: NdSexp, style: FmtStyle) -> None:
             #       :keyword value
             #       :other other-value)
             #
-            # But only pairs, so multiple non keyword values after the (keyword, value)
-            # split onto their own lines.
-            #
+            # But only pairs, so multiple values each get their own line:
             #     (foo
             #       :keyword
             #       value
@@ -373,8 +367,8 @@ def parse_local_defs(defs: FmtDefs, node_parent: NdSexp) -> None:
                 if isinstance(node_symbol, NdSymbol) and isinstance(node_args, NdSexp):
                     symbol = node_symbol.data
                     arg_index_min = 0
-                    arg_index_max: int | str = 0
-                    hints: HintType | None = None
+                    arg_index_max: Union[int, str] = 0
+                    hints: Optional[HintType] = None
                     for i, node_arg in enumerate(node_args.nodes_only_code):
                         if not isinstance(node_arg, NdSymbol):
                             continue
@@ -443,7 +437,7 @@ def parse_local_defs(defs: FmtDefs, node_parent: NdSexp) -> None:
             parse_local_defs(defs, node)
 
 
-def scan_used_fn_defs(defs: FmtDefs, node_parent: NdSexp, fn_used: set[str]) -> None:
+def scan_used_fn_defs(defs: FmtDefs, node_parent: NdSexp, fn_used: Set[str]) -> None:
     '''
     Fill ``fn_used`` with a list of definitions used in this document.
     Used to implement ``FmtDefs.prune_unused``.
@@ -460,7 +454,7 @@ def scan_used_fn_defs(defs: FmtDefs, node_parent: NdSexp, fn_used: set[str]) -> 
                 # so it's save to use this as a lookup even though this data is being populated.
                 fn_data = defs.fn_arity.get(symbol)
                 if fn_data is not None:
-                    hints: HintType | None = fn_data[3]
+                    hints: Optional[HintType] = fn_data[3]
                     if hints:
                         for hint_key in ('doc-string', 'indent'):
                             hint_value = hints.get(hint_key)
@@ -480,38 +474,37 @@ def apply_rules_from_comments(node_parent: NdSexp) -> None:
     del string
 
     wrap_locked = False
-    wrap_locked_next = False  # Should not be used but reads like a bug if this isn't set.
     autofmt_text = 'format'
     autofmt_text_next = '-next-line:'
     do_next_line = False
     for node in node_parent.iter_nodes_recursive():
         if isinstance(node, NdComment):
-            autofmt_text_index = node.data.find(autofmt_text)
-            if autofmt_text_index != -1:
+            autofmt_index = node.data.find(autofmt_text)
+            if autofmt_index != -1:
                 comment = node.data
                 # Ensure there is only space or ';' beforehand.
                 ok = True
-                for index in range(autofmt_text_index):
+                for index in range(autofmt_index):
                     if comment[index] not in {';', ' ', '\t'}:
                         ok = False
                         break
                 if ok:
                     # After format either: `:` or `-next-line:` are expected.
-                    autofmt_text_index += len(autofmt_text)
-                    if comment[autofmt_text_index] == ':':
-                        autofmt_text_index += 1
+                    autofmt_index += len(autofmt_text)
+                    if comment[autofmt_index] == ':':
+                        autofmt_index += 1
                         do_next_line = False
-                    elif comment[autofmt_text_index:autofmt_text_index + len(autofmt_text_next)] == autofmt_text_next:
-                        autofmt_text_index += len(autofmt_text_next)
+                    elif comment[autofmt_index:autofmt_index + len(autofmt_text_next)] == autofmt_text_next:
+                        autofmt_index += len(autofmt_text_next)
                         do_next_line = True
                     else:
                         ok = False
 
                     if ok:
-                        while autofmt_text_index < len(comment) and comment[autofmt_text_index] in {' ', '\t'}:
-                            autofmt_text_index += 1
+                        while autofmt_index < len(comment) and comment[autofmt_index] in {' ', '\t'}:
+                            autofmt_index += 1
                         # Allow text after the boolean (use split method).
-                        bool_value = node.data[autofmt_text_index:autofmt_text_index + 4]
+                        bool_value = node.data[autofmt_index:autofmt_index + 4]
                         if bool_value.startswith('on'):
                             if bool_value[2:3] in punctuation_space_or_empty:
                                 if do_next_line:
@@ -839,9 +832,9 @@ class FnArity(NamedTuple):
     # Minimum number of arguments.
     nargs_min: int
     # Maximum number of arguments, or strings: `many`, `unevalled`.
-    nargs_max: int | str
+    nargs_max: Union[int, str]
     # Optional additional hints.
-    hints: HintType | None
+    hints: Optional[HintType]
 
 
 class FmtDefs:
@@ -856,7 +849,7 @@ class FmtDefs:
             self,
             *,
             # The key is the function name.
-            fn_arity: dict[str, FnArity],
+            fn_arity: Dict[str, FnArity],
     ):
         self.fn_arity = fn_arity
 
@@ -866,7 +859,7 @@ class FmtDefs:
         '''
         return FmtDefs(fn_arity=self.fn_arity.copy())
 
-    def prune_unused(self, fn_used: set[str]) -> None:
+    def prune_unused(self, fn_used: Set[str]) -> None:
         '''
         Remove unused identifiers using a ``fn_used`` set.
         '''
@@ -916,7 +909,7 @@ class FmtWriteCtx:
         'cfg',
     )
 
-    last_node: Node | None
+    last_node: Optional[Node]
     is_newline: bool
     line: int
     column: int
@@ -943,7 +936,7 @@ class Node:
 
     force_newline: bool
     # Zero based line indices.
-    original_lines: tuple[int, int]
+    original_lines: Tuple[int, int]
 
     def calc_force_newline(self, style: FmtStyle) -> None:
         '''
@@ -995,7 +988,7 @@ if USE_DEBUG_TRACE_NEWLINES:
             '_force_newline_tracepoint',
         )
 
-        original_lines: tuple[int, int]
+        original_lines: Tuple[int, int]
 
         @property
         def force_newline(self) -> bool:
@@ -1042,12 +1035,7 @@ class NdSexp(Node):
         'fmt_cache',
     )
 
-    def __init__(
-            self,
-            lines: tuple[int, int],
-            brackets: str,
-            nodes: list[Node] | None = None,
-    ):
+    def __init__(self, lines: Tuple[int, int], brackets: str, nodes: Optional[List[Node]] = None):
         self.original_lines = lines
         self.prefix: str = ''
         self.brackets = brackets
@@ -1056,7 +1044,7 @@ class NdSexp(Node):
         self.wrap_all_or_nothing_hint: bool = False
         self.wrap_locked = False
         self.hints: HintType = {}
-        self.prior_states: list[NdSexp_WrapState] = []
+        self.prior_states: List[NdSexp_WrapState] = []
         self.fmt_cache = ''
 
     def __repr__(self) -> str:
@@ -1068,7 +1056,7 @@ class NdSexp(Node):
             '\n'.join(textwrap.indent(repr(node), '  ') for node in self.nodes),
         )
 
-    def fn_arity_get_from_first_symbol(self, defs: FmtDefs) -> FnArity | None:
+    def fn_arity_get_from_first_symbol(self, defs: FmtDefs) -> Optional[FnArity]:
         '''
         Return the ``FnArity`` from the first argument of this S-expressions symbol (if it is a symbol).
         '''
@@ -1112,7 +1100,7 @@ class NdSexp(Node):
                 count += node.count_recursive()
         return count
 
-    def node_last_for_trailing_parens_test(self) -> Node | None:
+    def node_last_for_trailing_parens_test(self) -> Optional[Node]:
         '''
         Return the node which would have trialing parenthesis written after it or None if it's not a code node
         since a trailing comment for e.g. will never have parenthesis written directly after it.
@@ -1171,7 +1159,7 @@ class NdSexp(Node):
                     yield node
                     yield from node.iter_nodes_recursive_only_sexp()
 
-    def iter_nodes_recursive_with_parent(self) -> Generator[tuple[Node, NdSexp], None, None]:
+    def iter_nodes_recursive_with_parent(self) -> Generator[Tuple[Node, NdSexp], None, None]:
         '''
         Iterate over all nodes recursively, with the parent node as well.
         '''
@@ -1180,7 +1168,7 @@ class NdSexp(Node):
             if isinstance(node, NdSexp):
                 yield from node.iter_nodes_recursive_with_parent()
 
-    def iter_nodes_recursive_with_prior_state(self, visited: set[int]) -> Generator[NdSexp, None, None]:
+    def iter_nodes_recursive_with_prior_state(self, visited: Set[int]) -> Generator[NdSexp, None, None]:
         '''
         Specialized iterator for looping over nodes that have a ``prior_state`` set.
 
@@ -1196,7 +1184,7 @@ class NdSexp(Node):
                         yield node
                     yield from node.iter_nodes_recursive_with_prior_state(visited)
 
-    def iter_nodes_recursive_with_prior_state_and_self(self, visited: set[int]) -> Generator[NdSexp, None, None]:
+    def iter_nodes_recursive_with_prior_state_and_self(self, visited: Set[int]) -> Generator[NdSexp, None, None]:
         '''
         A version of ``iter_nodes_recursive_with_prior_state`` that includes ``self`` (last).
         '''
@@ -1215,7 +1203,7 @@ class NdSexp(Node):
 
     def newline_state_set(self, state: NdSexp_WrapState) -> None:
         '''
-        set the wrapped state of this S-expressions nodes.
+        Set the wrapped state of this S-expressions nodes.
         '''
         for data, node in zip(state, self.nodes):
             node.force_newline = data
@@ -1508,7 +1496,7 @@ class NdSexp(Node):
                         i -= 1
             i -= 1
 
-        self.nodes_only_code: list[Node] = [
+        self.nodes_only_code: List[Node] = [
             node for node in self.nodes
             if isinstance(node, NODE_CODE_TYPES)
         ]
@@ -1552,7 +1540,7 @@ class NdSexp(Node):
             trailing_parens: int,
             *,
             calc_score: bool,
-            test_node_terminate: Node | None = None,
+            test_node_terminate: Optional[Node] = None,
     ) -> int:
         '''
         :arg calc_score: When true, the return value is a score.
@@ -1642,7 +1630,7 @@ class NdSexp(Node):
 
             return score
 
-        _data: list[str] = []
+        _data: List[str] = []
         write_fn = _data.append
 
         self.fmt_with_terminate_node(_ctx, write_fn, level, test=True, test_node_terminate=test_node_terminate)
@@ -1682,7 +1670,7 @@ class NdSexp(Node):
             level: int,
             *,
             test: bool = False,
-            test_node_terminate: Node | None = None,
+            test_node_terminate: Optional[Node] = None,
     ) -> None:
         '''
         Write this node to a file with support for terminating early.
@@ -1745,7 +1733,7 @@ class NdSexp(Node):
             if test:
                 # Use only for testing.
                 if node is test_node_terminate:
-                    # We could return however this misses trailing parentheses on the same line.
+                    # We could return however this misses trailing parenthesis on the same line.
                     assert ctx.line_terminate == -1
                     ctx.line_terminate = ctx.line
 
@@ -2042,7 +2030,7 @@ def fmt_solver_fill_column_unwrap_aggressive(
         node_parent: NdSexp,
         level: int,
         trailing_parens: int,
-        visited: set[int],
+        visited: Set[int],
 ) -> bool:
     '''
     First perform an unwrap: restore all nodes to their initial state recursively.
@@ -2121,11 +2109,11 @@ def fmt_solver_fill_column_unwrap_test_state(
         level: int,
         trailing_parens: int,
         parent_score_curr: int,
-        state_visit: set[NdSexp_WrapState],
+        state_visit: Set[NdSexp_WrapState],
         state_curr: NdSexp_WrapState,
         # This is the only argument which is likely to change each call.
         state_test: NdSexp_WrapState,
-) -> int | None:
+) -> Optional[int]:
     '''
     Set the line wrapping state to  ``state_test``, if it doesn't exceed the fill column,
     use it and return the new score,
@@ -2179,7 +2167,7 @@ def fmt_solver_fill_column_unwrap_test_state_permutations(
         level: int,
         trailing_parens: int,
         parent_score_curr: int,
-) -> int | None:
+) -> Optional[int]:
     '''
     Scan the previous line wrapping states and attempt to apply them.
 
@@ -2263,7 +2251,7 @@ def fmt_solver_fill_column_unwrap_test_state_permutations(
                 (not node.wrap_all_or_nothing_hint) and
                 # It only makes sense to run this logic if there are multiple arguments to deal with.
                 (len(node.nodes_only_code) > 1) and
-                # At the moment they are used interchangeably so mis-alignment is not supported.
+                # At the moment are used interchangeably so mis-alignment is not supported.
                 (len(node.nodes_only_code) == len(node.nodes)) and
                 # Was on a single line (ignoring the first).
                 (True not in state_init[1:])
@@ -2353,7 +2341,7 @@ def fmt_solver_fill_column_unwrap_recursive(
         node_parent: NdSexp,
         level: int,
         trailing_parens: int,
-        visited: set[int],
+        visited: Set[int],
 ) -> None:
     '''
     Wrap lines that were split back onto the same line.
@@ -2485,7 +2473,7 @@ def fmt_solver_newline_constraints_apply(
         # Ensure colon prefixed arguments are on new-lines
         # if the block is multi-line.
         #
-        # When multi-line, don't use this formatting:
+        # When multi-line, don't do:
         #     (foo
         #       :keyword long-value-which-causes-next-line-to-wrap
         #       :other value :third value)
@@ -2590,7 +2578,7 @@ def fmt_solver_for_root_node_multiprocessing(cfg: FmtConfig, node_group: Sequenc
     ctx = FmtWriteCtx(cfg)
     for node in node_group:
         fmt_solver_for_root_node(cfg, node)
-        data: list[str] = []
+        data: List[str] = []
         node.fmt(ctx, data.append, 0)
         result_group.append(''.join(data))
         del data
@@ -2687,7 +2675,7 @@ class NdString(Node):
     data: str
     lines: int
 
-    def __init__(self, lines: tuple[int, int], data: str):
+    def __init__(self, lines: Tuple[int, int], data: str):
         self.original_lines = lines
         self.data = data
         # self.lines = self.data.count('\n')
@@ -2771,47 +2759,9 @@ NODE_CODE_TYPES = (NdSymbol, NdString, NdSexp)
 
 
 # ------------------------------------------------------------------------------
-# File Diffing
-
-def diff_range_calc(data_src: str, data_dst: str) -> tuple[str, int, int]:
-    '''
-    Takes a data source & destination,
-    returns the sub-range of ``data_dst`` which is different from ``data_src``
-    and the length of the beginning and end spans which match.
-    '''
-    # NOTE: this seems as if it might be slow, but in practice even files of 100's of
-    # KB only take 1/100'th of a second or so to test, so it's not really worth optimizing
-    # unless cases are found where it's a bottleneck.
-    data_len_min = min(len(data_src), len(data_dst))
-    if not data_dst:
-        return data_dst, 0, 0
-    i = 0
-    for i in range(data_len_min):
-        if data_src[i] != data_dst[i]:
-            break
-
-    # The buffers are a complete match.
-    if i + 1 == data_len_min and len(data_src) == len(data_dst):
-        return "", -1, -1
-
-    ofs_beg = max(0, i - 1)
-    i = len(data_src) - 1
-    j = len(data_dst) - 1
-    ofs_end = 0
-    for _ in range(data_len_min - ofs_beg):
-        if data_src[i] != data_dst[j]:
-            break
-        i -= 1
-        j -= 1
-    # As if this was incremented each iteration.
-    ofs_end = (len(data_src) - 1) - i
-    return data_dst[ofs_beg:len(data_dst) - ofs_end], ofs_beg, ofs_end
-
-
-# ------------------------------------------------------------------------------
 # File Parsing
 
-def parse_file(fh: TextIO) -> tuple[str, NdSexp]:
+def parse_file(fh: TextIO) -> Tuple[str, NdSexp]:
     '''
     Parse the file ``fh``, returning:
     - The first un-parsed line (for ELISP files starting with a bang (``#!``)).
@@ -2833,7 +2783,7 @@ def parse_file(fh: TextIO) -> tuple[str, NdSexp]:
 
     # Special case, a lisp file with a shebang.
     first_line_unparsed = ''
-    c_peek: str | None = fh.read(1)
+    c_peek: Optional[str] = fh.read(1)
     if c_peek == '#':
         first_line_chars = [c_peek]
         c_peek = None
@@ -2902,7 +2852,7 @@ def parse_file(fh: TextIO) -> tuple[str, NdSexp]:
                         line += 1
 
             if not c:
-                raise FmtException('unterminated string literal at line {}'.format(line))
+                raise FmtException('parsing string at line {}'.format(line))
 
             sexp_ctx[sexp_level].nodes.append(NdString((line_beg, line), data.getvalue()))
             del line_beg, data, is_slash, c
@@ -3018,7 +2968,7 @@ def node_group_by_count(root: NdSexp, *, chunk_size_limit: int) -> Sequence[Sequ
         ]
 
     chunk_size_curr = 0
-    node_group_list: list[list[NdSexp]] = [[]]
+    node_group_list: List[List[NdSexp]] = [[]]
     for node in root.nodes_only_code:
         if isinstance(node, NdSexp):
             count_recursive = node.count_recursive()
@@ -3075,50 +3025,40 @@ def format_file(
         filepath: str,
         cfg: FmtConfig,
         *,
-        line_range: tuple[int, int] | None = None,
+        line_range: Optional[Tuple[int, int]] = None,
         parallel_jobs: int = 0,
         use_stdin: bool = False,
         use_stdout: bool = False,
-        use_diff_range: bool = False,
 ) -> None:
     '''
     Main file formatting function.
     '''
-    from io import StringIO
 
     # Needed as files may contain '\r' only, see emacs own:
     # `lisp/cedet/semantic/grammar-wy.el`
     newline = '\r\n' if (os.name == 'nt') else '\n'
 
-    diff_range_data_src = ''
-    if use_diff_range:
-        assert use_stdin
-        diff_range_data_src = sys.stdin.read()
-        fh_as_text = StringIO(diff_range_data_src, newline=newline)
-        first_line, root = parse_file(fh_as_text)
-        del fh_as_text
+    if use_stdin:
+        first_line, root = parse_file(sys.stdin)
     else:
-        if use_stdin:
-            first_line, root = parse_file(sys.stdin)
-        else:
-            with open(filepath, 'r', encoding='utf-8', newline=newline) as fh:
-                first_line, root = parse_file(fh)
+        with open(filepath, 'r', encoding='utf-8', newline=newline) as fh:
+            first_line, root = parse_file(fh)
 
     if USE_EXTRACT_DEFS:
         parse_local_defs(cfg.defs, root)
 
-    # Check for a newline at file start.
-    # If so, this will disable the settings such as lexical binding.
+    # Has newline at file start?
+    # it will disable the settings such as lexical binding.
     # The intention of re-formatting is not to make any functional changes,
     # so it's important to add the blank line back.
-    starts_with_bank_line = False
+    stars_with_bank_line = False
     if root.nodes:
         if isinstance(root.nodes[0], NdWs):
-            starts_with_bank_line = True
+            stars_with_bank_line = True
 
     root.finalize_style(cfg)
 
-    if starts_with_bank_line:
+    if stars_with_bank_line:
         # Add back the blank line.
         root.nodes.insert(0, NdWs(0))
 
@@ -3128,8 +3068,7 @@ def format_file(
 
     apply_rules_from_comments(root)
 
-    # Without assertions this is redundant, however it's needed for
-    # the assertion to succeed when `len(root.nodes_only_code) == 1`.
+    # Redundant but needed for the assertion not to fail in the case when `len(root.nodes_only_code) == 1`.
     root.force_newline = True
 
     if USE_WRAP_LINES:
@@ -3153,7 +3092,7 @@ def format_file(
 
         if cfg.use_multiprocessing:
             # Copying this information can be quite slow, prune unused items first.
-            fn_used: set[str] = set()
+            fn_used: Set[str] = set()
             scan_used_fn_defs(cfg.defs, root, fn_used)
             cfg.defs.prune_unused(fn_used)
 
@@ -3171,29 +3110,11 @@ def format_file(
         if not cfg.use_multiprocessing:
             assert root.flush_newlines_from_nodes_recursive() is False
 
-    if use_diff_range:
-        assert use_stdout
-        fh_as_text = StringIO(newline=newline)
-        write_file(cfg, fh_as_text, root, first_line)
-        diff_range_data_dst = fh_as_text.getvalue()
-
-        diff_range_data_dst_sub, diff_ofs_beg, diff_ofs_end = diff_range_calc(diff_range_data_src, diff_range_data_dst)
-
-        if diff_ofs_beg == -1 and diff_ofs_end == -1:
-            # No change.
-            sys.stdout.write("(-1 . -1)\n")
-        else:
-            sys.stdout.write("({:d} . {:d})\n".format(
-                diff_ofs_beg + 1,
-                (len(diff_range_data_src) - diff_ofs_end) + 1,
-            ))
-            sys.stdout.write(diff_range_data_dst_sub)
+    if use_stdout:
+        write_file(cfg, sys.stdout, root, first_line)
     else:
-        if use_stdout:
-            write_file(cfg, sys.stdout, root, first_line)
-        else:
-            with open(filepath, 'w', encoding='utf-8', newline=newline) as fh:
-                write_file(cfg, fh, root, first_line)
+        with open(filepath, 'w', encoding='utf-8', newline=newline) as fh:
+            write_file(cfg, fh, root, first_line)
 
 
 # ------------------------------------------------------------------------------
@@ -3256,7 +3177,7 @@ def argparse_create() -> argparse.ArgumentParser:
         default=False,
         action='store_true',
         required=False,
-        help='Don\'t output any status messages.',
+        help='Don\t output any status messages.',
     )
 
     parser.add_argument(
@@ -3265,7 +3186,7 @@ def argparse_create() -> argparse.ArgumentParser:
         default=False,
         action='store_true',
         required=False,
-        help='Give each trailing parenthesis its own line.',
+        help='Give each trailing parenthesis it\'s own line.',
     )
 
     parser.add_argument(
@@ -3284,7 +3205,7 @@ def argparse_create() -> argparse.ArgumentParser:
         nargs='?',
         type=int,
         required=False,
-        help='Maximum column width (zero disables).',
+        help='Maxumum column width (zero disables).',
     )
 
     parser.add_argument(
@@ -3339,14 +3260,6 @@ def argparse_create() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        '--use-diff-range',
-        dest='use_diff_range',
-        default=False,
-        action='store_true',
-        required=False,
-        help='Calculate a diff range.',
-    )
-    parser.add_argument(
         '--exit-code',
         dest='exit_code',
         default=0,
@@ -3399,11 +3312,9 @@ def main_generate_defs() -> bool:
         with open(file_output, 'w', encoding='utf-8') as fh:
             fh.write('{\n')
             fh.write('"functions": {\n')
-            is_first = True
+            is_first = False
             for key, val in defs.fn_arity.items():
                 if is_first:
-                    is_first = False
-                else:
                     fh.write(',\n')
                 symbol_type, nargs_min, nargs_max, hints = val
                 nargs_min_str = str(nargs_min) if isinstance(nargs_min, int) else '"{:s}"'.format(nargs_min)
@@ -3411,6 +3322,7 @@ def main_generate_defs() -> bool:
                 fh.write('"{:s}": ["{:s}", {:s}, {:s}, {:s}]'.format(
                     key, symbol_type, nargs_min_str, nargs_max_str, json.dumps(hints)
                 ))
+                is_first = True
             fh.write('')
             fh.write('}\n')  # 'functions'.
             fh.write('}\n')
@@ -3443,13 +3355,7 @@ def main() -> None:
             'No files passed in, pass in files or use both \'--stdin\' & \'--stdout\'\n')
         sys.exit(1)
 
-    if args.use_diff_range:
-        if not (args.use_stdin and args.use_stdout):
-            sys.stderr.write(
-                '\'--use-diff-range\' can only be used with both \'--stdin\' & \'--stdout\'\n')
-            sys.exit(1)
-
-    line_range: tuple[int, int] | None = None
+    line_range: Optional[Tuple[int, int]] = None
     if args.fmt_line_range:
         if ":" not in args.fmt_line_range:
             sys.stderr.write(
@@ -3517,7 +3423,6 @@ def main() -> None:
                 line_range=line_range,
                 use_stdin=args.use_stdin,
                 use_stdout=args.use_stdout,
-                use_diff_range=args.use_diff_range,
             )
         except FmtException as ex:
             if filepath:

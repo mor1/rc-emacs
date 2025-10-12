@@ -6,8 +6,8 @@
 ;; Author: Campbell Barton <ideasman42@gmail.com>
 
 ;; URL: https://codeberg.org/ideasman42/emacs-elisp-autofmt
-;; Package-Version: 20251002.1141
-;; Package-Revision: 6f5936074bb3
+;; Package-Version: 20250611.2328
+;; Package-Revision: c4cd57b2599e
 ;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
@@ -27,18 +27,17 @@
 ;; ---------------------------------------------------------------------------
 ;; Compatibility
 
-(eval-when-compile
-  (when (version< emacs-version "31.1")
-    (defmacro incf (place &optional delta)
-      "Increment PLACE by DELTA or 1."
-      (declare (debug (gv-place &optional form)))
-      (gv-letplace (getter setter) place
-        (funcall setter `(+ ,getter ,(or delta 1)))))
-    (defmacro decf (place &optional delta)
-      "Decrement PLACE by DELTA or 1."
-      (declare (debug (gv-place &optional form)))
-      (gv-letplace (getter setter) place
-        (funcall setter `(- ,getter ,(or delta 1)))))))
+(when (and (version< emacs-version "29.1") (not (and (fboundp 'pos-bol) (fboundp 'pos-eol))))
+  (defun pos-bol (&optional n)
+    "Return the position at the line beginning."
+    (declare (side-effect-free t))
+    (let ((inhibit-field-text-motion t))
+      (line-beginning-position n)))
+  (defun pos-eol (&optional n)
+    "Return the position at the line end."
+    (declare (side-effect-free t))
+    (let ((inhibit-field-text-motion t))
+      (line-end-position n))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -127,21 +126,13 @@ Otherwise you can set this to a user defined function."
   :type 'function)
 
 (defcustom elisp-autofmt-python-bin nil
-  "The Python binary to call to run the auto-formatting utility.
-
-When nil, the default Python command is used."
-  :type '(choice (const nil) string))
+  "The Python binary to call to run the auto-formatting utility."
+  :type 'string)
 
 (defcustom elisp-autofmt-cache-directory
   (locate-user-emacs-file "elisp-autofmt-cache" ".elisp-autofmt-cache")
   "The directory to store cache data."
   :type 'string)
-
-(defcustom elisp-autofmt-use-diff-range nil
-  "For whole buffer formatting, compute the changed region & only update that.
-
-Note that this may be useful for systems where the sub-process overhead is significant."
-  :type 'boolean)
 
 ;; Customization (Parallel Computation).
 
@@ -196,31 +187,6 @@ Note that this may be useful for systems where the sub-process overhead is signi
 
 ;; ---------------------------------------------------------------------------
 ;; Internal Utilities
-
-(defun elisp-autofmt--python-commands-or-empty ()
-  "Return the Python command an empty list.
-
-An empty list means the script will be executed directly,
-useful for systems that patch the SHEBANG for a custom Python location."
-  (cond
-   ((null elisp-autofmt-python-bin)
-    (cond
-     ((memq system-type (list 'ms-dos 'windows-nt))
-      ;; Use "python", from the PATH.
-      (list "python"))
-     (t
-      ;; Execute the script directly.
-      (list))))
-   (t
-    (list elisp-autofmt-python-bin))))
-
-(defun elisp-autofmt--python-env-prepend (env)
-  "Return a new environment prepended to ENV."
-  (cond
-   (elisp-autofmt-debug-mode
-    env)
-   (t
-    (cons "PYTHONOPTIMIZE=2" env))))
 
 (defmacro elisp-autofmt--with-advice (advice &rest body)
   "Execute BODY with ADVICE temporarily enabled.
@@ -307,9 +273,9 @@ The following keyword arguments are supported:
   (declare (important-return-value t))
   (let ((done 0))
     (while (search-forward str limit t 40)
-      (incf done 40))
+      (setq done (+ 40 done)))
     (while (search-forward str limit t 1)
-      (incf done))
+      (setq done (+ 1 done)))
     done))
 
 (defun elisp-autofmt--simple-search-forward-by-count (str limit-count)
@@ -327,9 +293,9 @@ The following keyword arguments are supported:
       (goto-char beg)
       (let ((done 0))
         (while (re-search-forward "\n\\|\r[^\n]" nil t 40)
-          (incf done 40))
+          (setq done (+ 40 done)))
         (while (re-search-forward "\n\\|\r[^\n]" nil t 1)
-          (incf done))
+          (setq done (+ 1 done)))
         done))))
 
 
@@ -380,8 +346,8 @@ The following keyword arguments are supported:
   (declare (important-return-value t))
   (save-excursion
     (goto-char pos)
-    (let ((fmt-region-range (elisp-autofmt--s-expr-range-around-pos (pos-bol))))
-      (unless fmt-region-range
+    (let ((region-range (elisp-autofmt--s-expr-range-around-pos (pos-bol))))
+      (unless region-range
         ;; Search for the widest range in this line.
         (let ((eol (pos-eol))
               (bol (pos-bol))
@@ -423,12 +389,12 @@ The following keyword arguments are supported:
                     (setq range-best-length-around-pos range-test-length)))))
             (forward-char 1))
 
-          (setq fmt-region-range (or range-best-around-pos range-best))
-          (when fmt-region-range
-            (let ((beg-bol (elisp-autofmt--bol-unless-non-blank (car fmt-region-range))))
+          (setq region-range (or range-best-around-pos range-best))
+          (when region-range
+            (let ((beg-bol (elisp-autofmt--bol-unless-non-blank (car region-range))))
               (when beg-bol
-                (setcar fmt-region-range beg-bol))))))
-      fmt-region-range)))
+                (setcar region-range beg-bol))))))
+      region-range)))
 
 (defun elisp-autofmt--call-process (proc-id command-with-args stdin-buffer stdout-buffer)
   "Run COMMAND-WITH-ARGS, using STDIN-BUFFER as input, writing to STDOUT-BUFFER.
@@ -515,7 +481,8 @@ Return a cons cell comprised of the:
                     :connection-type 'pipe
                     :command command-with-args
                     :coding (cons default-coding default-coding)
-                    :sentinel (lambda (_proc _msg) (incf sentinel-called))))
+                    :sentinel
+                    (lambda (_proc _msg) (setq sentinel-called (1+ sentinel-called)))))
                   (proc-err (get-buffer-process stderr-buffer)))
 
               ;; Unfortunately a separate process is set for the STDERR
@@ -523,7 +490,8 @@ Return a cons cell comprised of the:
               ;; Needed to override the "Process .. finished" message.
               (unless (eq proc-out proc-err)
                 (setq sentinel-called-expect 2)
-                (set-process-sentinel proc-err (lambda (_proc _msg) (incf sentinel-called))))
+                (set-process-sentinel
+                 proc-err (lambda (_proc _msg) (setq sentinel-called (1+ sentinel-called)))))
 
               (process-send-region proc-out (point-min) (point-max))
               (process-send-eof proc-out)
@@ -891,7 +859,6 @@ if the package could not be loaded."
 
 Return the cache name only (no directory)."
   (declare (important-return-value t))
-
   (let* ((filename-cache-name-only (elisp-autofmt--cache-api-encode-name-external filepath))
          (filename-cache-name-full
           (file-name-concat elisp-autofmt-cache-directory filename-cache-name-only)))
@@ -901,15 +868,21 @@ Return the cache name only (no directory)."
 
       (let ((command-with-args
              (append
-              ;; Python command (or empty to directly execute the script)
-              (elisp-autofmt--python-commands-or-empty)
+              ;; Python command.
+              (list (or elisp-autofmt-python-bin "python"))
+              ;; Debug mode.
+              (cond
+               (elisp-autofmt-debug-mode
+                (list))
+               (t
+                (list "-OO")))
               ;; Main command.
               (list
                elisp-autofmt--bin
                "--gen-defs"
                filepath
-               (expand-file-name filename-cache-name-full))))
-            (process-environment (elisp-autofmt--python-env-prepend process-environment)))
+               (expand-file-name filename-cache-name-full)))))
+
         (elisp-autofmt--call-checked command-with-args)))
     filename-cache-name-only))
 
@@ -960,7 +933,7 @@ Return a list of cache names (no directory)."
 ;; ---------------------------------------------------------------------------
 ;; Internal Functions
 
-(defun elisp-autofmt--replace-buffer-contents-fmt-region (buf-src beg end)
+(defun elisp-autofmt--replace-buffer-contents-isolate-region (buf-src beg end)
   "Isolate the region to be replaced in BEG END to format the region/selection.
 Argument BUF-SRC is the buffer containing the formatted text."
   (declare (important-return-value nil))
@@ -977,7 +950,7 @@ Argument BUF-SRC is the buffer containing the formatted text."
     ;; Note that we are not strict about the syntax, it's possible these
     ;; characters are inside comments or strings. The logic will still work.
     (while (and beg (memq (char-after beg) skip-chars))
-      (incf beg)
+      (setq beg (1+ beg))
       (unless (<= beg end)
         (setq beg nil)))
 
@@ -985,7 +958,7 @@ Argument BUF-SRC is the buffer containing the formatted text."
       (setq end nil))
 
     (while (and end (memq (char-before end) skip-chars))
-      (decf end)
+      (setq end (1- end))
       (unless (<= beg end)
         (setq end nil)))
 
@@ -1074,22 +1047,37 @@ Argument BUF-SRC is the buffer containing the formatted text."
           (insert-buffer-substring buf-dst buf-dst-pos-min beg-dst-pos))))
     changed))
 
-(defun elisp-autofmt--replace-region-contents-wrapper (pos-min pos-max buf is-interactive)
-  "Replace POS-MIN - POS-MAX with BUF, fast-path when undo is disabled.
+(defun elisp-autofmt--replace-buffer-contents-with-fastpath (buf region-range is-interactive)
+  "Replace buffer contents with BUF, fast-path when undo is disabled.
 
+Useful for fast operation, especially for automated conversion or tests.
+Argument REGION-RANGE optionally replaces a region when non-nil.
 Argument IS-INTERACTIVE is set when running interactively."
+  (declare (important-return-value nil))
   (let ((is-beg (bobp))
-        (is-end (eobp)))
+        (is-end (eobp))
+        (changed t))
+
+    ;; Optionally format within a region,
+    (when region-range
+      (setq changed
+            (elisp-autofmt--replace-buffer-contents-isolate-region
+             buf (car region-range) (cdr region-range)))
+
+      (when is-interactive
+        (message "elisp-autofmt: %s"
+                 (cond
+                  (changed
+                   "reformat")
+                  (t
+                   "reformat (unnecessary)")))))
+
     (cond
-     ;; No undo, use a simple method instead of `replace-region-contents',
-     ;; which has no benefit unless undo is in use.
+     ((null changed))
      ((and (eq t buffer-undo-list) (or is-beg is-end))
-      (cond
-       ((and (eq pos-min (point-min)) (eq pos-max (point-max)))
-        (erase-buffer))
-       (t
-        (delete-region pos-min pos-max)
-        (goto-char pos-min)))
+      ;; No undo, use a simple method instead of `replace-buffer-contents',
+      ;; which has no benefit unless undo is in use.
+      (erase-buffer)
       (insert-buffer-substring buf)
       (cond
        (is-beg
@@ -1100,29 +1088,16 @@ Argument IS-INTERACTIVE is set when running interactively."
       (cond
        (is-interactive
         ;; When run interactively replace the buffer contents if this takes over 1 second.
-        (replace-region-contents pos-min pos-max buf 1.0))
+        (replace-buffer-contents buf 1.0))
        (t
-        (replace-region-contents pos-min pos-max buf)))))))
-
-(defun elisp-autofmt--replace-buffer-contents-with-fastpath (buf fmt-region-range is-interactive)
-  "Replace buffer contents with BUF, fast-path when undo is disabled.
-
-Useful for fast operation, especially for automated conversion or tests.
-Argument FMT-REGION-RANGE optionally replaces a region when non-nil.
-Argument IS-INTERACTIVE is set when running interactively."
-  (declare (important-return-value nil))
-  ;; Optionally format within a region,
-  (cond
-
-   (t
-    (elisp-autofmt--replace-region-contents-wrapper (point-min) (point-max) buf is-interactive))))
+        (replace-buffer-contents buf)))))))
 
 (defun elisp-autofmt--region-impl
-    (stdout-buffer fmt-region-range to-file is-interactive &optional assume-file-name)
+    (stdout-buffer region-range to-file is-interactive &optional assume-file-name)
   "Auto format the current region using temporary STDOUT-BUFFER.
 Optional argument ASSUME-FILE-NAME overrides the file name used for this buffer.
 
-Argument FMT-REGION-RANGE optionally defines a region to format.
+Argument REGION-RANGE optionally defines a region to format.
 Argument TO-FILE writes to the file directly, without updating the buffer.
 Argument IS-INTERACTIVE is set when running interactively."
   (declare (important-return-value t))
@@ -1130,8 +1105,7 @@ Argument IS-INTERACTIVE is set when running interactively."
   (unless assume-file-name
     (setq assume-file-name buffer-file-name))
 
-  (let* ((use-diff-range (and elisp-autofmt-use-diff-range (null fmt-region-range) (null to-file)))
-         (proc-id "elisp-autofmt")
+  (let* ((proc-id "elisp-autofmt")
 
          ;; Cache files.
          (cache-defs
@@ -1154,13 +1128,12 @@ Argument IS-INTERACTIVE is set when running interactively."
          ;; Optionally
          (line-range
           (cond
-           (fmt-region-range
+           (region-range
             (let* ((line-beg
-                    (1+ (elisp-autofmt--simple-count-lines (point-min) (car fmt-region-range))))
+                    (1+ (elisp-autofmt--simple-count-lines (point-min) (car region-range))))
                    (line-end
                     (+ line-beg
-                       (elisp-autofmt--simple-count-lines
-                        (car fmt-region-range) (cdr fmt-region-range)))))
+                       (elisp-autofmt--simple-count-lines (car region-range) (cdr region-range)))))
               (cons line-beg line-end)))
            (t
             (cons 0 0))))
@@ -1168,7 +1141,13 @@ Argument IS-INTERACTIVE is set when running interactively."
          (command-with-args
           (append
            ;; Python command.
-           (elisp-autofmt--python-commands-or-empty)
+           (list (or elisp-autofmt-python-bin "python"))
+           ;; Debug mode.
+           (cond
+            (elisp-autofmt-debug-mode
+             (list))
+            (t
+             (list "-OO")))
            ;; Main command.
            (list
             elisp-autofmt--bin
@@ -1176,14 +1155,8 @@ Argument IS-INTERACTIVE is set when running interactively."
             "--quiet"
             ;; Don't use the file, use the stdin instead.
             "--stdin"
-            ;; Use the standard output.
-            "--stdout")
-           (cond
-            (use-diff-range
-             (list "--use-diff-range"))
-            (t
-             (list)))
-           (list
+            ;; Use the standard outpt.
+            "--stdout"
             ;; Follow the 'fill-column' setting.
             (format "--fmt-fill-column=%d" fill-column)
             (format "--fmt-empty-lines=%d" elisp-autofmt-empty-line-max)
@@ -1195,8 +1168,8 @@ Argument IS-INTERACTIVE is set when running interactively."
             (format "--parallel-jobs=%d"
                     (cond
                      ((<= (cond
-                           (fmt-region-range
-                            (- (cdr fmt-region-range) (car fmt-region-range)))
+                           (region-range
+                            (- (cdr region-range) (car region-range)))
                            (t
                             (buffer-size)))
                           elisp-autofmt-parallel-threshold)
@@ -1228,8 +1201,7 @@ Argument IS-INTERACTIVE is set when running interactively."
                              (list))))
                           path-separator))))
             (t
-             (list)))))
-         (process-environment (elisp-autofmt--python-env-prepend process-environment)))
+             (list))))))
 
     (when elisp-autofmt-debug-extra-info
       (message "elisp-autofmt: running piped process: %s"
@@ -1270,47 +1242,12 @@ Argument IS-INTERACTIVE is set when running interactively."
          (to-file
           (with-current-buffer stdout-buffer
             (write-region (point-min) (point-max) assume-file-name)))
-         (fmt-region-range
-          (let ((changed
-                 (save-restriction
-                   (widen)
-                   (elisp-autofmt--replace-buffer-contents-fmt-region
-                    stdout-buffer (car fmt-region-range) (cdr fmt-region-range)))))
-            ;; Even though only a small region changed, use logic that re-writes the buffer.
-            (when changed
-              (elisp-autofmt--replace-region-contents-wrapper
-               (point-min) (point-max) stdout-buffer is-interactive))
-            (when is-interactive
-              (message "elisp-autofmt: %s"
-                       (cond
-                        (changed
-                         "reformat")
-                        (t
-                         "reformat (unnecessary)"))))))
-         (use-diff-range
-          (let ((diff-range-beg nil)
-                (diff-range-end nil))
-            (with-current-buffer stdout-buffer
-              (goto-char (point-min))
-              ;; Read the first line, then remove it.
-              (let* ((header-eol (pos-eol))
-                     (header (read (buffer-substring (point-min) header-eol))))
-                (setq diff-range-beg (car header))
-                (setq diff-range-end (cdr header))
-                (delete-region (point-min) (1+ header-eol))))
-            (unless (and (eq -1 diff-range-beg) (eq -1 diff-range-end))
-              (save-restriction
-                (widen)
-                (elisp-autofmt--replace-region-contents-wrapper
-                 diff-range-beg diff-range-end stdout-buffer is-interactive)))))
          (t
-          (save-restriction
-            (widen)
-            (elisp-autofmt--replace-region-contents-wrapper
-             (point-min) (point-max) stdout-buffer is-interactive)))))))))
+          (elisp-autofmt--replace-buffer-contents-with-fastpath
+           stdout-buffer region-range is-interactive))))))))
 
-(defun elisp-autofmt--region (fmt-region-range to-file is-interactive &optional assume-file-name)
-  "Auto format the current buffer in FMT-REGION-RANGE.
+(defun elisp-autofmt--region (region-range to-file is-interactive &optional assume-file-name)
+  "Auto format the current buffer in REGION-RANGE.
 Optional argument ASSUME-FILE-NAME overrides the file name used for this buffer.
 
 See `elisp-autofmt--region-impl' for TO-FILE and IS-INTERACTIVE doc-strings."
@@ -1320,16 +1257,16 @@ See `elisp-autofmt--region-impl' for TO-FILE and IS-INTERACTIVE doc-strings."
     (with-temp-buffer
       (setq stdout-buffer (current-buffer))
       (with-current-buffer this-buffer
-        (elisp-autofmt--region-impl stdout-buffer fmt-region-range to-file is-interactive
+        (elisp-autofmt--region-impl stdout-buffer region-range to-file is-interactive
                                     assume-file-name)))))
 
-(defun elisp-autofmt--buffer-impl (buf fmt-region-range to-file is-interactive)
-  "Auto-format the entire buffer BUF in FMT-REGION-RANGE.
+(defun elisp-autofmt--buffer-impl (buf region-range to-file is-interactive)
+  "Auto-format the entire buffer BUF in REGION-RANGE.
 
 See `elisp-autofmt--region-impl' for TO-FILE and IS-INTERACTIVE doc-strings."
   (declare (important-return-value t))
   (with-current-buffer buf
-    (elisp-autofmt--region fmt-region-range to-file is-interactive)))
+    (elisp-autofmt--region region-range to-file is-interactive)))
 
 (defun elisp-autofmt--buffer-format-for-save-hook ()
   "The hook to run on buffer saving to format the buffer."
@@ -1405,10 +1342,10 @@ otherwise format the surrounding S-expression."
      ((region-active-p)
       (elisp-autofmt-region (region-beginning) (region-end) is-interactive))
      (t
-      (let ((fmt-region-range (elisp-autofmt--s-expr-range-around-pos-dwim (point))))
-        (unless fmt-region-range
+      (let ((region-range (elisp-autofmt--s-expr-range-around-pos-dwim (point))))
+        (unless region-range
           (user-error "Unable to find surrounding brackets!"))
-        (elisp-autofmt-region (car fmt-region-range) (cdr fmt-region-range) is-interactive))))))
+        (elisp-autofmt-region (car region-range) (cdr region-range) is-interactive))))))
 
 ;;;###autoload
 (defun elisp-autofmt-check-elisp-autofmt-exists ()
