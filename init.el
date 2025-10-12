@@ -180,30 +180,45 @@
     (insert
      (calendar-date-string (calendar-current-date) t omit-day-of-week-p))))
 
-(use-package cc-mode
+(use-package dabbrev
+  ;; dynamic abbreviations from buffer
+  :bind (("M-/" . dabbrev-completion) ("C-M-/" . dabbrev-expand))
   :config
-  (setq
-   c-basic-offset 2
-   c-default-style "linux"))
+  (add-to-list 'dabbrev-ignored-buffer-regexps "\\` ")
+  (add-to-list 'dabbrev-ignored-buffer-modes 'authinfo-mode)
+  (add-to-list 'dabbrev-ignored-buffer-modes 'doc-view-mode)
+  (add-to-list 'dabbrev-ignored-buffer-modes 'pdf-view-mode)
+  (add-to-list 'dabbrev-ignored-buffer-modes 'tags-table-mode))
 
-(use-package company
-  :diminish
-  :hook (after-init . global-company-mode)
+(use-package cc-mode
   :custom
-  (company-idle-delay 0.2) ;; how long to wait until popup
-  ;; (company-begin-commands nil) ;; uncomment to disable popup
+  (c-basic-offset 2)
+  (c-default-style "linux"))
+
+(use-package diff-hl
+  :init (global-diff-hl-mode))
+
+(use-package dirvish
+  :custom
+  (dirvish-bookmarks-alist
+   '(("h" "~/" "Home") ("d" "~/Downloads/" "Downloads") ("m" "/mnt/" "Drives")))
+  (dirvish-attributes '(all-the-icons file-size))
   :config
-  (setq
-   company-dabbrev-other-buffers t
-   company-dabbrev-code-other-buffers t)
-  ;; :hook ((text-mode . company-mode) (prog-mode . company-mode))
+  (dirvish-override-dired-mode)
+  (dirvish-peek-mode)
   :bind
   (:map
-   company-active-map
-   ("C-n" . company-select-next)
-   ("C-p" . company-select-previous)
-   ("M-<" . company-select-first)
-   ("M->" . company-select-last)))
+   dired-mode-map
+   ("SPC" . dirvish-show-history)
+   ("r" . dirvish-roam)
+   ("b" . dirvish-goto-bookmark)
+   ("f" . dirvish-file-info-menu)
+   ("M-a" . dirvish-mark-actions-menu)
+   ("M-s" . dirvish-setup-menu)
+   ("M-f" . dirvish-toggle-fullscreen)
+   ([remap dired-summary] . dirvish-dispatch)
+   ([remap dired-do-copy] . dirvish-yank)
+   ([remap mode-line-other-buffer] . dirvish-other-buffer)))
 
 (use-package direnv
   :config (direnv-mode))
