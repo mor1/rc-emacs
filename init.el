@@ -84,41 +84,80 @@
 (unless (server-running-p)
   (server-start))
 
-;; codings
-(prefer-coding-system 'utf-8)
-(set-buffer-file-coding-system 'utf-8)
-(set-clipboard-coding-system 'utf-8)
-(set-default-coding-systems 'utf-8)
-(set-file-name-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
-(set-selection-coding-system 'utf-8)
-(set-terminal-coding-system 'utf-8)
-(set-language-environment "utf-8")
-
-;; scrolling
-(setq
- scroll-conservatively 101
- scroll-preserve-screen-position t
- scroll-step 1
- scroll-step 1
- scroll-conservatively 10000
- auto-window-vscroll nil)
-
-;; reverting buffers
-(global-auto-revert-mode t)
-
 ;;
 ;; packages
 ;;
 
-;; (use-package auto-package-update
-;;   :config
-;;   (setq
-;;    ;; auto-package-update-delete-old-versions t
-;;    auto-package-update-interval 4
-;;    ;; auto-package-update-excluded-packages '("mu4e")
-;;    )
-;;   (auto-package-update-maybe))
+(use-package emacs
+  :init
+  ;; codings
+  (prefer-coding-system 'utf-8)
+  (set-buffer-file-coding-system 'utf-8)
+  (set-clipboard-coding-system 'utf-8)
+  (set-default-coding-systems 'utf-8)
+  (set-file-name-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (set-language-environment "utf-8")
+  (set-selection-coding-system 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+
+  (global-auto-revert-mode t)
+  (global-hl-line-mode t)
+  (global-visual-line-mode t)
+
+  (add-to-list 'interpreter-mode-alist '("uv" . python-mode))
+  (put 'narrow-to-region 'disabled nil)
+
+  :custom
+  (auto-hscroll-mode 'current-line)
+  (auto-window-vscroll nil)
+
+  (bibtex-autokey-titleword-separator ".")
+  (bibtex-autokey-year-title-separator ":")
+
+  (column-number-mode t)
+  (comment-auto-fill-only-comments t)
+  (context-menu-mode t)
+  (custom-safe-themes
+   '("7fea145741b3ca719ae45e6533ad1f49b2a43bf199d9afaee5b6135fd9e6f9b8"
+     default))
+  (default-major-mode 'text-mode t)
+  (display-time-day-and-date t)
+  (enable-recursive-minibuffers t)
+  (epg-pinentry-mode 'loopback)
+  (fill-column 80)
+  (frame-title-format "%b  %f" t)
+  (indent-tabs-mode nil)
+  (inhibit-startup-screen t)
+  (initial-frame-alist '((top . 1) (left . 1) (width . 170) (height . 80)))
+  (interprogram-paste-function 'x-selection-value t)
+  (lisp-indent-offset 2)
+  (make-backup-files nil)
+  (minibuffer-prompt-properties
+   '(read-only t cursor-intangible t face minibuffer-prompt))
+  (mouse-buffer-menu-mode-mult 1)
+  (next-screen-context-lines 0)
+  (ns-alternate-modifier 'none)
+  (ns-command-modifier 'meta)
+  (ns-function-modifier 'hyper)
+  (package-selected-packages nil)
+  (read-extended-command-predicate #'command-completion-default-include-p)
+  (require-final-newline 'visit-save)
+
+  (scroll-bar-mode nil)
+  (scroll-conservatively 10000)
+  (scroll-preserve-screen-position t)
+  (scroll-step 1)
+
+  (sentence-end-double-space nil)
+  (size-indication-mode t)
+  (tab-width 4)
+  (uniquify-buffer-name-style 'post-forward-angle-brackets nil (uniquify))
+  (unkillable-scratch t)
+  (vc-follow-symlinks t)
+  (visible-bell t)
+  (visual-line-fringe-indicators '(right-triangle right-curly-arrow))
+  (whitespace-line-column nil))
 
 (use-package auto-compile
   :init
@@ -422,7 +461,6 @@
     (org-agenda-schedule arg "."))
 
   ;; some Easter related helpers
-
   (defun da-easter (year)
     "Calculate the date for Easter Sunday in YEAR. Returns the date in the
   Gregorian calendar, ie (MM DD YY) format."
@@ -865,18 +903,14 @@
 ;; load customisations
 ;;
 
-(setq custom-file "~/.emacs.d/init-custom.el")
-(load custom-file)
-(put 'narrow-to-region 'disabled nil)
 
 ;;
 ;; ...and we're done
 ;;
 
-(let ((elapsed (float-time (time-subtract (current-time) emacs-start-time))))
-  (message "Loading %s...done (%.3fs)" load-file-name elapsed))
-
 (add-hook 'after-init-hook
+          ; Time Emacs startup; updated to new (current-time)
+          ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
           `(lambda ()
              (let ((elapsed
                     (float-time
