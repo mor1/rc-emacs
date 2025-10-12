@@ -168,12 +168,12 @@
 (use-package avy)
 
 (use-package calendar
+  :custom
+  (calendar-bahai-all-holidays-flag nil)
+  (calendar-christian-all-holidays-flag t)
+  (calendar-date-style (quote iso))
+  (calendar-mark-holidays-flag t)
   :config
-  (setq
-   calendar-bahai-all-holidays-flag nil
-   calendar-christian-all-holidays-flag t
-   calendar-date-style (quote iso)
-   calendar-mark-holidays-flag t)
   (calendar-set-date-style 'iso)
   (defun insert-current-date (&optional omit-day-of-week-p)
     (interactive "P*")
@@ -222,11 +222,11 @@
   :hook (emacs-lisp-mode . elisp-autofmt-mode))
 
 (use-package exec-path-from-shell
-  ;; set exec path
   :config (exec-path-from-shell-initialize))
 
 (use-package fill-column-indicator
-  :hook (prog-mode . fci-mode))
+  :hook (prog-mode . fci-mode)
+  :custom (fci-rule-width 2))
 
 (use-package flyspell
   ;; on the fly spell checking
@@ -253,12 +253,12 @@
   :bind ("C-x g" . magit-status)
   :bind (:map magit-status-mode-map ("q" . magit-quit-session))
   :hook (magit-status-mode . (lambda () (visual-line-mode 0)))
+  :custom
+  (magit-commit-arguments (quote ("--signoff")))
+  (magit-diff-refine-hunk (quote all))
+  (magit-process-popup-time 5)
+  (magit-set-upstream-on-push t)
   :config
-  (setq
-   magit-commit-arguments (quote ("--signoff"))
-   magit-diff-refine-hunk (quote all)
-   magit-process-popup-time 5
-   magit-set-upstream-on-push t)
   ;; full screen magit-status
   (defadvice magit-status (around magit-fullscreen activate)
     (window-configuration-to-register :magit-fullscreen)
@@ -279,22 +279,43 @@
    ("\\.markdown\\'" . markdown-mode)
    ("README.md\\'" . gfm-mode))
   :magic ("\\`==\\+==" . markdown-mode)
-  :init (setq markdown-command "multimarkdown"))
+  :custom (markdown-command "multimarkdown"))
 
 (use-package mu4e
-  :config
-  (setq
-   mu4e-attachment-dir "~/Downloads"
-   mu4e-drafts-folder "/drafts" ;; unfinished messages
-   mu4e-maildir "~/u/me/mail" ;; top-level Maildir
-   mu4e-mu-binary (executable-find "mu")
-   mu4e-refile-folder "/archive" ;; saved messages
-   mu4e-sent-folder "/sent" ;; folder for sent messages
-   mu4e-trash-folder "/trash" ;; trashed messages
-   mu4e-use-fancy-chars t
-   mu4e-view-show-images t))
+  :custom
+  (mu4e-attachment-dir "~/Downloads")
+  (mu4e-compose-complete-only-personal t)
+  (mu4e-confirm-quit nil)
 
-(use-package hide-mode-line)
+  (mu4e-date-format-long "%FT%T%z")
+  (mu4e-headers-long-date-format "%F%FT%z")
+  (mu4e-headers-time-format "%F%FT%z")
+
+  (mu4e-drafts-folder "/drafts") ;; unfinished messages
+  (mu4e-maildir "~/u/me/mail") ;; top-level Maildir
+  (mu4e-mu-binary (executable-find "mu"))
+  (mu4e-refile-folder "/archive") ;; saved messages
+  (mu4e-sent-folder "/sent") ;; folder for sent messages
+  (mu4e-trash-folder "/trash") ;; trashed messages
+
+  (mu4e-update-interval nil)
+  (mu4e-use-fancy-chars t)
+  (mu4e-user-mail-address-list
+   '("mort@cantab.net"
+     "mort@live.co.uk"
+     "mort@microsoft.com"
+     "mort@sprintlabs.com"
+     "mort@vipadia.com"
+     "richard.mortier@cl.cam.ac.uk"
+     "richard.mortier@gmail.com"
+     "richard.mortier@hotmail.com"
+     "richard.mortier@nottingham.ac.uk"
+     "richard.mortier@unikernel.com"
+     "rmm1002@cam.ac.uk"
+     "rmm1002@hermes.cam.ac.uk"
+     "rmm@cs.nott.ac.uk"))
+  (mu4e-view-show-addresses t)
+  (mu4e-view-show-images t))
 
 ;; OCaml
 (use-package tuareg
@@ -320,18 +341,6 @@
     (lambda () (local-set-key (kbd "C-x .") 'org-agenda-reschedule-to-today))))
 
   :config
-  (setq
-   org-agenda-files "~/Dropbox/calendar/index"
-   org-basedir "~/Dropbox/calendar/"
-   revert-without-query
-   (mapcar
-    (lambda (f) (expand-file-name f org-basedir))
-    '("richard-incoming.org" "richard-tripit.org"))
-   org-agenda-loop-over-headlines-in-active-region nil
-   org-agenda-todo-ignore-scheduled 'all
-   org-adapt-indentation t
-   org-hide-leading-stars t)
-
   ;; http://stackoverflow.com/questions/6997387/how-to-archive-all-the-done-tasks-using-a-single-command#6998051
   (defun org-archive-completed-tasks ()
     (interactive)
@@ -345,86 +354,6 @@
   (defadvice org-prepare-agenda (after org-fix-split)
     (toggle-window-split))
   (ad-activate 'org-prepare-agenda)
-
-  ;; customise my agenda options
-  (setq
-   org-agenda-custom-commands
-   '(("a" "Week agenda" agenda ""
-      ((org-agenda-compact-blocks t)
-       (org-agenda-include-diary t)
-       (org-agenda-log-mode-items (quote (closed clock)))
-       (org-agenda-repeating-timestamp-show-all t)
-       (org-agenda-skip-deadline-if-done t)
-       (org-agenda-skip-scheduled-if-done t)
-       (org-agenda-skip-timestamp-if-done t)
-       (org-agenda-span 7)
-       (org-agenda-start-on-weekday 1)
-       (org-deadline-warning-days 15)))
-
-     ;; ("c" "Calendar" agenda ""
-     ;;   ((org-agenda-span 7)
-     ;;     (org-agenda-start-on-weekday 1)
-     ;;     (org-agenda-time-grid nil)
-     ;;     (org-agenda-repeating-timestamp-show-all t)
-     ;;     (org-agenda-entry-types '(:timestamp :sexp :scheduled*))
-     ;;     (org-agenda-category-filter-preset '("-a/nosho"))
-     ;;     ))
-
-     ;; ("d" "Upcoming deadlines" agenda ""
-     ;;   ((org-agenda-span 60)
-     ;;     (org-agenda-time-grid nil)
-     ;;     (org-deadline-warning-days 365)
-     ;;     (org-agenda-entry-types '(:deadline))
-     ;;     ))
-
-     ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
-      ((org-agenda-compact-blocks t)
-       (org-agenda-category-filter-preset '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
-       (org-agenda-include-diary t)
-       (org-agenda-log-mode-items (quote (closed clock)))
-       (org-agenda-ndays 31)
-       (org-agenda-repeating-timestamp-show-all t)
-       (org-agenda-show-all-dates t)
-       (org-agenda-skip-deadline-if-done t)
-       (org-agenda-skip-scheduled-if-done t)
-       (org-agenda-skip-timestamp-if-done t)
-       (org-agenda-sorting-strategy
-        '(habit-up time-up deadline-up priority-down todo-state-down))
-       (org-agenda-start-on-weekday 1)
-       (org-agenda-time-grid nil)
-       (org-deadline-warning-days 15)
-       (org-default-notes-file "~/me/todo/notes.org")
-       (org-fast-tag-selection-single-key (quote expert))
-       (org-remember-store-without-prompt t)))
-
-     ;; ("n" "Agenda and all TODOs"
-     ;;   ( (agenda ""
-     ;;       ((org-agenda-skip-function
-     ;;          '(org-agenda-skip-entry-if 'REPEATS 'notscheduled)))
-     ;;       )
-     ;;     (alltodo "")
-     ;;     ))
-
-     ("t" "Today"
-      ((agenda "" ((org-agenda-span 1)))
-       (alltodo
-        ""
-        ;; ((org-agenda-sorting-strategy '(tag-up)))
-        ))
-
-      ((org-agenda-category-filter-preset
-        '("-a"
-          "-a/m-taxi"
-          "-a/in"
-          "-a/appt"
-          "-e"
-          "-e/clubs"
-          "-w"
-          "-w/clubs"
-          "-d"
-          "-house"
-          "-home"))
-       (org-agenda-include-diary t)))))
 
   ;; UK bank holiday calculations, <http://www.gnomon.org.uk/diary.html>
   (defun holiday-new-year-bank-holiday ()
@@ -494,18 +423,100 @@
 
   ;; *** Good Friday
   ;; <%%(= -2 (calendar-days-from-easter))>
-  )
+
+  :custom
+  (org-adapt-indentation t)
+  (org-agenda-files "~/Dropbox/calendar/index")
+  (org-agenda-loop-over-headlines-in-active-region nil)
+  (org-agenda-todo-ignore-scheduled 'all)
+  (org-basedir "~/Dropbox/calendar/")
+  (org-hide-leading-stars t)
+
+  (revert-without-query
+   (mapcar
+    (lambda (f) (expand-file-name f org-basedir))
+    '("richard-incoming.org" "richard-tripit.org")))
+
+  (holiday-bahai-holidays nil)
+  (holiday-general-holidays
+   ((holiday-fixed 1 1 "New Year's Day")
+    (holiday-new-year-bank-holiday)
+    (holiday-fixed 2 14 "Valentine's Day")
+    (holiday-fixed 3 17 "St. Patrick's Day")
+    (holiday-fixed 4 1 "April Fools' Day")
+    (holiday-easter-etc -21 "Mothering Sunday")
+    (holiday-easter-etc 1 "Easter Monday")
+    (holiday-float 5 1 1 "Early May Bank Holiday")
+    (holiday-float 5 1 -1 "Spring Bank Holiday")
+    (holiday-float 6 0 3 "Father's Day")
+    (holiday-float 8 1 -1 "Summer Bank Holiday")
+    (holiday-fixed 10 31 "Halloween")
+    (holiday-fixed 12 24 "Christmas Eve")
+    (holiday-fixed 12 26 "Boxing Day")
+    (holiday-christmas-bank-holidays)
+    (holiday-fixed 12 31 "New Year's Eve")))
+  (holiday-hebrew-holidays nil)
+  (holiday-islamic-holidays nil)
+  (holiday-oriental-holidays nil)
+  (holiday-other-holidays
+   ((holiday-float 1 1 3 "Martin Luther King Day")
+    (holiday-float 2 1 3 "President's Day")
+    (holiday-float 5 1 -1 "Memorial Day")
+    (holiday-fixed 7 4 "Independence Day")
+    (holiday-float 9 1 1 "Labor Day")
+    (holiday-float 10 1 2 "Columbus Day")
+    (holiday-fixed 11 11 "Veteran's Day")
+    (holiday-float 11 4 4 "Thanksgiving")))
+  (org-agenda-custom-commands
+   '(("a" "Week agenda" agenda ""
+      ((org-agenda-compact-blocks t)
+       (org-agenda-include-diary t)
+       (org-agenda-log-mode-items (quote (closed clock)))
+       (org-agenda-repeating-timestamp-show-all t)
+       (org-agenda-skip-deadline-if-done t)
+       (org-agenda-skip-scheduled-if-done t)
+       (org-agenda-skip-timestamp-if-done t)
+       (org-agenda-span 7)
+       (org-agenda-start-on-weekday 1)
+       (org-deadline-warning-days 15)))
+
+     ("m" "Month agenda" ((agenda "" ((org-agenda-span 31))) (alltodo ""))
+      ((org-agenda-compact-blocks t)
+       (org-agenda-category-filter-preset
+        '("-a/nosho" "-a/m-taxi")) ;; /-^extension day/
+       (org-agenda-include-diary t)
+       (org-agenda-log-mode-items (quote (closed clock)))
+       (org-agenda-ndays 31)
+       (org-agenda-repeating-timestamp-show-all t)
+       (org-agenda-show-all-dates t)
+       (org-agenda-skip-deadline-if-done t)
+       (org-agenda-skip-scheduled-if-done t)
+       (org-agenda-skip-timestamp-if-done t)
+       (org-agenda-sorting-strategy
+        '(habit-up time-up deadline-up priority-down todo-state-down))
+       (org-agenda-start-on-weekday 1)
+       (org-agenda-time-grid nil)
+       (org-deadline-warning-days 15)
+       (org-default-notes-file "~/me/todo/notes.org")
+       (org-fast-tag-selection-single-key (quote expert))
+       (org-remember-store-without-prompt t)))
+
+     ("t" "Today"
+      ((agenda "" ((org-agenda-span 1)))
+       (alltodo
+        ""
+        ;; ((org-agenda-sorting-strategy '(tag-up)))
+        ))
+      ((org-agenda-include-diary t))))))
 
 (use-package org-gcal
   :after org
   :hook
-  ( ;; (org-agenda-mode . (lambda () (org-gcal-sync)))
+  ((org-agenda-mode . (lambda () (org-gcal-sync)))
    (org-capture-after-finalize . (lambda () (org-gcal-sync))))
-  :config
-  (setq
-   plstore-cache-passphrase-for-symmetric-encryption t
-   ;; epa-file-cache-passphrase-for-symmetric-encryption t
-   org-gcal-auto-archive nil
+  :custom
+  (plstore-cache-passphrase-for-symmetric-encryption t)
+  (org-gcal-auto-archive nil)
 
    org-gcal-client-id "XXX"
    org-gcal-client-secret "XXX"
@@ -515,11 +526,11 @@
       .
       "~/Dropbox/calendar/richard-tripit.org"))
 
-   org-gcal-local-timezone "Europe/London"
-   org-gcal-managed-newly-fetched-mode "gcal"
-   org-gcal-managed-post-at-point-update-existing 'prompt
-   org-gcal-managed-update-existing-mode "org"
-   org-gcal-recurring-events-mode 'nested))
+  (org-gcal-local-timezone "Europe/London")
+  (org-gcal-managed-newly-fetched-mode "gcal")
+  (org-gcal-managed-post-at-point-update-existing 'never-push)
+  (org-gcal-managed-update-existing-mode "org")
+  (org-gcal-recurring-events-mode 'nested))
 
 (use-package outline
   :diminish outline-minor-mode
@@ -533,10 +544,9 @@
 
 (use-package paren
   :hook (find-file . show-paren-mode)
-  :config
-  (setq
-   show-paren-mode t
-   show-paren-style (quote expression)))
+  :custom
+  (show-paren-mode t)
+  (show-paren-style (quote expression)))
 
 (use-package rainbow-mode
   :diminish
@@ -544,13 +554,12 @@
 
 (use-package recentf
   ;; recent buffers in a new Emacs session
-  ;; :diminish nil
-  :config
-  (recentf-mode t)
-  (setq
-   recentf-auto-cleanup 'never
-   recentf-max-saved-items 1000
-   recentf-save-file (concat user-emacs-directory ".recentf")))
+  :config (recentf-mode t)
+  :custom
+  (recentf-auto-cleanup 'never)
+  (recentf-max-saved-items 1000)
+  (recentf-save-file (concat user-emacs-directory ".recentf")))
+
 
 (use-package saveplace
   ;; save cursor position in file after close
@@ -588,12 +597,18 @@
       (load-theme (car theme-current) t)
       (message "%S" (car theme-current))))
 
+  :custom
+  (solarized-distinct-fringe-background t)
+  (solarized-scale-org-headlines nil)
+  (solarized-scale-outline-headlines nil)
+  (solarized-use-variable-pitch nil)
+
   :bind ("C-c t" . my-theme-cycle)
   :hook (after-init . (lambda () (load-theme 'solarized-dark))))
 
 (use-package subword
   ;; obey CamelCase etc
-  :config (setq global-subword-mode t))
+  :custom (global-subword-mode t))
 
 (use-package latex
   :ensure auctex
