@@ -1,3 +1,7 @@
+;;; init.el -- mort's emacs initialisation  -*- lexical-binding: t -*-
+
+;;; Commentary:
+
 ;; Copyright (C) Richard Mortier <mort@cantab.net> except where noted. All
 ;; Rights Reserved.
 ;;
@@ -12,6 +16,8 @@
 ;; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ;; ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 ;; IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+;;; Code:
 
 (defconst emacs-start-time (current-time))
 
@@ -55,7 +61,7 @@
      ("gnu" . "https://elpa.gnu.org/packages/")
      ("nongnu" . "https://elpa.nongnu.org/nongnu/"))))
 
-;; debugging; eg `open /Applications/Emacs.app --args --debug-init`
+;; debugging
 (if init-file-debug
     (progn
       (message "DEBUGGING ON")
