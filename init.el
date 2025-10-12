@@ -690,6 +690,18 @@
 (use-package rg
   :init (rg-enable-default-bindings))
 
+(use-package rust-mode
+  :custom (rust-mode-treesitter-derive t))
+(use-package rustic
+  ;; rustup install rust-analyzer; rustup update
+  :after (rust-mode)
+  :hook (eglot--managed-mode-hook . (lambda () (flymake-mode -1)))
+  :custom
+  (rustic-analyzer-command '("rustup" "run" "stable" "rust-analyzer"))
+  (rustic-lsp-client 'eglot)
+  (rustic-format-on-save t)
+  (rustic-cargo-use-last-stored-arguments t))
+
 (use-package saveplace
   ;; save cursor position in file after close
   :unless noninteractive
