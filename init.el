@@ -660,11 +660,6 @@
   :diminish outline-minor-mode
   :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode))
 
-(use-package paradox
-  :init
-  (setq
-   paradox-github-token t
-   paradox-automatically-star t))
 ;; tree-sitters
 (use-package tree-sitter-langs
   :after tree-sitter)
