@@ -951,12 +951,44 @@
   (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster))
 ;;
 
+;; web development
+(use-package web-mode
+  :mode
+  (("\\.html?\\'" . web-mode)
+   ("\\.phtml\\'" . web-mode)
+   ("\\.php\\'" . web-mode)
+   ("\\.tpl\\'" . web-mode)
+   ("\\.[agj]sp\\'" . web-mode)
+   ("\\.as[cp]x\\'" . web-mode)
+   ("\\.erb\\'" . web-mode)
+   ("\\.mustache\\'" . web-mode)
+   ("\\.djhtml\\'" . web-mode))
+
+  :custom
+  (web-mode-markup-indent-offset 2)
+  (web-mode-css-indent-offset 2)
+  (web-mode-code-indent-offset 2)
+  (web-mode-enable-auto-pairing t)
+  (web-mode-enable-css-colorization t)
+  (web-mode-enable-block-face t)
+  (web-mode-enable-part-face t)
+  (web-mode-enable-current-column-highlight t)
+  (web-mode-enable-current-element-highlight t))
+(use-package web-mode-edit-element
+  :hook (web-mode . web-mode-edit-element-minor-mode))
+(use-package com-css-sort
+  :commands (com-css-sort com-css-sort-attributes-block com-css-sort-attributes-document)
+  :config (setq com-css-sort-sort-type 'alphabetic-sort))
+(use-package css-eldoc
+  :commands turn-on-css-eldoc
+  :hook ((css-mode-hook . turn-on-css-eldoc) (scss-mode-hook . turn-on-css-eldoc)))
 ;;
 
 (use-package which-key
   :diminish
   :commands (which-key-mode)
   :init (which-key-mode))
+
 (use-package whitespace
   ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
   :diminish
