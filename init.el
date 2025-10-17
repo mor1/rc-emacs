@@ -806,7 +806,11 @@
   :after eglot
   :mode (("\\.typ\\'" . typst-ts-mode))
   :hook (typst-ts-mode . eglot-ensure)
-  :bind ("C-c C-x" . #'typst-ts-tinymist-preview)
+  :bind
+  (("C-c C-x" . #'typst-ts-tinymist-preview)
+   ;; (:map typst-ts-mode-map ("C-c C-c" #'typst-ts-tmenu))
+   )
+
   :custom
   (typst-ts-lsp-download-path
    (string-trim (shell-command-to-string "which tinymist")))
@@ -815,21 +819,20 @@
                      user-emacs-directory))
   (typst-ts-mode-enable-raw-blocks-highlight t)
   :config
-  ((keymap-set typst-ts-mode-map "C-c C-c" #'typst-ts-tmenu)
-   (add-to-list
-    'eglot-server-programs
-    `((typst-ts-mode)
-      .
-      ,(eglot-alternatives
-        `(,typst-ts-lsp-download-path "tinymist" "typst-lsp"))))
+  (add-to-list
+   'eglot-server-programs
+   `((typst-ts-mode)
+     .
+     ,(eglot-alternatives
+       `(,typst-ts-lsp-download-path "tinymist" "typst-lsp"))))
 
-   (defun typst-ts-tinymist-preview ()
-     "Run `tinymist preview` on the current file."
-     (interactive)
-     (let ((file (buffer-file-name)))
-       (if file
-           (compile (format "tinymist preview %s" (shell-quote-argument file)))
-         (user-error "Buffer is not visiting a file"))))))
+  (defun typst-ts-tinymist-preview ()
+    "Run `tinymist preview` on the current file."
+    (interactive)
+    (let ((file (buffer-file-name)))
+      (if file
+          (compile (format "tinymist preview %s" (shell-quote-argument file)))
+        (user-error "Buffer is not visiting a file")))))
 
 ;; interactive menus, minibuffer, completion
 
