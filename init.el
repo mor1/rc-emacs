@@ -60,6 +60,8 @@
    '(("melpa" . "https://melpa.org/packages/")
      ("gnu" . "https://elpa.gnu.org/packages/")
      ("nongnu" . "https://elpa.nongnu.org/nongnu/"))))
+(use-package diminish
+  :ensure t)
 
 ;; debugging
 (if init-file-debug
@@ -294,6 +296,7 @@
 ;;
 
 (use-package eldoc
+  :diminish eldoc-mode
   :init (global-eldoc-mode))
 
 (use-package elisp-autofmt
@@ -323,7 +326,7 @@
 (use-package hide-mode-line)
 
 (use-package jinx
-  :diminish
+  :diminish jinx-mode
   :hook (emacs-startup . global-jinx-mode)
   :bind (("C-;" . jinx-correct) ("C-M-$" . jinx-languages))
   ;; :config
@@ -667,7 +670,7 @@
   (show-paren-style (quote expression)))
 
 (use-package rainbow-mode
-  :diminish
+  :diminish rainbow-mode
   :hook prog-mode)
 
 (use-package recentf
@@ -991,13 +994,13 @@
 ;;
 
 (use-package which-key
-  :diminish
+  :diminish which-key-mode
   :commands (which-key-mode)
   :init (which-key-mode))
 
 (use-package whitespace
   ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
-  :diminish
+  :diminish whitespace-mode
   :commands (whitespace-buffer whitespace-cleanup whitespace-mode whitespace-turn-off)
   :preface
   (defun normalize-file ()
@@ -1063,6 +1066,7 @@
 
 ;; paragraph un/filling
 (use-package filladapt
+  :diminish (filladapt-mode . "fa")
   :hook
   (prog-mode . filladapt-mode)
   (text-mode . filladapt-mode))
@@ -1289,6 +1293,7 @@
      corfu-terminal
      css-eldoc
      diff-hl
+     diminish
      direnv
      dirvish
      dune
