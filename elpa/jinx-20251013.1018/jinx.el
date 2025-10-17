@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2023
-;; Package-Version: 20251007.1659
-;; Package-Revision: 618e1a5c7ad8
+;; Package-Version: 20251013.1018
+;; Package-Revision: e0ad6ea90e25
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/jinx
 ;; Keywords: convenience, text
