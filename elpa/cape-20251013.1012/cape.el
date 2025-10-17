@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20250920.843
-;; Package-Revision: e687d4dbf4a8
+;; Package-Version: 20251013.1012
+;; Package-Revision: f7bdd1e67950
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/cape
 ;; Keywords: abbrev, convenience, matching, completion, text
