@@ -841,7 +841,7 @@
 ;;   (ido-everywhere t)
 ;;   :custom (ido-enable-flex-matching t (ido-use-filename-at-point nil)))
 
-((use-package vertico
+(use-package vertico
   :hook
   ((rfn-eshadow-update-overlay . vertico-directory-tidy)
    (minibuffer-setup . vertico-repeat-save))
@@ -919,11 +919,13 @@
    ([tab] . corfu-next)
    ("S-TAB" . corfu-previous)
    ([backtab] . corfu-previous)))
+
 (use-package corfu-terminal
   :after corfu
   :init
   (unless (display-graphic-p)
     (corfu-terminal-mode +1)))
+
 (use-package kind-icon
   :after corfu
   :custom
@@ -936,6 +938,7 @@
    (lambda ()
      (setq completion-in-region-function
            (kind-icon-enhance-completion completion-in-region-function)))))
+
 (use-package cape
   :after corfu
   :bind ("C-c c" . cape-prefix-map)
