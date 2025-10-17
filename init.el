@@ -1281,11 +1281,11 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(auto-compile
+   '(auctex
+     auto-compile
      avy
      cape
      com-css-sort
-     corfu
      corfu-terminal
      css-eldoc
      diff-hl
@@ -1293,13 +1293,16 @@
      dirvish
      dune
      eglot-booster
+     eglot-ltex-plus
      elisp-autofmt
      exec-path-from-shell
      fill-column-indicator
+     filladapt
      flycheck-eglot
      gcmh
      git-ps1-mode
      hide-mode-line
+     ido-completing-read+
      inheritenv
      jinx
      just-mode
@@ -1308,7 +1311,6 @@
      marginalia
      mu4e
      neocaml
-     nerd-icons
      nerd-icons-completion
      nerd-icons-corfu
      nix-ts-mode
@@ -1329,12 +1331,15 @@
      treesit-fold
      tuareg
      typst-ts-mode
+     unfill
      uv-mode
      vertico
      web-mode-edit-element)
    nil nil "Customized with use-package emacs")
  '(package-vc-selected-packages
-   '((treesit-fold :url "https://github.com/emacs-tree-sitter/treesit-fold")
+   '((eglot-ltex-plus
+      :url "https://github.com/emacs-languagetool/eglot-ltex-plus")
+     (treesit-fold :url "https://github.com/emacs-tree-sitter/treesit-fold")
      (neocaml :url "https://github.com/bbatsov/neocaml")
      (eglot-booster :url "https://github.com/jdtsmith/eglot-booster"))))
 ;; Local variables:
