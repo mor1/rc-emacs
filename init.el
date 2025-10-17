@@ -1061,6 +1061,14 @@
   :hook (python-base-mode . uv-mode-auto-activate-hook))
 ;;
 
+;; paragraph un/filling
+(use-package filladapt
+  :hook
+  (prog-mode . filladapt-mode)
+  (text-mode . filladapt-mode))
+
+(use-package unfill)
+;;
 
 ;;
 ;; functions
