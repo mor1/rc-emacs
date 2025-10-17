@@ -904,6 +904,7 @@
   (corfu-auto-delay 0.0)
   (corfu-auto-prefix 1)
   (completion-auto-help t)
+  (global-corfu-modes prog-mode)
 
   :config
   (corfu-history-mode 1)
@@ -911,7 +912,6 @@
   (add-to-list 'savehist-additional-variables 'corfu-history)
 
   :init
-  (global-corfu-mode)
   (corfu-popupinfo-mode)
   (corfu-echo-mode)
 
