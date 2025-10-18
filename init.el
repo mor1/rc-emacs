@@ -329,12 +329,11 @@
   :diminish jinx-mode
   :hook (emacs-startup . global-jinx-mode)
   :bind (("C-;" . jinx-correct) ("C-M-$" . jinx-languages))
-  ;; :config
-  ;; (vertico-multiform-mode)
-  ;; (add-to-list
-  ;;  'vertico-multiform-categories
-  ;;  '(jinx grid (vertico-grid-annotate . 20) (vertico-count . 4)))
-  )
+  :config
+  (vertico-multiform-mode)
+  (add-to-list
+   'vertico-multiform-categories
+   '(jinx grid (vertico-grid-annotate . 20) (vertico-count . 4))))
 
 (use-package just-mode)
 
