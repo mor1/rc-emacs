@@ -50,6 +50,7 @@
 ;; package management
 (require 'package)
 (require 'use-package-ensure)
+
 (use-package package
   :ensure nil
   :config (package-initialize)
@@ -60,6 +61,7 @@
    '(("melpa" . "https://melpa.org/packages/")
      ("gnu" . "https://elpa.gnu.org/packages/")
      ("nongnu" . "https://elpa.nongnu.org/nongnu/"))))
+
 (use-package diminish
   :ensure t)
 
@@ -283,6 +285,7 @@
    ("C-c c o" . eglot-code-actions-organize-imports)
    ("C-c c r" . eglot-rename)
    ("C-c c f" . eglot-format)))
+
 (use-package eglot-booster
   :vc (:url "https://github.com/jdtsmith/eglot-booster")
   :after eglot
@@ -425,8 +428,10 @@
   (neocaml-repl-program-name "utop")
   (neocaml-repl-program-args '("-emacs"))
   (neocaml-use-prettify-symbols t))
+
 (use-package tuareg
   :mode (("\\.ocamlinit\\'" . tuareg-mode)))
+
 (use-package ocaml-eglot
   :after tuareg
   :hook
@@ -435,10 +440,13 @@
   (ocaml-eglot . (lambda () (add-hook #'before-save-hook #'eglot-format nil t)))
   (eglot-managed-mode . (lambda () (flycheck-eglot-mode 1)))
   :config (setq ocaml-eglot-syntax-checker 'flycheck))
+
 (use-package dune)
+
 (use-package opam-switch-mode
   :after tuareg
   :hook (tuareg-mode . opam-switch-mode))
+
 (use-package ocp-indent
   :after ocaml-eglot
   :hook (ocaml-eglot . ocp-setup-indent))
@@ -865,8 +873,10 @@
   (read-buffer-completion-ignore-case t)
   (completion-ignore-case t)
   :init (vertico-mode))
+
 (use-package savehist
   :init (savehist-mode))
+
 (use-package marginalia
   :after vertico
   :custom
@@ -875,9 +885,11 @@
   (marginalia-max-relative-age 0)
   (marginalia-align 'right)
   :init (marginalia-mode))
+
 (use-package nerd-icons-completion
   :hook (marginalia-mode . nerd-icons-completion-marginalia-setup)
   :config (nerd-icons-completion-mode))
+
 (use-package emacs
   :custom
   ;; TAB cycle if there are only few candidates
@@ -892,6 +904,7 @@
   (text-mode-ispell-word-completion nil)
 
   (treesit-font-lock-level 4))
+
 (use-package corfu
   ;; completion in region popups
   :custom
