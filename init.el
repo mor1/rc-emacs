@@ -136,6 +136,7 @@
   (initial-frame-alist '((top . 1) (left . 1) (width . 170) (height . 80)))
   (interprogram-paste-function 'x-selection-value t)
   (lisp-indent-offset 2)
+
   (make-backup-files nil)
   (minibuffer-prompt-properties
    '(read-only t cursor-intangible t face minibuffer-prompt))
@@ -170,6 +171,19 @@
 (auto-compile-on-load-mode)
 
 (use-package avy)
+
+(use-package bash-ts-mode
+  :ensure nil ;; as there's no package to install
+  :after eglot
+  :hook (bash-ts-mode . eglot-ensure)
+  :custom (tab-width 2)
+  :config
+  (add-to-list
+   'major-mode-remap-alist
+   '((bash-mode . bash-ts-mode) (sh-mode . bash-ts-mode)))
+  (add-to-list
+   'eglot-server-programs
+   '((sh-mode bash-ts-mode) . ("bash-language-server" "start"))))
 
 (use-package calendar
   :custom
@@ -234,36 +248,38 @@
   (("\\Dockerfile\\'" . dockerfile-ts-mode)
    ("\\.dockerignore\\'" . dockerfile-ts-mode)))
 
-(use-package shfmt
-  :hook ((sh-mode . shfmt-on-save-mode) (bash-ts-mode . shfmt-on-save-mode))
-  :custom
-  (sh-basic-offset 2)
-  (sh-indendentation 2)
-  (shfmt-respect-sh-basic-offset t)
-  (shfmt-arguments
-   '("--simplify" "--binary-next-line" "--case-indent" "--space-redirects")))
-
 ;; LSP support
 (use-package eglot
   ;; per https://justinbarclay.ca/posts/from-zero-to-ide-with-emacs-and-lsp/
   :config
   (setq-default eglot-workspace-configuration
-                '((:pylsp
-                   .
-                   (:plugins
-                    (:basedpyright
-                     ()
-                     :basedpyright.analysis
-                     (:typeCheckingMode
-                      "recommended"
-                      :autoImportCompletions t
-                      ;; :inlayHints
-                      ;; (:variableTypes
-                      ;;  t
-                      ;;  :callArgumentNames t
-                      ;;  :functionReturnTypes t
-                      ;;  :genericTypes t)
-                      ))))))
+                '(:emacs-lisp-server
+                  nil
+
+                  :bashIde
+                  (:backgroundAnalysisMaxFiles
+                   0 ;; turn off background analysis of directory tree
+                   :shfmt
+                   (:binaryNextLine
+                    t
+                    :caseIndent t
+                    :simplifyCode t
+                    :spaceRedirects t))
+
+                  :pylsp
+                  (:plugins
+                   (:basedpyright
+                    ()
+                    :basedpyright.analysis
+                    (:typeCheckingMode
+                     "recommended"
+                     :autoImportCompletions t
+                     :inlayHints
+                     (:variableTypes
+                      t
+                      :callArgumentNames t
+                      :functionReturnTypes t
+                      :genericTypes t))))))
 
   ;; :custom
   ;; (eglot-ignored-server-capabilities
@@ -276,8 +292,11 @@
   ;;    :foldingRangeProvider))
   :hook
   (eglot-managed-mode . eglot-inlay-hints-mode)
-  (sh-mode . eglot-ensure)
-  (bash-ts-mode . eglot-ensure)
+  (before-save
+   .
+   (lambda ()
+     (if (eglot-managed-p)
+         (eglot-format))))
   :bind
   (:map
    eglot-mode-map
@@ -290,12 +309,6 @@
   :vc (:url "https://github.com/jdtsmith/eglot-booster")
   :after eglot
   :config (eglot-booster-mode))
-(use-package emacs
-  :after eglot
-  :config
-  (add-to-list
-   'eglot-server-programs
-   '((sh-mode bash-ts-mode) . ("bash-language-server" "start"))))
 ;;
 
 (use-package eldoc
@@ -305,6 +318,12 @@
 (use-package elisp-autofmt
   :commands (elisp-autofmt-mode elisp-autofmt-buffer)
   :hook (emacs-lisp-mode . elisp-autofmt-mode))
+
+(use-package emacs-lisp-mode
+  :ensure nil
+  :custom
+  (eglot-workspace-configuration
+   (plist-put eglot-workspace-configuration ':emacs-lisp-server nil)))
 
 (use-package exec-path-from-shell
   :config (exec-path-from-shell-initialize))
