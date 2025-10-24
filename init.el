@@ -786,6 +786,20 @@
   ;; obey CamelCase etc
   :custom (global-subword-mode t))
 
+(use-package eglot-ltex-plus
+  :vc (:url "https://github.com/emacs-languagetool/eglot-ltex-plus" :rev :newest)
+  :hook
+  ;; (eglot-ensure)
+  (text-mode
+   .
+   (lambda ()
+     (require 'eglot-ltex-plus)
+     (eglot-ensure)))
+  :custom
+  (eglot-ltex-plus-server-path
+   "/nix/store/3ihx8s39rl2d5by5wabcg3i4rcm3kns3-ltex-ls-plus-18.6.0/")
+  (eglot-ltex-plus-communication-channel 'stdio))
+
 (use-package latex
   :ensure auctex
   :mode
@@ -796,15 +810,15 @@
   ((LaTeX-mode . LaTeX-math-mode)
    (LaTeX-mode . turn-on-reftex)
    (LaTeX-mode . TeX-fold-mode))
-  :config
-  (use-package latex)
-  (setq
-   bibtex-dialect 'biblatex
-   TeX-auto-save t
-   TeX-parse-self t
-   TeX-master t
-   reftex-plug-into-AUCTeX t)
 
+  :custom
+  (bibtex-dialect 'biblatex)
+  (TeX-auto-save t)
+  (TeX-parse-self t)
+  (TeX-master t)
+  (reftex-plug-into-AUCTeX t)
+
+  :config
   ;; modified from swiftex.el
   (defun tex-enclose-word (before after)
     (interactive "*Mbefore: \nMafter: ")
