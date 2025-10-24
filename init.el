@@ -1,4 +1,4 @@
-;;; init.el -- mort's emacs initialisation  -*- lexical-binding: t -*-
+;;; init.el -- mort's emacs initialisation  -*- lexical-binding: t fill-column: 88 -*-
 
 ;;; Commentary:
 
@@ -62,8 +62,7 @@
      ("gnu" . "https://elpa.gnu.org/packages/")
      ("nongnu" . "https://elpa.nongnu.org/nongnu/"))))
 
-(use-package diminish
-  :ensure t)
+(use-package diminish)
 
 ;; debugging
 (if init-file-debug
@@ -93,6 +92,7 @@
 ;;
 
 (use-package emacs
+  :ensure nil
   :init
   ;; codings
   (prefer-coding-system 'utf-8)
@@ -113,56 +113,68 @@
   (put 'narrow-to-region 'disabled nil)
 
   :custom
+  ;; scrolling
   (auto-hscroll-mode 'current-line)
   (auto-window-vscroll nil)
-
-  (bibtex-autokey-titleword-separator ".")
-  (bibtex-autokey-year-title-separator ":")
-
-  (column-number-mode t)
-  (comment-auto-fill-only-comments t)
-  (context-menu-mode t)
-  (custom-safe-themes
-   '("7fea145741b3ca719ae45e6533ad1f49b2a43bf199d9afaee5b6135fd9e6f9b8"
-     default))
-  (default-major-mode 'text-mode t)
-  (display-time-day-and-date t)
-  (enable-recursive-minibuffers t)
-  (epg-pinentry-mode 'loopback)
-  (fill-column 80)
-  (frame-title-format "%b  %f" t)
-  (indent-tabs-mode nil)
-  (inhibit-startup-screen t)
-  (initial-frame-alist '((top . 1) (left . 1) (width . 170) (height . 80)))
-  (interprogram-paste-function 'x-selection-value t)
-  (lisp-indent-offset 2)
-
-  (make-backup-files nil)
-  (minibuffer-prompt-properties
-   '(read-only t cursor-intangible t face minibuffer-prompt))
-  (mouse-buffer-menu-mode-mult 1)
-  (next-screen-context-lines 0)
-  (ns-alternate-modifier 'none)
-  (ns-command-modifier 'meta)
-  (ns-function-modifier 'hyper)
-  (package-selected-packages nil)
-  (read-extended-command-predicate #'command-completion-default-include-p)
-  (require-final-newline 'visit-save)
-
   (scroll-bar-mode nil)
   (scroll-conservatively 10000)
   (scroll-preserve-screen-position t)
   (scroll-step 1)
 
+  ;; indentation
+  (fill-column 80)
+  (indent-tabs-mode nil)
+  (lisp-indent-offset 2)
+  (tab-always-indent 'complete)
+  (tab-width 4)
+
+  ;; bibtex
+  (bibtex-autokey-titleword-separator ".")
+  (bibtex-autokey-year-title-separator ":")
+
+  ;; MacOS keyboards
+  (ns-alternate-modifier 'none)
+  (ns-command-modifier 'meta)
+  (ns-function-modifier 'hyper)
+
+  ;; misc
+  (column-number-mode t)
+
+  (comment-auto-fill-only-comments t)
+  (completion-cycle-threshold 3)
+  (context-menu-mode t)
+  (custom-safe-themes
+   '("7fea145741b3ca719ae45e6533ad1f49b2a43bf199d9afaee5b6135fd9e6f9b8" default))
+
+  (default-major-mode 'text-mode t)
+
+  (display-time-day-and-date t)
+
+  (enable-recursive-minibuffers t)
+  (epg-pinentry-mode 'loopback)
+
+  (frame-title-format "%b  %f" t)
+  (inhibit-startup-screen t)
+  (initial-frame-alist '((top . 1) (left . 1) (width . 170) (height . 80)))
+  (interprogram-paste-function 'x-selection-value t)
+  (make-backup-files nil)
+  (minibuffer-prompt-properties
+   '(read-only t cursor-intangible t face minibuffer-prompt))
+  (mouse-buffer-menu-mode-mult 1)
+  (next-screen-context-lines 0)
+
+  (package-selected-packages nil)
+  (read-extended-command-predicate #'command-completion-default-include-p)
+  (require-final-newline 'visit-save)
   (sentence-end-double-space nil)
   (size-indication-mode t)
-  (tab-width 4)
+  (text-mode-ispell-word-completion nil) ;; Emacs 30 and newer: Disable Ispell completion function.
+  (treesit-font-lock-level 4)
   (uniquify-buffer-name-style 'post-forward-angle-brackets nil (uniquify))
   (unkillable-scratch t)
   (vc-follow-symlinks t)
   (visible-bell t)
-  (visual-line-fringe-indicators '(right-triangle right-curly-arrow))
-  (whitespace-line-column nil))
+  (visual-line-fringe-indicators '(right-triangle right-curly-arrow)))
 
 (use-package auto-compile
   :custom
@@ -173,17 +185,15 @@
 (use-package avy)
 
 (use-package bash-ts-mode
+  ;; shell scripts
   :ensure nil ;; as there's no package to install
   :after eglot
-  :hook (bash-ts-mode . eglot-ensure)
   :custom (tab-width 2)
   :config
   (add-to-list
-   'major-mode-remap-alist
-   '((bash-mode . bash-ts-mode) (sh-mode . bash-ts-mode)))
+   'major-mode-remap-alist '((bash-mode . bash-ts-mode) (sh-mode . bash-ts-mode)))
   (add-to-list
-   'eglot-server-programs
-   '((sh-mode bash-ts-mode) . ("bash-language-server" "start"))))
+   'eglot-server-programs '((sh-mode bash-ts-mode) . ("bash-language-server" "start"))))
 
 (use-package calendar
   :custom
@@ -195,8 +205,7 @@
   (calendar-set-date-style 'iso)
   (defun insert-current-date (&optional omit-day-of-week-p)
     (interactive "P*")
-    (insert
-     (calendar-date-string (calendar-current-date) t omit-day-of-week-p))))
+    (insert (calendar-date-string (calendar-current-date) t omit-day-of-week-p))))
 
 (use-package dabbrev
   ;; dynamic abbreviations from buffer
@@ -546,13 +555,11 @@
                   (* 30 century))
                30))
            (adjusted-epact
-            (if (or (= shifted-epact 0)
-                    (and (= shifted-epact 1) (< 10 (% year 19))))
+            (if (or (= shifted-epact 0) (and (= shifted-epact 1) (< 10 (% year 19))))
                 (1+ shifted-epact)
               shifted-epact))
            (paschal-moon
-            (- (calendar-absolute-from-gregorian (list 4 19 year))
-               adjusted-epact)))
+            (- (calendar-absolute-from-gregorian (list 4 19 year)) adjusted-epact)))
       (calendar-dayname-on-or-before 0 (+ paschal-moon 7))))
 
   (defun calendar-days-from-easter ()
@@ -699,8 +706,7 @@
   :diminish rainbow-mode
   :hook prog-mode)
 
-(use-package recentf
-  ;; recent buffers in a new Emacs session
+(use-package recentf ;; recent buffers in a new Emacs session
   :config (recentf-mode t)
   :custom
   (recentf-auto-cleanup 'never)
@@ -712,8 +718,8 @@
 
 (use-package rust-mode
   :custom (rust-mode-treesitter-derive t))
-(use-package rustic
-  ;; rustup install rust-analyzer; rustup update
+
+(use-package rustic ;; rustup install rust-analyzer; rustup update
   :after (rust-mode)
   :hook (eglot--managed-mode-hook . (lambda () (flymake-mode -1)))
   :custom
@@ -899,8 +905,7 @@
 (use-package marginalia
   :after vertico
   :custom
-  (marginalia-annotators
-   '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   (marginalia-max-relative-age 0)
   (marginalia-align 'right)
   :init (marginalia-mode))
@@ -908,21 +913,6 @@
 (use-package nerd-icons-completion
   :hook (marginalia-mode . nerd-icons-completion-marginalia-setup)
   :config (nerd-icons-completion-mode))
-
-(use-package emacs
-  :custom
-  ;; TAB cycle if there are only few candidates
-  (completion-cycle-threshold 3)
-
-  ;; Enable indentation+completion using the TAB key. `completion-at-point' is
-  ;; often bound to M-TAB.
-  (tab-always-indent 'complete)
-
-  ;; Emacs 30 and newer: Disable Ispell completion function.
-  ;; Try `cape-dict' as an alternative.
-  (text-mode-ispell-word-completion nil)
-
-  (treesit-font-lock-level 4))
 
 (use-package corfu
   ;; completion in region popups
@@ -1030,7 +1020,7 @@
   :init (which-key-mode))
 
 (use-package whitespace
-  ;; whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
+  ;; manage whitespace <https://github.com/jwiegley/dot-emacs/blob/master/init.el>
   :diminish whitespace-mode
   :commands (whitespace-buffer whitespace-cleanup whitespace-mode whitespace-turn-off)
   :preface
@@ -1054,14 +1044,7 @@
     (when (not (locate-dominating-file default-directory ".noclean"))
       (progn
         (setq whitespace-style
-              '(face
-                trailing
-                tabs
-                lines-tail
-                newline
-                empty
-                space-before-tab
-                tab-mark))
+              '(face trailing tabs lines-tail newline empty space-before-tab tab-mark))
         (whitespace-mode t))))
 
   :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
@@ -1266,8 +1249,7 @@
           ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
           `(lambda ()
              (let ((elapsed
-                    (float-time
-                     (time-subtract (current-time) emacs-start-time))))
+                    (float-time (time-subtract (current-time) emacs-start-time))))
                (message "Loading %s...done (%.3fs) [after-init]"
                         ,load-file-name
                         elapsed)))
@@ -1315,66 +1297,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   '(auctex
-     auto-compile
-     avy
-     cape
-     com-css-sort
-     corfu-terminal
-     css-eldoc
-     diff-hl
-     diminish
-     direnv
-     dirvish
-     dune
-     eglot-booster
-     eglot-ltex-plus
-     elisp-autofmt
-     exec-path-from-shell
-     fill-column-indicator
-     filladapt
-     flycheck-eglot
-     gcmh
-     git-ps1-mode
-     hide-mode-line
-     ido-completing-read+
-     inheritenv
-     jinx
-     just-mode
-     kind-icon
-     magit
-     marginalia
-     mu4e
-     neocaml
-     nerd-icons-completion
-     nerd-icons-corfu
-     nix-ts-mode
-     nixfmt
-     ocaml-eglot
-     ocp-indent
-     opam-switch-mode
-     org-gcal
-     pretty-sha-path
-     python-mode
-     rainbow-mode
-     rg
-     rustic
-     shfmt
-     solarized-theme
-     tree-sitter-langs
-     treesit-auto
-     treesit-fold
-     tuareg
-     typst-ts-mode
-     unfill
-     uv-mode
-     vertico
-     web-mode-edit-element)
-   nil nil "Customized with use-package emacs")
+ '(package-selected-packages nil nil nil "Customized with use-package emacs")
  '(package-vc-selected-packages
-   '((eglot-ltex-plus
-      :url "https://github.com/emacs-languagetool/eglot-ltex-plus")
+     (eglot-ltex-plus :url "https://github.com/emacs-languagetool/eglot-ltex-plus")
      (treesit-fold :url "https://github.com/emacs-tree-sitter/treesit-fold")
      (neocaml :url "https://github.com/bbatsov/neocaml")
      (eglot-booster :url "https://github.com/jdtsmith/eglot-booster"))))
