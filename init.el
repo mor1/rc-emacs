@@ -258,36 +258,39 @@
 
 ;; LSP support
 (use-package eglot
-  ;; per https://justinbarclay.ca/posts/from-zero-to-ide-with-emacs-and-lsp/
   :config
-  (setq-default eglot-workspace-configuration
-                '(:emacs-lisp-server
-                  nil
+  (setq-default
+   eglot-workspace-configuration
+   '(:emacs-lisp-server
+     nil
 
-                  :bashIde
-                  (:backgroundAnalysisMaxFiles
-                   0 ;; turn off background analysis of directory tree
-                   :shfmt
-                   (:binaryNextLine
-                    t
-                    :caseIndent t
-                    :simplifyCode t
-                    :spaceRedirects t))
+     :bashIde
+     (:backgroundAnalysisMaxFiles
+      0 ;; turn off background analysis of directory tree
+      :shfmt (:binaryNextLine t :caseIndent t :simplifyCode t :spaceRedirects t))
 
-                  :pylsp
-                  (:plugins
-                   (:basedpyright
-                    ()
-                    :basedpyright.analysis
-                    (:typeCheckingMode
-                     "recommended"
-                     :autoImportCompletions t
-                     :inlayHints
-                     (:variableTypes
-                      t
-                      :callArgumentNames t
-                      :functionReturnTypes t
-                      :genericTypes t))))))
+     :ltex-ls-plus
+     (:language
+      "en-GB"
+      :additionalRules (:enablePickyRules t :motherTongue "en-GB")
+      :completionEnabled t)
+
+     :nixd (:formatting.command "nixfmt")
+
+     :pylsp
+     (:plugins
+      (:basedpyright
+       ()
+       :basedpyright.analysis
+       (:typeCheckingMode
+        "recommended"
+        :autoImportCompletions t
+        :inlayHints
+        (:variableTypes
+         t
+         :callArgumentNames t
+         :functionReturnTypes t
+         :genericTypes t))))))
 
   ;; :custom
   ;; (eglot-ignored-server-capabilities
@@ -300,6 +303,7 @@
   ;;    :foldingRangeProvider))
   :hook
   (eglot-managed-mode . eglot-inlay-hints-mode)
+  (prog-mode . eglot-ensure)
   (before-save
    .
    (lambda ()
