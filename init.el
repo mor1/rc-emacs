@@ -253,9 +253,8 @@
    ([remap mode-line-other-buffer] . dirvish-other-buffer)))
 
 (use-package dockerfile-ts-mode
-  :mode
-  (("\\Dockerfile\\'" . dockerfile-ts-mode)
-   ("\\.dockerignore\\'" . dockerfile-ts-mode)))
+  :mode "\\Dockerfile\\'"
+  :config (add-to-list 'major-mode-remap-alist '((docker-mode . docker-ts-mode))))
 
 ;; LSP support
 (use-package eglot
@@ -391,14 +390,22 @@
 
 (use-package make-mode)
 
-(use-package markdown-mode
-  :commands (markdown-mode gfm-mode)
-  :mode
-  (("\\.md\\'" . markdown-mode)
-   ("\\.markdown\\'" . markdown-mode)
-   ("README.md\\'" . gfm-mode))
-  :magic ("\\`==\\+==" . markdown-mode)
-  :custom (markdown-command "multimarkdown"))
+(use-package markdown-ts-mode
+  :mode (("\\.md\\'" . markdown-ts-mode) ("\\.markdown\\'" . markdown-ts-mode))
+  :magic ("\\`==\\+==" . markdown-ts-mode)
+  :config
+  (add-to-list
+   'treesit-language-source-alist
+   '(markdown
+     "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
+     "split_parser"
+     "tree-sitter-markdown/src"))
+  (add-to-list
+   'treesit-language-source-alist
+   '(markdown-inline
+     "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
+     "split_parser"
+     "tree-sitter-markdown-inline/src")))
 
 (use-package mu4e
   :custom
@@ -436,12 +443,9 @@
   (mu4e-view-show-addresses t)
   (mu4e-view-show-images t))
 
-;; Nix
-(use-package nixfmt
-  :hook (nix-ts-mode . nixfmt-on-save-mode))
 (use-package nix-ts-mode
-  :mode "\\.nix\\'")
-;;
+  :mode "\\.nix\\'"
+  :config (add-to-list 'major-mode-remap-alist '((nix-mode . nix-ts-mode))))
 
 ;; OCaml
 (use-package neocaml
@@ -683,17 +687,26 @@
   (org-gcal-managed-update-existing-mode "org")
   (org-gcal-recurring-events-mode 'nested))
 
-(use-package outline
-  :diminish outline-minor-mode
-  :hook ((emacs-lisp-mode LaTeX-mode) . outline-minor-mode))
 
 ;; tree-sitters
-(use-package tree-sitter-langs
-  :after tree-sitter)
-(use-package treesit-auto
-  :config (global-treesit-auto-mode))
-(use-package treesit-fold
-  :vc (:url "https://github.com/emacs-tree-sitter/treesit-fold"))
+(use-package tree-sitter-langs ;; grammar bundle
+  :after tree-sitter
+  :custom (global-tree-sitter-mode t))
+
+(use-package treesit-auto ;; auto-install missing grammars
+  :after tree-sitter
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
+
+(use-package
+  treesit-fold ;; enable code folding based on tree-sitter
+  :vc (:url "https://github.com/emacs-tree-sitter/treesit-fold")
+  :config (treesit-fold-mode)
+  :bind
+  (("C-`" . treesit-fold-toggle)
+   ("C-€" . treesit-fold-close-all) ;; note that I remap S-` to €
+   ("M-C-€" . treesit-fold-open-all)))
 ;;
 
 (use-package paren
@@ -834,8 +847,13 @@
     (lambda ()
       (interactive "*")
       (tex-enclose-word "\\textbf{" "}")))))
+
 (use-package toml-ts-mode
-  :mode "\\.toml\\'")
+  :mode "\\.toml\\'"
+  :hook eglot-ensure
+  :config
+  (add-to-list 'major-mode-remap-alist '((toml-mode . toml-ts-mode)))
+  (add-to-list 'eglot-server-programs '(toml-ts-mode . ("tombi" "lsp"))))
 
 (use-package typst-ts-mode
   :after eglot
