@@ -856,28 +856,21 @@
   (add-to-list 'eglot-server-programs '(toml-ts-mode . ("tombi" "lsp"))))
 
 (use-package typst-ts-mode
-  :after eglot
-  :mode (("\\.typ\\'" . typst-ts-mode))
-  :hook (typst-ts-mode . eglot-ensure)
-  :bind
-  (("C-c C-x" . #'typst-ts-tinymist-preview)
-   ;; (:map typst-ts-mode-map ("C-c C-c" #'typst-ts-tmenu))
-   )
+  :mode "\\.typ\\'"
+  :hook eglot-ensure
 
   :custom
-  (typst-ts-lsp-download-path
-   (string-trim (shell-command-to-string "which tinymist")))
-  (typst-ts-mode-grammar-location
-   (expand-file-name "tree-sitter/libtree-sitter-typst.so"
-                     user-emacs-directory))
+  (typst-ts-lsp-download-path (string-trim (shell-command-to-string "which tinymist")))
   (typst-ts-mode-enable-raw-blocks-highlight t)
+
   :config
+  (add-to-list 'major-mode-remap-alist '(typst-mode . typst-ts-mode))
+  (add-to-list 'tree-sitter-major-mode-language-alist '(typst-ts-mode . typst))
   (add-to-list
    'eglot-server-programs
    `((typst-ts-mode)
      .
-     ,(eglot-alternatives
-       `(,typst-ts-lsp-download-path "tinymist" "typst-lsp"))))
+     ,(eglot-alternatives `(,typst-ts-lsp-download-path "tinymist" "typst-lsp"))))
 
   (defun typst-ts-tinymist-preview ()
     "Run `tinymist preview` on the current file."
@@ -885,7 +878,9 @@
     (let ((file (buffer-file-name)))
       (if file
           (compile (format "tinymist preview %s" (shell-quote-argument file)))
-        (user-error "Buffer is not visiting a file")))))
+        (user-error "Buffer is not visiting a file"))))
+  :bind ("C-c C-x" . #'typst-ts-tinymist-preview)
+  :bind (:map typst-ts-mode-map ("C-c C-c" . typst-ts-tmenu)))
 
 ;; interactive menus, minibuffer, completion
 
@@ -1066,6 +1061,9 @@
         (whitespace-mode t))))
 
   :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
+(use-package nxml-mode
+  :mode "\\.xml\\'"
+  :custom (nxml-slash-auto-complete-flag t))
 
 (use-package yaml-ts-mode
   :mode "\\.ya?ml\\'")
