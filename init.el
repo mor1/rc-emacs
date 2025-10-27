@@ -187,13 +187,21 @@
 (use-package bash-ts-mode
   ;; shell scripts
   :ensure nil ;; as there's no package to install
-  :after eglot
   :custom (tab-width 2)
   :config
   (add-to-list
    'major-mode-remap-alist '((bash-mode . bash-ts-mode) (sh-mode . bash-ts-mode)))
   (add-to-list
-   'eglot-server-programs '((sh-mode bash-ts-mode) . ("bash-language-server" "start"))))
+   'eglot-server-programs
+   '(bash-ts-mode
+     .
+     ("bash-language-server" "start"
+      ;; unfortunately not respected by `bash-language-server`
+      ;; :initializationOptions
+      ;; (:backgroundAnalysisMaxFiles
+      ;;  0 ;; turn off background analysis of directory tree
+      ;;  :shfmt (:binaryNextLine t :caseIndent t :simplifyCode t :spaceRedirects t))
+      ))))
 
 (use-package calendar
   :custom
@@ -254,45 +262,42 @@
 
 (use-package dockerfile-ts-mode
   :mode "\\Dockerfile\\'"
-  :config (add-to-list 'major-mode-remap-alist '((docker-mode . docker-ts-mode))))
+  :config (add-to-list 'major-mode-remap-alist '((dockerfile-mode . dockerfile-ts-mode))))
 
 ;; LSP support
 (use-package eglot
   :config
   (setq-default
    eglot-workspace-configuration
-   '(:emacs-lisp-server
-     nil
-
+   '(
+     ;; sh/bash
      :bashIde
      (:backgroundAnalysisMaxFiles
       0 ;; turn off background analysis of directory tree
       :shfmt (:binaryNextLine t :caseIndent t :simplifyCode t :spaceRedirects t))
 
+     ;; latex
      :ltex-ls-plus
      (:language
       "en-GB"
       :additionalRules (:enablePickyRules t :motherTongue "en-GB")
       :completionEnabled t)
 
-     :nixd (:formatting.command "nixfmt")
+     ;; python
+     :basedpyright (:disableOrganizeImports t)
+     :basedpyright.analysis
+     (:typeCheckingMode
+      "all"
+      :autoImportCompletions t
+      :inlayHints (:callArgumentNamesMatching t)
+      :useTypingExtensions t)
 
-     :pylsp
-     (:plugins
-      (:basedpyright
-       ()
-       :basedpyright.analysis
-       (:typeCheckingMode
-        "recommended"
-        :autoImportCompletions t
-        :inlayHints
-        (:variableTypes
-         t
-         :callArgumentNames t
-         :functionReturnTypes t
-         :genericTypes t))))))
+     ;;
+     ))
 
-  ;; :custom
+  :custom
+  (eglot-send-changes-idle-time 0.5)
+  (eglot-extend-to-xref t)
   ;; (eglot-ignored-server-capabilities
   ;;  '(:hoverProvider
   ;;    :documentHighlightProvider
@@ -301,9 +306,14 @@
   ;;    :documentOnTypeFormattingProvider
   ;;    :colorProvider
   ;;    :foldingRangeProvider))
+
   :hook
   (eglot-managed-mode . eglot-inlay-hints-mode)
-  (prog-mode . eglot-ensure)
+  (prog-mode
+   .
+   (lambda ()
+     (unless (eq major-mode 'emacs-lisp-mode)
+       (eglot-ensure))))
   (before-save
    .
    (lambda ()
@@ -329,13 +339,7 @@
 
 (use-package elisp-autofmt
   :commands (elisp-autofmt-mode elisp-autofmt-buffer)
-  :hook (emacs-lisp-mode . elisp-autofmt-mode))
-
-(use-package emacs-lisp-mode
-  :ensure nil
-  :custom
-  (eglot-workspace-configuration
-   (plist-put eglot-workspace-configuration ':emacs-lisp-server nil)))
+  :hook emacs-lisp-mode)
 
 (use-package exec-path-from-shell
   :config (exec-path-from-shell-initialize))
@@ -395,15 +399,21 @@
 (use-package make-mode)
 
 (use-package markdown-ts-mode
-  :mode (("\\.md\\'" . markdown-ts-mode) ("\\.markdown\\'" . markdown-ts-mode))
-  :magic ("\\`==\\+==" . markdown-ts-mode)
+  :mode "\\.md\\'"
+  :hook (markdown-ts-mode . eglot-ensure)
+
   :config
+  (add-to-list 'major-mode-remap-alist '((markdown-mode . markdown-ts-mode)))
+  (add-to-list
+   'eglot-server-programs '((markdown-mode markdown-ts-mode) . ("ltex-ls-plus")))
+
   (add-to-list
    'treesit-language-source-alist
    '(markdown
      "https://github.com/tree-sitter-grammars/tree-sitter-markdown"
      "split_parser"
      "tree-sitter-markdown/src"))
+
   (add-to-list
    'treesit-language-source-alist
    '(markdown-inline
@@ -449,7 +459,16 @@
 
 (use-package nix-ts-mode
   :mode "\\.nix\\'"
-  :config (add-to-list 'major-mode-remap-alist '((nix-mode . nix-ts-mode))))
+  :config
+  (add-to-list 'major-mode-remap-alist '((nix-mode . nix-ts-mode)))
+  (add-to-list
+   'eglot-server-programs
+   '((nix-mode nix-ts-mode)
+     .
+     ("nixd"
+      "--semantic-tokens"
+      "--inlay-hints"
+      :initializationOptions (:nixd (:formatting.command "nixfmt"))))))
 
 ;; OCaml
 (use-package neocaml
@@ -691,7 +710,6 @@
   (org-gcal-managed-update-existing-mode "org")
   (org-gcal-recurring-events-mode 'nested))
 
-
 ;; tree-sitters
 (use-package tree-sitter-langs ;; grammar bundle
   :after tree-sitter
@@ -788,13 +806,6 @@
 
 (use-package eglot-ltex-plus
   :vc (:url "https://github.com/emacs-languagetool/eglot-ltex-plus" :rev :newest)
-  :hook
-  ;; (eglot-ensure)
-  (text-mode
-   .
-   (lambda ()
-     (require 'eglot-ltex-plus)
-     (eglot-ensure)))
   :custom
   (eglot-ltex-plus-server-path
    "/nix/store/3ihx8s39rl2d5by5wabcg3i4rcm3kns3-ltex-ls-plus-18.6.0/")
@@ -868,14 +879,14 @@
 
 (use-package toml-ts-mode
   :mode "\\.toml\\'"
-  :hook eglot-ensure
+  :hook (toml-ts-mode . eglot-ensure)
   :config
   (add-to-list 'major-mode-remap-alist '((toml-mode . toml-ts-mode)))
   (add-to-list 'eglot-server-programs '(toml-ts-mode . ("tombi" "lsp"))))
 
 (use-package typst-ts-mode
   :mode "\\.typ\\'"
-  :hook eglot-ensure
+  :hook (typst-ts-mode . eglot-ensure)
 
   :custom
   (typst-ts-lsp-download-path (string-trim (shell-command-to-string "which tinymist")))
@@ -1078,35 +1089,37 @@
               '(face trailing tabs lines-tail newline empty space-before-tab tab-mark))
         (whitespace-mode t))))
 
-  :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup)))
-(use-package nxml-mode
-  :mode "\\.xml\\'"
-  :custom (nxml-slash-auto-complete-flag t))
+  :hook ((find-file . maybe-turn-on-whitespace) (prog-mode . whitespace-cleanup))
+  :custom (whitespace-line-column nil))
 
 (use-package yaml-ts-mode
   :mode "\\.ya?ml\\'")
 
 ;; python
-(use-package python-mode
+(use-package python-ts-mode
+  :ensure nil
   :after (eglot reformatter)
-  :hook
-  ((python-base-mode . eglot-ensure)
-   (python-base-mode . ruff-format-on-save-mode)
-   (python-base-mode . dd/ruff-sort-on-save-mode))
-  :config
-  (add-to-list
-   'eglot-server-programs
-   `(python-mode
-     .
-     ,(eglot-alternatives
-       '(("basedpyright-langserver" "--stdio") ("ruff" "server")))))
   :preface
   ;; per https://ddavis.io/blog/python-emacs-4/
+  (reformatter-define
+   dd/ruff-format
+   :program "ruff" ;; "uvx" with "ruff" as an arg doesn't work because dynamic linking on NixOS
+   :args `("format" "--stdin-filename" ,buffer-file-name "-"))
   (reformatter-define
    dd/ruff-sort
    :program "ruff"
    :args
-   `("check" "--select" "I" "--fix" "--stdin-filename" ,buffer-file-name "-")))
+   `("check" "--select" "I" "--fix" "--stdin-filename" ,buffer-file-name "-"))
+
+  :init
+  (add-to-list
+   'eglot-server-programs
+   `((python-mode python-ts-mode) . ("basedpyright-langserver" "--stdio")))
+
+  :hook
+  ((python-base-mode . dd/ruff-format-on-save-mode)
+   (python-base-mode . dd/ruff-sort-on-save-mode)))
+
 (use-package uv-mode
   :after (eglot python-base-mode)
   :hook (python-base-mode . uv-mode-auto-activate-hook))
@@ -1273,23 +1286,6 @@
 ;; load customisations
 ;;
 
-
-;;
-;; ...and we're done
-;;
-
-(add-hook 'after-init-hook
-          ; Time Emacs startup; updated to new (current-time)
-          ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
-          `(lambda ()
-             (let ((elapsed
-                    (float-time (time-subtract (current-time) emacs-start-time))))
-               (message "Loading %s...done (%.3fs) [after-init]"
-                        ,load-file-name
-                        elapsed)))
-          t)
-(put 'scroll-left 'disabled nil)
-
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -1333,10 +1329,27 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages nil nil nil "Customized with use-package emacs")
  '(package-vc-selected-packages
-     (eglot-ltex-plus :url "https://github.com/emacs-languagetool/eglot-ltex-plus")
+   '((eglot-ltex-plus :url "https://github.com/emacs-languagetool/eglot-ltex-plus")
      (treesit-fold :url "https://github.com/emacs-tree-sitter/treesit-fold")
      (neocaml :url "https://github.com/bbatsov/neocaml")
      (eglot-booster :url "https://github.com/jdtsmith/eglot-booster"))))
+
+;;
+;; ...and we're done
+;;
+
+(add-hook 'after-init-hook
+          ; Time Emacs startup; updated to new (current-time)
+          ;;  http://a-nickels-worth.blogspot.co.uk/2007/11/effective-emacs.html
+          `(lambda ()
+             (let ((elapsed
+                    (float-time (time-subtract (current-time) emacs-start-time))))
+               (message "Loading %s...done (%.3fs) [after-init]"
+                        ,load-file-name
+                        elapsed)))
+          t)
+(put 'scroll-left 'disabled nil)
+
 ;; Local variables:
 ;; elisp-autofmt-load-packages-local: ("use-package" "use-package-core")
 ;; end:
