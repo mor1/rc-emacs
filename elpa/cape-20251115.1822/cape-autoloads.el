@@ -86,10 +86,21 @@ result.  Such behavior is useful when listing multiple super Capfs in
 the `completion-at-point-functions':
 
   (setq completion-at-point-functions
-        (list (cape-capf-super \\='eglot-completion-at-point
+        (list (cape-capf-super \\='elisp-completion-at-point
                                :with \\='tempel-complete)
               (cape-capf-super \\='cape-dabbrev
                                :with \\='tempel-complete)))
+
+See the dual `cape-wrap-choose' if you want to try multiple Capfs in
+turn.
+
+(fn &rest CAPFS)")
+(autoload 'cape-wrap-choose "cape" "\
+Call each of CAPFS in turn and return first non-nil result.
+Use `cape-wrap-choose' to create a single Capf from multiple Capfs.
+Usually you want to add multiple non-exclusive Capfs to the variable
+`completion-at-point-functions' directly instead.  See the dual
+`cape-wrap-super' if you want to merge multiple Capf results.
 
 (fn &rest CAPFS)")
 (autoload 'cape-wrap-debug "cape" "\
@@ -110,13 +121,14 @@ completion table is refreshed on every input change.
 (fn CAPF &optional VALID)")
 (autoload 'cape-wrap-passthrough "cape" "\
 Call CAPF and make sure that no completion style filtering takes place.
+This function can be used as an advice around an existing Capf.
 
 (fn CAPF)")
 (autoload 'cape-wrap-properties "cape" "\
 Call CAPF and strip or add completion PROPERTIES.
 Completion properties include for example :exclusive, :category,
 :annotation-function, :display-sort-function and various :company-*
-extensions.  The :strip flag means to strip all completion properties.
+extensions.  Strip all properties if PROPERTIES is :strip.
 
 (fn CAPF &rest PROPERTIES)")
 (autoload 'cape-wrap-nonexclusive "cape" "\
@@ -125,10 +137,12 @@ This function can be used as an advice around an existing Capf.
 
 (fn CAPF)")
 (autoload 'cape-wrap-sort "cape" "\
-Call CAPF and add SORT function.
-This function can be used as an advice around an existing Capf.
+Call CAPF and add SORT function as completion metadata.
+If the SORT argument is nil or not given, the completion UI will use
+its own default sorting algorithm.  This function can be used as an
+advice around an existing Capf.
 
-(fn CAPF SORT)")
+(fn CAPF &optional SORT)")
 (autoload 'cape-wrap-predicate "cape" "\
 Call CAPF and add an additional candidate PREDICATE.
 The PREDICATE is passed the candidate symbol or string.
@@ -157,7 +171,6 @@ If the prefix is long enough, enforce auto completion.
 (fn CAPF LENGTH)")
 (autoload 'cape-wrap-inside-faces "cape" "\
 Call CAPF only if inside FACES.
-This function can be used as an advice around an existing Capf.
 
 (fn CAPF &rest FACES)")
 (autoload 'cape-wrap-inside-code "cape" "\
@@ -175,19 +188,30 @@ Call CAPF only if inside string.
 This function can be used as an advice around an existing Capf.
 
 (fn CAPF)")
-(autoload 'cape-wrap-purify "cape" "\
-Call CAPF and ensure that it does not illegally modify the buffer.
+(autoload 'cape-wrap-accept-all "cape" "\
+Call CAPF and return a completion table which accepts every input.
 This function can be used as an advice around an existing Capf.
 
 (fn CAPF)")
-(autoload 'cape-wrap-accept-all "cape" "\
-Call CAPF and return a completion table which accepts every input.
+(autoload 'cape-wrap-trigger "cape" "\
+Ensure that TRIGGER character occurs before point and then call CAPF.
+See also `corfu-auto-trigger'.
+Example:
+  (setq corfu-auto-trigger \"/\"
+        completion-at-point-functions
+        (list (cape-capf-trigger \\='cape-abbrev ?/)))
+
+(fn CAPF TRIGGER)")
+ (autoload 'cape-capf-purify "cape")
+(autoload 'cape-wrap-purify "cape" "\
+Obsolete purification wrapper calling CAPF.
 This function can be used as an advice around an existing Capf.
 
 (fn CAPF)")
  (autoload 'cape-capf-accept-all "cape")
  (autoload 'cape-capf-buster "cape")
  (autoload 'cape-capf-case-fold "cape")
+ (autoload 'cape-capf-choose "cape")
  (autoload 'cape-capf-debug "cape")
  (autoload 'cape-capf-inside-code "cape")
  (autoload 'cape-capf-inside-comment "cape")
@@ -199,9 +223,9 @@ This function can be used as an advice around an existing Capf.
  (autoload 'cape-capf-predicate "cape")
  (autoload 'cape-capf-prefix-length "cape")
  (autoload 'cape-capf-properties "cape")
- (autoload 'cape-capf-purify "cape")
  (autoload 'cape-capf-silent "cape")
  (autoload 'cape-capf-super "cape")
+ (autoload 'cape-capf-trigger "cape")
  (autoload 'cape-prefix-map "cape" nil t 'keymap)
 (register-definition-prefixes "cape" '("cape-"))
 
