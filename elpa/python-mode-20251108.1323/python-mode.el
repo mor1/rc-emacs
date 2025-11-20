@@ -1,7 +1,7 @@
 ;;; python-mode.el --- Edit, debug, develop, run Python programs. -*- lexical-binding: t; -*- 
 
-;; Package-Version: 20250930.608
-;; Package-Revision: 5aaf8b386aa6
+;; Package-Version: 20251108.1323
+;; Package-Revision: 048e90ded3a2
 
 ;; URL: https://gitlab.com/groups/python-mode-devs
 
@@ -3030,10 +3030,11 @@ Second group grabs the name")
   "See ‘py-minor-clause-re-raw’, which it reads.")
 
 (defcustom py-top-level-re
-  (concat
-   "^[a-zA-Z_]"
-   (regexp-opt  py-extended-block-or-clause-re-raw)
-   "[( \t]*.*:?")
+  ;; (concat
+   ;; "^[a-zA-Z_]"
+   "^[[:alpha:]_'\"]"
+   ;; (regexp-opt  py-extended-block-or-clause-re-raw)
+   ;; "[( \t]*.*:?")
   "A form which starts at zero indent level, but is not a comment."
   :type '(regexp)
   :tag "py-top-level-re"
@@ -8295,21 +8296,6 @@ This function does not modify point or mark."
        ((eq position (quote bos)) (py-backward-statement))
        (t (error "Unknown buffer position requested: %s" position))))))
 
-;; (defun py-backward-top-level ()
-;;   "Go up to beginning of statments until level of indentation is null.
-
-;; Returns position if successful, nil otherwise "
-;;   (interactive)
-;;   (let (erg done)
-;;     (unless (bobp)
-;;       (while (and (not done)(not (bobp))
-;;                   (setq erg (re-search-backward "^[[:alpha:]_'\"]" nil t 1)))
-;;         (if
-;;             (nth 8 (parse-partial-sexp (point-min) (point)))
-;;             (setq erg nil)
-;;           (setq done t)))
-;;       erg)))
-
 (defun py-backward-top-level ()
   "Go up to beginning of statments until level of indentation is null.
 
@@ -8318,7 +8304,7 @@ Returns position if successful, nil otherwise "
   (let ((orig (point)))
     (while (and
             (not (bobp))
-            (re-search-backward "^[[:alpha:]_'\"]" nil t 1)
+            (re-search-backward py-top-level-re nil t 1)
             (nth 8 (parse-partial-sexp (point-min) (point)))))
     (and (< (point) orig)(point))))
 
@@ -14096,7 +14082,7 @@ Returns position if successful, nil otherwise"
         erg)
     (while (and (not (eobp))
                 (progn (end-of-line)
-                       (re-search-forward "^[[:alpha:]_'\"]" nil 'move 1))
+                       (re-search-forward py-top-level-re nil 'move 1))
                 (nth 8 (parse-partial-sexp (point-min) (point)))))
     (when (and (not (eobp)) (< orig (point)))
       (goto-char (match-beginning 0))
@@ -14660,7 +14646,7 @@ Store data in kill ring, so it might yanked back."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-block-bol ()
-  "Delete block bol at point.
+  "Copy block bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14669,7 +14655,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-block-or-clause-bol ()
-  "Delete block-or-clause bol at point.
+  "Copy block-or-clause bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14678,7 +14664,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-buffer-bol ()
-  "Delete buffer bol at point.
+  "Copy buffer bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14687,7 +14673,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-class-bol ()
-  "Delete class bol at point.
+  "Copy class bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14696,7 +14682,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-clause-bol ()
-  "Delete clause bol at point.
+  "Copy clause bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14705,7 +14691,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-def-bol ()
-  "Delete def bol at point.
+  "Copy def bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14714,7 +14700,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-def-or-class-bol ()
-  "Delete def-or-class bol at point.
+  "Copy def-or-class bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14723,7 +14709,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-expression-bol ()
-  "Delete expression bol at point.
+  "Copy expression bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14732,7 +14718,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-indent-bol ()
-  "Delete indent bol at point.
+  "Copy indent bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14741,7 +14727,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-line-bol ()
-  "Delete line bol at point.
+  "Copy line bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14750,7 +14736,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-minor-block-bol ()
-  "Delete minor-block bol at point.
+  "Copy minor-block bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14759,7 +14745,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-paragraph-bol ()
-  "Delete paragraph bol at point.
+  "Copy paragraph bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14768,7 +14754,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-partial-expression-bol ()
-  "Delete partial-expression bol at point.
+  "Copy partial-expression bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14777,7 +14763,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-region-bol ()
-  "Delete region bol at point.
+  "Copy region bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14786,7 +14772,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-statement-bol ()
-  "Delete statement bol at point.
+  "Copy statement bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -14795,7 +14781,7 @@ Stores data in kill ring. Might be yanked back using ‘C-y’."
       (copy-region-as-kill (car erg) (cdr erg)))))
 
 (defun py-copy-top-level-bol ()
-  "Delete top-level bol at point.
+  "Copy top-level bol at point.
 
 Stores data in kill ring. Might be yanked back using ‘C-y’."
   (interactive "*")
@@ -24904,10 +24890,9 @@ See lp:1066489 "
             (narrow-to-region thisbeg thisend)
             (fill-region thisbeg thisend))))))
 
-(defun py--fill-docstring (beg end fill-prefix)
+(defun py--fill-docstring (beg end)
   "Fills paragraph in docstring below or at cursor position."
-  (let ((fill-prefix fill-prefix)
-        (orig (point)))
+  (let ((orig (point)))
     ;; do not go backward beyond beginning of string
     (let* (;; Paragraph starts with beginning of string, skip the fence-chars
            (innerbeg (copy-marker
@@ -24987,7 +24972,7 @@ Fill according to ‘py-docstring-style’ "
       (goto-char orig)
       (when beg
         (if docstring
-            (py--fill-docstring beg end fill-prefix)
+            (py--fill-docstring beg end)
           (if (not tqs)
               (if (py-preceding-line-backslashed-p)
                   (progn
@@ -25047,7 +25032,7 @@ Fill according to ‘py-docstring-style’ "
            (py-fill-comment))
           (docstring
            ;; (setq fill-column py-docstring-fill-colum;; n)
-           (py--fill-docstring beg end fill-prefix))
+           (py--fill-docstring beg end))
           (t
            (and beg end (fill-region beg end))
            (when (and in-string (not tqs))
@@ -25574,12 +25559,18 @@ Optional File: execute through running a temp-file"
 ;; (setq hs-forward-sexp-func (quote py-forward-block))
 
 (defun py-hide-base (form &optional beg end)
-  "Hide visibility of existing form at point."
+  "Hide visibility of existing FORM at point.
+
+FORM is of type symbol, not string"
   (hs-minor-mode 1)
   (save-excursion
-    (let* ((form (prin1-to-string form))
-           (beg (or beg (or (funcall (intern-soft (concat "py--beginning-of-" form "-p")))
-                            (funcall (intern-soft (concat "py-backward-" form))))))
+    (let* ((form (or (prin1-to-string form) "block"))
+           (beg (or beg (progn
+                          (or (funcall (intern-soft (concat "py--beginning-of-" form "-p")))
+                              (funcall (intern-soft (concat "py-backward-" form))))
+                          (if (string= form "expression")
+                              (point)
+                            (line-end-position)))))
            (end (or end (funcall (intern-soft (concat "py-forward-" form)))))
            (modified (buffer-modified-p))
            (inhibit-read-only t))
@@ -25589,20 +25580,30 @@ Optional File: execute through running a temp-file"
             (set-buffer-modified-p modified))
         (error (concat "No " (format "%s" form) " at point"))))))
 
+(defalias 'py-toggle-hide-show 'py-hide-show)
 (defun py-hide-show (&optional form beg end)
-  "Toggle visibility of existing forms at point."
+  "Toggle visibility of existing forms at point.
+
+Optional argument FORM: a string
+Optional arguments beg, end: numbers"
   (interactive)
   (save-excursion
-    (let* ((form (prin1-to-string form))
-           (beg (or beg (or (funcall (intern-soft (concat "py--beginning-of-" form "-p")))
-                            (funcall (intern-soft (concat "py-backward-" form))))))
+    (let* ((form (or form "block"))
+           (beg (or beg (progn
+                          (or (funcall (intern-soft (concat "py--beginning-of-" form "-p")))
+                              (funcall (intern-soft (concat "py-backward-" form))))
+                          (if (string= form "expression")
+                              (point)
+                            (line-end-position)))))
            (end (or end (funcall (intern-soft (concat "py-forward-" form)))))
            (modified (buffer-modified-p))
            (inhibit-read-only t))
       (if (and beg end)
           (if (overlays-in beg end)
               (hs-discard-overlays beg end)
-            (hs-make-overlay beg end (quote code)))
+            (py-hide-base nil beg end)
+            ;; (hs-make-overlay beg end (quote code))
+            )
         (error (concat "No " (format "%s" form) " at point")))
       (set-buffer-modified-p modified))))
 
