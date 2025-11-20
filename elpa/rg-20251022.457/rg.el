@@ -6,10 +6,10 @@
 ;;
 ;; Author: David Landell <david.landell@sunnyhill.email>
 ;;         Roland McGrath <roland@gnu.org>
-;; Package-Version: 20251004.2013
-;; Package-Revision: dcd65fd34b5f
+;; Package-Version: 20251022.457
+;; Package-Revision: 9ff6cb24bda5
 ;; URL: https://github.com/dajva/rg.el
-;; Package-Requires: ((emacs "26.1") (transient "0.9.2") (wgrep "2.1.10"))
+;; Package-Requires: ((emacs "28.1") (transient "0.9.2") (wgrep "2.1.10"))
 ;; Keywords: matching, tools
 
 ;; This file is not part of GNU Emacs.
