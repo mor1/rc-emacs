@@ -1,10 +1,10 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "nerd-icons" "20251008.1720"
+(define-package "nerd-icons" "20251108.1545"
   "Emacs Nerd Font Icons Library."
-  '((emacs "24.3"))
+  '((emacs "25.1"))
   :url "https://github.com/rainstormstudio/nerd-icons.el"
-  :commit "418f137faac926b822582fbce55a74a26e891ec5"
-  :revdesc "418f137faac9"
+  :commit "940b28d3dbd134696ef448e906e42a87a9d61e20"
+  :revdesc "940b28d3dbd1"
   :keywords '("lisp")
   :authors '(("Hongyu Ding" . "rainstormstudio@yahoo.com")
              ("Vincent Zhang" . "seagle0128@gmail.com"))
