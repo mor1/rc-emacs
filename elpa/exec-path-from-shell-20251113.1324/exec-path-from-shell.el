@@ -5,8 +5,8 @@
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords: unix, environment
 ;; URL: https://github.com/purcell/exec-path-from-shell
-;; Package-Version: 20250922.1413
-;; Package-Revision: 59631fc47567
+;; Package-Version: 20251113.1324
+;; Package-Revision: 7552abf032a3
 ;; Package-Requires: ((emacs "24.4"))
 
 ;; This file is not part of GNU Emacs.
@@ -215,10 +215,10 @@ buffer is left undisplayed."
          (err-buff-name "*exec-path-from-shell: nushell errors*")
          (err-file (make-temp-file err-buff-name)))
     (with-temp-buffer
-      (kill-buffer err-buff-name)
+      (when (get-buffer err-buff-name) (kill-buffer err-buff-name))
       (exec-path-from-shell--debug "Invoking shell %s with args %S" shell shell-args)
       (let ((exit-code (exec-path-from-shell--warn-duration
-                        (apply #'call-process shell nil '(t err-file) nil shell-args)))
+                        (apply #'call-process shell nil `(t ,err-file) nil shell-args)))
             (err-buff (generate-new-buffer err-buff-name)))
         (exec-path-from-shell--debug "Shell printed: %S" (buffer-string))
         (with-current-buffer err-buff (insert-file-contents err-file))
