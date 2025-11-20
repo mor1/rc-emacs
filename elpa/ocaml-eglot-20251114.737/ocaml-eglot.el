@@ -13,8 +13,8 @@
 ;; Keywords: ocaml languages
 ;; URL: https://github.com/tarides/ocaml-eglot
 ;; Package-Requires: ((emacs "29.1"))
-;; Package-Version: 20250716.1427
-;; Package-Revision: 2d64c6460571
+;; Package-Version: 20251114.737
+;; Package-Revision: 588e3a51433a
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
@@ -41,6 +41,7 @@
 (require 'ocaml-eglot-req)
 (require 'ocaml-eglot-type-enclosing)
 (require 'ocaml-eglot-xref)
+(require 'ocaml-eglot-objinfo)
 (require 'eglot)
 
 (declare-function flycheck-next-error "ext:flycheck")
@@ -91,14 +92,6 @@ Otherwise, `merlin-construct' only includes constructors."
                        (featurep 'flycheck-eglot))
               '((const :tag "Use Flycheck" flycheck)))))
 
-(defcustom ocaml-eglot-objinfo-flags
-  (list "-shape" "-index" "-decls" "-uid-deps")
-  "Flags passed to `ocamlobjinfo'."
-  :type '(set
-          (const "-shape")
-          (const "-index")
-          (const "-decls")
-          (const "-uid-deps")))
 
 ;;; Faces
 
@@ -153,107 +146,32 @@ Otherwise, `merlin-construct' only includes constructors."
     (_ (ocaml-eglot--invalid-syntax-checker))))
 
 ;; Jump to definition
+;; The following commands are based primarily on `xref' and are
+;; here in correspondence with the `merlin` mode.
 
-(defun ocaml-eglot--find (strategy query)
-  "Find the definition using QUERY and jump to it using STRATEGY."
-  (let* ((query-result (funcall query))
-         (result (ocaml-eglot-util--vec-first-or-nil query-result)))
-    (if result
-        (let* ((uri (cl-getf result :uri))
-               (range (cl-getf result :range))
-               (file (ocaml-eglot-util--uri-to-path uri)))
-          (ocaml-eglot-util--visit-file strategy (buffer-file-name) file range))
-      (eglot--error "Not in environment"))))
-
-(defun ocaml-eglot--find-definition (strategy)
-  "Find the definition at point and jump to it using STRATEGY."
-  (ocaml-eglot--find strategy #'ocaml-eglot-req--definition))
-
-(defun ocaml-eglot-find-definition ()
-  "Find the definition identifier at point."
-  (interactive)
-  (ocaml-eglot--find-definition ocaml-eglot-open-window-strategy))
-
-(defun ocaml-eglot-find-definition-in-new-window ()
-  "Find the definition of the identifier at point and show it in a new window."
-  (interactive)
-  (ocaml-eglot--find-definition 'new))
-
-(defun ocaml-eglot-find-definition-in-current-window ()
-  "Find the definition of the identifier and show it in the current window."
-  (interactive)
-  (ocaml-eglot--find-definition 'current))
-
-(defun ocaml-eglot--identifier-query (identifier kind)
-  "Build the locate IDENTIFIER query based on  KIND."
-  (lambda () (let* ((result (ocaml-eglot-req--locate-ident identifier kind))
-                    (result-value (ocaml-eglot-util--merlin-call-result result))
-                    (loc (ocaml-eglot-util--merlin-location-to-lsp result-value)))
-               (make-vector 1 loc))))
-
-(defun ocaml-eglot--find-identifier-definition (identifier strategy)
-  "Find the definition of IDENTIFIER jump to it using STRATEGY."
-  (ocaml-eglot--find
-   strategy (ocaml-eglot--identifier-query identifier 'implementation)))
-
-(defun ocaml-eglot-find-identifier-definition (identifier)
-  "Find the definition of the given IDENTIFIER."
-  (interactive "s> ")
-  (ocaml-eglot--find-identifier-definition
-   identifier ocaml-eglot-open-window-strategy))
-
-(defun ocaml-eglot-find-identifier-definition-in-new-window (identifier)
-  "Find the definition of the IDENTIFIER and show it in a new window."
-  (interactive "s> ")
-  (ocaml-eglot--find-identifier-definition identifier 'new))
-
-(defun ocaml-eglot-find-identifier-definition-in-current-window (identifier)
-  "Find the definition of the IDENTIFIER and show it in the current window."
-  (interactive "s> ")
-  (ocaml-eglot--find-identifier-definition identifier 'current))
-
-;; Jump to declaration
-
-(defun ocaml-eglot--find-declaration (strategy)
-  "Find the declaration of the identifier at point and jump to it using STRATEGY."
-  (ocaml-eglot--find strategy #'ocaml-eglot-req--declaration))
+(defalias 'ocaml-eglot-locate #'xref-find-definitions)
+(defalias 'ocaml-eglot-find-definition #'xref-find-definitions)
 
 (defun ocaml-eglot-find-declaration ()
-  "Find the declaration of the identifier at point."
+  "Find the declaration of identifier at point."
   (interactive)
-  (ocaml-eglot--find-declaration ocaml-eglot-open-window-strategy))
+  (let ((ocaml-eglot-locate-preference 'mli)
+        (xref-prompt-for-identifier nil))
+    (call-interactively #'xref-find-definitions)))
 
-(defun ocaml-eglot-find-declaration-in-new-window ()
-  "Find the declaration of the identifier at point and show it in a new window."
+(defun ocaml-eglot-find-identifier-definition ()
+  "Find the definition of identifier at point."
   (interactive)
-  (ocaml-eglot--find-declaration 'new))
+  (let ((ocaml-eglot-locate-preference 'ml)
+        (xref-prompt-for-identifier t))
+    (call-interactively #'xref-find-definitions)))
 
-(defun ocaml-eglot-find-declaration-in-current-window ()
-  "Find the declaration of the identifier at point.
-Show it the current window."
+(defun ocaml-eglot-find-identifier-declaration ()
+  "Find the declaration of identifier at point."
   (interactive)
-  (ocaml-eglot--find-declaration 'current))
-
-(defun ocaml-eglot--find-identifier-declaration (identifier strategy)
-  "Find the declaration of IDENTIFIER jump to it using STRATEGY."
-  (ocaml-eglot--find
-   strategy (ocaml-eglot--identifier-query identifier 'interface)))
-
-(defun ocaml-eglot-find-identifier-declaration (identifier)
-  "Find the declaration of the given IDENTIFIER."
-  (interactive "s> ")
-  (ocaml-eglot--find-identifier-declaration
-   identifier ocaml-eglot-open-window-strategy))
-
-(defun ocaml-eglot-find-identifier-declaration-in-new-window (identifier)
-  "Find the declaration of the given IDENTIFIER and show it in a new window."
-  (interactive "s> ")
-  (ocaml-eglot--find-identifier-declaration identifier 'new))
-
-(defun ocaml-eglot-find-identifier-declaration-in-current-window (identifier)
-  "Find the declaration of the given IDENTIFIER and show it in the current window."
-  (interactive "s> ")
-  (ocaml-eglot--find-identifier-declaration identifier 'current))
+  (let ((ocaml-eglot-locate-preference 'mli)
+        (xref-prompt-for-identifier t))
+    (call-interactively #'xref-find-definitions)))
 
 ;; Jump type declaration of expression
 
@@ -271,7 +189,7 @@ Show it the current window."
 (defun ocaml-eglot-find-type-definition ()
   "Find the definition of the type of the expression at point."
   (interactive)
-  (ocaml-eglot--find-type-definition ocaml-eglot-open-window-strategy))
+  (ocaml-eglot--find-type-definition 'current))
 
 (defun ocaml-eglot-find-type-definition-in-new-window ()
   "Find the definition of the type of the expression at point.
@@ -542,27 +460,9 @@ The universal prefix argument can be used to change the maximum number
 of results (LIMIT)."
   (interactive "sSearch query: \np")
   (ocaml-eglot--search-def-or-decl
-   #'ocaml-eglot-find-identifier-definition
-   query
-   limit))
-
-(defun ocaml-eglot-search-definition-in-current-window (query &optional limit)
-  "Search a definition using a QUERY (type or polarity) in the current window.
-The universal prefix argument can be used to change the maximum number
-of results (LIMIT)."
-  (interactive "sSearch query: \np")
-  (ocaml-eglot--search-def-or-decl
-   #'ocaml-eglot-find-identifier-definition-in-current-window
-   query
-   limit))
-
-(defun ocaml-eglot-search-definition-in-new-window (query &optional limit)
-  "Search a definition using a QUERY (type or polarity) in a new window.
-The universal prefix argument can be used to change the maximum number
-of results (LIMIT)."
-  (interactive "sSearch query: \np")
-  (ocaml-eglot--search-def-or-decl
-   #'ocaml-eglot-find-identifier-definition-in-new-window
+   (lambda (identifier)
+     (let ((ocaml-eglot-locate-preference 'ml))
+       (xref-find-definitions identifier)))
    query
    limit))
 
@@ -572,27 +472,9 @@ The universal prefix argument can be used to change the maximum number
 of results (LIMIT)."
   (interactive "sSearch query: \np")
   (ocaml-eglot--search-def-or-decl
-   #'ocaml-eglot-find-identifier-declaration
-   query
-   limit))
-
-(defun ocaml-eglot-search-declaration-in-current-window (query &optional limit)
-  "Search a declaration using a QUERY (type or polarity) in the current window.
-The universal prefix argument can be used to change the maximum number
-of results (LIMIT)."
-  (interactive "sSearch query: \np")
-  (ocaml-eglot--search-def-or-decl
-   #'ocaml-eglot-find-identifier-declaration-in-current-window
-   query
-   limit))
-
-(defun ocaml-eglot-search-declaration-in-new-window (query &optional limit)
-  "Search a declaration using a QUERY (type or polarity) in a new window.
-The universal prefix argument can be used to change the maximum number
-of results (LIMIT)."
-  (interactive "sSearch query: \np")
-  (ocaml-eglot--search-def-or-decl
-   #'ocaml-eglot-find-identifier-declaration-in-new-window
+   (lambda (identifier)
+     (let ((ocaml-eglot-locate-preference 'mli))
+       (xref-find-definitions identifier)))
    query
    limit))
 
@@ -756,7 +638,6 @@ and print its type."
 (defvar ocaml-eglot-map
   (let ((ocaml-eglot-keymap (make-sparse-keymap)))
     (define-key ocaml-eglot-keymap (kbd "C-c C-x") #'ocaml-eglot-error-next)
-    (define-key ocaml-eglot-keymap (kbd "C-c C-c") #'ocaml-eglot-error-prev)
     (define-key ocaml-eglot-keymap (kbd "C-c C-l") #'ocaml-eglot-find-definition)
     (define-key ocaml-eglot-keymap (kbd "C-c C-i") #'ocaml-eglot-find-declaration)
     (define-key ocaml-eglot-keymap (kbd "C-c C-a") #'ocaml-eglot-alternate-file)
@@ -790,41 +671,6 @@ OCaml Eglot provides standard implementations of the various custom-requests
   :keymap ocaml-eglot-map
   :group 'ocaml-eglot
   (if ocaml-eglot (ocaml-eglot-setup) (ocaml-eglot-clean)))
-
-;;; Ocamlobjinfo mode
-
-;; Allows known compilation artefacts to be displayed via the
-;; `ocamlobjinfo' binary
-
-(define-derived-mode ocaml-eglot-objinfo-mode special-mode "OCaml-obj-info"
-  "Mode for displaying ocamlobjinfo output."
-  (setq buffer-read-only t
-        buffer-offer-save nil
-        buffer-file-name nil
-        auto-save-default nil
-        make-backup-files nil
-        create-lockfiles nil)
-  (define-key ocaml-eglot-objinfo-mode-map (kbd "q") #'quit-window))
-
-;;;###autoload
-(defun ocaml-eglot-objinfo-handler ()
-  "Display the result of `ocamlobjinfo` instead of file contents."
-  (when (and buffer-file-name
-             (ocaml-eglot-util--is-artifact buffer-file-name))
-    (let ((file buffer-file-name)
-          (inhibit-read-only t))
-      (setq buffer-read-only nil)
-      (erase-buffer)
-      (if (executable-find "ocamlobjinfo")
-          (let ((args (append ocaml-eglot-objinfo-flags (list file))))
-            (apply #'call-process "ocamlobjinfo" nil t nil args))
-        (insert "`ocamlobjinfo' not found in PATH"))
-      (goto-char (point-min))
-      (ocaml-eglot-objinfo-mode))))
-
-
-;;;###autoload
-(add-hook 'find-file-hook #'ocaml-eglot-objinfo-handler)
 
 (provide 'ocaml-eglot)
 ;;; ocaml-eglot.el ends here
