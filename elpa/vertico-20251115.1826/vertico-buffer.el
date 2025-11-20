@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Requires: ((emacs "29.1") (compat "30") (vertico "2.5"))
+;; Package-Requires: ((emacs "29.1") (compat "30") (vertico "2.6"))
 ;; URL: https://github.com/minad/vertico
 
 ;; This file is part of GNU Emacs.
@@ -100,7 +100,8 @@
     (setq-local truncate-lines (< (window-point win)
                                   (* 0.8 (window-width win)))
                 vertico-count (- (/ (window-pixel-height win)
-                                    (default-line-height)) 2))
+                                    (default-line-height))
+                                 (if mode-line-format 2 1)))
     (set-window-point win (point))
     (set-window-hscroll win 0)
     (when vertico-buffer-hide-prompt
@@ -155,7 +156,8 @@
                                       (let ((depth (recursion-depth)))
                                         (if (< depth 2) "" (format " [%s]" depth))))))
                      vertico-count (- (/ (window-pixel-height win)
-                                         (default-line-height)) 2))))
+                                         (default-line-height))
+                                      (if mode-line-format 2 1)))))
     (set-window-parameter win 'no-other-window t)
     (set-window-parameter win 'no-delete-other-windows t)
     (set-window-dedicated-p win t)
