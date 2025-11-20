@@ -10,9 +10,9 @@
 ;;             Bozhidar Batsov <bozhidar@batsov.dev>
 ;; URL: https://www.flycheck.org
 ;; Keywords: convenience, languages, tools
-;; Package-Version: 20250527.907
-;; Package-Revision: a4d782e7af12
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Version: 20251119.1203
+;; Package-Revision: 1eafe2911d50
+;; Package-Requires: ((emacs "27.1") (seq "2.24"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -10886,6 +10886,15 @@ Requires Flake8 3.0 or newer. See URL
 (flycheck-def-config-file-var flycheck-python-ruff-config python-ruff
                               '("pyproject.toml" "ruff.toml" ".ruff.toml"))
 
+(defun flycheck-python-ruff-explainer (err)
+  "Return documentation for the ruff `flycheck-error' ERR."
+  (when-let (error-code (flycheck-error-id err))
+    (lambda ()
+      (flycheck-call-checker-process
+       'python-ruff nil standard-output t "rule" error-code)
+      (with-current-buffer standard-output
+        (flycheck--fontify-as-markdown)))))
+
 (flycheck-define-checker python-ruff
   "A Python syntax and style checker using Ruff.
 
@@ -10907,14 +10916,16 @@ See URL `https://docs.astral.sh/ruff/'."
   :error-patterns
   ((error line-start
           (or "-" (file-name)) ":" line ":" (optional column ":") " "
-          "SyntaxError: "
+          ;; first variant is produced by ruff < 0.8 and kept for backward compat
+          (or "SyntaxError: " "invalid-syntax: ")
           (message (one-or-more not-newline))
           line-end)
    (warning line-start
             (or "-" (file-name)) ":" line ":" (optional column ":") " "
-            (id (one-or-more (any alpha)) (one-or-more digit) " ")
+            (id (one-or-more (any alpha)) (one-or-more digit)) " "
             (message (one-or-more not-newline))
             line-end))
+  :error-explainer flycheck-python-ruff-explainer
   :working-directory flycheck-python-find-project-root
   :modes (python-mode python-ts-mode)
   :next-checkers ((warning . python-mypy)))
@@ -12502,13 +12513,25 @@ or added as a shellcheck directive before the source command:
   :safe #'booleanp
   :package-version '(flycheck . "31"))
 
+(flycheck-def-option-var flycheck-shellcheck-infer-shell nil sh-shellcheck
+  "Whether to let ShellCheck infer the shell from the script.
+
+When non-nil, the --shell flag is not passed to ShellCheck,
+allowing it to infer the shell from the shebang line or
+shellcheck directives in the script."
+  :type 'boolean
+  :safe #'booleanp
+  :package-version '(flycheck . "36"))
+
 (flycheck-define-checker sh-shellcheck
   "A shell script syntax and style checker using Shellcheck.
 
 See URL `https://github.com/koalaman/shellcheck/'."
   :command ("shellcheck"
             "--format" "checkstyle"
-            "--shell" (eval (symbol-name sh-shell))
+            (eval
+             (unless flycheck-shellcheck-infer-shell
+               (list "--shell" (symbol-name sh-shell))))
             (option-flag "--external-sources"
                          flycheck-shellcheck-follow-sources)
             (option "--exclude" flycheck-shellcheck-excluded-warnings list
