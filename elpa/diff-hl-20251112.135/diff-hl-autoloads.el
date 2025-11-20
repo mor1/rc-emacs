@@ -39,6 +39,11 @@ Call `turn-on-diff-hl-mode' if the current major mode is applicable.")
 Set the reference revision globally to REV.
 When called interactively, REV read with completion.
 
+When called with a prefix argument, reset the global reference to the most
+recent one instead.  With two prefix arguments, do the same and discard
+every per-project reference created by
+`diff-hl-set-reference-rev-in-project`.
+
 The default value chosen using one of methods below:
 
 - In a log view buffer, it uses the revision of current entry.
@@ -47,9 +52,33 @@ view buffer.
 - In a VC annotate buffer, it uses the revision of current line.
 - In other situations, it uses the symbol at point.
 
-Notice that this sets the reference revision globally, so in
-files from other repositories, `diff-hl-mode' will not highlight
-changes correctly, until you run `diff-hl-reset-reference-rev'.
+Notice that this sets the reference revision globally, so in files from
+other repositories, `diff-hl-mode' will not highlight changes correctly,
+until you run `diff-hl-reset-reference-rev'.  To set the reference on a
+per-project basis, see `diff-hl-set-reference-rev-in-project`.
+
+Also notice that this will disable `diff-hl-amend-mode' in
+buffers that enables it, since `diff-hl-amend-mode' overrides its
+effect.
+
+(fn REV)" t)
+(autoload 'diff-hl-set-reference-rev-in-project "diff-hl" "\
+Set the reference revision in the current project to REV.
+When called interactively, REV read with completion.
+
+When called with a prefix argument, reset to the global value instead.
+
+The default value chosen using one of methods below:
+
+- In a log view buffer, it uses the revision of current entry.
+Call `vc-print-log' or `vc-print-root-log' first to open a log
+view buffer.
+- In a VC annotate buffer, it uses the revision of current line.
+- In other situations, it uses the symbol at point.
+
+Projects whose reference was set with this command are unaffected by
+subsequent changes to the global reference (see
+`diff-hl-set-reference-rev`).
 
 Also notice that this will disable `diff-hl-amend-mode' in
 buffers that enables it, since `diff-hl-amend-mode' overrides its
@@ -57,7 +86,12 @@ effect.
 
 (fn REV)" t)
 (autoload 'diff-hl-reset-reference-rev "diff-hl" "\
-Reset the reference revision globally to the most recent one." t)
+Reset the reference revision globally to the most recent one.
+
+When called with a prefix argument, do the same and discard every
+per-project reference created by `diff-hl-set-reference-rev-in-project'.
+
+(fn &optional ARG)" t)
 (put 'global-diff-hl-mode 'globalized-minor-mode t)
 (defvar global-diff-hl-mode nil "\
 Non-nil if Global Diff-Hl mode is enabled.
@@ -82,7 +116,7 @@ it.
 See `diff-hl-mode' for more information on Diff-Hl mode.
 
 (fn &optional ARG)" t)
-(register-definition-prefixes "diff-hl" '("diff-hl-"))
+(register-definition-prefixes "diff-hl" '("diff-hl-" "static-if"))
 
 
 ;;; Generated autoloads from diff-hl-amend.el
