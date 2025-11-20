@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20251013.1013
-;; Package-Revision: a3ba7b7884b4
+;; Package-Version: 20251116.1939
+;; Package-Revision: d9f88cbdb8de
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/corfu
 ;; Keywords: abbrev, convenience, matching, completion, text
@@ -73,7 +73,7 @@ The value should lie between 0 and corfu-count/2."
   "Enable cycling for `corfu-next' and `corfu-previous'."
   :type 'boolean)
 
-(defcustom corfu-on-exact-match 'insert
+(defcustom corfu-on-exact-match nil
   "Configure how a single exact match should be handled.
 - nil: No special handling, continue completion.
 - insert: Insert candidate, quit and call the `:exit-function'.
@@ -85,7 +85,7 @@ The value should lie between 0 and corfu-count/2."
   '(ignore universal-argument universal-argument-more digit-argument
     "\\`corfu-" "\\`scroll-other-window")
   "Continue Corfu completion after executing these commands.
-The list can container either command symbols or regular expressions."
+The list can contain either command symbols or regular expressions."
   :type '(repeat (choice regexp symbol)))
 
 (defcustom corfu-preview-current 'insert
@@ -168,26 +168,33 @@ This function is used even if a completion table specifies its
 own sort function."
   :type '(choice (const nil) function))
 
+(defcustom corfu-auto-trigger ""
+  "Characters which trigger auto completion.
+If a trigger character is detected `corfu-auto-prefix' is ignored."
+  :type 'string)
+
 (defcustom corfu-auto-prefix 3
   "Minimum length of prefix for auto completion.
-The completion backend can override this with
-:company-prefix-length.  It is *not recommended* to use a small
-prefix length (below 2), since this will create high load for
-Emacs.  See also `corfu-auto-delay'."
+The completion backend can override this with :company-prefix-length.
+It is not recommended to use a small prefix length (below 2), since this
+will create high load for Emacs.  See also `corfu-auto-delay' and
+`corfu-auto-trigger'."
   :type 'natnum)
 
 (defcustom corfu-auto-delay 0.2
   "Delay for auto completion.
-It is *not recommended* to use a short delay or even 0, since
-this will create high load for Emacs, in particular if executing
-the completion backend is costly."
+It is not recommended to use a short delay or even 0, since this will
+create high load for Emacs, in particular if executing the completion
+backend is costly.  Instead of reducing the delay too much, try
+`corfu-auto-trigger' to trigger immediate completion after certain
+characters."
   :type 'float)
 
 (defcustom corfu-auto-commands
   '("self-insert-command\\'" "delete-backward-char\\'" "\\`backward-delete-char"
     c-electric-colon c-electric-lt-gt c-electric-slash c-scope-operator)
   "Commands which initiate auto completion.
-The list can container either command symbols or regular expressions."
+The list can contain either command symbols or regular expressions."
   :type '(repeat (choice regexp symbol)))
 
 (defcustom corfu-auto nil
@@ -195,7 +202,7 @@ The list can container either command symbols or regular expressions."
 Auto completion is disabled by default for safety and unobtrusiveness.
 Note that auto completion is particularly dangerous in untrusted files
 since some completion functions may perform arbitrary code execution,
-notably the Emacs built-in `elisp-completion-at-point' .  See also the
+notably the Emacs built-in `elisp-completion-at-point'.  See also the
 settings `corfu-auto-delay', `corfu-auto-prefix' and
 `corfu-auto-commands'."
   :type 'boolean)
@@ -343,6 +350,7 @@ settings `corfu-auto-delay', `corfu-auto-prefix' and
     (no-other-frame . t)
     (unsplittable . t)
     (undecorated . t)
+    (fullscreen . nil)
     (cursor-type . nil)
     (no-special-glyphs . t)
     (desktop-dont-save . t)
@@ -401,18 +409,28 @@ is a prefix length override, which is t for manual completion."
           (let ((len (or prefix
                          (plist-get plist :company-prefix-length)
                          (- (point) beg))))
-            (or (eq len t) (>= len corfu-auto-prefix)))
+            (or (eq len t) (>= len corfu-auto-prefix)
+                (seq-contains-p corfu-auto-trigger last-command-event)))
           ;; For non-exclusive Capfs, check for valid completion.
           (or (not (eq 'no (plist-get plist :exclusive)))
-              (let* ((str (buffer-substring-no-properties beg end))
-                     (pt (- (point) beg))
-                     (pred (plist-get plist :predicate))
-                     (md (completion-metadata (substring str 0 pt) table pred)))
-                ;; We use `completion-try-completion' to check if there are
-                ;; completions. The upstream `completion--capf-wrapper' uses
-                ;; `try-completion' which is incorrect since it only checks for
-                ;; prefix completions.
-                (completion-try-completion str table pred pt md)))
+              (let ((str (buffer-substring-no-properties beg end))
+                    (pt (- (point) beg))
+                    (pred (plist-get plist :predicate)))
+                ;; NOTE:
+                ;; * We use `completion-try-completion' to check if there are
+                ;;   completions. The upstream `completion--capf-wrapper' uses
+                ;;   `try-completion' which is incorrect since it only checks
+                ;;   for prefix completions.
+                ;; * `eglot--dumb-tryc' always returns nil which is
+                ;;   exceptional. Even if `eglot-completion-at-point' is marked
+                ;;   non-exclusive via `cape-capf-nonexclusive', the
+                ;;   `eglot--dumb-flex' completion style must additionally be
+                ;;   overridden to not defeat the check here.
+                ;; * An alternative would be to use `completion-all-completions'
+                ;;   to explicitly check for the presence of candidates. This
+                ;;   can be made efficient with a side-effecting predicate which
+                ;;   throws on first successful match.
+                (corfu--try-completion str table pred pt)))
           (cons fun res)))))
 
 (defun corfu--make-buffer (name)
@@ -516,10 +534,15 @@ FRAME is the existing frame."
       ;; Mark window as dedicated to prevent frame reuse (gh:minad/corfu#60)
       (set-window-dedicated-p win t))
     (redirect-frame-focus frame parent)
-    (set-frame-size frame width height t)
     (pcase-let ((`(,px . ,py) (frame-position frame)))
-      (unless (and (= x px) (= y py))
-        (set-frame-position frame x y))))
+      (cond
+       ((and (= x px) (= y py)) (set-frame-size frame width height t))
+       ;; NOTE: Experimental new Emacs 31 addition by Martin Rudalics
+       ;; https://lists.gnu.org/archive/html/emacs-devel/2025-11/msg00322.html
+       ((fboundp 'set-frame-position-and-size)
+        (set-frame-position-and-size frame x y width height t))
+       (t (set-frame-size frame width height t)
+          (set-frame-position frame x y)))))
   (make-frame-visible frame)
   ;; Unparent child frame if EXWM is used, otherwise EXWM buffers are drawn on
   ;; top of the Corfu child frame.
@@ -582,6 +605,11 @@ FRAME is the existing frame."
                           (lambda (x) (car (completion-hilit-commonality (list x) prefix base))))
                     (and cands (nconc cands base)))))
         (cons (apply #'completion-all-completions args) completion-lazy-hilit-fn)))))
+
+(defun corfu--try-completion (str table pred pt &optional md)
+  "Complete STR given TABLE, predicate PRED, point PT and optional metadata MD."
+  (setq md (or md (completion-metadata (substring str 0 pt) table pred)))
+  (completion-try-completion str table pred pt md))
 
 (defsubst corfu--length-string< (x y)
   "Sorting predicate which compares X and Y first by length then by `string<'."
@@ -952,11 +980,11 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
   (when completion-in-region-mode (corfu-quit))
   (let* ((pt (max 0 (- (point) beg)))
          (str (buffer-substring-no-properties beg end))
-         (metadata (completion-metadata (substring str 0 pt) table pred))
-         (threshold (completion--cycle-threshold metadata))
+         (md (completion-metadata (substring str 0 pt) table pred))
+         (threshold (completion--cycle-threshold md))
          (completion-in-region-mode-predicate
           (or completion-in-region-mode-predicate #'always)))
-    (pcase (completion-try-completion str table pred pt metadata)
+    (pcase (corfu--try-completion str table pred pt md)
       ('nil (corfu--message "No match") nil)
       ('t (goto-char end)
           (corfu--message "Sole match")
@@ -976,17 +1004,16 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
               (total (alist-get 'corfu--total state))
               (cands (alist-get 'corfu--candidates state)))
          (cond
-          ((<= total 1)
-           ;; If completion is finished and cannot be extended further and
-           ;; `corfu-on-exact-match' is not 'show, return 'finished.  Otherwise
-           ;; setup the popup.
-           (if (and (= total 1)
-                    (or (eq corfu-on-exact-match 'show)
-                        (consp (completion-try-completion
-                                newstr table pred newpt
-                                (completion-metadata newstr table pred)))))
+          ((= total 0)
+           (when (test-completion newstr table pred)
+             (corfu--exit-function newstr 'finished nil)))
+          ((= total 1)
+           ;; Setup popup if `corfu-on-exact-match' is `show' or if completion
+           ;; can continue.
+           (if (or (eq corfu-on-exact-match 'show)
+                   (consp (corfu--try-completion newstr table pred newpt)))
                (corfu--setup beg end table pred)
-             (corfu--exit-function newstr 'finished cands)))
+             (corfu--exit-function (car cands) 'finished nil)))
           ;; Too many candidates for cycling -> Setup popup.
           ((or (not threshold) (and (not (eq threshold t)) (< threshold total)))
            (corfu--setup beg end table pred))
@@ -1045,7 +1072,8 @@ See `completion-in-region' for the arguments BEG, END, TABLE, PRED."
                 (not buffer-read-only)
                 (corfu--match-symbol-p corfu-auto-commands this-command)
                 (corfu--popup-support-p))
-       (if (<= corfu-auto-delay 0)
+       (if (or (<= corfu-auto-delay 0)
+               (seq-contains-p corfu-auto-trigger last-command-event))
            (corfu--auto-complete-deferred)
          ;; Do not use `timer-set-idle-time' since this leads to
          ;; unpredictable pauses, in particular with `flyspell-mode'.
@@ -1212,7 +1240,7 @@ AUTO is non-nil when initializing auto completion."
            (equal (car corfu--candidates) str) (not (cdr corfu--candidates))
            (not (eq corfu-on-exact-match 'show))
            (or auto corfu-on-exact-match)
-           (not (consp (completion-try-completion str table pred pt corfu--metadata))))
+           (not (consp (corfu--try-completion str table pred pt))))
       ;; Quit directly when initializing auto completion.
       (if (or auto (eq corfu-on-exact-match 'quit))
           (corfu-quit)
@@ -1355,16 +1383,14 @@ If a candidate is selected, insert it.  Otherwise invoke
   (if (< corfu--index 0)
       (corfu-expand)
     ;; Continue completion with selected candidate.  Exit with status 'finished
-    ;; if input is a valid match and no further completion is
-    ;; possible. Additionally treat completion as finished if at the end of a
-    ;; boundary, even if other longer candidates would still match, since the
-    ;; user invoked `corfu-complete' with an explicitly selected candidate!
+    ;; if input is a valid match and no further completion is possible.
     (pcase-let ((`(,_beg ,_end ,table ,pred . ,_) completion-in-region--data)
                 (newstr (corfu--insert nil)))
       (and (test-completion newstr table pred)
-           (or (not (consp (completion-try-completion
-                            newstr table pred (length newstr)
-                            (completion-metadata newstr table pred))))
+           (or (not (consp (corfu--try-completion newstr table pred (length newstr))))
+               ;; Additionally finish completion if at the end of a boundary,
+               ;; even if other longer candidates match, since the user invoked
+               ;; `corfu-complete' with an explicitly selected candidate!
                (equal (completion-boundaries newstr table pred "") '(0 . 0)))
            (corfu--done newstr 'finished nil))
       t)))
@@ -1381,7 +1407,7 @@ input has been expanded."
     (pcase-let* ((`(,beg ,end ,table ,pred . ,_) completion-in-region--data)
                  (pt (max 0 (- (point) beg)))
                  (str (buffer-substring-no-properties beg end)))
-      (pcase (completion-try-completion str table pred pt corfu--metadata)
+      (pcase (corfu--try-completion str table pred pt)
         ('t
          (goto-char end)
          (corfu--done str 'finished corfu--candidates)
@@ -1392,9 +1418,7 @@ input has been expanded."
          ;; Exit with status 'finished if input is a valid match
          ;; and no further completion is possible.
          (and (test-completion newstr table pred)
-              (not (consp (completion-try-completion
-                           newstr table pred newpt
-                           (completion-metadata (substring newstr 0 newpt) table pred))))
+              (not (consp (corfu--try-completion newstr table pred newpt)))
               (corfu--done newstr 'finished corfu--candidates))
          t)))))
 
@@ -1484,6 +1508,10 @@ The ORIG function takes the FUN and WHICH arguments."
 (advice-add #'eldoc-display-message-no-interference-p
             :before-while #'corfu--eldoc-advice)
 (eldoc-add-command #'corfu-complete #'corfu-insert #'corfu-expand #'corfu-send)
+
+(with-eval-after-load 'corfu-terminal
+  (when (featurep 'tty-child-frames)
+    (display-warning 'corfu "Suggestion: Try `tty-child-frames' instead of `corfu-terminal' on Emacs 31")))
 
 (provide 'corfu)
 ;;; corfu.el ends here
