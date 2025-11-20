@@ -6,8 +6,8 @@
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
 
-;; Package-Version: 20250901.1341
-;; Package-Revision: 20744a681ba5
+;; Package-Version: 20251111.1802
+;; Package-Revision: 7d314cc13515
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -129,8 +129,6 @@
 (eval-when-compile (require 'subr-x))
 
 (defvar warning-minimum-level)
-
-(defvar auto-compile-use-mode-line)
 
 (defgroup auto-compile nil
   "Automatically compile Emacs Lisp source libraries."
@@ -293,20 +291,12 @@ non-nil."
                  'mode-line-format)))
     (set-default 'mode-line-format format)))
 
-(defun auto-compile-use-mode-line-set (_ignored value)
-  "Set `auto-compile-use-mode-line' and modify `mode-line-format'.
-VALUE is the element in `mode-line-format' after which our
-element is inserted.  _IGNORED is of no relevance."
-  (setq-default auto-compile-use-mode-line value)
-  (auto-compile-modify-mode-line value))
-
 (defcustom auto-compile-use-mode-line
   (car (auto-compile--tree-member 'mode-line-remote
                                   (default-value 'mode-line-format)))
   "Whether and where to show byte-code information in the mode line.
 
-Set this variable using the Custom interface or using the function
-`auto-compile-use-mode-line-set'.
+This variable has to be set using `setopt' or the Custom interface.
 
 This works by inserting `mode-line-auto-compile' into the default
 value of `mode-line-format' after the construct (usually a symbol)
@@ -321,11 +311,13 @@ variable that is itself a member of `mode-line-format' then you
 have to set this option to nil and manually modify that variable
 to include `mode-line-auto-compile'."
   :group 'auto-compile
-  :set #'auto-compile-use-mode-line-set
-  :type '(choice (const :tag "don't insert" nil)
-                 (const :tag "after mode-line-modified" mode-line-modified)
-                 (const :tag "after mode-line-remote" mode-line-remote)
-                 (sexp  :tag "after construct")))
+  :set (lambda (symbol value)
+         (set-default-toplevel-value symbol value)
+         (auto-compile-modify-mode-line value))
+  :type '(choice (const :tag "Don't insert" nil)
+                 (const :tag "After mode-line-modified" mode-line-modified)
+                 (const :tag "After mode-line-remote" mode-line-remote)
+                 (sexp  :tag "After construct")))
 
 (defcustom auto-compile-toggle-recompiles t
   "Whether to recompile all source files when turning on compilation.
@@ -874,6 +866,13 @@ Without this advice the outdated source file would get loaded."
                  (mapcar (lambda (s) (concat ".el" s)) load-file-rep-suffixes))))
 
 ;;; _
+
+(when (fboundp 'setopt) ; since Emacs 29.1
+  (with-no-warnings
+    (defun auto-compile-use-mode-line-set (_ignored value)
+      (declare (obsolete "use `setopt' instead." "Auto-Compile 2.2.0"))
+      (setopt auto-compile-use-mode-line value))))
+
 (provide 'auto-compile)
 ;; Local Variables:
 ;; indent-tabs-mode: nil
