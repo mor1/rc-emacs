@@ -5,8 +5,8 @@
 ;; Author:   Dmitry Gutov <dmitry@gutov.dev>
 ;; URL:      https://github.com/dgutov/diff-hl
 ;; Keywords: vc, diff
-;; Package-Version: 20251112.135
-;; Package-Revision: 4548d29eab30
+;; Package-Version: 20251125.238
+;; Package-Revision: 8dc486f568af
 ;; Package-Requires: ((cl-lib "0.2") (emacs "26.1"))
 
 ;; This file is part of GNU Emacs.
@@ -981,8 +981,9 @@ that file, if it's present."
       (unwind-protect
           (progn
             (vc-setup-buffer diff-buffer)
-            (diff-hl-diff-against-reference file backend diff-buffer)
-            (set-buffer diff-buffer)
+            (with-current-buffer buffer
+              ;; Ensure that the buffer-local variable value is applied.
+              (diff-hl-diff-against-reference file backend diff-buffer))
             (diff-mode)
             (setq-local diff-vc-backend backend)
             (setq-local diff-vc-revisions (list diff-hl-reference-revision nil))

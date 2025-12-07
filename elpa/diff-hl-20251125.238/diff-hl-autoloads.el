@@ -227,20 +227,6 @@ disabled.
 (register-definition-prefixes "diff-hl-flydiff" '("diff-hl-flydiff"))
 
 
-;;; Generated autoloads from diff-hl-inline-popup.el
-
-(autoload 'diff-hl-inline-popup-hide "diff-hl-inline-popup" "\
-Hide the current inline popup." t)
-(autoload 'diff-hl-inline-popup-show "diff-hl-inline-popup" "\
-Create a phantom overlay to show the inline popup, with some
-content LINES, and a HEADER and a FOOTER, at POINT.  KEYMAP is
-added to the current keymaps.  CLOSE-HOOK is called when the popup
-is closed.
-
-(fn LINES &optional HEADER FOOTER KEYMAP CLOSE-HOOK POINT HEIGHT)")
-(register-definition-prefixes "diff-hl-inline-popup" '("diff-hl-inline-popup-"))
-
-
 ;;; Generated autoloads from diff-hl-margin.el
 
 (defvar diff-hl-margin-mode nil "\
@@ -294,11 +280,6 @@ disabled.
 
 ;;; Generated autoloads from diff-hl-show-hunk.el
 
-(autoload 'diff-hl-show-hunk-inline-popup "diff-hl-show-hunk" "\
-Implementation to show the hunk in a inline popup.
-BUFFER is a buffer with the hunk.
-
-(fn BUFFER &optional IGNORED-LINE)")
 (autoload 'diff-hl-show-hunk-previous "diff-hl-show-hunk" "\
 Go to previous hunk/change and show it." t)
 (autoload 'diff-hl-show-hunk-next "diff-hl-show-hunk" "\
@@ -358,6 +339,25 @@ Diff-Hl-Show-Hunk-Mouse mode.
 
 (fn &optional ARG)" t)
 (register-definition-prefixes "diff-hl-show-hunk" '("diff-hl-show-hunk-"))
+
+
+;;; Generated autoloads from diff-hl-show-hunk-inline.el
+
+(autoload 'diff-hl-show-hunk-inline-hide "diff-hl-show-hunk-inline" "\
+Hide the current inline popup." t)
+(autoload 'diff-hl-show-hunk-inline-show "diff-hl-show-hunk-inline" "\
+Create a phantom overlay to show the inline popup, with some
+content LINES, and a HEADER and a FOOTER, at POINT.  KEYMAP is
+added to the current keymaps.  CLOSE-HOOK is called when the popup
+is closed.
+
+(fn LINES &optional HEADER FOOTER KEYMAP CLOSE-HOOK POINT HEIGHT)")
+(autoload 'diff-hl-show-hunk-inline "diff-hl-show-hunk-inline" "\
+Implementation to show the hunk in a inline popup.
+BUFFER is a buffer with the hunk.
+
+(fn BUFFER &optional IGNORED-LINE)")
+(register-definition-prefixes "diff-hl-show-hunk-inline" '("diff-hl-show-hunk-inline-"))
 
 
 ;;; Generated autoloads from diff-hl-show-hunk-posframe.el
