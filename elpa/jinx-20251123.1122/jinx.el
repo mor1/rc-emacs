@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2023
-;; Package-Version: 20251111.1701
-;; Package-Revision: e787bf6fd9f6
+;; Package-Version: 20251123.1122
+;; Package-Revision: 5e7ddede2552
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/jinx
 ;; Keywords: convenience, text
@@ -714,26 +714,26 @@ See `isearch-open-necessary-overlays' and `isearch-open-overlay-temporary'."
   (use-local-map
    (make-composed-keymap (list jinx-correct-map) (current-local-map))))
 
-(defun jinx--add-suggestion (list ht word group)
+(defun jinx--add-suggestion (list ht word group &optional suffix)
   "Add suggestion WORD to LIST and HT.
-The word will be associated with GROUP and get a prefix key."
+The suggestion will get a prefix key.  A GROUP and a SUFFIX property are
+optionally added."
   (unless (gethash word ht)
     (add-text-properties
      0 (length word)
-     (list 'jinx--group group
-           'jinx--prefix
-           (let ((idx (1+ (hash-table-count ht))))
-             (cond
-              ((< idx 10)
-               (format #("%d " 0 3 (face jinx-key))
-                       idx))
-              ((< (- idx 10) (length jinx--select-keys))
-               (format #("0%c " 0 4 (face jinx-key))
-                       (aref jinx--select-keys (- idx 10)))))))
+     `( jinx--group ,group
+        jinx--prefix ,(let ((idx (1+ (hash-table-count ht))))
+                        (cond
+                         ((< idx 10)
+                          (format #("%d " 0 3 (face jinx-key))
+                                  idx))
+                         ((< (- idx 10) (length jinx--select-keys))
+                          (format #("0%c " 0 4 (face jinx-key))
+                                  (aref jinx--select-keys (- idx 10))))))
+        jinx--suffix ,suffix)
      word)
-    (push word list)
-    (puthash word t ht))
-  list)
+    (push word (car list))
+    (puthash word t ht)))
 
 (defun jinx--session-suggestions (word)
   "Retrieve suggestions for WORD from session."
@@ -747,15 +747,15 @@ The word will be associated with GROUP and get a prefix key."
 (defun jinx--correct-suggestions (word)
   "Retrieve suggestions for WORD from all dictionaries."
   (let ((ht (make-hash-table :test #'equal))
-        (list nil))
+        (list (cons nil nil)))
     (dolist (dict jinx--dicts)
       (let* ((desc (jinx--mod-describe dict))
              (group (format "Suggestions from dictionary ‘%s’ - %s"
                             (car desc) (cdr desc))))
         (dolist (w (jinx--mod-suggest dict word))
-          (setq list (jinx--add-suggestion list ht w group)))))
+          (jinx--add-suggestion list ht w group))))
     (dolist (w (jinx--session-suggestions word))
-      (setq list (jinx--add-suggestion list ht w "Suggestions from session")))
+      (jinx--add-suggestion list ht w "Suggestions from session"))
     (cl-loop
      for (key . fun) in jinx--save-keys
      for actions = (funcall fun nil key word) do
@@ -767,12 +767,9 @@ The word will be associated with GROUP and get a prefix key."
                            'face 'jinx-save 'rear-nonsticky t)
       for a2 = (format #(" [%s]" 0 5 (face jinx-annotation)) a)
       do (cl-loop
-          for w2 in (delete-consecutive-dups (list w (downcase w))) do
-          (push (propertize (concat k2 w2)
-                            'jinx--group "Accept and save"
-                            'jinx--suffix a2)
-                list))))
-    (nreverse list)))
+          for w2 in (list w (downcase w)) do
+          (jinx--add-suggestion list ht (concat k2 w2) "Accept and save" a2))))
+    (nreverse (car list))))
 
 (defun jinx--correct-affixation (cands)
   "Affixate CANDS during completion."
@@ -780,12 +777,6 @@ The word will be associated with GROUP and get a prefix key."
            (list cand
                  (or (get-text-property 0 'jinx--prefix cand) "")
                  (or (get-text-property 0 'jinx--suffix cand) ""))))
-
-(defun jinx--correct-annotation (cand)
-  "Annotate CAND during completion."
-  (if-let ((prefix (get-text-property 0 'jinx--prefix cand)))
-      (format #(" (%s)" 0 5 (face jinx-key)) (string-trim prefix))
-    (get-text-property 0 'jinx--suffix cand)))
 
 (defun jinx--group (word transform)
   "Group WORD during completion, TRANSFORM candidate if non-nil."
@@ -823,8 +814,7 @@ Optionally show prompt INFO and insert INITIAL input."
                           (display-sort-function . ,#'identity)
                           (cycle-sort-function . ,#'identity)
                           (group-function . ,#'jinx--group)
-                          (affixation-function . ,#'jinx--correct-affixation)
-                          (annotation-function . ,#'jinx--correct-annotation)))
+                          (affixation-function . ,#'jinx--correct-affixation)))
                        nil nil initial t word)
                       word)))))
            (len (length choice)))
@@ -1071,15 +1061,11 @@ This command dispatches to the following commands:
     is 4, corresponding to \\[universal-argument] pressed once,
     correct all misspelled words.
   - `jinx-correct-word': If prefix ARG is 16, corresponding to
-    \\[universal-argument] pressed twice, correct word before point.
-  - If prefix ARG is 64, corresponding to \\[universal-argument] pressed
-    three times, check the whole buffer, but do not open the correction
-    UI."
+    \\[universal-argument] pressed twice, correct word before point."
   (interactive "*P")
   (pcase arg
     ('nil (if (use-region-p) (jinx-correct-all) (jinx-correct-nearest)))
     ('(16) (jinx-correct-word))
-    ('(64) (jinx-correct-all t))
     (_ (jinx-correct-all))))
 
 (defun jinx-correct-select ()

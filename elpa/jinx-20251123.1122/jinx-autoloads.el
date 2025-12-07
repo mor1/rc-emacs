@@ -48,9 +48,6 @@ This command dispatches to the following commands:
     correct all misspelled words.
   - `jinx-correct-word': If prefix ARG is 16, corresponding to
     \\[universal-argument] pressed twice, correct word before point.
-  - If prefix ARG is 64, corresponding to \\[universal-argument] pressed
-    three times, check the whole buffer, but do not open the correction
-    UI.
 
 (fn &optional ARG)" t)
 (autoload 'jinx-mode "jinx" "\
