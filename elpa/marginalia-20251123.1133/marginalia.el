@@ -5,8 +5,8 @@
 ;; Author: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2020
-;; Package-Version: 20251115.1821
-;; Package-Revision: f4058af89839
+;; Package-Version: 20251123.1133
+;; Package-Revision: d38041df2c2d
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/marginalia
 ;; Keywords: docs, help, matching, completion
@@ -459,14 +459,17 @@ Otherwise stay within current buffer."
 (defun marginalia-annotate-multi-category (cand)
   "Annotate multi-category CAND, dispatching to the appropriate annotator."
   (if-let ((multi (get-text-property 0 'multi-category cand))
-           (annotate (marginalia--annotator (car multi))))
+           (fun (marginalia--annotator (car multi))))
       ;; Use the Marginalia annotator corresponding to the multi category.
-      (funcall annotate (cdr multi))
+      (funcall fun (cdr multi))
     ;; Apply the original annotation function on the original candidate. Bypass
     ;; our `marginalia--completion-metadata-get' advice.
-    (when-let (annotate (marginalia--orig-completion-metadata-get
-                         marginalia--metadata 'annotation-function))
-      (funcall annotate cand))))
+    (if-let ((fun (marginalia--orig-completion-metadata-get
+                   marginalia--metadata 'affixation-function)))
+        (caddar (funcall fun (list cand)))
+      (when-let ((fun (marginalia--orig-completion-metadata-get
+                       marginalia--metadata 'annotation-function)))
+        (funcall fun cand)))))
 
 (defconst marginalia--advice-regexp
   (rx bos
@@ -1309,13 +1312,6 @@ completion UIs like Vertico or Icomplete."
 METADATA is the metadata.
 PROP is the property which is looked up."
   (pcase prop
-    ('annotation-function
-     ;; We do want the advice triggered for `completion-metadata-get'.
-     (when-let ((cat (completion-metadata-get metadata 'category))
-                (annotator (marginalia--annotator cat)))
-       (lambda (cand)
-         (let ((ann (caddar (marginalia--affixate metadata annotator (list cand)))))
-           (and (not (equal ann "")) ann)))))
     ('affixation-function
      ;; We do want the advice triggered for `completion-metadata-get'.
      (when-let ((cat (completion-metadata-get metadata 'category))
