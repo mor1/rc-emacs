@@ -5,8 +5,8 @@
 ;; Author:   Dmitry Gutov <dmitry@gutov.dev>
 ;; URL:      https://github.com/dgutov/diff-hl
 ;; Keywords: vc, diff
-;; Package-Version: 20251125.238
-;; Package-Revision: 8dc486f568af
+;; Package-Version: 20251216.242
+;; Package-Revision: e79aa49ad3cb
 ;; Package-Requires: ((cl-lib "0.2") (emacs "26.1"))
 
 ;; This file is part of GNU Emacs.
@@ -422,7 +422,8 @@ It can be a relative expression as well, such as \"HEAD^\" with Git, or
   (or (memq state '(edited conflict))
       (and (eq state 'up-to-date)
            ;; VC state is stale in after-revert-hook.
-           (or (static-if (>= emacs-major-version 31)
+           (or (static-if (boundp 'revert-buffer-in-progress)
+                   ;; Emacs 31.
                    revert-buffer-in-progress
                  revert-buffer-in-progress-p)
                ;; Diffing against an older revision.
@@ -741,9 +742,36 @@ Return a list of line overlays used."
 (defun diff-hl--resolve (value-or-buffer cb)
   (if (listp value-or-buffer)
       (funcall cb value-or-buffer)
-    (with-current-buffer value-or-buffer
-      (vc-run-delayed
-        (funcall cb (diff-hl-changes-from-buffer (current-buffer)))))))
+    (static-if (fboundp 'vc-run-delayed-success)
+        ;; Emacs 31.
+        (with-current-buffer value-or-buffer
+          (vc-run-delayed-success 1
+            (funcall cb (diff-hl-changes-from-buffer (current-buffer)))))
+      (diff-hl--when-done value-or-buffer
+                          #'diff-hl-changes-from-buffer
+                          cb))))
+
+(defun diff-hl--when-done (buffer get-value callback &optional proc)
+  (let ((proc (or proc (get-buffer-process buffer))))
+    (cond
+     ;; If there's no background process, just execute the code.
+     ((or (null proc) (eq (process-status proc) 'exit))
+      ;; Make sure we've read the process's output before going further.
+      (when proc (accept-process-output proc))
+      (when (get-buffer buffer)
+        (with-current-buffer buffer
+          (funcall callback (funcall get-value buffer)))))
+     ;; If process was deleted, we ignore it.
+     ((eq (process-status proc) 'signal))
+     ;; If a process is running, set the sentinel.
+     ((eq (process-status proc) 'run)
+      (set-process-sentinel
+       proc
+       (lambda (proc _status)
+         ;; Delegate to the parent cond for decision logic.
+         (diff-hl--when-done buffer get-value callback proc))))
+     ;; Maybe we should ignore all other states as well.
+     (t (error "Unexpected process state")))))
 
 (defun diff-hl--autohide-margin ()
   (let ((width-var (intern (format "%s-margin-width" diff-hl-side))))
