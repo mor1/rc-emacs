@@ -1,12 +1,12 @@
 ;;; cape.el --- Completion At Point Extensions -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2021-2026 Free Software Foundation, Inc.
 
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20251115.1822
-;; Package-Revision: a3f190328df2
+;; Package-Version: 20260104.1103
+;; Package-Revision: f8682a046a57
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/cape
 ;; Keywords: abbrev, convenience, matching, completion, text
@@ -29,9 +29,9 @@
 ;;; Commentary:
 
 ;; Let your completions fly! This package provides additional completion
-;; backends in the form of Capfs (completion-at-point-functions).
+;; backends in the form of Capfs, see `completion-at-point-functions'.
 ;;
-;; `cape-abbrev': Complete abbreviation (add-global-abbrev, add-mode-abbrev).
+;; `cape-abbrev': Complete abbreviation (`add-global-abbrev', `add-mode-abbrev').
 ;; `cape-dabbrev': Complete word from current buffers.
 ;; `cape-dict': Complete word from dictionary file.
 ;; `cape-elisp-block': Complete Elisp in Org or Markdown code block.
@@ -68,6 +68,8 @@
   "Maximal number of completion candidates returned by `cape-dict'."
   :type '(choice (const nil) natnum))
 
+;; TODO bug#80071 file-local language. Add mechanism to locate dictionary file
+;; based on file-local language variable.
 (defcustom cape-dict-file "/usr/share/dict/words"
   "Path to dictionary word list file.
 This variable can also be a list of paths or
@@ -430,15 +432,21 @@ If INTERACTIVE is nil the function acts like a Capf."
                                      (substitute-in-file-name file)))))
         (unless (boundp 'comint-unquote-function)
           (require 'comint))
-        `( ,beg ,end
-           ,(cape--nonessential-table
-             (completion-table-with-quoting
-              #'read-file-name-internal
-              comint-unquote-function
-              comint-requote-function))
-           ,@(when (or prefix (string-match-p "./" file))
-               '(:company-prefix-length t))
-           ,@cape--file-properties)))))
+        (let ((table (cape--nonessential-table
+                      (completion-table-with-quoting
+                       #'read-file-name-internal
+                       comint-unquote-function
+                       comint-requote-function))))
+          `( ,beg ,end ,table
+             :company-location
+             ,(lambda (file)
+                (let* ((str (buffer-substring-no-properties beg (point)))
+                       (pre (car (completion-boundaries str table nil "")))
+                       (file (file-name-concat (substring str 0 pre) file)))
+                  (and (file-exists-p file) (list file))))
+             ,@(when (or prefix (string-match-p "./" file))
+                 '(:company-prefix-length t))
+             ,@cape--file-properties))))))
 
 ;;;;; cape-elisp-symbol
 
@@ -466,14 +474,14 @@ If INTERACTIVE is nil the function acts like a Capf."
 (defun cape--elisp-symbol-exit (sym status)
   "Wrap symbol SYM with `cape-elisp-symbol-wrapper' buffers.
 STATUS is the exit status."
-  (when-let (((not (eq status 'exact)))
-             (c (cl-loop for (m . c) in cape-elisp-symbol-wrapper
-                         if (derived-mode-p m) return c))
-             ((or (not (derived-mode-p 'emacs-lisp-mode))
-                  ;; Inside comment or string
-                  (let ((s (syntax-ppss))) (or (nth 3 s) (nth 4 s)))))
-             (x (if (stringp (car c)) (car c) (string (car c))))
-             (y (if (stringp (cadr c)) (cadr c) (string (cadr c)))))
+  (when-let* (((not (eq status 'exact)))
+              (c (cl-loop for (m . c) in cape-elisp-symbol-wrapper
+                          if (derived-mode-p m) return c))
+              ((or (not (derived-mode-p 'emacs-lisp-mode))
+                   ;; Inside comment or string
+                   (let ((s (syntax-ppss))) (or (nth 3 s) (nth 4 s)))))
+              (x (if (stringp (car c)) (car c) (string (car c))))
+              (y (if (stringp (cadr c)) (cadr c) (string (cadr c)))))
     (save-excursion
       (backward-char (length sym))
       (unless (save-excursion
@@ -518,15 +526,15 @@ If INTERACTIVE is nil the function acts like a Capf."
 
 (defun cape--inside-block-p (&rest langs)
   "Return non-nil if inside LANGS code block."
-  (when-let ((face (get-text-property (point) 'face))
-             (lang (or (and (if (listp face)
-                                (memq 'org-block face)
-                              (eq 'org-block face))
-                            (plist-get (cadr (org-element-context)) :language))
-                       (and (if (listp face)
-                                (memq 'markdown-code-face face)
-                              (eq 'markdown-code-face face))
-                            (save-excursion
+  (when-let* ((face (get-text-property (point) 'face))
+              (lang (or (and (if (listp face)
+                                 (memq 'org-block face)
+                               (eq 'org-block face))
+                             (plist-get (cadr (org-element-context)) :language))
+                        (and (if (listp face)
+                                 (memq 'markdown-code-face face)
+                               (eq 'markdown-code-face face))
+                             (save-excursion
                               (markdown-code-block-lang))))))
     (member lang langs)))
 
@@ -713,9 +721,9 @@ If INTERACTIVE is nil the function acts like a Capf."
       ;; No cycling since it breaks the :exit-function.
       (let (completion-cycle-threshold)
         (cape-interactive #'cape-abbrev))
-    (when-let (abbrevs (cape--abbrev-list))
-      (let ((bounds (cape--bounds 'symbol)))
-        `(,(car bounds) ,(cdr bounds) ,abbrevs ,@cape--abbrev-properties)))))
+    (when-let* ((abbrevs (cape--abbrev-list))
+                (bounds (cape--bounds 'symbol)))
+      `(,(car bounds) ,(cdr bounds) ,abbrevs ,@cape--abbrev-properties))))
 
 ;;;;; cape-line
 
@@ -817,9 +825,9 @@ again if the input prefix changed."
       (funcall backend 'init)
       (put backend 'company-init t)
       (setf (alist-get backend cape--company-init) t))
-    (when-let ((pre (pcase (cape--company-call backend 'prefix)
-                      ((or `(,p ,_s) (and (pred stringp) p)) (cons p (length p)))
-                      ((or `(,p ,_s ,l) `(,p . ,l)) (cons p l)))))
+    (when-let* ((pre (pcase (cape--company-call backend 'prefix)
+                       ((or `(,p ,_s) (and (pred stringp) p)) (cons p (length p)))
+                       ((or `(,p ,_s ,l) `(,p . ,l)) (cons p l)))))
       (let* ((end (point)) (beg (- end (length (car pre))))
              (valid (if (cape--company-call backend 'no-cache (car pre))
                         #'equal (or valid #'string-prefix-p)))
@@ -851,7 +859,7 @@ again if the input prefix changed."
               :display-sort-function sort-fun
               :cycle-sort-function sort-fun
               :annotation-function (lambda (x)
-                                     (when-let (ann (cape--company-call backend 'annotation x))
+                                     (when-let* ((ann (cape--company-call backend 'annotation x)))
                                        (concat " " (string-trim ann))))
               :exit-function (lambda (x _status)
                                ;; Restore the candidate string including
@@ -907,9 +915,9 @@ the `completion-at-point-functions':
 
 See the dual `cape-wrap-choose' if you want to try multiple Capfs in
 turn."
-  (when-let ((results (cl-loop for capf in capfs until (eq capf :with)
-                               for res = (funcall capf)
-                               if res collect (cons t res))))
+  (when-let* ((results (cl-loop for capf in capfs until (eq capf :with)
+                                for res = (funcall capf)
+                                if res collect (cons t res))))
     (pcase-let* ((results (nconc results
                                  (cl-loop for capf in (cdr (memq :with capfs))
                                           for res = (funcall capf)
@@ -929,7 +937,7 @@ turn."
                  (push (list main (plist-get plist :predicate) table
                              ;; Plist attached to the candidates
                              (mapcan (lambda (f)
-                                       (when-let ((v (plist-get plist f)))
+                                       (when-let* ((v (plist-get plist f)))
                                          (list f v)))
                                      cape--super-functions))
                        tables)
@@ -1003,11 +1011,11 @@ turn."
             (lambda (prop)
               (list prop
                     (lambda (cand &rest args)
-                      (if-let ((ref (get-text-property 0 'cape-capf-super cand)))
-                          (when-let ((fun (plist-get (cdr ref) prop)))
+                      (if-let* ((ref (get-text-property 0 'cape-capf-super cand)))
+                          (when-let* ((fun (plist-get (cdr ref) prop)))
                             (apply fun (car ref) args))
-                        (when-let ((plist (and cand-ht (gethash cand cand-ht)))
-                                   (fun (plist-get plist prop)))
+                        (when-let* ((plist (and cand-ht (gethash cand cand-ht)))
+                                    (fun (plist-get plist prop)))
                           (apply fun cand args))))))
             cape--super-functions)))))
 
@@ -1026,9 +1034,8 @@ Usually you want to add multiple non-exclusive Capfs to the variable
              (pt (- (point) beg))
              (pred (plist-get plist :predicate))
              (md (completion-metadata (substring str 0 pt) table pred)))
-        ;; NOTE: Treat the Capfs always as non-exclusive. Return the first which
-        ;; returns a non-nil result. See the comment in `corfu--capf-wrapper'
-        ;; for further considerations.
+        ;; Treat the Capfs always as non-exclusive. Return the first which
+        ;; returns non-nil. See also the comment in `corfu--capf-wrapper'.
         (and (completion-try-completion str table pred pt md)
              result))))))
 
@@ -1066,7 +1073,7 @@ meaningful debugging output."
      `( ,beg ,end
         ,(cape--debug-table
           table name (copy-marker beg) (copy-marker end t))
-        ,@(when-let ((exit (plist-get plist :exit-function)))
+        ,@(when-let* ((exit (plist-get plist :exit-function)))
             (list :exit-function
                   (lambda (str status)
                     (cape--debug-message "%s:exit(status=%s string=%S)"
@@ -1156,7 +1163,7 @@ The PREDICATE is passed the candidate symbol or string."
     (`(,beg ,end ,table . ,plist)
      `( ,beg ,end ,table
         :predicate
-        ,(if-let (pred (plist-get plist :predicate))
+        ,(if-let* ((pred (plist-get plist :predicate)))
              ;; First argument is key, second is value for hash tables.
              ;; The first argument can be a cons cell for alists. Then
              ;; the candidate itself is either a string or a symbol. We
@@ -1207,11 +1214,11 @@ If the prefix is long enough, enforce auto completion."
 ;;;###autoload
 (defun cape-wrap-inside-faces (capf &rest faces)
   "Call CAPF only if inside FACES."
-  (when-let (((> (point) (point-min)))
-             (fs (get-text-property (1- (point)) 'face))
-             ((if (listp fs)
-                  (cl-loop for f in fs thereis (memq f faces))
-                (memq fs faces))))
+  (when-let* (((> (point) (point-min)))
+              (fs (get-text-property (1- (point)) 'face))
+              ((if (listp fs)
+                   (cl-loop for f in fs thereis (memq f faces))
+                 (memq fs faces))))
     (funcall capf)))
 
 ;;;###autoload
@@ -1252,8 +1259,8 @@ Example:
   (setq corfu-auto-trigger \"/\"
         completion-at-point-functions
         (list (cape-capf-trigger \\='cape-abbrev ?/)))"
-  (when-let ((pos (save-excursion (search-backward (char-to-string trigger) (pos-bol) 'noerror)))
-             ((save-excursion (not (re-search-backward "\\s-" pos 'noerror)))))
+  (when-let* ((pos (save-excursion (search-backward (char-to-string trigger) (pos-bol) 'noerror)))
+              ((save-excursion (not (re-search-backward "\\s-" pos 'noerror)))))
     (pcase
         ;; Treat the trigger character as punctuation.
         (with-syntax-table cape--trigger-syntax-table
@@ -1269,7 +1276,7 @@ Example:
                    (end (copy-marker (1+ pos))))
                (lambda (str status)
                  (delete-region pos end)
-                 (when-let ((exit (plist-get plist :exit-function)))
+                 (when-let* ((exit (plist-get plist :exit-function)))
                    (funcall exit str status))))
             . ,plist))))))
 
