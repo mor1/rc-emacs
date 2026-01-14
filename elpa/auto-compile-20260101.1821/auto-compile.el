@@ -1,13 +1,13 @@
 ;;; auto-compile.el --- Automatically compile Emacs Lisp libraries  -*- lexical-binding:t -*-
 
-;; Copyright (C) 2008-2025 Jonas Bernoulli
+;; Copyright (C) 2008-2026 Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <emacs.auto-compile@jonas.bernoulli.dev>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
 
-;; Package-Version: 20251111.1802
-;; Package-Revision: 7d314cc13515
+;; Package-Version: 20260101.1821
+;; Package-Revision: eaed414fa7da
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -425,30 +425,30 @@ multiple files is toggled as follows:
 
 \(fn FILE ACTION)"
   (interactive
-   (let* ((file (and (eq major-mode 'emacs-lisp-mode)
-                     (buffer-file-name)))
-          (action
-           (cond
-            (current-prefix-arg
-             (if (> (prefix-numeric-value current-prefix-arg) 0)
-                 'start
-               'quit))
-            (file
-             (if (file-exists-p (byte-compile-dest-file file))
-                 'quit
-               'start))
-            (t
-             (pcase (read-char-choice
-                     "Toggle automatic compilation (s=tart, q=uit, C-g)? "
-                     '(?s ?q))
-               (?s 'start)
-               (?q 'quit))))))
-     (list (read-file-name (concat (capitalize (symbol-name action))
-                                   " auto-compiling: ")
-                           (and file (file-name-directory file))
-                           nil t
-                           (and file (file-name-nondirectory file)))
-           action t)))
+    (let* ((file (and (eq major-mode 'emacs-lisp-mode)
+                      (buffer-file-name)))
+           (action
+            (cond
+              (current-prefix-arg
+               (if (> (prefix-numeric-value current-prefix-arg) 0)
+                   'start
+                 'quit))
+              (file
+               (if (file-exists-p (byte-compile-dest-file file))
+                   'quit
+                 'start))
+              (t
+               (pcase (read-char-choice
+                       "Toggle automatic compilation (s=tart, q=uit, C-g)? "
+                       '(?s ?q))
+                 (?s 'start)
+                 (?q 'quit))))))
+      (list (read-file-name (concat (capitalize (symbol-name action))
+                                    " auto-compiling: ")
+                            (and file (file-name-directory file))
+                            nil t
+                            (and file (file-name-nondirectory file)))
+            action t)))
   (if (file-regular-p file)
       (pcase action
         ('start (auto-compile-byte-compile file t))
@@ -459,29 +459,29 @@ multiple files is toggled as follows:
           (kill-buffer buffer))))
     (dolist (f (directory-files file t))
       (cond
-       ((file-directory-p f)
-        (unless (or (string-prefix-p "." (file-name-nondirectory
-                                          (directory-file-name f)))
-                    (file-exists-p (expand-file-name ".nosearch" f)))
-          (toggle-auto-compile f action)))
-       ((funcall auto-compile-predicate-function f)
-        (let ((dest (byte-compile-dest-file f)))
-          (if (eq action 'start)
-              (and (file-exists-p f)
-                   (or auto-compile-toggle-recompiles
-                       (file-newer-than-file-p f dest))
-                   (or (not (string-match "^\\.?#" (file-name-nondirectory f)))
-                       (file-exists-p dest))
-                   (auto-compile-byte-compile f t))
-            (auto-compile-delete-dest dest))))
-       ((and auto-compile-toggle-deletes-nonlib-dest
-             (eq action 'quit)
-             (auto-compile-source-file-p f))
-        (auto-compile-delete-dest (byte-compile-dest-file f)))
-       ((and auto-compile-delete-stray-dest
-             (string-match "\\.elc$" f)
-             (not (auto-compile--byte-compile-source-file f t)))
-        (auto-compile-delete-dest f))))))
+        ((file-directory-p f)
+         (unless (or (string-prefix-p "." (file-name-nondirectory
+                                           (directory-file-name f)))
+                     (file-exists-p (expand-file-name ".nosearch" f)))
+           (toggle-auto-compile f action)))
+        ((funcall auto-compile-predicate-function f)
+         (let ((dest (byte-compile-dest-file f)))
+           (if (eq action 'start)
+               (and (file-exists-p f)
+                    (or auto-compile-toggle-recompiles
+                        (file-newer-than-file-p f dest))
+                    (or (not (string-match "^\\.?#" (file-name-nondirectory f)))
+                        (file-exists-p dest))
+                    (auto-compile-byte-compile f t))
+             (auto-compile-delete-dest dest))))
+        ((and auto-compile-toggle-deletes-nonlib-dest
+              (eq action 'quit)
+              (auto-compile-source-file-p f))
+         (auto-compile-delete-dest (byte-compile-dest-file f)))
+        ((and auto-compile-delete-stray-dest
+              (string-match "\\.elc$" f)
+              (not (auto-compile--byte-compile-source-file f t)))
+         (auto-compile-delete-dest f))))))
 
 (defalias 'auto-compile-toggle #'toggle-auto-compile)
 
@@ -692,7 +692,7 @@ This is especially useful during rebase sessions."
 ;;; Mode-Line
 
 (defvar-local mode-line-auto-compile
-    '(auto-compile-mode (:eval (mode-line-auto-compile-control))))
+  '(auto-compile-mode (:eval (mode-line-auto-compile-control))))
 (put 'mode-line-auto-compile 'risky-local-variable t)
 
 (defun mode-line-auto-compile-control ()
@@ -701,64 +701,64 @@ This is especially useful during rebase sessions."
     (when (and src (setq dst (byte-compile-dest-file src)))
       (list
        (cond
-        ((not auto-compile-mode-line-counter) "")
-        ((> auto-compile-warnings 0)
-         (propertize
-          (format "%s" auto-compile-warnings)
-          'help-echo (format "%s compile warnings\nmouse-1 display compile log"
-                             auto-compile-warnings)
-          'face 'error
-          'mouse-face 'mode-line-highlight
-          'local-map (make-mode-line-mouse-map
-                      'mouse-1 #'auto-compile-display-log)))
-        (t
-         (propertize
-          ":"
-          'help-echo "No compile warnings\nmouse-1 display compile log"
-          'mouse-face 'mode-line-highlight
-          'local-map (make-mode-line-mouse-map
-                      'mouse-1 #'auto-compile-display-log))))
+         ((not auto-compile-mode-line-counter) "")
+         ((> auto-compile-warnings 0)
+          (propertize
+           (format "%s" auto-compile-warnings)
+           'help-echo (format "%s compile warnings\nmouse-1 display compile log"
+                              auto-compile-warnings)
+           'face 'error
+           'mouse-face 'mode-line-highlight
+           'local-map (make-mode-line-mouse-map
+                       'mouse-1 #'auto-compile-display-log)))
+         (t
+          (propertize
+           ":"
+           'help-echo "No compile warnings\nmouse-1 display compile log"
+           'mouse-face 'mode-line-highlight
+           'local-map (make-mode-line-mouse-map
+                       'mouse-1 #'auto-compile-display-log))))
        (cond
-        ((file-writable-p dst)
-         (propertize
-          "-"
-          'help-echo "Byte-compile destination is writable"
-          'mouse-face 'mode-line))
-        (t
-         (propertize
-          "%%"
-          'help-echo "Byte-compile destination is read-only"
-          'mouse-face 'mode-line)))
+         ((file-writable-p dst)
+          (propertize
+           "-"
+           'help-echo "Byte-compile destination is writable"
+           'mouse-face 'mode-line))
+         (t
+          (propertize
+           "%%"
+           'help-echo "Byte-compile destination is read-only"
+           'mouse-face 'mode-line)))
        (cond
-        ((and auto-compile-pretend-byte-compiled
-              (not (file-exists-p dst)))
-         (propertize
-          "!"
-          'help-echo "Failed to byte-compile\nmouse-1 retry"
-          'mouse-face 'mode-line-highlight
-          'local-map (make-mode-line-mouse-map
-                      'mouse-1 #'auto-compile-mode-line-byte-compile)))
-        ((not (file-exists-p dst))
-         (propertize
-          "%%"
-          'help-echo "Byte-compiled file doesn't exist\nmouse-1 create"
-          'mouse-face 'mode-line-highlight
-          'local-map (make-mode-line-mouse-map
-                      'mouse-1 #'mode-line-toggle-auto-compile)))
-        ((file-newer-than-file-p src dst)
-         (propertize
-          "*"
-          'help-echo "Byte-compiled file needs updating\nmouse-1 update"
-          'mouse-face 'mode-line-highlight
-          'local-map (make-mode-line-mouse-map
-                      'mouse-1 #'auto-compile-mode-line-byte-compile)))
-        (t
-         (propertize
-          "-"
-          'help-echo "Byte-compiled file is up-to-date\nmouse-1 remove"
-          'mouse-face 'mode-line-highlight
-          'local-map (make-mode-line-mouse-map
-                      'mouse-1 #'mode-line-toggle-auto-compile))))))))
+         ((and auto-compile-pretend-byte-compiled
+               (not (file-exists-p dst)))
+          (propertize
+           "!"
+           'help-echo "Failed to byte-compile\nmouse-1 retry"
+           'mouse-face 'mode-line-highlight
+           'local-map (make-mode-line-mouse-map
+                       'mouse-1 #'auto-compile-mode-line-byte-compile)))
+         ((not (file-exists-p dst))
+          (propertize
+           "%%"
+           'help-echo "Byte-compiled file doesn't exist\nmouse-1 create"
+           'mouse-face 'mode-line-highlight
+           'local-map (make-mode-line-mouse-map
+                       'mouse-1 #'mode-line-toggle-auto-compile)))
+         ((file-newer-than-file-p src dst)
+          (propertize
+           "*"
+           'help-echo "Byte-compiled file needs updating\nmouse-1 update"
+           'mouse-face 'mode-line-highlight
+           'local-map (make-mode-line-mouse-map
+                       'mouse-1 #'auto-compile-mode-line-byte-compile)))
+         (t
+          (propertize
+           "-"
+           'help-echo "Byte-compiled file is up-to-date\nmouse-1 remove"
+           'mouse-face 'mode-line-highlight
+           'local-map (make-mode-line-mouse-map
+                       'mouse-1 #'mode-line-toggle-auto-compile))))))))
 
 (defun auto-compile-display-log ()
   "Display the *Compile-Log* buffer."
@@ -876,5 +876,6 @@ Without this advice the outdated source file would get loaded."
 (provide 'auto-compile)
 ;; Local Variables:
 ;; indent-tabs-mode: nil
+;; lisp-indent-local-overrides: ((cond . 0) (interactive . 0))
 ;; End:
 ;;; auto-compile.el ends here
