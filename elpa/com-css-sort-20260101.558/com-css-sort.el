@@ -1,12 +1,12 @@
 ;;; com-css-sort.el --- Common way of sorting the CSS attributes  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2018-2025  Shen, Jen-Chieh
+;; Copyright (C) 2018-2026  Shen, Jen-Chieh
 ;; Created date 2018-04-30 14:26:37
 
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/jcs-elpa/com-css-sort
-;; Package-Version: 20250101.1004
-;; Package-Revision: 4c6f8bfd88c0
+;; Package-Version: 20260101.558
+;; Package-Revision: 244f910ef55c
 ;; Package-Requires: ((emacs "25.1") (s "1.12.0"))
 ;; Keywords: convenience matching css sort
 
