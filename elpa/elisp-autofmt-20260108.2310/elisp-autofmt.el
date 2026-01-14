@@ -6,15 +6,15 @@
 ;; Author: Campbell Barton <ideasman42@gmail.com>
 
 ;; URL: https://codeberg.org/ideasman42/emacs-elisp-autofmt
-;; Package-Version: 20251015.1201
-;; Package-Revision: 4295b30b432d
+;; Package-Version: 20260108.2310
+;; Package-Revision: e6c0aac8ebd8
 ;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
 
 ;; Auto format emacs-lisp code on save.
 
-;;; Usage
+;;; Usage:
 
 ;; (elisp-autofmt-buffer) ; Auto-format the current buffer.
 ;;
@@ -67,27 +67,27 @@ Otherwise existing line-breaks are kept and only indentation is performed."
 
 (defcustom elisp-autofmt-empty-line-max 2
   "The maximum number of blank lines to preserve."
-  :type 'integer)
+  :type 'natnum)
 ;;;###autoload
 (put 'elisp-autofmt-empty-line-max 'safe-local-variable #'integerp)
 
 ;; Customization (API Definitions).
 
 (defcustom elisp-autofmt-use-function-defs t
-  "When non nil, generate function definitions for the auto-formatter to use."
+  "When non-nil, generate function definitions for the auto-formatter to use."
   :type 'boolean)
 
 
 (defcustom elisp-autofmt-use-default-override-defs t
-  "When non nil, make opinionated changes to how line breaks are handled."
+  "When non-nil, make opinionated changes to how line breaks are handled."
   :type 'boolean)
 
 (defcustom elisp-autofmt-load-packages-local nil
   "Additional packages/modules to include definitions from.
 
-Each entry may be:
-- A package identifier which will be loaded
-  which isn't loaded by default on Emacs startup.
+Each entry is a string which may be:
+- A package name (e.g. \"pcase\") which will be loaded
+  if it isn't loaded by default on Emacs startup.
 - A buffer relative path (beginning with a \".\"),
   which is intended to support sharing definitions for multi-file packages.
 
@@ -135,7 +135,7 @@ When nil, the default Python command is used."
 (defcustom elisp-autofmt-cache-directory
   (locate-user-emacs-file "elisp-autofmt-cache" ".elisp-autofmt-cache")
   "The directory to store cache data."
-  :type 'string)
+  :type 'directory)
 
 (defcustom elisp-autofmt-use-diff-range nil
   "For whole buffer formatting, compute the changed region & only update that.
@@ -156,7 +156,7 @@ Note that this may be useful for systems where the sub-process overhead is signi
   "Buffers under this size will not use parallel computation.
 
 - Use 0 to enable parallel computation for buffers of any size."
-  :type 'integer)
+  :type 'natnum)
 
 
 ;; ---------------------------------------------------------------------------
@@ -198,7 +198,7 @@ Note that this may be useful for systems where the sub-process overhead is signi
 ;; Internal Utilities
 
 (defun elisp-autofmt--python-commands-or-empty ()
-  "Return the Python command an empty list.
+  "Return the Python command or an empty list.
 
 An empty list means the script will be executed directly,
 useful for systems that patch the SHEBANG for a custom Python location."
@@ -225,7 +225,7 @@ useful for systems that patch the SHEBANG for a custom Python location."
 (defmacro elisp-autofmt--with-advice (advice &rest body)
   "Execute BODY with ADVICE temporarily enabled.
 
-Advice are triplets of (SYMBOL HOW FUNCTION),
+Each advice is a triplet of (SYMBOL HOW FUNCTION),
 see `advice-add' documentation."
   (declare (indent 1))
   (let ((advice-list advice)
@@ -519,7 +519,7 @@ Return a cons cell comprised of the:
                   (proc-err (get-buffer-process stderr-buffer)))
 
               ;; Unfortunately a separate process is set for the STDERR
-              ;; which uses it's own sentinel.
+              ;; which uses its own sentinel.
               ;; Needed to override the "Process .. finished" message.
               (unless (eq proc-out proc-err)
                 (setq sentinel-called-expect 2)
@@ -564,7 +564,7 @@ Any `stderr' is output a message and is interpreted as failure."
 
           ;; Calling the process is completed.
           (cond
-           ((not (zerop exit-code))
+           ((null (zerop exit-code))
             (message "elisp-autofmt: Command %S failed with exit code %d!"
                      command-with-args
                      exit-code)
@@ -719,7 +719,8 @@ When INCLUDE-PRIVATE is nil, exclude functions with \"--\" in their names."
                           ;; Is it built-in? (speeds up accessing the file-path which is slow).
                           (subrp sym-fn)
                           (or (null auto-load-pkg)
-                              (not (member auto-load-pkg elisp-autofmt-ignore-autoload-packages))))
+                              (null
+                               (member auto-load-pkg elisp-autofmt-ignore-autoload-packages))))
                  ;; (autoload sym-id)
 
                  ;; Note that we could check for C-source only using.
@@ -777,7 +778,7 @@ When SKIP-REQUIRE is non-nil, the package is not required."
             (message "Unable to load %s" package-id)
             nil))
 
-      ;; Ensure the cache is newer than it's source.
+      ;; Ensure the cache is newer than its source.
       (with-temp-buffer
         (insert "{\n")
         ;; Allow for other kinds of data in these files in the future.
@@ -802,7 +803,7 @@ Writes outputs to `ELISP_AUTOFMT_OUTPUT'."
     (elisp-autofmt--cache-api-generate-for-builtins output-path)))
 
 (defun elisp-autofmt--gen-package-defs ()
-  "Generate builtin definitions.
+  "Generate package definitions.
 
 Uses package from environment variable `ELISP_AUTOFMT_PACKAGE'.
 Writes outputs to environment variable `ELISP_AUTOFMT_OUTPUT'."
@@ -811,7 +812,7 @@ Writes outputs to environment variable `ELISP_AUTOFMT_OUTPUT'."
         (package-id (getenv "ELISP_AUTOFMT_PACKAGE")))
     (unless output-path
       (error "elisp-autofmt: $ELISP_AUTOFMT_OUTPUT was not set for package!"))
-    (unless output-path
+    (unless package-id
       (error "elisp-autofmt: $ELISP_AUTOFMT_PACKAGE was not set for package!"))
     (elisp-autofmt--cache-api-generate-for-package output-path package-id nil)))
 
@@ -827,7 +828,7 @@ Return the cache name only (no directory)."
          (filename-cache-name-only (elisp-autofmt--cache-api-encode-name filename))
          (filename-cache-name-full
           (file-name-concat elisp-autofmt-cache-directory filename-cache-name-only)))
-    (when (or (not (file-exists-p filename-cache-name-full))
+    (when (or (null (file-exists-p filename-cache-name-full))
               (elisp-autofmt--cache-api-file-is-older filename-cache-name-full filename))
 
       (cond
@@ -880,7 +881,7 @@ if the package could not be loaded."
               (file-name-concat elisp-autofmt-cache-directory filename-cache-name-only)))
 
         ;; Ensure the cache is newer than it's source.
-        (when (or (not (file-exists-p filename-cache-name-full))
+        (when (or (null (file-exists-p filename-cache-name-full))
                   (elisp-autofmt--cache-api-file-is-older filename-cache-name-full filename))
           (elisp-autofmt--cache-api-generate-for-package
            filename-cache-name-full package-id skip-require))
@@ -896,7 +897,7 @@ Return the cache name only (no directory)."
          (filename-cache-name-full
           (file-name-concat elisp-autofmt-cache-directory filename-cache-name-only)))
 
-    (when (or (not (file-exists-p filename-cache-name-full))
+    (when (or (null (file-exists-p filename-cache-name-full))
               (elisp-autofmt--cache-api-file-is-older filename-cache-name-full filepath))
 
       (let ((command-with-args
@@ -1108,19 +1109,6 @@ Argument IS-INTERACTIVE is set when running interactively."
             (buf-fn (lambda () buf)))
         (replace-region-contents pos-min pos-max buf-fn max-secs))))))
 
-(defun elisp-autofmt--replace-buffer-contents-with-fastpath (buf fmt-region-range is-interactive)
-  "Replace buffer contents with BUF, fast-path when undo is disabled.
-
-Useful for fast operation, especially for automated conversion or tests.
-Argument FMT-REGION-RANGE optionally replaces a region when non-nil.
-Argument IS-INTERACTIVE is set when running interactively."
-  (declare (important-return-value nil))
-  ;; Optionally format within a region,
-  (cond
-
-   (t
-    (elisp-autofmt--replace-region-contents-wrapper (point-min) (point-max) buf is-interactive))))
-
 (defun elisp-autofmt--region-impl
     (stdout-buffer fmt-region-range to-file is-interactive &optional assume-file-name)
   "Auto format the current region using temporary STDOUT-BUFFER.
@@ -1255,7 +1243,7 @@ Argument IS-INTERACTIVE is set when running interactively."
 
       ;; Calling the process is completed.
       (cond
-       ((or (not (eq exit-code 2)) stderr-as-string)
+       ((or (null (eq exit-code 2)) stderr-as-string)
         (when stderr-as-string
           (cond
            (exit-code
@@ -1338,7 +1326,7 @@ See `elisp-autofmt--region-impl' for TO-FILE and IS-INTERACTIVE doc-strings."
 (defun elisp-autofmt--buffer-format-for-save-hook ()
   "The hook to run on buffer saving to format the buffer."
   (declare (important-return-value t))
-  ;; Demote errors as this is user configurable, we can't be sure it wont error.
+  ;; Demote errors as this is user configurable, we can't be sure it won't error.
   (when (with-demoted-errors "elisp-autofmt: Error %S"
           (funcall elisp-autofmt-on-save-p))
     (elisp-autofmt-buffer))
@@ -1363,7 +1351,7 @@ See `elisp-autofmt--region-impl' for TO-FILE and IS-INTERACTIVE doc-strings."
 
 ;;;###autoload
 (defun elisp-autofmt-buffer-to-file ()
-  "Auto format the current buffer, writing it's output to a file.
+  "Auto format the current buffer, writing its output to a file.
 
 This is intended for use by batch processing scripts,
 where loading changes back into the buffer is not important."
