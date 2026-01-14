@@ -13,7 +13,7 @@
 
 (autoload 'xterm-color-filter-strip "xterm-color" "\
 Translate ANSI color sequences in STRING into text properties.
-Return new STRING with text properties applied.
+Returns new STRING with text properties applied.
 
 In order to get maximum performance, this function strips text properties
 if they are present in STRING.
@@ -21,7 +21,7 @@ if they are present in STRING.
 (fn STRING)")
 (autoload 'xterm-color-filter "xterm-color" "\
 Translate ANSI color sequences in STRING into text properties.
-Return new STRING with text properties applied.
+Returns new STRING with text properties applied.
 
 This function checks if `xterm-color-preserve-properties' is non-nil
 and only calls `xterm-color-filter-strip' on substrings that do not
