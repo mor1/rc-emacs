@@ -1,14 +1,15 @@
 ;;; tsc.el --- Core Tree-sitter APIs -*- lexical-binding: t; coding: utf-8 -*-
 
-;; Copyright (C) 2021  Tuấn-Anh Nguyễn
+;; Copyright (C) 2021-2025 emacs-tree-sitter maintainers
 ;;
 ;; Author: Tuấn-Anh Nguyễn <ubolonton@gmail.com>
 ;;         Jorge Javier Araya Navarro <jorgejavieran@yahoo.com.mx>
+;; Maintainer: Jen-Chieh Shen <jcs090218@gmail.com>
 ;; Keywords: languages tools parsers dynamic-modules tree-sitter
 ;; Homepage: https://github.com/emacs-tree-sitter/elisp-tree-sitter
-;; Package-Version: 20220212.1632
-;; Package-Revision: 909717c685ff
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Version: 20251222.1802
+;; Package-Revision: d12aff8ee91d
+;; Package-Requires: ((emacs "27.1"))
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
@@ -25,7 +26,7 @@
 
 ;; Load the dynamic module at compile time as well, to satisfy the byte compiler.
 (eval-and-compile
-  (defconst tsc--dyn-version "0.18.0"
+  (defconst tsc--dyn-version "0.19.3"
     "Required version of the dynamic module `tsc-dyn'.")
   (require 'tsc-dyn-get)
   (tsc-dyn-get-ensure tsc--dyn-version))
