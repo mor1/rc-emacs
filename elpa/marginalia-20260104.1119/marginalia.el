@@ -1,12 +1,12 @@
 ;;; marginalia.el --- Enrich existing commands with completion annotations -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2021-2026 Free Software Foundation, Inc.
 
 ;; Author: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2020
-;; Package-Version: 20251123.1133
-;; Package-Revision: d38041df2c2d
+;; Package-Version: 20260104.1119
+;; Package-Revision: fc0cee1151fc
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/marginalia
 ;; Keywords: docs, help, matching, completion
@@ -28,7 +28,11 @@
 
 ;;; Commentary:
 
-;; Enrich existing commands with completion annotations
+;; Enrich existing commands with completion annotations.  The information
+;; associated with the completion candidates is shown in the minibuffer or the
+;; *Completions* buffer.  For files the owner and permissions are shown, for
+;; buffers the major mode and modification status and for functions or commands
+;; the docstring is shown.
 
 ;;; Code:
 
@@ -114,9 +118,10 @@ displayed instead."
      (tab ,#'marginalia-annotate-tab)
      (multi-category ,#'marginalia-annotate-multi-category)))
   "Annotator function registry.
-Associates completion categories with annotation functions.
-Each annotation function must return a string,
-which is appended to the completion candidate."
+Associates completion categories with annotation functions.  Each
+annotation function must return a string, which is appended to the
+completion candidate.  The annotation functions are executed in the
+original window and the original buffer, if still alive."
   :type '(alist :key-type symbol :value-type (repeat symbol)))
 
 (defcustom marginalia-classifiers
@@ -382,7 +387,7 @@ for performance profiling of the annotators.")
 (defun marginalia--truncate (str width)
   "Truncate string STR to WIDTH."
   (when (floatp width) (setq width (round (* width marginalia-field-width))))
-  (when-let (pos (string-search "\n" str))
+  (when-let* ((pos (string-search "\n" str)))
     (setq str (substring str 0 pos)))
   (let* ((face (and (not (equal str ""))
                     (get-text-property (1- (length str)) 'face str)))
@@ -432,7 +437,7 @@ FACE is the name of the face, with which the field should be propertized."
   "Run BODY inside minibuffer if minibuffer is active.
 Otherwise stay within current buffer."
   (declare (indent 0))
-  `(with-current-buffer (if-let (win (active-minibuffer-window))
+  `(with-current-buffer (if-let* ((win (active-minibuffer-window)))
                             (window-buffer win)
                           (current-buffer))
      ,@body))
@@ -445,8 +450,8 @@ Otherwise stay within current buffer."
 
 (defun marginalia-annotate-binding (cand)
   "Annotate command CAND with keybinding."
-  (when-let ((sym (intern-soft cand))
-             (key (and (commandp sym) (where-is-internal sym nil 'first-only))))
+  (when-let* ((sym (intern-soft cand))
+              (key (and (commandp sym) (where-is-internal sym nil 'first-only))))
     (format #(" (%s)" 1 5 (face marginalia-key)) (key-description key))))
 
 (defun marginalia--annotator (cat)
@@ -458,17 +463,17 @@ Otherwise stay within current buffer."
 
 (defun marginalia-annotate-multi-category (cand)
   "Annotate multi-category CAND, dispatching to the appropriate annotator."
-  (if-let ((multi (get-text-property 0 'multi-category cand))
-           (fun (marginalia--annotator (car multi))))
+  (if-let* ((multi (get-text-property 0 'multi-category cand))
+            (fun (marginalia--annotator (car multi))))
       ;; Use the Marginalia annotator corresponding to the multi category.
       (funcall fun (cdr multi))
     ;; Apply the original annotation function on the original candidate. Bypass
     ;; our `marginalia--completion-metadata-get' advice.
-    (if-let ((fun (marginalia--orig-completion-metadata-get
-                   marginalia--metadata 'affixation-function)))
+    (if-let* ((fun (marginalia--orig-completion-metadata-get
+                    marginalia--metadata 'affixation-function)))
         (caddar (funcall fun (list cand)))
-      (when-let ((fun (marginalia--orig-completion-metadata-get
-                       marginalia--metadata 'annotation-function)))
+      (when-let* ((fun (marginalia--orig-completion-metadata-get
+                        marginalia--metadata 'annotation-function)))
         (funcall fun cand)))))
 
 (defconst marginalia--advice-regexp
@@ -576,14 +581,14 @@ t cl-type"
 Sometimes symbols which are not yet loaded appear in completion tables
 if `help-enable-completion-autoload' is enabled.  These symbols
 originate from the `definition-prefixes' hash table."
-  (when-let (((bound-and-true-p help-enable-completion-autoload))
-             (files (gethash (symbol-name sym) definition-prefixes)))
+  (when-let* (((bound-and-true-p help-enable-completion-autoload))
+              (files (gethash (symbol-name sym) definition-prefixes)))
     (format "[Not yet loaded from %s. See `help-enable-completion-autoload'.]"
             (string-join files ", "))))
 
 (defun marginalia--function-doc (sym)
   "Documentation string of function SYM."
-  (if-let (str (ignore-errors (documentation sym)))
+  (if-let* ((str (ignore-errors (documentation sym))))
       (save-match-data
         (if (string-match marginalia--advice-regexp str)
             (substring str (match-end 0))
@@ -611,7 +616,7 @@ originate from the `definition-prefixes' hash table."
 
 (defun marginalia-annotate-symbol (cand)
   "Annotate symbol CAND with its documentation string."
-  (when-let (sym (intern-soft cand))
+  (when-let* ((sym (intern-soft cand)))
     (marginalia--fields
      (:left (marginalia-annotate-binding cand))
      ((marginalia--symbol-class sym) :face 'marginalia-type)
@@ -630,7 +635,7 @@ originate from the `definition-prefixes' hash table."
 (defun marginalia-annotate-command (cand)
   "Annotate command CAND with its documentation string.
 Similar to `marginalia-annotate-symbol', but does not show symbol class."
-  (when-let (sym (intern-soft cand))
+  (when-let* ((sym (intern-soft cand)))
     (concat
      (marginalia-annotate-binding cand)
      (marginalia--documentation (marginalia--function-doc sym)))))
@@ -639,7 +644,7 @@ Similar to `marginalia-annotate-symbol', but does not show symbol class."
   "Annotate Embark keybinding CAND with its documentation string.
 Similar to `marginalia-annotate-command', but does not show the
 keybinding since CAND includes it."
-  (when-let (cmd (get-text-property 0 'embark-command cand))
+  (when-let* ((cmd (get-text-property 0 'embark-command cand)))
     (marginalia--documentation (marginalia--function-doc cmd))))
 
 (defun marginalia-annotate-imenu (cand)
@@ -650,7 +655,7 @@ keybinding since CAND includes it."
 
 (defun marginalia-annotate-function (cand)
   "Annotate function CAND with its documentation string."
-  (when-let (sym (intern-soft cand))
+  (when-let* ((sym (intern-soft cand)))
     (marginalia--fields
      (:left (marginalia-annotate-binding cand))
      ((marginalia--symbol-class sym) :face 'marginalia-type)
@@ -733,7 +738,7 @@ keybinding since CAND includes it."
 
 (defun marginalia-annotate-variable (cand)
   "Annotate variable CAND with its documentation string."
-  (when-let (sym (intern-soft cand))
+  (when-let* ((sym (intern-soft cand)))
     (marginalia--fields
      ((marginalia--symbol-class sym) :face 'marginalia-type)
      ((marginalia--variable-value sym) :truncate 0.5)
@@ -743,13 +748,13 @@ keybinding since CAND includes it."
 
 (defun marginalia-annotate-environment-variable (cand)
   "Annotate environment variable CAND with its current value."
-  (when-let (val (getenv cand))
+  (when-let* ((val (getenv cand)))
     (marginalia--fields
      (val :truncate 1.0 :face 'marginalia-value))))
 
 (defun marginalia-annotate-face (cand)
   "Annotate face CAND with its documentation string and face example."
-  (when-let (sym (intern-soft cand))
+  (when-let* ((sym (intern-soft cand)))
     (marginalia--fields
      ;; HACK: Manual alignment to fix misalignment due to face
      ((concat marginalia--pangram #(" " 0 1 (display (space :align-to center))))
@@ -759,7 +764,7 @@ keybinding since CAND includes it."
 
 (defun marginalia-annotate-color (cand)
   "Annotate face CAND with its documentation string and face example."
-  (when-let (rgb (color-name-to-rgb cand))
+  (when-let* ((rgb (color-name-to-rgb cand)))
     (pcase-let* ((`(,r ,g ,b) rgb)
                  (`(,h ,s ,l) (apply #'color-rgb-to-hsl rgb))
                  (cr (color-rgb-to-hex r 0 0))
@@ -787,7 +792,7 @@ keybinding since CAND includes it."
 
 (defun marginalia-annotate-char (cand)
   "Annotate character CAND with its general character category and character code."
-  (when-let (char (char-from-name cand t))
+  (when-let* ((char (char-from-name cand t)))
     (marginalia--fields
      (:left char :format" (%c)" :face 'marginalia-char)
      (char :format "%06X" :face 'marginalia-number)
@@ -816,21 +821,21 @@ keybinding since CAND includes it."
 
 (defun marginalia-annotate-package (cand)
   "Annotate package CAND with its description summary."
-  (when-let ((pkg-alist (bound-and-true-p package-alist))
-             ;; See `package-get-version'.
-             (name (replace-regexp-in-string
-                    "-[0-9]\\(?:[0-9.]\\|pre\\|beta\\|alpha\\|snapshot\\)+\\'" "" cand))
-             (pkg (intern-soft name))
-             (desc (or (unless (equal name cand)
-                         (cl-loop with version = (substring cand (1+ (length name)))
-                                  for d in (alist-get pkg pkg-alist)
-                                  if (equal (package-version-join (package-desc-version d)) version)
-                                  return d))
-                       ;; taken from `describe-package-1'
-                       (car (alist-get pkg pkg-alist))
-                       (if-let (built-in (assq pkg package--builtins))
-                           (package--from-builtin built-in)
-                         (car (alist-get pkg package-archive-contents))))))
+  (when-let* ((pkg-alist (bound-and-true-p package-alist))
+              ;; See `package-get-version'.
+              (name (replace-regexp-in-string
+                     "-[0-9]\\(?:[0-9.]\\|pre\\|beta\\|alpha\\|snapshot\\)+\\'" "" cand))
+              (pkg (intern-soft name))
+              (desc (or (unless (equal name cand)
+                          (cl-loop with version = (substring cand (1+ (length name)))
+                                   for d in (alist-get pkg pkg-alist)
+                                   if (equal (package-version-join (package-desc-version d)) version)
+                                   return d))
+                        ;; taken from `describe-package-1'
+                        (car (alist-get pkg pkg-alist))
+                        (if-let* ((built-in (assq pkg package--builtins)))
+                            (package--from-builtin built-in)
+                          (car (alist-get pkg package-archive-contents))))))
     (marginalia--fields
      ((package-version-join (package-desc-version desc)) :truncate 16 :face 'marginalia-version)
      ((cond
@@ -860,7 +865,7 @@ The string is transformed according to `marginalia--bookmark-type-transforms'."
 
 (defun marginalia-annotate-bookmark (cand)
   "Annotate bookmark CAND with its file name and front context string."
-  (when-let ((bm (assoc cand (bound-and-true-p bookmark-alist))))
+  (when-let* ((bm (assoc cand (bound-and-true-p bookmark-alist))))
     (marginalia--fields
      ((marginalia--bookmark-type bm) :width 10 :face 'marginalia-type)
      ((or (bookmark-prop-get bm 'filename)
@@ -904,7 +909,7 @@ The string is transformed according to `marginalia--bookmark-type-transforms'."
 
 (defun marginalia--buffer-file (buffer)
   "Return the file or process name of BUFFER."
-  (if-let (proc (get-buffer-process buffer))
+  (if-let* ((proc (get-buffer-process buffer)))
       (format "(%s %s) %s"
               proc (process-status proc)
               (abbreviate-file-name (buffer-local-value 'default-directory buffer)))
@@ -912,8 +917,8 @@ The string is transformed according to `marginalia--bookmark-type-transforms'."
      (or (cond
           ;; see ibuffer-buffer-file-name
           ((buffer-file-name buffer))
-          ((when-let (dir (and (local-variable-p 'dired-directory buffer)
-                               (buffer-local-value 'dired-directory buffer)))
+          ((when-let* ((dir (and (local-variable-p 'dired-directory buffer)
+                                 (buffer-local-value 'dired-directory buffer))))
              (expand-file-name (if (stringp dir) dir (car dir))
                                (buffer-local-value 'default-directory buffer))))
           ((local-variable-p 'list-buffers-directory buffer)
@@ -923,9 +928,9 @@ The string is transformed according to `marginalia--bookmark-type-transforms'."
 (defun marginalia-annotate-buffer (cand)
   "Annotate buffer CAND with modification status, file name and major mode."
   ;; Emacs 31: `project--read-project-buffer' uses `uniquify-get-unique-names'
-  (when-let ((buffer (or (and (stringp cand)
-                              (get-text-property 0 'uniquify-orig-buffer cand))
-                         (get-buffer cand))))
+  (when-let* ((buffer (or (and (stringp cand)
+                               (get-text-property 0 'uniquify-orig-buffer cand))
+                          (get-buffer cand))))
     (if (buffer-live-p buffer)
         (marginalia--fields
          ((marginalia--buffer-status buffer))
@@ -939,7 +944,7 @@ For some completion tables, the completion candidates offered are
 meant to be only a part of the full minibuffer contents.  For
 example, during file name completion the candidates are one path
 component of a full file path."
-  (if-let (win (active-minibuffer-window))
+  (if-let* ((win (active-minibuffer-window)))
       (with-current-buffer (window-buffer win)
         (concat (let ((end (minibuffer-prompt-end)))
                   (buffer-substring-no-properties
@@ -963,11 +968,11 @@ e.g., the protocol."
 (defun marginalia--annotate-local-file (cand)
   "Annotate local file CAND."
   (marginalia--in-minibuffer
-    (when-let (attrs (ignore-errors
-                       ;; may throw permission denied errors
-                       (file-attributes (substitute-in-file-name
-                                         (marginalia--full-candidate cand))
-                                        'integer)))
+    (when-let* ((attrs (ignore-errors
+                         ;; may throw permission denied errors
+                         (file-attributes (substitute-in-file-name
+                                           (marginalia--full-candidate cand))
+                                          'integer))))
       ;; HACK: Format differently accordingly to alignment, since the file owner
       ;; is usually not displayed. Otherwise we will see an excessive amount of
       ;; whitespace in front of the file permissions. Furthermore the alignment
@@ -991,10 +996,10 @@ e.g., the protocol."
 (defun marginalia-annotate-file (cand)
   "Annotate file CAND with its size, modification time and other attributes.
 These annotations are skipped for remote paths."
-  (if-let (remote (or (marginalia--remote-file-p cand)
-                      (when-let (win (active-minibuffer-window))
-                        (with-current-buffer (window-buffer win)
-                          (marginalia--remote-file-p (minibuffer-contents-no-properties))))))
+  (if-let* ((remote (or (marginalia--remote-file-p cand)
+                        (when-let* ((win (active-minibuffer-window)))
+                          (with-current-buffer (window-buffer win)
+                            (marginalia--remote-file-p (minibuffer-contents-no-properties)))))))
       (marginalia--fields (remote :format "*%s*" :face 'marginalia-documentation))
     (marginalia--annotate-local-file cand)))
 
@@ -1084,7 +1089,7 @@ These annotations are skipped for remote paths."
                         "\\`\\(?:Dired\\|Find file\\) in \\(.*\\): \\'"
                         prompt)
                        (match-string 1 prompt)))
-                (when-let (proj (project-current))
+                (when-let* ((proj (project-current)))
                   (project-root proj)))))
     marginalia--project-root))
 
@@ -1093,7 +1098,7 @@ These annotations are skipped for remote paths."
   ;; Absolute project directories also report project-file category
   (if (file-name-absolute-p cand)
       (marginalia-annotate-file cand)
-    (when-let (root (marginalia--project-root))
+    (when-let* ((root (marginalia--project-root)))
       (marginalia-annotate-file (expand-file-name cand root)))))
 
 (defvar-local marginalia--library-cache nil)
@@ -1152,11 +1157,11 @@ These annotations are skipped for remote paths."
 (defun marginalia-annotate-library (cand)
   "Annotate library CAND with documentation and path."
   (setq cand (marginalia--library-name cand))
-  (when-let (file (gethash cand (marginalia--library-cache)))
+  (when-let* ((file (gethash cand (marginalia--library-cache))))
     (marginalia--fields
      ;; Display if the corresponding feature is loaded.
      ;; feature/=library file, but better than nothing.
-     ((when-let (sym (intern-soft cand))
+     ((when-let* ((sym (intern-soft cand)))
         (when (memq sym features)
           (propertize "Loaded" 'face 'marginalia-on)))
       :width 8)
@@ -1167,7 +1172,7 @@ These annotations are skipped for remote paths."
 
 (defun marginalia-annotate-theme (cand)
   "Annotate theme CAND with documentation and path."
-  (when-let (file (gethash (concat cand "-theme") (marginalia--library-cache)))
+  (when-let* ((file (gethash (concat cand "-theme") (marginalia--library-cache))))
     (marginalia--fields
      ((marginalia--library-doc file)
       :truncate 1.0 :face 'marginalia-documentation)
@@ -1176,10 +1181,10 @@ These annotations are skipped for remote paths."
 
 (defun marginalia-annotate-tab (cand)
   "Annotate named tab CAND with tab index, window and buffer information."
-  (when-let ((tabs (funcall tab-bar-tabs-function))
-             (index (seq-position
-                     tabs nil
-                     (lambda (tab _) (equal (alist-get 'name tab) cand)))))
+  (when-let* ((tabs (funcall tab-bar-tabs-function))
+              (index (seq-position
+                      tabs nil
+                      (lambda (tab _) (equal (alist-get 'name tab) cand)))))
     (let* ((tab (nth index tabs))
            (ws (alist-get 'ws tab))
            (bufs (window-state-buffers ws)))
@@ -1204,20 +1209,20 @@ These annotations are skipped for remote paths."
   (and marginalia--command
        (or (alist-get marginalia--command marginalia-command-categories)
            ;; The command can be an alias, e.g., `recentf' -> `recentf-open'.
-           (when-let ((chain (function-alias-p marginalia--command)))
+           (when-let* ((chain (function-alias-p marginalia--command)))
              (alist-get (car (last chain)) marginalia-command-categories)))))
 
 (defun marginalia-classify-original-category ()
   "Return original category reported by completion metadata."
   ;; Bypass our `marginalia--completion-metadata-get' advice.
-  (when-let (cat (marginalia--orig-completion-metadata-get marginalia--metadata 'category))
+  (when-let* ((cat (marginalia--orig-completion-metadata-get marginalia--metadata 'category)))
     ;; Ignore `symbol-help' category in order to ensure that the categories are
     ;; refined to our categories function and variable.
     (and (not (eq cat 'symbol-help)) cat)))
 
 (defun marginalia-classify-symbol ()
   "Determine if currently completing symbols."
-  (when-let (mct minibuffer-completion-table)
+  (when-let* ((mct minibuffer-completion-table))
     (when (or (eq mct 'help--symbol-completion-table)
               (obarrayp mct)
               (and (not (functionp mct)) (consp mct) (symbolp (car mct)))) ; assume list of symbols
@@ -1227,7 +1232,7 @@ These annotations are skipped for remote paths."
   "Determine category by matching regexps against the minibuffer prompt.
 This runs through the `marginalia-prompt-categories' alist
 looking for a regexp that matches the prompt."
-  (when-let (prompt (minibuffer-prompt))
+  (when-let* ((prompt (minibuffer-prompt)))
     (setq prompt
           (replace-regexp-in-string "(.*?default.*?)\\|\\[.*?\\]" "" prompt))
     (cl-loop with case-fold-search = t
@@ -1263,7 +1268,7 @@ completion UIs like Vertico or Icomplete."
   "Align annotations of CANDS according to `marginalia-align'."
   (cl-loop
    for (cand . ann) in cands do
-   (when-let (align (text-property-any 0 (length ann) 'marginalia--align t ann))
+   (when-let* ((align (text-property-any 0 (length ann) 'marginalia--align t ann)))
      (setq marginalia--cand-width-max
            (max marginalia--cand-width-max
                 (* (ceiling (+ (string-width cand) (string-width ann 0 align))
@@ -1272,7 +1277,7 @@ completion UIs like Vertico or Icomplete."
   (cl-loop
    for (cand . ann) in cands collect
    (progn
-     (when-let (align (text-property-any 0 (length ann) 'marginalia--align t ann))
+     (when-let* ((align (text-property-any 0 (length ann) 'marginalia--align t ann)))
        (put-text-property
         align (1+ align) 'display
         `(space :align-to
@@ -1296,16 +1301,18 @@ completion UIs like Vertico or Icomplete."
   (let* ((width (cl-loop for win in (get-buffer-window-list) minimize (window-width win)))
          (marginalia-field-width (min (/ width 2) marginalia-field-width))
          (marginalia--metadata metadata)
-         (cache marginalia--cache))
+         (cache marginalia--cache)
+         (orig-buf minibuffer--original-buffer))
     (marginalia--align
      ;; Run the annotators in the original window. `with-selected-window'
      ;; is necessary because of `lookup-minor-mode-from-indicator'.
      ;; Otherwise it would suffice to only change the current buffer. We
      ;; need the `selected-window' fallback for Embark Occur.
      (with-selected-window (or (minibuffer-selected-window) (selected-window))
-       (cl-loop for cand in cands collect
-                (let ((ann (or (marginalia--cached cache annotator cand) "")))
-                  (cons cand (if (string-blank-p ann) "" ann))))))))
+       (with-current-buffer (if (buffer-live-p orig-buf) orig-buf (current-buffer))
+         (cl-loop for cand in cands collect
+                  (let ((ann (or (marginalia--cached cache annotator cand) "")))
+                    (cons cand (if (string-blank-p ann) "" ann)))))))))
 
 (defun marginalia--completion-metadata-get (metadata prop)
   "Meant as :before-until advice for `completion-metadata-get'.
@@ -1314,8 +1321,8 @@ PROP is the property which is looked up."
   (pcase prop
     ('affixation-function
      ;; We do want the advice triggered for `completion-metadata-get'.
-     (when-let ((cat (completion-metadata-get metadata 'category))
-                (annotator (marginalia--annotator cat)))
+     (when-let* ((cat (completion-metadata-get metadata 'category))
+                 (annotator (marginalia--annotator cat)))
        (apply-partially #'marginalia--affixate metadata annotator)))
     ('category
      ;; Find the completion category by trying each of our classifiers.
@@ -1402,25 +1409,25 @@ Remember `this-command' for `marginalia-classify-by-command-name'."
 
 (defun marginalia--context-menu (menu _event)
   "Add Marginalia commands to context MENU."
-  (when-let ((md (marginalia--completion-metadata))
-             (cat (completion-metadata-get md 'category))
-             (ann (assq cat marginalia-annotators))
-             (items (cl-loop
-                     for fun in (cdr ann) for i from 0
-                     if (or (not (eq fun 'builtin)) (marginalia--builtin-annotator-p md))
-                     collect
-                     (vector
-                      (thread-last (symbol-name fun)
-                                   (replace-regexp-in-string ".*?-+annotate-+" "")
-                                   (replace-regexp-in-string "-+" " ")
-                                   capitalize)
-                      (let ((i i))
-                        (lambda ()
-                          (interactive)
-                          (setcdr ann (append (drop i (cdr ann)) (take i (cdr ann))))
-                          (marginalia--cache-reset)
-                          (message "Marginalia: Use annotator `%s' for category `%s'" (cadr ann) cat)))
-                      :style 'radio :selected (eq fun (cadr ann))))))
+  (when-let* ((md (marginalia--completion-metadata))
+              (cat (completion-metadata-get md 'category))
+              (ann (assq cat marginalia-annotators))
+              (items (cl-loop
+                      for fun in (cdr ann) for i from 0
+                      if (or (not (eq fun 'builtin)) (marginalia--builtin-annotator-p md))
+                      collect
+                      (vector
+                       (thread-last (symbol-name fun)
+                                    (replace-regexp-in-string ".*?-+annotate-+" "")
+                                    (replace-regexp-in-string "-+" " ")
+                                    capitalize)
+                       (let ((i i))
+                         (lambda ()
+                           (interactive)
+                           (setcdr ann (append (drop i (cdr ann)) (take i (cdr ann))))
+                           (marginalia--cache-reset)
+                           (message "Marginalia: Use annotator `%s' for category `%s'" (cadr ann) cat)))
+                       :style 'radio :selected (eq fun (cadr ann))))))
     (define-key menu [marginalia]
                 `("Marginalia" . ,(easy-menu-create-menu
                                    "" `(["Cycle" marginalia-cycle] "---" ,@items)))))
