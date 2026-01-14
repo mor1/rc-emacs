@@ -13,8 +13,8 @@
 ;; Keywords: ocaml languages
 ;; URL: https://github.com/tarides/ocaml-eglot
 ;; Package-Requires: ((emacs "29.1"))
-;; Package-Version: 20251114.737
-;; Package-Revision: 588e3a51433a
+;; Package-Version: 20260105.1923
+;; Package-Revision: ec7e2eacf392
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
@@ -354,12 +354,16 @@ If there is no available holes, it returns the first one of HOLES."
 
 (defun ocaml-eglot--phrase (direction)
   "Move to the next or previous phrase using DIRECTION."
-  (let* ((result (ocaml-eglot-req--phrase direction))
-         (json-result (ocaml-eglot-util--merlin-call-result result))
-         (pos (cl-getf json-result :pos)))
-    (when pos
-      (let ((target (ocaml-eglot-util--pos-to-point pos)))
-        (ocaml-eglot-util--goto-char target)))))
+  (if (ocaml-eglot-req--server-capable :experimental :ocamllsp :handlePhrase)
+      (let ((result (ocaml-eglot-req--phrase direction)))
+        (when result
+          (ocaml-eglot-util--jump-to result)))
+    (let* ((result (ocaml-eglot-req--phrase-legacy direction))
+           (json-result (ocaml-eglot-util--merlin-call-result result))
+           (pos (cl-getf json-result :pos)))
+      (when pos
+        (let ((target (ocaml-eglot-util--pos-to-point pos)))
+          (ocaml-eglot-util--goto-char target))))))
 
 (defun ocaml-eglot-phrase-next ()
   "Go to the beginning of the next phrase."
@@ -541,9 +545,13 @@ It use the ARG to use local values or not."
 (defun ocaml-eglot-type-expression (expression)
   "Prompt the user for expression EXPRESSION and print its type."
   (interactive "sExpression: ")
-  (let* ((result (ocaml-eglot-req--type-expression expression))
-         (type-expr (ocaml-eglot-util--merlin-call-result result)))
-    (ocaml-eglot-type-enclosing--display type-expr nil)))
+  (if (ocaml-eglot-req--server-capable
+       :experimental :ocamllsp :handleTypeExpression)
+      (let ((type-expr (ocaml-eglot-req--type-expression expression)))
+        (ocaml-eglot-type-enclosing--display type-expr nil))
+    (let* ((result (ocaml-eglot-req--type-expression-legacy expression))
+           (type-expr (ocaml-eglot-util--merlin-call-result result)))
+      (ocaml-eglot-type-enclosing--display type-expr nil))))
 
 (defun ocaml-eglot-type-enclosing (&optional prefix)
   "Print the type of the expression under point (or of the region, if it exists).
@@ -594,13 +602,15 @@ and print its type."
 
 (cl-defmethod eglot-client-capabilities :around (_)
   "Add client capabilities to Eglot for OCaml LSP server."
-  (let* ((capabilities (copy-tree (cl-call-next-method)))
-         (experimental-capabilities (cl-getf capabilities :experimental))
-         (previous (or experimental-capabilities eglot--{}))
+(let* ((capabilities (copy-tree (cl-call-next-method)))
+         (experimental-capabilities
+          (if-let* ((previous (cl-getf capabilities :experimental)))
+              (copy-hash-table previous)
+            (make-hash-table)))
          (commands (append (apply #'vector ocaml-eglot-client-capabilities) nil)))
     (dolist (key commands)
-      (puthash key t previous))
-    (setq capabilities (plist-put capabilities :experimental previous))))
+      (puthash key t experimental-capabilities))
+    (setq capabilities (plist-put capabilities :experimental experimental-capabilities))))
 
 ;; A command can be executed by the server or by the client. The
 ;; following code analyses the command. If it's a command which must

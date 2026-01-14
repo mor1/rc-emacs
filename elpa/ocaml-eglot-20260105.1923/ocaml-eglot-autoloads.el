@@ -35,30 +35,18 @@ evaluate the variable `ocaml-eglot'.
 The mode's hook is called both when the mode is enabled and when it is
 disabled.
 
-\\{ocaml-eglot-map}
-
 (fn &optional ARG)" t)
 (register-definition-prefixes "ocaml-eglot" '("ocaml-eglot-"))
 
 
 ;;; Generated autoloads from ocaml-eglot-objinfo.el
 
-(autoload 'ocaml-eglot--artifact-file-p "ocaml-eglot-objinfo" "\
-Return non-nil if FILE is an OCaml compiled artifact file.
-
-(fn FILE)")
-(autoload 'ocaml-eglot-objinfo-mode "ocaml-eglot-objinfo" "\
-Mode for displaying ocamlobjinfo output.
+(add-to-list 'auto-mode-alist '("\\.\\(cmi\\|cmti\\|cmt\\|cmo\\|cmx\\|cma\\|cmxa\\|cmxs\\)\\'" . ocaml-eglot-ocamlobjinfo-mode) t)
+(autoload 'ocaml-eglot-ocamlobjinfo-mode "ocaml-eglot-objinfo" "\
+Major Mode for displaying `ocamlobjinfo' output.
 
 (fn)" t)
-(autoload 'ocaml-eglot-objinfo-handler "ocaml-eglot-objinfo" "\
-Display the result of `ocamlobjinfo` instead of file contents.")
-(autoload 'ocaml-eglot-objinfo--ocaml-mode-p "ocaml-eglot-objinfo" "\
-Return non-nil if current buffer's major mode is an OCaml mode.")
-(autoload 'ocaml-eglot-objinfo--setup "ocaml-eglot-objinfo" "\
-Enable OCaml objinfo handler for artifact files in OCaml buffers.")
-(add-hook 'after-change-major-mode-hook #'ocaml-eglot-objinfo--setup)
-(register-definition-prefixes "ocaml-eglot-objinfo" '("ocaml-eglot-objinfo-flags"))
+(register-definition-prefixes "ocaml-eglot-objinfo" '("ocaml-eglot-o"))
 
 
 ;;; Generated autoloads from ocaml-eglot-req.el
