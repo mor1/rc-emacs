@@ -2,8 +2,8 @@
 
 ;; Copyright 2011-2025 François-Xavier Bois
 
-;; Package-Version: 20250827.1315
-;; Package-Revision: 1eb0abb1a9bf
+;; Package-Version: 20251214.1728
+;; Package-Revision: 1e7694aee877
 ;; Author: François-Xavier Bois
 ;; Maintainer: François-Xavier Bois <fxbois@gmail.com>
 ;; Package-Requires: ((emacs "23.1"))
@@ -5676,6 +5676,17 @@ Also return non-nil if it is the command `self-insert-command' is remapped to."
 ;; (6)value-uq (7)value-sq (8)value-dq (9)value-bq : jsx attr={}
 ;; (10)value-block
 
+(defun web-mode--indentless-attribute-p (attr)
+  "Return t if ATTR is in `web-mode-indentless-attributes'.
+  Handles wildcards where '*' matches any suffix."
+  (let ((found nil))
+    (dolist (pattern web-mode-indentless-attributes found)
+      (if (string-suffix-p "*" pattern)
+          (when (string-prefix-p (substring pattern 0 -1) attr)
+            (setq found t))
+        (when (string= pattern attr)
+          (setq found t))))))
+
 (defun web-mode-attr-skip (limit)
 
   (let ((tag-flags 0) (attr-flags 0) (continue t) (attrs 0) (brace-depth 0)
@@ -5767,7 +5778,7 @@ Also return non-nil if it is the command `self-insert-command' is remapped to."
                name-end (1- pos))
          (setq state 4)
          (setq attr (buffer-substring-no-properties name-beg (1+ name-end)))
-         (when (and web-mode-indentless-attributes (member (downcase attr) web-mode-indentless-attributes))
+         (when (and web-mode-indentless-attributes (web-mode--indentless-attribute-p (downcase attr)))
            (setq attr-flags (logior attr-flags 8)))
          )
 
