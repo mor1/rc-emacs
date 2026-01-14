@@ -1,6 +1,6 @@
 ;;; vertico-repeat.el --- Repeat Vertico sessions -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2021-2026 Free Software Foundation, Inc.
 
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
@@ -87,8 +87,8 @@
 
 (defun vertico-repeat--remove-long (session)
   "Remove overly long candidate from SESSION."
-  (when-let ((cand (caddr session))
-             ((and (stringp cand) (length> cand 200))))
+  (when-let* ((cand (caddr session))
+              ((and (stringp cand) (length> cand 200))))
     (setf (cddr session) (cdddr session)))
   session)
 
@@ -126,17 +126,17 @@
   (delete-minibuffer-contents)
   (insert (cadr session))
   (setq vertico--lock-candidate
-        (when-let ((cand (seq-find #'stringp (cddr session))))
+        (when-let* ((cand (seq-find #'stringp (cddr session))))
           (vertico--update)
-          (when-let ((idx (seq-position vertico--candidates cand)))
+          (when-let* ((idx (seq-position vertico--candidates cand)))
             (setq vertico--index idx)
             t)))
   ;; Restore display modes if not modifying the current session
-  (when-let (((not (and vertico-repeat--command
-                        (eq vertico-repeat--command (car session)))))
-             (mode (seq-find #'symbolp (cddr session)))
-             ((bound-and-true-p vertico-multiform-mode))
-             ((not (and (boundp mode) (symbol-value mode)))))
+  (when-let* (((not (and vertico-repeat--command
+                         (eq vertico-repeat--command (car session)))))
+              (mode (seq-find #'symbolp (cddr session)))
+              ((bound-and-true-p vertico-multiform-mode))
+              ((not (and (boundp mode) (symbol-value mode)))))
     (declare-function vertico-multiform--toggle-mode "ext:vertico-multiform")
     (vertico-multiform--toggle-mode mode))
   (vertico--exhibit))
@@ -186,7 +186,7 @@ selected candidate for the current command."
       ((= vertico-repeat--pos 0)
        (setcar vertico-repeat--step (vertico-repeat--current))))
      (cl-incf n vertico-repeat--pos)
-     (when-let (((>= n 0)) (session (nth n vertico-repeat--step)))
+     (when-let* (((>= n 0)) (session (nth n vertico-repeat--step)))
        (setq vertico-repeat--pos n)
        session))))
 

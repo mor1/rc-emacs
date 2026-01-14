@@ -1,6 +1,6 @@
 ;;; vertico-buffer.el --- Display Vertico like a regular buffer -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2021-2026 Free Software Foundation, Inc.
 
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
@@ -93,10 +93,10 @@
 
 (defun vertico-buffer--redisplay (_)
   "Redisplay buffer window."
-  (when-let ((mbwin (active-minibuffer-window))
-             ((eq (window-buffer mbwin) (current-buffer)))
-             ((overlayp vertico--candidates-ov))
-             (win (overlay-get vertico--candidates-ov 'window)))
+  (when-let* ((mbwin (active-minibuffer-window))
+              ((eq (window-buffer mbwin) (current-buffer)))
+              ((overlayp vertico--candidates-ov))
+              (win (overlay-get vertico--candidates-ov 'window)))
     (setq-local truncate-lines (< (window-point win)
                                   (* 0.8 (window-width win)))
                 vertico-count (- (/ (window-pixel-height win)
@@ -202,7 +202,7 @@
   "Display Vertico like a regular buffer in a large window."
   :global t :group 'vertico
   ;; Shrink current minibuffer window
-  (when-let ((win (active-minibuffer-window)))
+  (when-let* ((win (active-minibuffer-window)))
     (unless (frame-root-window-p win)
       (window-resize win (- (window-pixel-height win)) nil nil 'pixelwise))
     (with-selected-window win
