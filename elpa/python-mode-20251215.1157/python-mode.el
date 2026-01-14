@@ -1,7 +1,7 @@
 ;;; python-mode.el --- Edit, debug, develop, run Python programs. -*- lexical-binding: t; -*- 
 
-;; Package-Version: 20251108.1323
-;; Package-Revision: 048e90ded3a2
+;; Package-Version: 20251215.1157
+;; Package-Revision: 5719f9a18c48
 
 ;; URL: https://gitlab.com/groups/python-mode-devs
 
@@ -3554,6 +3554,14 @@ Also used by navigation"
   :tag "py-mark-decorators")
 
 
+
+(defun py-empty-line-p ()
+  "Return t if cursor is at an empty line, nil otherwise."
+  (save-excursion
+    (beginning-of-line)
+    (save-match-data (looking-at py-empty-line-p-chars))))
+
+
 (require 'ansi-color)
 (ignore-errors (require 'subr-x))
 (require 'cc-cmds)
@@ -4248,12 +4256,6 @@ Optional argument END specify end."
     (end-of-line)))
 
 (and py-company-pycomplete-p (require 'company-pycomplete))
-
-(defun py-empty-line-p ()
-  "Return t if cursor is at an empty line, nil otherwise."
-  (save-excursion
-    (beginning-of-line)
-    (looking-at py-empty-line-p-chars)))
 
 (defun py-toggle-closing-list-dedents-bos (&optional arg)
   "Switch boolean variable ‘py-closing-list-dedents-bos’.
@@ -24630,9 +24632,12 @@ For example:
   (message (concat "Virtualenv '" virtualenv-name "' deactivated."))
   (setq virtualenv-name nil))
 
-(defun virtualenv-p (dir)
-  "Check if a directory DIR is a virtualenv."
-  (file-exists-p (concat dir "/bin/activate")))
+(defun virtualenv-p ()
+  "Check if current directory is a virtualenv."
+  (interactive)
+  (let ((erg (file-exists-p (concat default-directory "bin/activate"))))
+    (when py-verbose-p (message "virtualenv-p: %s" erg))
+    erg))
 
 (defun virtualenv-workon-complete ()
   "Return available completions for ‘virtualenv-workon’."
@@ -26272,7 +26277,8 @@ Setup code specific to ‘py-shell-mode’."
     (py-message-which-python-mode))
   (when py-use-menu-p
     (py-define-menu python-mode-map))
-  (force-mode-line-update))
+  (add-hook 'python-mode-hook 'force-mode-line-update)
+  )
 
 (defun py--update-version-dependent-keywords ()
   (let ((kw-py2 '(("\\<print\\>" . 'font-lock-keyword-face)
