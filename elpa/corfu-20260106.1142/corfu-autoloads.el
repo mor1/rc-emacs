@@ -28,8 +28,6 @@ evaluate the variable `corfu-mode'.
 The mode's hook is called both when the mode is enabled and when it is
 disabled.
 
-\\{corfu-mode-map}
-
 (fn &optional ARG)" t)
 (put 'global-corfu-mode 'globalized-minor-mode t)
 (defvar global-corfu-mode nil "\
@@ -71,6 +69,11 @@ and nil means \"don't use\".  There's an implicit nil at the end of the
 list.")
 (custom-autoload 'global-corfu-modes "corfu" t)
 (register-definition-prefixes "corfu" '("corfu-" "global-corfu-minibuffer"))
+
+
+;;; Generated autoloads from corfu-auto.el
+
+(register-definition-prefixes "corfu-auto" '("corfu-auto-"))
 
 
 ;;; Generated autoloads from corfu-echo.el
