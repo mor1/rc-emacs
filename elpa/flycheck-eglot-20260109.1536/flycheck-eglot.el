@@ -4,8 +4,8 @@
 
 ;; Author: Sergey Firsov <intramurz@gmail.com>
 ;; Maintainer: Sergey Firsov <intramurz@gmail.com>
-;; Package-Version: 20250626.212
-;; Package-Revision: 0d7f0afc9bf0
+;; Package-Version: 20260109.1536
+;; Package-Revision: 87cc55936f84
 ;; Package-Requires: ((emacs "28.1") (eglot "1.9") (flycheck "32"))
 ;; URL: https://github.com/flycheck/flycheck-eglot
 ;; Keywords: convenience language tools
@@ -219,11 +219,24 @@ ORIG is the original function, (BEG END) is the range"
                                        end))
                               (beg (= beg (flymake-diagnostic-beg s)))
                               (t t)))
-                      ;; `eglot--diagnostics' was a list before, but it is now a cons after Emacs 31.
-                      (pcase eglot--diagnostics
-                        (`(nil) nil)
-                        ((pred proper-list-p) eglot--diagnostics)
-                        (_ (car eglot--diagnostics))))))
+                      (cond ((boundp 'eglot--diagnostics)
+                             ;; `eglot--diagnostics' was a list before,
+                             ;; but it is now wrapped in a list as of 4aff16bf9e8be9e45b5ac5b98a323957e3af6444
+                             ;; in https://github.com/emacs-mirror/emacs/.
+                             (pcase eglot--diagnostics
+                               (`(,(pred proper-list-p) ,_ ,_) (car eglot--diagnostics))
+                               (`(nil) nil)
+                               ((pred proper-list-p) eglot--diagnostics)
+                               (_ (car eglot--diagnostics))))
+
+                            ;; if eglot--diagnostics is not bound, it's most likely
+                            ;; removed as of da4c693e0be6ede3f245d29ad67d0dfc64c5656b
+                            ;; in https://github.com/emacs-mirror/emacs
+                            ;;
+                            ;; The diagnostics are present in `eglot--pushed-diagnostics`
+                            ;; and `eglot--pulled-diagnostics` or maybe both.
+                            ((and (boundp 'eglot--pushed-diagnostics) (boundp 'eglot--pulled-diagnostics))
+                             (append (car eglot--pushed-diagnostics) (car eglot--pulled-diagnostics)))))))
 
 
 (defun flycheck-eglot--setup ()
