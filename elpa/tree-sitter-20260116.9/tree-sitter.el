@@ -1,14 +1,14 @@
 ;;; tree-sitter.el --- Incremental parsing system -*- lexical-binding: t; coding: utf-8 -*-
 
-;; Copyright (C) 2021-2025 emacs-tree-sitter maintainers
+;; Copyright (C) 2021-2026 emacs-tree-sitter maintainers
 ;;
 ;; Author: Tuấn-Anh Nguyễn <ubolonton@gmail.com>
 ;; Maintainer: Jen-Chieh Shen <jcs090218@gmail.com>
 ;; Keywords: languages tools parsers tree-sitter
 ;; Homepage: https://github.com/emacs-tree-sitter/elisp-tree-sitter
-;; Package-Version: 20251222.1802
-;; Package-Revision: d12aff8ee91d
-;; Package-Requires: ((emacs "27.1") (tsc "0.19.3"))
+;; Package-Version: 20260116.9
+;; Package-Revision: 8f0bd387ad7a
+;; Package-Requires: ((emacs "27.1") (tsc "0.19.4"))
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
@@ -56,6 +56,15 @@ Use this to enable other minor modes that depends on the syntax tree."
   :group 'tree-sitter
   :type '(alist :key-type symbol
                 :value-type symbol))
+
+(make-obsolete-variable 'tree-sitter-major-mode-language-alist
+                        'tree-sitter-major-mode-language-table
+                        "0.19.3")
+
+(defcustom tree-sitter-major-mode-language-table nil
+  "A hash table that maps major modes to tree-sitter language names."
+  :group 'tree-sitter
+  :type 'hash-table)
 
 (defcustom tree-sitter-mode-lighter " tree-sitter"
   "Lighter for command `tree-sitter-mode'."
@@ -157,7 +166,8 @@ OLD-LEN is the char length of the old text."
   "Enable `tree-sitter' in the current buffer."
   (unless tree-sitter-language
     ;; Determine the language symbol based on `major-mode' .
-    (let ((lang-symbol (alist-get major-mode tree-sitter-major-mode-language-alist)))
+    (let ((lang-symbol (ignore-errors
+                         (gethash major-mode tree-sitter-major-mode-language-table))))
       (unless lang-symbol
         (error "No language registered for major mode `%s'" major-mode))
       (setq tree-sitter-language (tree-sitter-require lang-symbol))))

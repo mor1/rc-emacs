@@ -6,8 +6,8 @@
 ;; Maintainer: Jen-Chieh Shen <jcs090218@gmail.com>
 ;; Keywords: languages tools parsers tree-sitter
 ;; Homepage: https://github.com/emacs-tree-sitter/tree-sitter-langs
-;; Package-Version: 20260113.2303
-;; Package-Revision: ee38bc689c65
+;; Package-Version: 20260115.2356
+;; Package-Revision: a7f76c45b2b5
 ;; Package-Requires: ((emacs "26.1") (tree-sitter "0.15.0"))
 ;; SPDX-License-Identifier: MIT
 
@@ -96,7 +96,7 @@ See `tree-sitter-langs-repos'."
 (advice-add 'tree-sitter-load :before #'tree-sitter-langs--init-load-path)
 
 ;;;###autoload
-(defun tree-sitter-langs--init-major-mode-alist (&rest _args)
+(defun tree-sitter-langs--init-major-mode-table (&rest _args)
   "Link known major modes to languages provided by the bundle."
   (let ((alist '((actionscript-mode      . actionscript)
                  (ada-mode               . ada)
@@ -237,29 +237,22 @@ See `tree-sitter-langs-repos'."
                  (yaml-mode              . yaml)
                  (k8s-mode               . yaml)
                  (zig-mode               . zig))))
-    (cond
-     ;; If never been set; update the value directly!
-     ((null tree-sitter-major-mode-language-alist)
-      (setq tree-sitter-major-mode-language-alist alist))
-     ;; Else, we try not to change the custom value from user.
-     (t
-      (dolist (entry alist)
-        ;; TODO: The `cl-pushnew' operation is very slow; better if we can use
-        ;; `hash-table' instead?
-        ;;
-        ;; I've run the benchmark tests with 123 entries (alist length);
-        ;; compare to set value directly. Obviously, set the value directly cost
-        ;; constant time but how fast compare to `cl-pushnew'?
-        ;;
-        ;; It's average 325 to 650 times faster! The average time for each
-        ;; `cl-pushnew' operation is 2.6 to 5.2 times slower.
-        (cl-pushnew entry tree-sitter-major-mode-language-alist :key #'car))))
-    (advice-remove 'tree-sitter--setup #'tree-sitter-langs--init-major-mode-alist)))
+    ;; Create one.
+    (when (null tree-sitter-major-mode-language-table)
+      (setq tree-sitter-major-mode-language-table (make-hash-table :test 'eq)))
+    ;; Add entry from the alist.
+    (dolist (entry alist)
+      (when-let* ((key (car entry))
+                  (value (cdr entry)))
+        (unless (gethash key tree-sitter-major-mode-language-table)
+          (puthash key value tree-sitter-major-mode-language-table))))
+    ;; Clean up.
+    (advice-remove 'tree-sitter--setup #'tree-sitter-langs--init-major-mode-table)))
 
 ;;;###autoload
-(advice-add 'tree-sitter--setup :before #'tree-sitter-langs--init-major-mode-alist)
+(advice-add 'tree-sitter--setup :before #'tree-sitter-langs--init-major-mode-table)
 ;;; Normal load.
-(tree-sitter-langs--init-major-mode-alist)
+(tree-sitter-langs--init-major-mode-table)
 
 (defun tree-sitter-langs--hl-query-path (lang-symbol &optional mode)
   "Return the highlighting query file for LANG-SYMBOL.

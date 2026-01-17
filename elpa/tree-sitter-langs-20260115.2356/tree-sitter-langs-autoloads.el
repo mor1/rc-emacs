@@ -16,11 +16,11 @@ Add the directory containing compiled grammars to `tree-sitter-load-path'.
 
 (fn &rest ARGS)")
 (advice-add 'tree-sitter-load :before #'tree-sitter-langs--init-load-path)
-(autoload 'tree-sitter-langs--init-major-mode-alist "tree-sitter-langs" "\
+(autoload 'tree-sitter-langs--init-major-mode-table "tree-sitter-langs" "\
 Link known major modes to languages provided by the bundle.
 
 (fn &rest ARGS)")
-(advice-add 'tree-sitter--setup :before #'tree-sitter-langs--init-major-mode-alist)
+(advice-add 'tree-sitter--setup :before #'tree-sitter-langs--init-major-mode-table)
 (autoload 'tree-sitter-langs--set-hl-default-patterns "tree-sitter-langs" "\
 Use syntax highlighting patterns provided by `tree-sitter-langs'.
 
