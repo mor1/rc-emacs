@@ -6,8 +6,8 @@
 ;; Maintainer: Jen-Chieh Shen <jcs090218@gmail.com>
 ;; Keywords: languages tools parsers tree-sitter
 ;; Homepage: https://github.com/emacs-tree-sitter/tree-sitter-langs
-;; Package-Version: 20260115.2356
-;; Package-Revision: a7f76c45b2b5
+;; Package-Version: 20260117.1333
+;; Package-Revision: 44e9ff58eca2
 ;; Package-Requires: ((emacs "26.1") (tree-sitter "0.15.0"))
 ;; SPDX-License-Identifier: MIT
 
@@ -122,6 +122,7 @@ See `tree-sitter-langs-repos'."
                  (csharp-mode            . c-sharp)
                  (c++-mode               . cpp)
                  (cmake-mode             . cmake)
+                 (crystal-mode           . crystal)
                  (d-mode                 . d)
                  (dart-mode              . dart)
                  (diff-mode              . diff)
