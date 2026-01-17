@@ -4,8 +4,8 @@
 
 ;; Author: Hongyu Ding <rainstormstudio@yahoo.com>, Vincent Zhang <seagle0128@gmail.com>
 ;; Keywords: lisp
-;; Package-Version: 20260114.1405
-;; Package-Revision: a57f80901590
+;; Package-Version: 20260116.1608
+;; Package-Revision: f9d240b59f9a
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/rainstormstudio/nerd-icons.el
 ;; Keywords: convenient, lisp
@@ -205,6 +205,7 @@
     ("rb"             nerd-icons-codicon "nf-cod-ruby"           :face nerd-icons-lred)
     ("rs"             nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-maroon)
     ("rlib"           nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-dmaroon)
+    ("ron"            nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-silver)
     ("r"              nerd-icons-sucicon "nf-seti-r"             :face nerd-icons-lblue)
     ("rd"             nerd-icons-sucicon "nf-seti-r"             :face nerd-icons-lblue)
     ("rdx"            nerd-icons-sucicon "nf-seti-r"             :face nerd-icons-lblue)
@@ -874,6 +875,7 @@
     (rust-mode                         nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-maroon)
     (rustic-mode                       nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-maroon)
     (rust-ts-mode                      nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-maroon)
+    (ron-mode                          nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-silver)
     (scala-mode                        nerd-icons-devicon "nf-dev-scala"                 :face nerd-icons-red)
     (scheme-mode                       nerd-icons-sucicon "nf-custom-scheme"             :face nerd-icons-red)
     (swift-mode                        nerd-icons-devicon "nf-dev-swift"                 :face nerd-icons-lred)
