@@ -1,6 +1,6 @@
 ;;; ocaml-eglot-util.el --- Auxiliary tools   -*- coding: utf-8; lexical-binding: t -*-
 
-;; Copyright (C) 2024-2025  Xavier Van de Woestyne
+;; Copyright (C) 2024-2026  Xavier Van de Woestyne
 ;; Licensed under the MIT license.
 
 ;; Author: Xavier Van de Woestyne <xaviervdw@gmail.com>
@@ -19,6 +19,8 @@
 (require 'json)
 (require 'eglot)
 (require 'cl-lib)
+(defvar pulse-flag)
+
 
 ;; Generic util
 
@@ -92,7 +94,12 @@ If optional MARKERS, make markers instead."
       (let* ((offset-l (position-bytes (point)))
              (offset-c (max 0 col))
              (target (+ offset-l offset-c)))
-        (byte-to-position target)))))
+        (or (byte-to-position target)
+            ;; The target can be out of bounds in generated files with
+            ;; line number directives, and it's difficult to get this
+            ;; behavior exactly right in Emacs.  Do our best to
+            ;; avoid returning nil.
+            (point-max))))))
 
 (defun ocaml-eglot-util--pos-to-point (pos)
   "Convert a POS to a point."
@@ -221,13 +228,10 @@ current window otherwise."
 
 (defun ocaml-eglot-util--highlight-range (range face)
   "Highlight a given RANGE using a given FACE."
-  (remove-overlays nil nil 'ocaml-eglot-highlight 'highlight)
-  (let* ((beg (eglot--lsp-position-to-point (cl-getf range :start)))
+  (let ((beg (eglot--lsp-position-to-point (cl-getf range :start)))
         (end (eglot--lsp-position-to-point (cl-getf range :end)))
-        (overlay (make-overlay beg end)))
-    (overlay-put overlay 'face face)
-    (overlay-put overlay 'ocaml-eglot-highlight 'highlight)
-    (unwind-protect (sit-for 60) (delete-overlay overlay))))
+        (pulse-flag nil))
+    (pulse-momentary-highlight-region beg end face)))
 
 (defun ocaml-eglot-util--as-json (str)
   "Parse a string STR as a Json object."

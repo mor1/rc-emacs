@@ -1,6 +1,6 @@
 ;;; ocaml-eglot-xref.el --- Xref backend for OCaml   -*- coding: utf-8; lexical-binding: t -*-
 
-;; Copyright (C) 2025  The OCaml-eglot Project Contributors
+;; Copyright (C) 2025-2026  The OCaml-eglot Project Contributors
 ;; Licensed under the MIT license.
 
 ;; Author: Xavier Van de Woestyne <xaviervdw@gmail.com>
@@ -16,6 +16,7 @@
 
 (require 'cl-lib)
 (require 'xref)
+(require 'eglot)
 (require 'ocaml-eglot-util)
 (require 'ocaml-eglot-req)
 
@@ -57,54 +58,22 @@ than a character offset, so we can't use `xref-make-file-location'."
                  (ocaml-eglot-xref-location-merlin-pos l)))))
     (move-marker (make-marker) pos buffer)))
 
-(defun ocaml-eglot-xref--call-occurences (pt)
-  "Call merlin-occurences for given PT."
-  (let ((argv (vector "-scope" "project"
-                      "-identifier-at" (ocaml-eglot-util-point-as-arg pt))))
-    (ocaml-eglot-req--merlin-call "occurrences" argv)))
-
 (defun ocaml-eglot-xref--call-locate (symbol)
-  "Locate an idenfier based on SYMBOL used for xref."
-  (let ((argv (if-let* ((pt (get-text-property 0 'ocaml-eglot-xref-point symbol)))
-                  ;; SYMBOL is from `xref-backend-identifier-at-point',
-                  ;; since if it was read from the minibuffer its text
-                  ;; properties would have been stripped
-                  ;; (see `minibuffer-allow-text-properties').  Just pass
-                  ;; position and Merlin will figure out everything from that.
-                  (vector "-position" (ocaml-eglot-util-point-as-arg pt)
-                          "-look-for" (symbol-name ocaml-eglot-locate-preference))
-                ;; SYMBOL was probably just typed in by the user.  So pass it
-                ;; to Merlin, removing a trailing "." in case the user completed
-                ;; a module name with `merlin-cap-dot-after-module':
-                (vector "-prefix" (string-remove-suffix "." symbol)
-                        ;; We don't know if SYMBOL is a module or type or
-                        ;; expr, and we shouldn't use -position to guess.
-                        ;; See: https://github.com/janestreet/merlin-jst/pull/91
-                        "-context" "unknown"
-                        "-position" (ocaml-eglot-util-point-as-arg (point))
-                        ;; And use `point' to pick the lexical environment to
-                        ;; search:
-                        "-look-for" (symbol-name ocaml-eglot-locate-preference)))))
+  "Locate an identifier based on SYMBOL used for xref."
+  (let ((argv
+         ;; SYMBOL was probably just typed in by the user.  So pass it
+         ;; to Merlin, removing a trailing "." in case the user completed
+         ;; a module name with `merlin-cap-dot-after-module':
+         (vector "-prefix" (string-remove-suffix "." symbol)
+                 ;; We don't know if SYMBOL is a module or type or
+                 ;; expr, and we shouldn't use -position to guess.
+                 ;; See: https://github.com/janestreet/merlin-jst/pull/91
+                 "-context" "unknown"
+                 "-position" (ocaml-eglot-util-point-as-arg (point))
+                 ;; And use `point' to pick the lexical environment to
+                 ;; search:
+                 "-look-for" (symbol-name ocaml-eglot-locate-preference))))
     (ocaml-eglot-req--merlin-call "locate" argv)))
-
-(defun ocaml-eglot-xref--occurences (symbol)
-  "Compute occurrences for the given SYMBOL."
-  (let ((pt (get-text-property 0 'ocaml-eglot-xref-point symbol)))
-    (cl-assert pt nil "OCaml-eglot xref-find-references cannot be used by explicitly typing in a symbol %s" symbol)
-    (let ((result (ocaml-eglot-xref--call-occurences pt)))
-      ;; Change the vector into a list
-      (append (ocaml-eglot-util--merlin-call-result result) nil))))
-
-(defun ocaml-eglot-xref--buffer (file)
-  "Compute a buffer in term of FILE based on occurences results."
-  (if (equal file "/*buffer*")
-      ;; occurences returns "/*buffer*" as the filename for occurences
-      ;; in the current buffer when we don't pass the -filename argument.
-      (current-buffer)
-    ;; Look for an existing buffer with this file, but don't open it
-    ;; if it's not already open.
-    (get-file-buffer file)))
-
 
 (defun ocaml-eglot-xref--make-location-in-file (file merlin-pos)
   "Turn FILE and MERLIN-POS into an `xref-item'.
@@ -120,56 +89,32 @@ Requires that the current buffer be the buffer of FILE."
                                     :line (cl-getf merlin-pos :line)
                                     :merlin-pos merlin-pos)))
 
-(defun ocaml-eglot-xref--push-marker (symbol buffer start loc xref-loc)
-  "Push computed marker for SYMBOL by START and LOC/XREF-LOC on the given BUFFER."
-  (if buffer
-      ;; We have the file open, or this is just a reference found in
-      ;; the current buffer.  We can populate the summary field with real data,
-      ;; and decode the byte-based `start' and `end' into the character
-      ;; length of the reference.
-      (with-current-buffer buffer
-        (let ((start-pos (ocaml-eglot-util--pos-to-point start))
-              (end-pos (ocaml-eglot-util--pos-to-point (cl-getf loc :end))))
-          (xref-make-match
-           (concat
-            (buffer-substring
-             (save-excursion (goto-char start-pos) (pos-bol))
-             start-pos)
-            (propertize (buffer-substring start-pos end-pos) 'face 'xref-match)
-            (buffer-substring
-             (save-excursion (goto-char end-pos) (pos-eol))
-             end-pos))
-           xref-loc
-           (- end-pos start-pos))))
-    ;; We don't have the file open, so we can't make a real summary or decode
-    ;; the length.  We'll just use the symbol as the summary instead.
-    (xref-make symbol xref-loc)))
 
 (cl-defmethod xref-backend-references ((_backend (eql ocaml-eglot-xref)) symbol)
   "An `xref-backend-references' for SYMBOL for OCaml-eglot."
-  (let ((occurences (ocaml-eglot-xref--occurences symbol))
-        result)
-    (dolist (loc occurences)
-      (let* ((file (cl-getf loc :file))
-             (start-pos (cl-getf loc :start))
-             (buffer (ocaml-eglot-xref--buffer file))
-             (location (ocaml-eglot-xref--make-location-in-file file start-pos)))
-        (push (ocaml-eglot-xref--push-marker
-               symbol buffer start-pos loc location) result)))
-    (reverse result)))
+  (xref-backend-references 'eglot symbol))
 
 (cl-defmethod xref-backend-definitions ((_backend (eql ocaml-eglot-xref)) symbol)
   "Extension of `xref-backend-definitions' for SYMBOL."
-  (let* ((result (ocaml-eglot-xref--call-locate symbol))
-         (loc (ocaml-eglot-util--merlin-call-result result)))
-    (unless loc (error "Not found.  (Check *Messages* for potential errors)"))
-    ;; In this case, an error is returned.
-    (if (stringp loc) (user-error "%s" loc))
-    (list
-     (xref-make
-      symbol
-      (ocaml-eglot-xref--make-location-in-file (cl-getf loc :file)
-                                               (cl-getf loc :pos))))))
+  (if (get-text-property 0 'ocaml-eglot-xref-point symbol)
+      ;; SYMBOL is from `xref-backend-identifier-at-point', since if it was read from the
+      ;; minibuffer its text properties would have been stripped (see
+      ;; `minibuffer-allow-text-properties').  Call the LSP/eglot method which is
+      ;; hardcoded to use the identifier at point.
+      (eglot--lsp-xrefs-for-method
+       (if (eq ocaml-eglot-locate-preference 'mli)
+           :textDocument/declaration
+         :textDocument/definition))
+    (let* ((result (ocaml-eglot-xref--call-locate symbol))
+           (loc (ocaml-eglot-util--merlin-call-result result)))
+      (unless loc (error "Not found.  (Check *Messages* for potential errors)"))
+      ;; In this case, an error is returned.
+      (if (stringp loc) (user-error "%s" loc))
+      (list
+       (xref-make
+        symbol
+        (ocaml-eglot-xref--make-location-in-file (cl-getf loc :file)
+                                                 (cl-getf loc :pos)))))))
 
 
 (cl-defmethod xref-backend-identifier-completion-table ((_backend (eql ocaml-eglot-xref)))
