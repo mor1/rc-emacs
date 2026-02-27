@@ -1,5 +1,5 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "rustic" "20250630.1332"
+(define-package "rustic" "20260216.440"
   "Rust development environment."
   '((emacs         "28.2")
     (rust-mode     "1.0.6")
@@ -12,6 +12,6 @@
     (spinner       "1.7.3")
     (xterm-color   "1.6"))
   :url "https://github.com/emacs-rustic/rustic"
-  :commit "bfff139f260c386f60d581edef6df1a0d109a131"
-  :revdesc "bfff139f260c"
+  :commit "eea94386bf0c7b55adc264faefdfb134ae2807b9"
+  :revdesc "eea94386bf0c"
   :keywords '("languages"))
