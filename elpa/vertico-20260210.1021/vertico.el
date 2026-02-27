@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20260116.1205
-;; Package-Revision: 2ba626d028b9
+;; Package-Version: 20260210.1021
+;; Package-Revision: 93f15873d7d6
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/vertico
 ;; Keywords: convenience, files, matching, completion
@@ -148,7 +148,6 @@ The value should lie between 0 and vertico-count/2."
 (defvar vertico--locals
   '((scroll-margin . 0)
     (completion-auto-help . nil)
-    (completion-show-inline-help . nil)
     (pixel-scroll-precision-mode . nil))
   "Vertico minibuffer local variables.")
 
