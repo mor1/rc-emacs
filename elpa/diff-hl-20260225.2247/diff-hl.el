@@ -5,8 +5,8 @@
 ;; Author:   Dmitry Gutov <dmitry@gutov.dev>
 ;; URL:      https://github.com/dgutov/diff-hl
 ;; Keywords: vc, diff
-;; Package-Version: 20251216.242
-;; Package-Revision: e79aa49ad3cb
+;; Package-Version: 20260225.2247
+;; Package-Revision: bb9af85441b0
 ;; Package-Requires: ((cl-lib "0.2") (emacs "26.1"))
 
 ;; This file is part of GNU Emacs.
@@ -316,10 +316,13 @@ It can be a relative expression as well, such as \"HEAD^\" with Git, or
                     (expt text-scale-mode-step text-scale-mode-amount)
                   1))
          (spacing (or (and (display-graphic-p) (default-value 'line-spacing)) 0))
+         (total-spacing (pcase spacing
+                          ((pred numberp) spacing)
+                          (`(,above . ,below) (+ above below))))
          (h (+ (ceiling (* (frame-char-height) scale))
-               (if (floatp spacing)
-                   (truncate (* (frame-char-height) spacing))
-                 spacing)))
+               (if (floatp total-spacing)
+                   (truncate (* (frame-char-height) total-spacing))
+                 total-spacing)))
          (w (min (frame-parameter nil (intern (format "%s-fringe" diff-hl-side)))
                  diff-hl-bmp-max-width))
          (_ (when (zerop w) (setq w diff-hl-bmp-max-width)))
@@ -483,12 +486,14 @@ It can be a relative expression as well, such as \"HEAD^\" with Git, or
          (hide-staged (and (eq backend 'Git) (not diff-hl-show-staged-changes))))
     (when backend
       (let ((state (vc-state file backend))
-            ;; Workaround for debbugs#78946.
+            ;; Workaround for debbugs#78946 for the `thread' async update method.
             ;; This is fiddly, but we basically allow the thread to start, while
             ;; prohibiting the async process call inside.
-            ;; That still makes it partially async.
-            (diff-hl-update-async (and (not (eq window-system 'ns))
-                                       (eq diff-hl-update-async t))))
+            ;; That still makes it partially async on macOS.
+            ;; Or just use "simple async" if your Emacs is new enough.
+            (diff-hl-update-async (or (and (eq diff-hl-update-async 'thread)
+                                           (not (eq window-system 'ns)))
+                                      (eq diff-hl-update-async t))))
         (cond
          ((and
            (not diff-hl-highlight-reference-function)
@@ -580,11 +585,6 @@ contents as they are (or would be) after applying the changes in NEW."
       (cl-incf (nth 0 (car old)) acc)
       (setq old (cdr old)))
     ref))
-
-(defun diff-hl-process-wait (buf)
-  (let ((proc (get-buffer-process buf)))
-    (while (process-live-p proc)
-      (accept-process-output proc 0.01))))
 
 (defun diff-hl-changes-from-buffer (buf)
   (with-current-buffer buf
@@ -765,8 +765,9 @@ Return a list of line overlays used."
      ((eq (process-status proc) 'signal))
      ;; If a process is running, set the sentinel.
      ((eq (process-status proc) 'run)
-      (set-process-sentinel
-       proc
+      (add-function
+       :after
+       (process-sentinel proc)
        (lambda (proc _status)
          ;; Delegate to the parent cond for decision logic.
          (diff-hl--when-done buffer get-value callback proc))))
