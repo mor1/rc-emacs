@@ -1,12 +1,12 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "flycheck-eglot" "20260109.1536"
+(define-package "flycheck-eglot" "20260225.255"
   "Flycheck support for eglot."
   '((emacs    "28.1")
     (eglot    "1.9")
     (flycheck "32"))
   :url "https://github.com/flycheck/flycheck-eglot"
-  :commit "87cc55936f843f8e0b9ab0b6b5ae5c6d7170f600"
-  :revdesc "87cc55936f84"
+  :commit "cd1dd78cec0ae1f566c765d98bbff322cc7b67ef"
+  :revdesc "cd1dd78cec0a"
   :keywords '("convenience" "language" "tools")
   :authors '(("Sergey Firsov" . "intramurz@gmail.com"))
   :maintainers '(("Sergey Firsov" . "intramurz@gmail.com")))

@@ -4,8 +4,8 @@
 
 ;; Author: Sergey Firsov <intramurz@gmail.com>
 ;; Maintainer: Sergey Firsov <intramurz@gmail.com>
-;; Package-Version: 20260109.1536
-;; Package-Revision: 87cc55936f84
+;; Package-Version: 20260225.255
+;; Package-Revision: cd1dd78cec0a
 ;; Package-Requires: ((emacs "28.1") (eglot "1.9") (flycheck "32"))
 ;; URL: https://github.com/flycheck/flycheck-eglot
 ;; Keywords: convenience language tools
@@ -101,18 +101,31 @@
   ""
   "Diagnostic tag label separator.")
 
+(defvar-local flycheck-eglot--current-diags nil)
 
-(defvar-local flycheck-eglot--current-errors nil)
+(defvar-local flycheck-eglot--can-run-flymake-backend-p t)
 
+(defvar-local flycheck-eglot--can-run-flycheck-auto-p t)
+
+(defun flycheck-eglot-disable-diagnostics-pull ()
+  "Disable diagnostics pull."
+  (setq flycheck-eglot--can-run-flymake-backend-p nil))
+
+(defun flycheck-eglot-enable-diagnostics-pull ()
+  "Enable diagnostics pull."
+  (setq flycheck-eglot--can-run-flymake-backend-p t))
 
 (defun flycheck-eglot--start (checker callback)
   "Start function for generic checker definition.
 CHECKER is the current checker (assuming eglot-check).
 CALLBACK is a callback function provided by Flycheck."
   (when (eq checker 'eglot-check)
+    (when flycheck-eglot--can-run-flymake-backend-p
+      (let ((flycheck-eglot--can-run-flycheck-auto-p nil))
+        (eglot-flymake-backend #'flycheck-eglot--report-eglot-diagnostics)))
     (funcall callback
              'finished
-             flycheck-eglot--current-errors)))
+             (flycheck-eglot--diags-to-error-list flycheck-eglot--current-diags))))
 
 
 (flymake--diag-accessor flymake-diagnostic-overlay-properties
@@ -173,25 +186,56 @@ DIAG is the Eglot diagnostics in Flymake format."
       level)))
 
 
-(defun flycheck-eglot--report-eglot-diagnostics (diags &rest _)
+(defun flycheck-eglot--report-eglot-diagnostics (diags &rest args)
   "Report function for the `eglot-flymake-backend'.
 DIAGS is the Eglot diagnostics list in Flymake format."
-  (cl-flet
-      ((diag-to-err (diag)
-                    ;; Translate flymake to flycheck
-                    (with-current-buffer (flymake-diagnostic-buffer diag)
-                      (flycheck-error-new-at-pos
-                       (flymake-diagnostic-beg diag) ; POS
-                       (flycheck-eglot--get-error-level diag) ; LEVEL
-                       (flymake-diagnostic-text diag)  ; MESSAGE
-                       :end-pos (flymake-diagnostic-end diag)
-                       :checker 'eglot-check
-                       :buffer (current-buffer)
-                       :filename (buffer-file-name)))))
+  (when-let* ((reg (plist-get args :region))
+              (beg (car reg))
+              (end (cdr reg)))
 
-    (setq flycheck-eglot--current-errors
-          (mapcar #'diag-to-err diags))
-    (flycheck-buffer-automatically '(idle-change new-line))))
+    (setq flycheck-eglot--current-diags
+          (cond ((and (= beg (point-min)) (= end (point-max)))
+                 (append diags nil))
+
+                ((and (= beg (point-min)) (= end (point-min)))
+                 (append flycheck-eglot--current-diags diags))
+
+                ;; The default case never seems to appear in the context of interactions with eglot.
+                ;; Most likely, this is dead code.
+                ;; But the :region parameter specification for flymake report functions
+                ;; requires this behavior. So be it.
+                (t (append (cl-remove-if (lambda (diag)
+                                           (let* (
+                                                  (diag-beg (flymake-diagnostic-beg diag))
+                                                  (diag-end (or (flymake-diagnostic-end diag)
+                                                                diag-beg)))
+
+                                             (or (> beg diag-beg)
+                                                 (< end diag-end))))
+                                         flycheck-eglot--current-diags)
+                           diags)))))
+
+  (when flycheck-eglot--can-run-flycheck-auto-p
+    (let ((flycheck-eglot--can-run-flymake-backend-p nil))
+      (flycheck-buffer-automatically))))
+
+
+(defun flycheck-eglot--diags-to-error-list (diags)
+  "Convert the list of diagnostics in Flymake format
+to a list of errors in Flycheck format.
+DIAGS is the diagnostics list in Flymake format."
+  (mapcar (lambda (diag)
+            ;;
+            (with-current-buffer (flymake-diagnostic-buffer diag)
+              (flycheck-error-new-at-pos
+               (flymake-diagnostic-beg diag) ; POS
+               (flycheck-eglot--get-error-level diag) ; LEVEL
+               (flymake-diagnostic-text diag)  ; MESSAGE
+               :end-pos (flymake-diagnostic-end diag)
+               :checker 'eglot-check
+               :buffer (current-buffer)
+               :filename (buffer-file-name))))
+          diags))
 
 
 (defun flycheck-eglot--eglot-available-p ()
@@ -219,24 +263,7 @@ ORIG is the original function, (BEG END) is the range"
                                        end))
                               (beg (= beg (flymake-diagnostic-beg s)))
                               (t t)))
-                      (cond ((boundp 'eglot--diagnostics)
-                             ;; `eglot--diagnostics' was a list before,
-                             ;; but it is now wrapped in a list as of 4aff16bf9e8be9e45b5ac5b98a323957e3af6444
-                             ;; in https://github.com/emacs-mirror/emacs/.
-                             (pcase eglot--diagnostics
-                               (`(,(pred proper-list-p) ,_ ,_) (car eglot--diagnostics))
-                               (`(nil) nil)
-                               ((pred proper-list-p) eglot--diagnostics)
-                               (_ (car eglot--diagnostics))))
-
-                            ;; if eglot--diagnostics is not bound, it's most likely
-                            ;; removed as of da4c693e0be6ede3f245d29ad67d0dfc64c5656b
-                            ;; in https://github.com/emacs-mirror/emacs
-                            ;;
-                            ;; The diagnostics are present in `eglot--pushed-diagnostics`
-                            ;; and `eglot--pulled-diagnostics` or maybe both.
-                            ((and (boundp 'eglot--pushed-diagnostics) (boundp 'eglot--pulled-diagnostics))
-                             (append (car eglot--pushed-diagnostics) (car eglot--pulled-diagnostics)))))))
+                      flycheck-eglot--current-diags)))
 
 
 (defun flycheck-eglot--setup ()
@@ -244,6 +271,13 @@ ORIG is the original function, (BEG END) is the range"
   (when (flycheck-eglot--eglot-available-p)
     (flycheck-eglot--register-eglot-checker major-mode)
     (setq flycheck-checker 'eglot-check)
+    ;; Auto-detect pull diagnostic support once at setup time.
+    ;; `eglot-flymake-backend' already checks this internally, but
+    ;; doing it here avoids the overhead of calling the backend on
+    ;; every flycheck cycle for push-only servers.
+    (unless (or (eglot-server-capable :diagnosticProvider)
+                (eglot-server-capable :$streamingDiagnosticsProvider))
+      (setq flycheck-eglot--can-run-flymake-backend-p nil))
     (eglot-flymake-backend #'flycheck-eglot--report-eglot-diagnostics)
     (advice-add #'flymake-diagnostics :around #'flycheck-eglot--flymake-diagnostics-wrapper)
     (flymake-mode -1)
@@ -267,7 +301,7 @@ ORIG is the original function, (BEG END) is the range"
   (when (flycheck-eglot--eglot-available-p)
     (eglot-flymake-backend #'ignore)
     (setq flycheck-checker nil)
-    (setq flycheck-eglot--current-errors nil)
+    (setq flycheck-eglot--current-diags nil)
     (flycheck-buffer-deferred)))
 
 
