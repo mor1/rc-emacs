@@ -5,8 +5,8 @@
 ;; Author: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Omar Antolín Camarena <omar@matem.unam.mx>, Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2020
-;; Package-Version: 20260104.1119
-;; Package-Revision: fc0cee1151fc
+;; Package-Version: 20260220.1149
+;; Package-Revision: 142e4da1bd76
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/marginalia
 ;; Keywords: docs, help, matching, completion
@@ -116,6 +116,7 @@ displayed instead."
      (library ,#'marginalia-annotate-library)
      (theme ,#'marginalia-annotate-theme)
      (tab ,#'marginalia-annotate-tab)
+     (frame ,#'marginalia-annotate-frame)
      (multi-category ,#'marginalia-annotate-multi-category)))
   "Annotator function registry.
 Associates completion categories with annotation functions.  Each
@@ -151,6 +152,7 @@ determine it."
     ("\\<minor mode\\>" . minor-mode)
     ("\\<kill-ring\\>" . kill-ring)
     ("\\<tab by name\\>" . tab)
+    ("\\<frame\\>" . frame)
     ("\\<library\\>" . library)
     ("\\<theme\\>" . theme))
   "Associates regexps to match against minibuffer prompts with categories.
@@ -383,6 +385,11 @@ for performance profiling of the annotators.")
      ((bound-and-true-p truncate-string-ellipsis))
      ((char-displayable-p ?…) "…")
      ("..."))))
+
+(defun marginalia--abbreviate-file-name (file)
+  "Abbreviate FILE name without Tramp slowdown."
+  (let (file-name-handler-alist)
+    (abbreviate-file-name file)))
 
 (defun marginalia--truncate (str width)
   "Truncate string STR to WIDTH."
@@ -629,7 +636,7 @@ originate from the `definition-prefixes' hash table."
              thereis (ignore-errors (documentation-property sym doc)))
             (marginalia--definition-prefix sym)))
       :truncate 1.0 :face 'marginalia-documentation)
-     ((abbreviate-file-name (or (symbol-file sym) ""))
+     ((marginalia--abbreviate-file-name (or (symbol-file sym) ""))
       :truncate -0.5 :face 'marginalia-file-name))))
 
 (defun marginalia-annotate-command (cand)
@@ -644,7 +651,8 @@ Similar to `marginalia-annotate-symbol', but does not show symbol class."
   "Annotate Embark keybinding CAND with its documentation string.
 Similar to `marginalia-annotate-command', but does not show the
 keybinding since CAND includes it."
-  (when-let* ((cmd (get-text-property 0 'embark-command cand)))
+  (when-let* ((cmd (get-text-property 0 'embark-command cand))
+              ((symbolp cmd)))
     (marginalia--documentation (marginalia--function-doc cmd))))
 
 (defun marginalia-annotate-imenu (cand)
@@ -912,8 +920,8 @@ The string is transformed according to `marginalia--bookmark-type-transforms'."
   (if-let* ((proc (get-buffer-process buffer)))
       (format "(%s %s) %s"
               proc (process-status proc)
-              (abbreviate-file-name (buffer-local-value 'default-directory buffer)))
-    (abbreviate-file-name
+              (marginalia--abbreviate-file-name (buffer-local-value 'default-directory buffer)))
+    (marginalia--abbreviate-file-name
      (or (cond
           ;; see ibuffer-buffer-file-name
           ((buffer-file-name buffer))
@@ -1167,7 +1175,7 @@ These annotations are skipped for remote paths."
       :width 8)
      ((marginalia--library-doc file)
       :truncate 1.0 :face 'marginalia-documentation)
-     ((abbreviate-file-name (file-name-directory file))
+     ((marginalia--abbreviate-file-name (file-name-directory file))
       :truncate -0.5 :face 'marginalia-file-name))))
 
 (defun marginalia-annotate-theme (cand)
@@ -1176,8 +1184,25 @@ These annotations are skipped for remote paths."
     (marginalia--fields
      ((marginalia--library-doc file)
       :truncate 1.0 :face 'marginalia-documentation)
-     ((abbreviate-file-name (file-name-directory file))
+     ((marginalia--abbreviate-file-name (file-name-directory file))
       :truncate -1.0 :face 'marginalia-file-name))))
+
+(defun marginalia-annotate-frame (cand)
+  "Annotate frame named CAND with window and buffer information."
+  (when-let* ((frame (cl-loop
+                      for f in (frame-list)
+                      if (or (equal cand (frame-parameter f 'name))
+                             ;; `frame-id' is an Emacs 31 addition
+                             (when (fboundp 'frame-id)
+                               (equal cand (number-to-string (frame-id f)))))
+                      return f)))
+    (let ((wins (window-list frame)))
+      (marginalia--fields
+       ((length wins) :format "win:%s" :face 'marginalia-size)
+       ((if (eq frame (selected-frame))
+            "(current frame)"
+          (mapconcat (lambda (w) (buffer-name (window-buffer w))) wins " "))
+        :face 'marginalia-documentation)))))
 
 (defun marginalia-annotate-tab (cand)
   "Annotate named tab CAND with tab index, window and buffer information."
