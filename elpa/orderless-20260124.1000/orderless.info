@@ -45,7 +45,7 @@ Related packages
 
 * Ivy and Helm::
 * Prescient::
-* Restricting to current matches in Icicles, Ido and Ivy: Restricting to current matches in Icicles Ido and Ivy.
+* Restricting to current matches in Icicles, Ido and Ivy::
 
 
 
@@ -66,10 +66,7 @@ front-end that provides a completion UI.  Any completion style can be
 used with the default Emacs completion UI (sometimes called minibuffer
 tab completion), with the built-in Icomplete package (which is similar
 to the more well-known Ido Mode), the icomplete-vertical variant from
-Emacs 28 (see the external icomplete-vertical
-(https://github.com/oantolin/icomplete-vertical) package to get that
-functionality on earlier versions of Emacs), or with some third party
-minibuffer completion frameworks such as Mct
+Emacs 28, or with minibuffer completion frameworks such as Mct
 (https://gitlab.com/protesilaos/mct) or Vertico
 (https://github.com/minad/vertico).
 
@@ -96,10 +93,10 @@ exclusively, set both variables to ‘nil’, but be aware that
    With a bit of effort, it might still be possible to use ‘orderless’
 with other completion UIs, even if those UIs don’t support the standard
 Emacs completion styles.  Currently there is support for Ivy
-(https://github.com/abo-abo/swiper) (see below).  Also, while Company
-does support completion styles directly, pressing ‘SPC’ takes you out of
-completion, so comfortably using ‘orderless’ with it takes a bit of
-configuration (see below).
+(https://github.com/abo-abo/swiper), as documented below.  Also, while
+Company does support completion styles directly, pressing ‘SPC’ takes
+you out of completion, so comfortably using ‘orderless’ with it takes a
+bit of configuration (see below).
 
    If you use ELPA or MELPA, the easiest way to install ‘orderless’ is
 via ‘package-install’.  If you use ‘use-package’, you can use:
@@ -108,14 +105,16 @@ via ‘package-install’.  If you use ‘use-package’, you can use:
        :ensure t
        :custom
        (completion-styles '(orderless basic))
-       (completion-category-overrides '((file (styles basic partial-completion)))))
+       (completion-category-overrides '((file (styles partial-completion))))
+       (completion-pcm-leading-wildcard t)) ;; Emacs 31: partial-completion behaves like substring
 
    Alternatively, put ‘orderless.el’ somewhere on your ‘load-path’, and
 use the following configuration:
 
      (require 'orderless)
      (setq completion-styles '(orderless basic)
-           completion-category-overrides '((file (styles basic partial-completion))))
+           completion-category-overrides '((file (styles partial-completion)))
+           completion-pcm-leading-wildcard t) ;; Emacs 31: partial-completion behaves like substring
 
    The ‘basic’ completion style is specified as fallback in addition to
 ‘orderless’ in order to ensure that completion commands which rely on
@@ -537,7 +536,7 @@ File: orderless.info,  Node: Related packages,  Prev: Integration with other com
 
 * Ivy and Helm::
 * Prescient::
-* Restricting to current matches in Icicles, Ido and Ivy: Restricting to current matches in Icicles Ido and Ivy.
+* Restricting to current matches in Icicles, Ido and Ivy::
 
 
 File: orderless.info,  Node: Ivy and Helm,  Next: Prescient,  Up: Related packages
@@ -572,7 +571,7 @@ configure Icomplete to use it as follows:
 ‘helm-mode’ rather than Icomplete.)
 
 
-File: orderless.info,  Node: Prescient,  Next: Restricting to current matches in Icicles Ido and Ivy,  Prev: Ivy and Helm,  Up: Related packages
+File: orderless.info,  Node: Prescient,  Next: Restricting to current matches in Icicles, Ido and Ivy,  Prev: Ivy and Helm,  Up: Related packages
 
 4.2 Prescient
 =============
@@ -589,7 +588,7 @@ sorting of candidates, while Orderless leaves that up to the candidate
 source and the completion UI.
 
 
-File: orderless.info,  Node: Restricting to current matches in Icicles Ido and Ivy,  Prev: Prescient,  Up: Related packages
+File: orderless.info,  Node: Restricting to current matches in Icicles, Ido and Ivy,  Prev: Prescient,  Up: Related packages
 
 4.3 Restricting to current matches in Icicles, Ido and Ivy
 ==========================================================
@@ -615,24 +614,24 @@ out of order matching!
 
 Tag Table:
 Node: Top235
-Node: Overview975
-Node: Customization5028
-Node: Component matching styles5386
-Node: Style modifiers7677
-Node: Style dispatchers8366
-Node: Component separator regexp12030
-Node: Defining custom orderless styles13267
-Node: Faces for component matches15159
-Node: Pattern compiler15963
-Node: Interactively changing the configuration16554
-Node: Integration with other completion UIs18017
-Node: Ivy18803
-Node: Helm19155
-Node: Company19499
-Node: Related packages21478
-Node: Ivy and Helm21776
-Node: Prescient23110
-Node: Restricting to current matches in Icicles Ido and Ivy23943
+Node: Overview921
+Node: Customization5002
+Node: Component matching styles5360
+Node: Style modifiers7651
+Node: Style dispatchers8340
+Node: Component separator regexp12004
+Node: Defining custom orderless styles13241
+Node: Faces for component matches15133
+Node: Pattern compiler15937
+Node: Interactively changing the configuration16528
+Node: Integration with other completion UIs17991
+Node: Ivy18777
+Node: Helm19129
+Node: Company19473
+Node: Related packages21452
+Node: Ivy and Helm21696
+Node: Prescient23030
+Node: Restricting to current matches in Icicles, Ido and Ivy23864
 
 End Tag Table
 
