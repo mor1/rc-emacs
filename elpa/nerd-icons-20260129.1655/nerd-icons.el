@@ -4,8 +4,8 @@
 
 ;; Author: Hongyu Ding <rainstormstudio@yahoo.com>, Vincent Zhang <seagle0128@gmail.com>
 ;; Keywords: lisp
-;; Package-Version: 20260116.1608
-;; Package-Revision: f9d240b59f9a
+;; Package-Version: 20260129.1655
+;; Package-Revision: 9a7f44db9a53
 ;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/rainstormstudio/nerd-icons.el
 ;; Keywords: convenient, lisp
@@ -205,7 +205,7 @@
     ("rb"             nerd-icons-codicon "nf-cod-ruby"           :face nerd-icons-lred)
     ("rs"             nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-maroon)
     ("rlib"           nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-dmaroon)
-    ("ron"            nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-silver)
+    ("ron"            nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-dorange)
     ("r"              nerd-icons-sucicon "nf-seti-r"             :face nerd-icons-lblue)
     ("rd"             nerd-icons-sucicon "nf-seti-r"             :face nerd-icons-lblue)
     ("rdx"            nerd-icons-sucicon "nf-seti-r"             :face nerd-icons-lblue)
@@ -636,7 +636,7 @@
     ("^webpack"                nerd-icons-devicon "nf-dev-webpack"           :face nerd-icons-lblue)
     ("^\\.?eslint"             nerd-icons-devicon "nf-dev-eslint"            :face nerd-icons-lblue)
     ("^\\.?prettier"           nerd-icons-sucicon "nf-custom-prettier"       :face nerd-icons-silver)
-    ("^\\.?babel"              nerd-icons-sucicon "nf-seti-babel"            :face nerd-icons-yellow)
+    ("\\`babel\\.config.*"     nerd-icons-sucicon "nf-seti-babel"            :face nerd-icons-yellow)
     ("^vite.config"            nerd-icons-devicon "nf-dev-vitest"            :face nerd-icons-yellow)
     ("^vitest"                 nerd-icons-devicon "nf-dev-vitest"            :face nerd-icons-yellow)
     ("^\\.?jest"               nerd-icons-devicon "nf-dev-jest"              :face nerd-icons-lred)
@@ -875,7 +875,7 @@
     (rust-mode                         nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-maroon)
     (rustic-mode                       nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-maroon)
     (rust-ts-mode                      nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-maroon)
-    (ron-mode                          nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-silver)
+    (ron-mode                          nerd-icons-devicon "nf-dev-rust"                  :face nerd-icons-dorange)
     (scala-mode                        nerd-icons-devicon "nf-dev-scala"                 :face nerd-icons-red)
     (scheme-mode                       nerd-icons-sucicon "nf-custom-scheme"             :face nerd-icons-red)
     (swift-mode                        nerd-icons-devicon "nf-dev-swift"                 :face nerd-icons-lred)
