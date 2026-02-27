@@ -2,9 +2,10 @@
 
 ;; Author: myuhe <yuhei.maeda_at_gmail.com>
 ;; URL: https://github.com/kidd/org-gcal.el
-;; Package-Version: 20250624.1628
-;; Package-Revision: c7ad854ee44e
+;; Package-Version: 20260225.409
+;; Package-Revision: 0f46c08f6035
 ;; Maintainer: Raimon Grau <raimonster@gmail.com>
+;; Package-Requires: ((aio "1.0") (alert "1.2") (emacs "26.1") (oauth2-auto "20240326.2225") (org "9.3") (persist "0.8") (request "20190901") (request-deferred "20181129"))
 ;; Copyright (C) :2014 myuhe all rights reserved.
 ;; Keywords: convenience,
 
@@ -37,8 +38,8 @@
 (require 'json)
 (require 'aio)
 (require 'oauth2-auto)
-(require 'ol)
 (require 'org)
+(require 'ol nil t)
 (require 'org-archive)
 (require 'org-clock)
 (require 'org-element)
@@ -287,6 +288,11 @@ Name of drawer in which event time and description are stored on org-gcal
 entries."
   :group 'org-gcal
   :type 'string)
+
+(defcustom org-gcal-event-default-duration 5
+  "Default duration of events in minutes."
+  :group 'org-gcal
+  :type 'integer)
 
 (defvar org-gcal--sync-lock nil
   "Set if a sync function is running.")
@@ -1288,12 +1294,11 @@ For valid values of EXISTING-MODE see
              (desc (plist-get time-desc :desc)))
         (unless end
           (let* ((start-time (or start (org-read-date 'with-time 'to-time)))
-                 (min-duration 5)
                  (resolution 5)
                  (duration-default
                   (org-duration-from-minutes
                    (max
-                    min-duration
+                    org-gcal-event-default-duration
                     ;; Round up to the nearest multiple of ‘resolution’ minutes.
                     (* resolution
                        (ceiling
@@ -1555,6 +1560,18 @@ Return an Emacs time object from ‘encode-time'."
      ;;(if (and repeat (not (string= repeat ""))) (concat " " repeat) "")
      ">")))
 
+(defun org-gcal--make-link-string (url title)
+  "Return an Org link string for URL and TITLE across Org versions."
+  (cond
+   ((fboundp 'org-link-make-string)
+    (org-link-make-string url title))
+   ((fboundp 'org-make-link-string)
+    (org-make-link-string url title))
+   (title
+    (format "[[%s][%s]]" url title))
+   (t
+    (format "[[%s]]" url))))
+
 (defun org-gcal--format-org2iso (year mon day &optional hour min tz)
   (let ((seconds (time-to-seconds (encode-time 0
                                                (or min 0)
@@ -1661,7 +1678,7 @@ heading."
                          (plist-get source :url)))
          (t
           (org-entry-put (point) "link"
-                         (org-link-make-string
+                         (org-gcal--make-link-string
                           (plist-get source :url)
                           (plist-get source :title)))))))
     (when transparency (org-entry-put (point) "TRANSPARENCY" transparency))
