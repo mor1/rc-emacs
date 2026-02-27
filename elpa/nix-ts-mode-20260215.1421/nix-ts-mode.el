@@ -2,8 +2,8 @@
 
 ;; Maintainer: Remi Gelinas <mail@remigelin.as>
 ;; Homepage: https://github.com/nix-community/nix-ts-mode
-;; Package-Version: 20251114.1500
-;; Package-Revision: 03c77fdbbd22
+;; Package-Version: 20260215.1421
+;; Package-Revision: 319831712125
 ;; Keywords: nix languages tree-sitter
 ;; Package-Requires: ((emacs "29.1"))
 
@@ -348,6 +348,7 @@ and for subsequent lines it's the previous line's indentation."
 
 (defvar nix-ts-mode-indent-rules
   `((nix
+     ((parent-is "function_expression") parent-bol 0)
      ((parent-is "source_code") column-0 0)
      ((node-is "]") parent-bol 0)
      ((node-is ")") parent-bol 0)
