@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20260106.1142
-;; Package-Revision: f3717e0db8fa
+;; Package-Version: 20260210.915
+;; Package-Revision: abfe0003d71b
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/corfu
 ;; Keywords: abbrev, convenience, matching, completion, text
@@ -492,14 +492,21 @@ FRAME is the existing frame."
       ;; Mark window as dedicated to prevent frame reuse (gh:minad/corfu#60)
       (set-window-dedicated-p win t))
     (redirect-frame-focus frame parent)
-    (pcase-let ((`(,px . ,py) (frame-position frame)))
+    (pcase-let* ((`(,ox ,oy ,right ,bottom) (frame-edges frame 'outer-edges))
+                 (border (* 2 corfu-border-width))
+                 (ow (- (- right ox) left-fringe-width right-fringe-width border))
+                 (oh (- (- bottom oy) border))
+                 (pos-change (or (/= x ox) (/= y oy)))
+                 (size-change (or (/= ow width) (/= oh height))))
       (cond
-       ((and (= x px) (= y py)) (set-frame-size frame width height t))
-       ;; New Emacs 31 function for faster resizing/movement in one go.
-       ((fboundp 'set-frame-size-and-position-pixelwise)
-        (set-frame-size-and-position-pixelwise frame width height x y))
-       (t (set-frame-size frame width height t)
-          (set-frame-position frame x y)))))
+       ((and pos-change size-change)
+        ;; New Emacs 31 function for faster resizing/movement in one go.
+        (static-if (fboundp 'set-frame-size-and-position-pixelwise)
+            (set-frame-size-and-position-pixelwise frame width height x y)
+          (set-frame-size frame width height t)
+          (set-frame-position frame x y)))
+       (pos-change (set-frame-position frame x y))
+       (size-change (set-frame-size frame width height t)))))
   (make-frame-visible frame)
   ;; Unparent child frame if EXWM is used, otherwise EXWM buffers are drawn on
   ;; top of the Corfu child frame.
