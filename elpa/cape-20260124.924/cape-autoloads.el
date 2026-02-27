@@ -125,10 +125,11 @@ This function can be used as an advice around an existing Capf.
 
 (fn CAPF)")
 (autoload 'cape-wrap-properties "cape" "\
-Call CAPF and strip or add completion PROPERTIES.
-Completion properties include for example :exclusive, :category,
-:annotation-function, :display-sort-function and various :company-*
-extensions.  Strip all properties if PROPERTIES is :strip.
+Call CAPF and add completion PROPERTIES.
+Completion properties include :exclusive, :category,
+:annotation-function, :affixation-function, :display-sort-function,
+:company-kind, :company-doc-buffer, :company-docsig, :company-location,
+:company-deprecated and :company-prefix-length.
 
 (fn CAPF &rest PROPERTIES)")
 (autoload 'cape-wrap-nonexclusive "cape" "\
@@ -202,12 +203,6 @@ Example:
         (list (cape-capf-trigger \\='cape-abbrev ?/)))
 
 (fn CAPF TRIGGER)")
- (autoload 'cape-capf-purify "cape")
-(autoload 'cape-wrap-purify "cape" "\
-Obsolete purification wrapper calling CAPF.
-This function can be used as an advice around an existing Capf.
-
-(fn CAPF)")
  (autoload 'cape-capf-accept-all "cape")
  (autoload 'cape-capf-buster "cape")
  (autoload 'cape-capf-case-fold "cape")

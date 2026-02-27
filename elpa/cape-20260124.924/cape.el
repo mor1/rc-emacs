@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20260117.1646
-;; Package-Revision: 96162aab2a22
+;; Package-Version: 20260124.924
+;; Package-Revision: 2b2a5c5bef16
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/cape
 ;; Keywords: abbrev, convenience, matching, completion, text
@@ -245,6 +245,17 @@ BODY is the wrapping expression."
     (cape--wrapped-table cape--nonessential-table
       (let ((default-directory dir)
             (non-essential t))))))
+
+(defun cape--table-drop-metadata (table keys)
+  "Create completion TABLE without metadata KEYS."
+  (if (functionp table)
+      (lambda (str pred action)
+        (if (eq action 'metadata)
+            (when-let* ((md (copy-sequence (funcall table str pred action))))
+              (dolist (k keys) (setq md (assq-delete-all k md)))
+              md)
+          (complete-with-action action table str pred)))
+    table))
 
 (defvar cape--debug-length 5
   "Length of printed lists in `cape--debug-print'.")
@@ -1129,14 +1140,17 @@ This function can be used as an advice around an existing Capf."
 
 ;;;###autoload
 (defun cape-wrap-properties (capf &rest properties)
-  "Call CAPF and strip or add completion PROPERTIES.
-Completion properties include for example :exclusive, :category,
-:annotation-function, :display-sort-function and various :company-*
-extensions.  Strip all properties if PROPERTIES is :strip."
-  (pcase (funcall capf)
-    (`(,beg ,end ,table . ,plist)
-     `( ,beg ,end ,table
-        ,@(and (not (eq :strip (car properties))) (append properties plist))))))
+  "Call CAPF and add completion PROPERTIES.
+Completion properties include :exclusive, :category,
+:annotation-function, :affixation-function, :display-sort-function,
+:company-kind, :company-doc-buffer, :company-docsig, :company-location,
+:company-deprecated and :company-prefix-length."
+  (let ((keys (cl-loop for (k _) on properties by #'cddr
+                       collect (intern (substring (symbol-name k) 1)))))
+    (pcase (funcall capf)
+      (`(,beg ,end ,table . ,plist)
+       `( ,beg ,end ,(cape--table-drop-metadata table keys)
+          ,@properties ,@plist)))))
 
 ;;;###autoload
 (defun cape-wrap-nonexclusive (capf)
@@ -1280,16 +1294,6 @@ Example:
                    (funcall exit str status))))
             . ,plist))))))
 
-;;;###autoload (autoload 'cape-capf-purify "cape")
-;;;###autoload
-(defun cape-wrap-purify (capf)
-  "Obsolete purification wrapper calling CAPF.
-This function can be used as an advice around an existing Capf."
-  (warn "`cape-wrap-purify' is obsolete")
-  (funcall capf))
-(make-obsolete 'cape-wrap-purify nil "2.2")
-(make-obsolete 'cape-capf-purify nil "2.2")
-
 (dolist (wrapper (list #'cape-wrap-accept-all #'cape-wrap-buster
                        #'cape-wrap-case-fold #'cape-wrap-choose
                        #'cape-wrap-debug #'cape-wrap-inside-code
@@ -1297,9 +1301,8 @@ This function can be used as an advice around an existing Capf."
                        #'cape-wrap-inside-string #'cape-wrap-nonexclusive
                        #'cape-wrap-noninterruptible #'cape-wrap-passthrough
                        #'cape-wrap-predicate #'cape-wrap-prefix-length
-                       #'cape-wrap-properties 'cape-wrap-purify
-                       #'cape-wrap-silent #'cape-wrap-sort
-                       #'cape-wrap-super #'cape-wrap-trigger))
+                       #'cape-wrap-properties #'cape-wrap-silent
+                       #'cape-wrap-sort #'cape-wrap-super #'cape-wrap-trigger))
   (let ((name (string-remove-prefix "cape-wrap-" (symbol-name wrapper))))
     (defalias (intern (format "cape-capf-%s" name))
       (lambda (capf &rest args) (lambda () (apply wrapper capf args)))
