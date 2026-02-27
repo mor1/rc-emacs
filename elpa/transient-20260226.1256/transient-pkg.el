@@ -1,13 +1,13 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "transient" "20260113.1549"
+(define-package "transient" "20260226.1256"
   "Transient commands."
   '((emacs    "28.1")
     (compat   "30.1")
     (cond-let "0.2")
     (seq      "2.24"))
   :url "https://github.com/magit/transient"
-  :commit "642343e847a5a26a0adc2493b8b83b62f407d768"
-  :revdesc "642343e847a5"
+  :commit "ef7714b2528b7c74034a1568a753a56dcc8ca877"
+  :revdesc "ef7714b2528b"
   :keywords '("extensions")
   :authors '(("Jonas Bernoulli" . "emacs.transient@jonas.bernoulli.dev"))
   :maintainers '(("Jonas Bernoulli" . "emacs.transient@jonas.bernoulli.dev")))
