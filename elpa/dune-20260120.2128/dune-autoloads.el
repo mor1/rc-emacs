@@ -21,6 +21,8 @@ For customization purposes, use `dune-mode-hook'.
 Promote the correction for the current file." t)
 (autoload 'dune-runtest-and-promote "dune" "\
 Run tests in the current directory and promote the current buffer." t)
+(autoload 'dune-find-dominating "dune" "\
+Find dominating dune file." t)
 (register-definition-prefixes "dune" '("dune-"))
 
 
