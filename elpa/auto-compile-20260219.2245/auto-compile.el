@@ -6,8 +6,8 @@
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile convenience lisp
 
-;; Package-Version: 20260101.1821
-;; Package-Revision: eaed414fa7da
+;; Package-Version: 20260219.2245
+;; Package-Revision: fa5a6f1c7f37
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
@@ -129,6 +129,13 @@
 (eval-when-compile (require 'subr-x))
 
 (defvar warning-minimum-level)
+
+(defmacro auto-compile--static-if (condition then-form &rest else-forms)
+  (declare (indent 2)
+           (debug (sexp sexp &rest sexp)))
+  (if (eval condition lexical-binding)
+      then-form
+    (cons 'progn else-forms)))
 
 (defgroup auto-compile nil
   "Automatically compile Emacs Lisp source libraries."
@@ -277,14 +284,14 @@ non-nil."
                  ((nbutlast tree) nil))
          (catch 'found
            (dolist (sub tree)
-             (when-let ((found (auto-compile--tree-member elt sub delete)))
+             (when-let* ((found (auto-compile--tree-member elt sub delete)))
                (throw 'found found)))))))
 
 (defun auto-compile-modify-mode-line (after)
   (let ((format (default-value 'mode-line-format)))
     (auto-compile--tree-member 'mode-line-auto-compile format 'delete)
     (when after
-      (if-let ((mem (auto-compile--tree-member after format)))
+      (if-let* ((mem (auto-compile--tree-member after format)))
           (push 'mode-line-auto-compile (cdr mem))
         (message "Could not insert `%s' into `%s'"
                  'mode-line-auto-compile
@@ -501,21 +508,20 @@ Optionally that suffix may be followed by one listed in
   (string-match-p (format "\\.el%s\\'" (regexp-opt load-file-rep-suffixes))
                   file))
 
-(cl-eval-when (compile load eval)
-  (if (fboundp 'file-name-with-extension)
-      ;; Added in Emacs 28.1.
-      (defalias 'auto-compile--file-name-with-extension
-        #'file-name-with-extension)
-    (defun auto-compile--file-name-with-extension (filename extension)
-      (let ((extn (string-trim-left extension "[.]")))
-        (cond ((string-empty-p filename)
-               (error "Empty filename"))
-              ((string-empty-p extn)
-               (error "Malformed extension: %s" extension))
-              ((directory-name-p filename)
-               (error "Filename is a directory: %s" filename))
-              (t
-               (concat (file-name-sans-extension filename) "." extn)))))))
+(auto-compile--static-if (fboundp 'file-name-with-extension)
+    ;; Added in Emacs 28.1.
+    (defalias 'auto-compile--file-name-with-extension
+      #'file-name-with-extension)
+  (defun auto-compile--file-name-with-extension (filename extension)
+    (let ((extn (string-trim-left extension "[.]")))
+      (cond ((string-empty-p filename)
+             (error "Empty filename"))
+            ((string-empty-p extn)
+             (error "Malformed extension: %s" extension))
+            ((directory-name-p filename)
+             (error "Filename is a directory: %s" filename))
+            (t
+             (concat (file-name-sans-extension filename) "." extn))))))
 
 (defun auto-compile--byte-compile-source-file (file &optional must-exist)
   (let ((standard (auto-compile--file-name-with-extension
@@ -867,11 +873,10 @@ Without this advice the outdated source file would get loaded."
 
 ;;; _
 
-(when (fboundp 'setopt) ; since Emacs 29.1
-  (with-no-warnings
+(auto-compile--static-if (fboundp 'setopt) ; since Emacs 29.1
     (defun auto-compile-use-mode-line-set (_ignored value)
-      (declare (obsolete "use `setopt' instead." "Auto-Compile 2.2.0"))
-      (setopt auto-compile-use-mode-line value))))
+      (declare (obsolete "use `setopt' instead." "Auto-Compile 2.1.2"))
+      (setopt auto-compile-use-mode-line value)))
 
 (provide 'auto-compile)
 ;; Local Variables:
