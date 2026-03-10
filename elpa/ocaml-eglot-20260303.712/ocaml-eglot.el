@@ -13,8 +13,8 @@
 ;; Keywords: ocaml languages
 ;; URL: https://github.com/tarides/ocaml-eglot
 ;; Package-Requires: ((emacs "29.1"))
-;; Package-Version: 20260226.1707
-;; Package-Revision: 5ab62926555d
+;; Package-Version: 20260303.712
+;; Package-Revision: bbd10ff5d60a
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
@@ -254,7 +254,7 @@ If optional IN-OTHER-WINDOW is non-nil, find the file in another window."
 If optional IN-OTHER-WINDOW is non-nil, find the declaration in another window."
   (interactive "P")
   (let* ((identifier (xref-backend-identifier-at-point (xref-find-backend)))
-         (identifier-str (progn (substring-no-properties identifier)))
+         (identifier-str (substring-no-properties identifier))
          (alternate-buffer
           (progn
             (ocaml-eglot-req--server-capable-or-lose :experimental :ocamllsp :handleSwitchImplIntf)
@@ -457,8 +457,8 @@ KEY-COMPLETABLE define the current value to be selected."
 The universal prefix argument can be used to change the maximum number
 of results (LIMIT).  KEY defines the current value to be selected."
   (ocaml-eglot-req--server-capable-or-lose :experimental :ocamllsp :handleTypeSearch)
-  (let* ((limit (or(if (> limit 1) limit nil)
-                   ocaml-eglot-type-search-limit 25))
+  (let* ((limit (or (if (> limit 1) limit nil)
+                    ocaml-eglot-type-search-limit))
          (with-doc (or ocaml-eglot-type-search-include-doc :json-false))
          ;; We use plaintext because the result of the documentation may
          ;; be truncated
