@@ -4623,14 +4623,14 @@ Fine-grained un-/staging has to be done from the status or a diff
 buffer, but it’s also possible to un-/stage all changes made to the file
 visited in the current buffer right from inside that buffer.
 
-‘M-x magit-stage-file’
+‘M-x magit-stage-files’
      When invoked inside a file-visiting buffer, then stage all changes
      to that file.  In a Magit buffer, stage the file at point if any.
      Otherwise prompt for a file to be staged.  With a prefix argument
      always prompt the user for a file, even in a file-visiting buffer
      or when there is a file section at point.
 
-‘M-x magit-unstage-file’
+‘M-x magit-unstage-files’
      When invoked inside a file-visiting buffer, then unstage all
      changes to that file.  In a Magit buffer, unstage the file at point
      if any.  Otherwise prompt for a file to be unstaged.  With a prefix
@@ -7723,10 +7723,10 @@ all, add this to your init file and restart Emacs.
      (setq magit-define-global-key-bindings nil)
 
 ‘C-c f’ (‘magit-file-dispatch’)
-‘C-c f s’ (‘magit-stage-file’)
-‘C-c f s’ (‘magit-stage-buffer-file’)
-‘C-c f u’ (‘magit-unstage-file’)
-‘C-c f u’ (‘magit-unstage-buffer-file’)
+‘C-c f s’ (‘magit-stage-files’)
+‘C-c f s’ (‘magit-file-stage’)
+‘C-c f u’ (‘magit-unstage-files’)
+‘C-c f u’ (‘magit-file-unstage’)
 ‘C-c f , x’ (‘magit-file-untrack’)
 ‘C-c f , r’ (‘magit-file-rename’)
 ‘C-c f , k’ (‘magit-file-delete’)
@@ -7760,14 +7760,14 @@ all, add this to your init file and restart Emacs.
      This transient prefix command binds the following suffix commands
      and displays them in a temporary buffer until a suffix is invoked.
 
-‘C-c M-g s’ (‘magit-stage-file’)
-‘C-c M-g s’ (‘magit-stage-buffer-file’)
+‘C-c M-g s’ (‘magit-stage-files’)
+‘C-c M-g s’ (‘magit-file-stage’)
      Stage all changes to the file being visited in the current buffer.
      When not visiting a file, then the first command is used, which
      prompts for a file.
 
-‘C-c M-g u’ (‘magit-unstage-file’)
-‘C-c M-g u’ (‘magit-unstage-buffer-file’)
+‘C-c M-g u’ (‘magit-unstage-files’)
+‘C-c M-g u’ (‘magit-file-unstage’)
      Unstage all changes to the file being visited in the current
      buffer.  When not visiting a file, then the first command is used,
      which prompts for a file.
@@ -10258,6 +10258,14 @@ Appendix D Function and Command Index
                                                               (line  52)
 * magit-file-rename <1>:                 Commands for Buffers Visiting Files.
                                                               (line  78)
+* magit-file-stage:                      Commands for Buffers Visiting Files.
+                                                              (line  52)
+* magit-file-stage <1>:                  Commands for Buffers Visiting Files.
+                                                              (line  63)
+* magit-file-unstage:                    Commands for Buffers Visiting Files.
+                                                              (line  52)
+* magit-file-unstage <1>:                Commands for Buffers Visiting Files.
+                                                              (line  69)
 * magit-file-untrack:                    Commands for Buffers Visiting Files.
                                                               (line  52)
 * magit-file-untrack <1>:                Commands for Buffers Visiting Files.
@@ -10569,15 +10577,11 @@ Appendix D Function and Command Index
 * magit-sparse-checkout-set:             Sparse checkouts.    (line  33)
 * magit-stage:                           Staging and Unstaging.
                                                               (line  29)
-* magit-stage-buffer-file:               Commands for Buffers Visiting Files.
-                                                              (line  52)
-* magit-stage-buffer-file <1>:           Commands for Buffers Visiting Files.
-                                                              (line  63)
-* magit-stage-file:                      Staging and Unstaging.
+* magit-stage-files:                     Staging and Unstaging.
                                                               (line  90)
-* magit-stage-file <1>:                  Commands for Buffers Visiting Files.
+* magit-stage-files <1>:                 Commands for Buffers Visiting Files.
                                                               (line  52)
-* magit-stage-file <2>:                  Commands for Buffers Visiting Files.
+* magit-stage-files <2>:                 Commands for Buffers Visiting Files.
                                                               (line  63)
 * magit-stage-modified:                  Staging and Unstaging.
                                                               (line  36)
@@ -10647,15 +10651,11 @@ Appendix D Function and Command Index
                                                               (line  42)
 * magit-unstage-all:                     Staging and Unstaging.
                                                               (line  50)
-* magit-unstage-buffer-file:             Commands for Buffers Visiting Files.
-                                                              (line  52)
-* magit-unstage-buffer-file <1>:         Commands for Buffers Visiting Files.
-                                                              (line  69)
-* magit-unstage-file:                    Staging and Unstaging.
+* magit-unstage-files:                   Staging and Unstaging.
                                                               (line  97)
-* magit-unstage-file <1>:                Commands for Buffers Visiting Files.
+* magit-unstage-files <1>:               Commands for Buffers Visiting Files.
                                                               (line  52)
-* magit-unstage-file <2>:                Commands for Buffers Visiting Files.
+* magit-unstage-files <2>:               Commands for Buffers Visiting Files.
                                                               (line  69)
 * magit-version:                         Running Git.         (line 195)
 * magit-version <1>:                     Debugging Tools.     (line  11)
@@ -10938,111 +10938,111 @@ Node: Creating Repository191298
 Node: Cloning Repository191835
 Node: Staging and Unstaging198276
 Ref: Staging from File-Visiting Buffers202206
-Node: Applying203221
-Node: Committing205294
-Ref: Initiating a Commit205921
-Ref: Creating a new commit206233
-Ref: Editing the last commit206343
-Ref: Editing any reachable commit208322
-Ref: Editing any reachable commit and rebasing immediately212735
-Ref: Options used by commit commands214383
-Ref: Used by all or most commit commands214455
-Ref: Used by all squash and fixup commands216686
-Ref: Used by specific commit commands217240
-Ref: Editing Commit Messages217564
-Ref: Using the Revision Stack220118
-Ref: Commit Pseudo Headers223080
-Ref: Commit Mode and Hooks224232
-Ref: Commit Message Conventions226945
-Node: Branching228835
-Ref: The Two Remotes228956
-Ref: Branch Commands231525
-Ref: Branch Git Variables244275
-Ref: Auxiliary Branch Commands249522
-Node: Merging250539
-Node: Resolving Conflicts254894
-Node: Rebasing260268
-Ref: Editing Rebase Sequences265228
-Ref: Information About In-Progress Rebase270461
-Ref: Rebasing-Footnote-1279461
-Node: Cherry Picking280057
-Ref: Reverting284367
-Node: Resetting285727
-Node: Stashing287553
-Node: Transferring293800
-Node: Remotes294022
-Ref: Remote Commands294119
-Ref: Remote Git Variables298071
-Node: Fetching299255
-Node: Pulling301738
-Node: Pushing302764
-Node: Plain Patches307055
-Node: Maildir Patches308526
-Node: Miscellaneous310005
-Node: Tagging310351
-Node: Notes312244
-Node: Submodules314579
-Ref: Listing Submodules314740
-Ref: Submodule Transient316807
-Node: Subtree319166
-Node: Worktree321097
-Node: Sparse checkouts322412
-Node: Bundle325188
-Node: Common Commands325563
-Node: Wip Modes328191
-Ref: Wip Graph332769
-Node: Commands for Buffers Visiting Files335208
-Node: Minor Mode for Buffers Visiting Blobs343549
-Node: Customizing344712
-Node: Per-Repository Configuration346308
-Node: Essential Settings348562
-Ref: Safety348851
-Ref: Performance350532
-Ref: Log Performance353325
-Ref: Diff Performance354630
-Ref: Refs Buffer Performance355971
-Ref: Committing Performance356546
-Ref: Microsoft Windows Performance357528
-Ref: MacOS Performance358617
-Ref: Global Bindings359502
-Ref: Essential Settings-Footnote-1361677
-Node: Plumbing361759
-Node: Calling Git362588
-Ref: Getting a Value from Git364047
-Ref: Calling Git for Effect367679
-Node: Section Plumbing373624
-Ref: Creating Sections373776
-Ref: Section Selection377594
-Ref: Matching Sections379293
-Node: Refreshing Buffers385207
-Node: Conventions388351
-Ref: Theming Faces388515
-Node: FAQ396560
-Node: FAQ - How to ...?396998
-Ref: How to pronounce Magit?397131
-Ref: How to show git's output?397825
-Ref: How to install the gitman info manual?398450
-Ref: How to show diffs for gpg-encrypted files?399261
-Ref: How does branching and pushing work?399670
-Ref: Should I disable VC?399834
-Node: FAQ - Issues and Errors400319
-Ref: Magit is slow400464
-Ref: I changed several thousand files at once and now Magit is unusable400610
-Ref: I am having problems committing401149
-Ref: I am using MS Windows and cannot push with Magit401414
-Ref: I am using macOS and SOMETHING works in shell but not in Magit401814
-Ref: Expanding a file to show the diff causes it to disappear402405
-Ref: Point is wrong in the COMMIT_EDITMSG buffer402755
-Ref: The mode-line information isn't always up-to-date403579
-Ref: A branch and tag sharing the same name breaks SOMETHING404418
-Ref: My Git hooks work on the command-line but not inside Magit405066
-Ref: git-commit-mode isn't used when committing from the command-line405658
-Ref: Point ends up inside invisible text when jumping to a file-visiting buffer407656
-Ref: I am no longer able to save popup defaults408248
-Node: Debugging Tools409043
-Node: Keystroke Index412982
-Node: Function and Command Index451078
-Node: Variable Index502650
+Node: Applying203223
+Node: Committing205296
+Ref: Initiating a Commit205923
+Ref: Creating a new commit206235
+Ref: Editing the last commit206345
+Ref: Editing any reachable commit208324
+Ref: Editing any reachable commit and rebasing immediately212737
+Ref: Options used by commit commands214385
+Ref: Used by all or most commit commands214457
+Ref: Used by all squash and fixup commands216688
+Ref: Used by specific commit commands217242
+Ref: Editing Commit Messages217566
+Ref: Using the Revision Stack220120
+Ref: Commit Pseudo Headers223082
+Ref: Commit Mode and Hooks224234
+Ref: Commit Message Conventions226947
+Node: Branching228837
+Ref: The Two Remotes228958
+Ref: Branch Commands231527
+Ref: Branch Git Variables244277
+Ref: Auxiliary Branch Commands249524
+Node: Merging250541
+Node: Resolving Conflicts254896
+Node: Rebasing260270
+Ref: Editing Rebase Sequences265230
+Ref: Information About In-Progress Rebase270463
+Ref: Rebasing-Footnote-1279463
+Node: Cherry Picking280059
+Ref: Reverting284369
+Node: Resetting285729
+Node: Stashing287555
+Node: Transferring293802
+Node: Remotes294024
+Ref: Remote Commands294121
+Ref: Remote Git Variables298073
+Node: Fetching299257
+Node: Pulling301740
+Node: Pushing302766
+Node: Plain Patches307057
+Node: Maildir Patches308528
+Node: Miscellaneous310007
+Node: Tagging310353
+Node: Notes312246
+Node: Submodules314581
+Ref: Listing Submodules314742
+Ref: Submodule Transient316809
+Node: Subtree319168
+Node: Worktree321099
+Node: Sparse checkouts322414
+Node: Bundle325190
+Node: Common Commands325565
+Node: Wip Modes328193
+Ref: Wip Graph332771
+Node: Commands for Buffers Visiting Files335210
+Node: Minor Mode for Buffers Visiting Blobs343527
+Node: Customizing344690
+Node: Per-Repository Configuration346286
+Node: Essential Settings348540
+Ref: Safety348829
+Ref: Performance350510
+Ref: Log Performance353303
+Ref: Diff Performance354608
+Ref: Refs Buffer Performance355949
+Ref: Committing Performance356524
+Ref: Microsoft Windows Performance357506
+Ref: MacOS Performance358595
+Ref: Global Bindings359480
+Ref: Essential Settings-Footnote-1361655
+Node: Plumbing361737
+Node: Calling Git362566
+Ref: Getting a Value from Git364025
+Ref: Calling Git for Effect367657
+Node: Section Plumbing373602
+Ref: Creating Sections373754
+Ref: Section Selection377572
+Ref: Matching Sections379271
+Node: Refreshing Buffers385185
+Node: Conventions388329
+Ref: Theming Faces388493
+Node: FAQ396538
+Node: FAQ - How to ...?396976
+Ref: How to pronounce Magit?397109
+Ref: How to show git's output?397803
+Ref: How to install the gitman info manual?398428
+Ref: How to show diffs for gpg-encrypted files?399239
+Ref: How does branching and pushing work?399648
+Ref: Should I disable VC?399812
+Node: FAQ - Issues and Errors400297
+Ref: Magit is slow400442
+Ref: I changed several thousand files at once and now Magit is unusable400588
+Ref: I am having problems committing401127
+Ref: I am using MS Windows and cannot push with Magit401392
+Ref: I am using macOS and SOMETHING works in shell but not in Magit401792
+Ref: Expanding a file to show the diff causes it to disappear402383
+Ref: Point is wrong in the COMMIT_EDITMSG buffer402733
+Ref: The mode-line information isn't always up-to-date403557
+Ref: A branch and tag sharing the same name breaks SOMETHING404396
+Ref: My Git hooks work on the command-line but not inside Magit405044
+Ref: git-commit-mode isn't used when committing from the command-line405636
+Ref: Point ends up inside invisible text when jumping to a file-visiting buffer407634
+Ref: I am no longer able to save popup defaults408226
+Node: Debugging Tools409021
+Node: Keystroke Index412960
+Node: Function and Command Index451056
+Node: Variable Index502628
 
 End Tag Table
 
