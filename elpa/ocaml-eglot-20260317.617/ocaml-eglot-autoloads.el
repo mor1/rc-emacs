@@ -39,16 +39,6 @@ disabled.
 (register-definition-prefixes "ocaml-eglot" '("ocaml-eglot-"))
 
 
-;;; Generated autoloads from ocaml-eglot-objinfo.el
-
-(add-to-list 'auto-mode-alist '("\\.\\(cmi\\|cmti\\|cmt\\|cmo\\|cmx\\|cma\\|cmxa\\|cmxs\\)\\'" . ocaml-eglot-ocamlobjinfo-mode) t)
-(autoload 'ocaml-eglot-ocamlobjinfo-mode "ocaml-eglot-objinfo" "\
-Major Mode for displaying `ocamlobjinfo' output.
-
-(fn)" t)
-(register-definition-prefixes "ocaml-eglot-objinfo" '("ocaml-eglot-o"))
-
-
 ;;; Generated autoloads from ocaml-eglot-req.el
 
 (register-definition-prefixes "ocaml-eglot-req" '("ocaml-eglot-req--"))

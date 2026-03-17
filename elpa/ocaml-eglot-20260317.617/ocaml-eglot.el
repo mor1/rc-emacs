@@ -13,8 +13,8 @@
 ;; Keywords: ocaml languages
 ;; URL: https://github.com/tarides/ocaml-eglot
 ;; Package-Requires: ((emacs "29.1"))
-;; Package-Version: 20260303.712
-;; Package-Revision: bbd10ff5d60a
+;; Package-Version: 20260317.617
+;; Package-Revision: 24b314f03cb1
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
@@ -41,7 +41,6 @@
 (require 'ocaml-eglot-req)
 (require 'ocaml-eglot-type-enclosing)
 (require 'ocaml-eglot-xref)
-(require 'ocaml-eglot-objinfo)
 (require 'eglot)
 
 (declare-function flycheck-next-error "ext:flycheck")
