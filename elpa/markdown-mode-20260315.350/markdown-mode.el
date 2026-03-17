@@ -6,8 +6,8 @@
 ;; Author: Jason R. Blevins <jblevins@xbeta.org>
 ;; Maintainer: Jason R. Blevins <jblevins@xbeta.org>
 ;; Created: May 24, 2007
-;; Package-Version: 20260308.930
-;; Package-Revision: 107a368a6def
+;; Package-Version: 20260315.350
+;; Package-Revision: 877d943cc344
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: Markdown, GitHub Flavored Markdown, itex
 ;; URL: https://jblevins.org/projects/markdown-mode/
@@ -7800,9 +7800,11 @@ Return the name of the output buffer used."
                       markdown-command exit-code))))
     output-buffer-name))
 
-(defun markdown-standalone (&optional output-buffer-name)
+(defun markdown-standalone (&optional output-buffer-name title)
   "Special function to provide standalone HTML output.
-Insert the output in the buffer named OUTPUT-BUFFER-NAME."
+Insert the output in the buffer named OUTPUT-BUFFER-NAME.
+Set the HTML title to TITLE if provided, otherwise the name of the
+output buffer."
   (interactive)
   (setq output-buffer-name (markdown output-buffer-name))
   (let ((css-path markdown-css-paths))
@@ -7810,7 +7812,7 @@ Insert the output in the buffer named OUTPUT-BUFFER-NAME."
       (set-buffer output-buffer-name)
       (setq-local markdown-css-paths css-path)
       (unless (markdown-output-standalone-p)
-        (markdown-add-xhtml-header-and-footer output-buffer-name))
+        (markdown-add-xhtml-header-and-footer (or title output-buffer-name)))
       (goto-char (point-min))
       (html-mode)))
   output-buffer-name)
@@ -7891,7 +7893,8 @@ When OUTPUT-BUFFER-NAME is given, insert the output in the buffer with
 that name."
   (interactive)
   (browse-url-of-buffer
-   (markdown-standalone (or output-buffer-name markdown-output-buffer-name))))
+   (markdown-standalone (or output-buffer-name markdown-output-buffer-name)
+                        (buffer-name))))
 
 (defun markdown-export-file-name (&optional extension)
   "Attempt to generate a filename for Markdown output.
