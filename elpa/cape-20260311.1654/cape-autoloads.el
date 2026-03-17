@@ -219,6 +219,7 @@ Example:
  (autoload 'cape-capf-prefix-length "cape")
  (autoload 'cape-capf-properties "cape")
  (autoload 'cape-capf-silent "cape")
+ (autoload 'cape-capf-sort "cape")
  (autoload 'cape-capf-super "cape")
  (autoload 'cape-capf-trigger "cape")
  (autoload 'cape-prefix-map "cape" nil t 'keymap)

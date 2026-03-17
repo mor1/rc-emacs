@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2021
-;; Package-Version: 20260124.924
-;; Package-Revision: 2b2a5c5bef16
+;; Package-Version: 20260311.1654
+;; Package-Revision: a326a0575fe5
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/cape
 ;; Keywords: abbrev, convenience, matching, completion, text
@@ -1326,6 +1326,7 @@ See `%s' for documentation." name wrapper wrapper))))
 ;;;###autoload (autoload 'cape-capf-prefix-length "cape")
 ;;;###autoload (autoload 'cape-capf-properties "cape")
 ;;;###autoload (autoload 'cape-capf-silent "cape")
+;;;###autoload (autoload 'cape-capf-sort "cape")
 ;;;###autoload (autoload 'cape-capf-super "cape")
 ;;;###autoload (autoload 'cape-capf-trigger "cape")
 
