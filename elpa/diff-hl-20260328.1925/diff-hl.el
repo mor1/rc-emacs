@@ -5,8 +5,8 @@
 ;; Author:   Dmitry Gutov <dmitry@gutov.dev>
 ;; URL:      https://github.com/dgutov/diff-hl
 ;; Keywords: vc, diff
-;; Package-Version: 20260225.2247
-;; Package-Revision: bb9af85441b0
+;; Package-Version: 20260328.1925
+;; Package-Revision: b965e19e6e7f
 ;; Package-Requires: ((cl-lib "0.2") (emacs "26.1"))
 
 ;; This file is part of GNU Emacs.
@@ -140,6 +140,11 @@ enclosed in a `progn' form.  ELSE-FORMS may be empty."
 
 (defcustom diff-hl-ask-before-revert-hunk t
   "Non-nil to ask for confirmation before revert a hunk."
+  :group 'diff-hl
+  :type 'boolean)
+
+(defcustom diff-hl-next-previous-hunk-auto-recenter nil
+  "Non-nil to `recenter' after `diff-hl-next-hunk' and `diff-hl-previous-hunk'."
   :group 'diff-hl
   :type 'boolean)
 
@@ -1111,9 +1116,11 @@ its end position."
   "Go to the beginning of the next hunk in the current buffer."
   (interactive)
   (let ((overlay (diff-hl-search-next-hunk backward)))
-    (if overlay
-        (goto-char (overlay-start overlay))
-      (user-error "No further hunks found"))))
+    (unless overlay
+      (user-error "No further hunks found"))
+    (goto-char (overlay-start overlay))
+    (when diff-hl-next-previous-hunk-auto-recenter
+      (recenter))))
 
 (defun diff-hl-previous-hunk ()
   "Go to the beginning of the previous hunk in the current buffer."
@@ -1121,7 +1128,8 @@ its end position."
   (diff-hl-next-hunk t))
 
 (defun diff-hl-find-current-hunk ()
-  (let (o)
+  (let ((o)
+        (diff-hl-next-previous-hunk-auto-recenter nil))
     (cond
      ((diff-hl-hunk-overlay-at (point)))
      ((setq o (diff-hl-search-next-hunk t))
