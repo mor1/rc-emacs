@@ -11,11 +11,7 @@
 
 ;;; Generated autoloads from ocaml-eglot.el
 
-(autoload 'ocaml-eglot-setup "ocaml-eglot" "\
-Setup OCaml-eglot.")
-(autoload 'ocaml-eglot-clean "ocaml-eglot" "\
-Clean registered hooks and advice.")
-(autoload 'ocaml-eglot "ocaml-eglot" "\
+(autoload 'ocaml-eglot-mode "ocaml-eglot" "\
 Minor mode for interacting with `ocaml-lsp-server' using `eglot' as a client.
 
 OCaml Eglot provides standard implementations of the various custom-requests
@@ -30,12 +26,13 @@ mode if ARG is nil, omitted, or is a positive number.  Disable the mode
 if ARG is a negative number.
 
 To check whether the minor mode is enabled in the current buffer,
-evaluate the variable `ocaml-eglot'.
+evaluate the variable `ocaml-eglot-mode'.
 
 The mode's hook is called both when the mode is enabled and when it is
 disabled.
 
 (fn &optional ARG)" t)
+(defalias 'ocaml-eglot #'ocaml-eglot-mode)
 (register-definition-prefixes "ocaml-eglot" '("ocaml-eglot-"))
 
 
