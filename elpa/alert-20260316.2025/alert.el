@@ -5,8 +5,8 @@
 ;; Author: John Wiegley <jwiegley@gmail.com>
 ;; Created: 24 Aug 2011
 ;; Updated: 16 Mar 2015
-;; Package-Version: 20250823.650
-;; Package-Revision: 79f6936ab4d8
+;; Package-Version: 20260316.2025
+;; Package-Revision: fb8f1fc7f769
 ;; Package-Requires: ((gntp "0.1") (log4e "0.3.0") (cl-lib "0.5"))
 ;; Keywords: notification emacs message
 ;; X-URL: https://github.com/jwiegley/alert
@@ -201,6 +201,22 @@
 ;; shut up the byte compiler
 (declare-function alert-gntp-notify "alert")
 (declare-function alert-notifications-notify "alert")
+(declare-function x-change-window-property "xfns.c")
+(declare-function x-window-property "xfns.c")
+(declare-function notifications-notify "notifications")
+(declare-function notifications-close-notification "notifications")
+(declare-function do-applescript "nsfns.m")
+
+;; Functions generated dynamically by log4e:deflogger
+(declare-function alert--log-set-level "alert")
+(declare-function alert--log-enable-logging "alert")
+(declare-function alert--log-clear-log "alert")
+(declare-function alert--log-fatal "alert")
+(declare-function alert--log-error "alert")
+(declare-function alert--log-warn "alert")
+(declare-function alert--log-info "alert")
+(declare-function alert--log-debug "alert")
+(declare-function alert--log-trace "alert")
 
 (defgroup alert nil
   "Notification system for Emacs similar to Growl"
@@ -420,7 +436,7 @@ These details are given in a plist which uses various keyword to
 identify the parts of the alert.  Here is a prototypical style
 definition:
 
-\(alert-define-style 'style-name :title \"My Style's title\"
+\(alert-define-style \\='style-name :title \"My Style\\='s title\"
                     :notifier
                     (lambda (info)
                       ;; The message text is :message
@@ -834,7 +850,7 @@ by the `notifications' style.")
                                     :urgency (cdr (assq (plist-get info :severity)
                                                         alert-notifications-priorities))
                                     :actions '("default" "Open corresponding buffer")
-                                    :on-action (lambda (id action)
+                                    :on-action (lambda (_id action)
                                                  (when (string= action "default")
                                                    (switch-to-buffer (plist-get info :buffer)))))))
       (when (plist-get info :id)
