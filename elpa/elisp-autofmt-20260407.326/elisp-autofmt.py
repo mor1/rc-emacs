@@ -25,7 +25,7 @@ import argparse
 
 HintType = dict[
     str,
-    str | int | tuple[int, int],
+    Any,
 ]
 NdSexp_WrapState = tuple[bool, ...]
 
@@ -83,108 +83,11 @@ def is_hash_prefix_special_case(text: str) -> bool:
     )
 
 
-# ------------------------------------------------------------------------------
-# Line Length Checks
-
-def calc_over_long_line_score(data: str, fill_column: int, trailing_parens: int, line_terminate: int) -> int:
+def is_prefix_symbol(text: str) -> bool:
     '''
-    The resulting score is zero when all values are within the fill column.
-    Otherwise a score will be returned which is used to compare the state of wrapped lines
-    (bigger is worse).
+    Return true when ``text`` should be absorbed as a prefix of a following S-expression.
     '''
-
-    # This is the accumulated ``2 ** overflow``.
-    # Note that the power is used so breaking a single line into two which both overflow
-    # return a better (lower) score than a single line that overflows.
-
-    # Step over `\n` characters instead of `data.split('\n')`
-    # so consecutive newlines can be handled separately.
-    line_step = 0
-    i = 0
-
-    score = 0
-    if line_terminate != -1:
-        while line_step != -1:
-            line_step_next = data.find('\n', line_step)
-            if line_step_next == -1:
-                line_length = len(data) - line_step
-                line_step = -1
-            else:
-                line_length = line_step_next - line_step
-                line_step = line_step_next + 1
-
-            if line_terminate == i:
-                line_length += trailing_parens
-                if line_length > fill_column:
-                    score += 2 ** (line_length - fill_column)
-                break
-            if line_length > fill_column:
-                score += 2 ** (line_length - fill_column)
-            i += 1
-    else:
-        while line_step != -1:
-            line_step_next = data.find('\n', line_step)
-            if line_step_next == -1:
-                line_length = len(data) - line_step
-                line_step = -1
-            else:
-                line_length = line_step_next - line_step
-                line_step = line_step_next + 1
-
-            if line_length > fill_column:
-                score += 2 ** (line_length - fill_column)
-            i += 1
-
-    return score
-
-
-def calc_over_long_line_length_test(data: str, fill_column: int, trailing_parens: int, line_terminate: int) -> int:
-    '''
-    Return zero when all lines are within the ``fill_column``, otherwise 1.
-
-    Even though this logically returns a boolean,
-    use an int type since this is used by logic that calculates a score,
-    and the return value from this function is part of that score.
-    '''
-
-    # Step over `\n` characters instead of `data.split('\n')`
-    # so multiple characters are handled separately.
-    line_step = 0
-    i = 0
-
-    if line_terminate != -1:
-        while line_step != -1:
-            line_step_next = data.find('\n', line_step)
-            if line_step_next == -1:
-                line_length = len(data) - line_step
-                line_step = -1
-            else:
-                line_length = line_step_next - line_step
-                line_step = line_step_next + 1
-
-            if line_terminate == i:
-                line_length += trailing_parens
-                if line_length > fill_column:
-                    return 1
-                break
-            if line_length > fill_column:
-                return 1
-            i += 1
-    else:
-        while line_step != -1:
-            line_step_next = data.find('\n', line_step)
-            if line_step_next == -1:
-                line_length = len(data) - line_step
-                line_step = -1
-            else:
-                line_length = line_step_next - line_step
-                line_step = line_step_next + 1
-
-            if line_length > fill_column:
-                return 1
-            i += 1
-
-    return 0
+    return (not text.lstrip('#,`\'')) or is_hash_prefix_special_case(text)
 
 
 # ------------------------------------------------------------------------------
@@ -244,7 +147,7 @@ def apply_relaxed_wrap(node_parent: NdSexp, style: FmtStyle) -> None:
         assert isinstance(group_beg, int)
         assert isinstance(group_len, int)
 
-        nodes_iter = node_parent.nodes_only_code[group_beg + 1:]
+        nodes_iter = node_parent.nodes_only_code[group_beg:]
     else:
         nodes_iter = node_parent.nodes_only_code[node_parent.index_wrap_hint:]
 
@@ -260,11 +163,14 @@ def apply_relaxed_wrap(node_parent: NdSexp, style: FmtStyle) -> None:
     # Finish building 'nodes_with_trailing_comment_or_newline'.
 
     if hint_group is not None:
-        group_len = hint_group[1]
+        # For data lists, the first group stays on the opening line.
+        wrap_skip = (node_parent.index_wrap_hint - group_beg) if node_parent.hints.get('is_data') else 0
         for i, node in enumerate(nodes_iter):
             ok = True
 
             if (i % group_len) != 0:
+                ok = False
+            if i < wrap_skip:
                 ok = False
 
             if ok:
@@ -332,6 +238,49 @@ def apply_relaxed_wrap_when_multiple_args(node_parent: NdSexp, style: FmtStyle) 
     '''
     if len(node_parent.nodes_only_code) - node_parent.index_wrap_hint > 1:
         apply_relaxed_wrap(node_parent, style)
+
+
+def _sexp_node_to_python(node: Node) -> object:
+    '''
+    Convert an AST node to a Python value for use as formatting hints.
+
+    - ``NdSymbol``: numbers become int, ``t`` becomes True, ``nil`` becomes None,
+      keywords (``:``) become string keys, other symbols become strings.
+    - ``NdString``: becomes a Python string.
+    - ``NdSexp`` starting with a keyword: becomes a dict (plist).
+    - ``NdSexp`` otherwise: becomes a list.
+    '''
+    if isinstance(node, NdSymbol):
+        data = node.data
+        if data == 't':
+            return True
+        if data == 'nil':
+            return None
+        if data.removeprefix('-').isdigit():
+            return int(data)
+        return data
+    if isinstance(node, NdString):
+        return node.data
+    if isinstance(node, NdSexp):
+        children = node.nodes_only_code
+        if not children:
+            return []
+        # Plist: first child is a keyword symbol.
+        if isinstance(children[0], NdSymbol) and children[0].data.startswith(':'):
+            result: dict[str, object] = {}
+            i = 0
+            while i < len(children) - 1:
+                node_key = children[i]
+                if not isinstance(node_key, NdSymbol):
+                    break
+                key = node_key.data[1:].replace('-', '_')
+                val = _sexp_node_to_python(children[i + 1])
+                result[key] = val
+                i += 2
+            return result
+        # Otherwise a list.
+        return [_sexp_node_to_python(child) for child in children]
+    return None
 
 
 def parse_local_defs(defs: FmtDefs, node_parent: NdSexp) -> None:
@@ -430,6 +379,25 @@ def parse_local_defs(defs: FmtDefs, node_parent: NdSexp) -> None:
                                                     if isinstance(node_val, NdSymbol):
                                                         val = node_val.data
                                                         hints[key] = int(val) if val.isdigit() else val
+                                                elif key == 'elisp-autofmt':
+                                                    if isinstance(node_val, NdSexp):
+                                                        fmt_hints = _sexp_node_to_python(node_val)
+                                                        if isinstance(fmt_hints, dict):
+                                                            if hints is None:
+                                                                hints = fmt_hints
+                                                            else:
+                                                                hints.update(fmt_hints)
+
+                    # Merge with existing hints from JSON overrides (if any),
+                    # so inline `declare' adds to rather than replaces JSON rules.
+                    fn_data_existing = defs.fn_arity.get(symbol)
+                    if fn_data_existing is not None and fn_data_existing[3] is not None:
+                        if hints is None:
+                            hints = dict(fn_data_existing[3])
+                        else:
+                            merged = dict(fn_data_existing[3])
+                            merged.update(hints)
+                            hints = merged
 
                     defs.fn_arity[symbol] = FnArity(
                         symbol_type=symbol_type,
@@ -451,7 +419,7 @@ def scan_used_fn_defs(defs: FmtDefs, node_parent: NdSexp, fn_used: set[str]) -> 
     if node_parent.nodes_only_code:
         node = node_parent.nodes_only_code[0]
         # When `is_data`, the `fn_arity` value should be ignored.
-        if isinstance(node, NdSymbol) and (not node_parent.hints.get("is_data")):
+        if isinstance(node, NdSymbol) and (not node_parent.hints.get('is_data')):
             symbol = node.data
             len_prev = len(fn_used)
             fn_used.add(symbol)
@@ -561,14 +529,151 @@ def apply_rules_recursive_locked(node_parent: NdSexp) -> None:
             prev_original_line = node.original_lines[0]
 
 
+def resolve_arg_range(arg_range: list[int | None], num_items: int) -> range:
+    '''
+    Resolve an argument range list into a Python range (exclusive end).
+
+    Supports:
+    - ``[0]`` - single index.
+    - ``[2, null]`` - from index 2 to end.
+    - ``[0, -1]`` - all but last.
+    - ``[-1]`` - last only.
+    - ``[1, 3]`` - indices 1, 2.
+    '''
+    def resolve_index(idx: int) -> int:
+        if idx < 0:
+            idx = num_items + idx
+        return idx
+
+    start = resolve_index(arg_range[0] if arg_range[0] is not None else 0)
+    if len(arg_range) < 2:
+        end = start + 1
+    elif arg_range[1] is None:
+        end = num_items
+    else:
+        end = resolve_index(arg_range[1])
+
+    # Clamp to valid bounds.
+    start = max(0, min(start, num_items))
+    end = max(start, min(end, num_items))
+
+    return range(start, end)
+
+
+def _eval_condition(node: Node, condition: list[Any]) -> bool:
+    '''
+    Recursively evaluate a condition against a node.
+
+    Operator-first ordering (S-expression style):
+    - Comparison: ``[">=", "children_count", 2]``, ``["==", "bracket_type", "()"]``
+    - Boolean:    ``["and", [...cond...], [...cond...]]``
+    - Boolean:    ``["or", [...cond...], [...cond...]]``
+    - Negation:   ``["not", [...cond...]]``
+    '''
+    op = condition[0]
+
+    if op == 'and':
+        return all(_eval_condition(node, c) for c in condition[1:])
+    if op == 'or':
+        return any(_eval_condition(node, c) for c in condition[1:])
+    if op == 'not':
+        return not _eval_condition(node, condition[1])
+
+    # Comparison: [operator, property, value].
+    prop, value = condition[1], condition[2]
+    if prop == 'children_count':
+        actual: int | str = len(node.nodes_only_code) if isinstance(node, NdSexp) else 0
+    elif prop == 'bracket_type':
+        actual = node.brackets if isinstance(node, NdSexp) else ''
+    else:
+        raise FmtException('unknown condition property: {!r}'.format(prop))
+
+    if op == '==':
+        return bool(actual == value)
+    if op == '!=':
+        return bool(actual != value)
+    if isinstance(actual, int):
+        value_int = int(value)
+        if op == '>=':
+            return actual >= value_int
+        if op == '>':
+            return actual > value_int
+        if op == '<=':
+            return actual <= value_int
+        if op == '<':
+            return actual < value_int
+    raise FmtException('unknown condition operator: {!r}'.format(op))
+
+
+def _apply_hint_props(
+        cfg: FmtConfig,
+        node: Node,
+        props: dict[str, Any],
+) -> None:
+    '''
+    Apply hint properties to a single node.
+    '''
+    # Check condition before applying any properties.
+    if (condition := props.get('if')) is not None:
+        if not _eval_condition(node, condition):
+            return
+
+    if props.get('newline'):
+        node.force_newline = True
+
+    if isinstance(node, NdSexp):
+        if props.get('is_data'):
+            node.hints['is_data'] = True
+
+        if (group_val := props.get('group')) is not None:
+            assert isinstance(group_val, list) and len(group_val) == 2
+            group_beg, group_len = group_val
+            assert isinstance(group_beg, int)
+            assert isinstance(group_len, int)
+            if len(node.nodes_only_code) > group_beg + group_len:
+                node.hints['group'] = group_val
+                node.hints['break_point'] = 'overflow'
+                node.index_wrap_hint = group_beg + group_len
+
+        if (break_val := props.get('break')) is not None:
+            if break_val == 'always':
+                apply_relaxed_wrap(node, cfg.style)
+            elif break_val == 'multi':
+                apply_relaxed_wrap_when_multiple_args(node, cfg.style)
+
+        children_hints = props.get('children')
+        if children_hints is not None:
+            children_nodes = node.nodes_only_code
+            num_children = len(children_nodes)
+            for child_range, child_props in children_hints:
+                for j in resolve_arg_range(child_range, num_children):
+                    _apply_hint_props(cfg, children_nodes[j], child_props)
+
+
+def apply_args_hints(
+        cfg: FmtConfig,
+        node_parent: NdSexp,
+        args_hints: list[list[Any]],
+) -> None:
+    '''
+    Apply per-argument formatting rules from the ``args`` hint.
+    Arguments are 0-indexed from the first argument (excluding function symbol).
+    '''
+    nodes = node_parent.nodes_only_code
+    num_args = len(nodes) - 1
+
+    for arg_range, props in args_hints:
+        for i in resolve_arg_range(arg_range, num_args):
+            _apply_hint_props(cfg, nodes[i + 1], props)
+
+
 def apply_rules_recursive(cfg: FmtConfig, node_parent: NdSexp) -> None:
     '''
     Define line breaks using rules set by:
 
     - Function properties.
     - Function argument count.
-    - Hard coded checks (``let`` for e.g.).
-      NOTE: ideally there would be no hard coded checks, remove wherever possible.
+    - Per-argument formatting rules (``args`` hint).
 
     Without this, the LISP will be correct but not formatted in a way users might expect.
     '''
@@ -581,205 +686,101 @@ def apply_rules_recursive(cfg: FmtConfig, node_parent: NdSexp) -> None:
             wrap_locked = True
         elif isinstance(node := node_parent.nodes_only_code[0], NdSymbol):
             data_strip = node.data.rstrip('-*')
-            node_parent.index_wrap_hint = 1
-            # NOTE: this also captures `-let` and `-when-let` which are defined by dash.
-            if data_strip in {
-                    'and-let',  # Also: `and-let*`.
-                    'cl-letf',  # Also: `cl-letf*`.
-                    'if-let',  # Also: `if-let`.
-                    'let',  # Also: `let*`.
-                    'letrec',
-                    'pcase-let',  # Also: `pcase-let*`.
-                    'when-let',  # Also: `when-let*`.
-            }:
-                # A new line for each body of the let-statement.
-                node_parent.index_wrap_hint = 2
-                node_parent.hints['indent'] = 1
+            # First lookup built-in definitions, if they exist.
+            if node_parent.hints.get('is_data'):
+                pass
+            elif (fn_data := (cfg.defs.fn_arity.get(data_strip) or cfg.defs.fn_arity.get(node.data))) is not None:
+                # May be `FnArity` or a list.
+                symbol_type, nargs_min, nargs_max, hints = fn_data
+                if nargs_min is None:
+                    nargs_min = 0
 
-                # Only wrap with multiple declarations.
-                if cfg.use_wrap:
-                    # Regarding the following `is_data` assignment.
-                    #
-                    # This applies to:
-                    #    (cond
-                    #      (symbol
-                    #        (function X Y Z)
-                    #        result))
-                    # In this case it's incorrect to wrap `symbol` as if it is a function with two arguments.
-                    # Instead, the first argument should be considered "data".
-                    if use_native:
-                        if isinstance(node_parent.nodes_only_code[1], NdSexp):
-                            if len(node_parent.nodes_only_code[1].nodes_only_code) > 1:
-                                for subnode in node_parent.nodes_only_code[1].nodes_only_code[1:]:
-                                    subnode.force_newline = True
-                                    if isinstance(subnode, NdSexp):
-                                        subnode.hints["is_data"] = True
-                    else:
-                        if isinstance(node_parent.nodes_only_code[1], NdSexp):
-                            if len(node_parent.nodes_only_code[1].nodes_only_code) > 1:
-                                for subnode in node_parent.nodes_only_code[1].nodes_only_code:
-                                    subnode.force_newline = True
-                                    if isinstance(subnode, NdSexp):
-                                        subnode.hints["is_data"] = True
+                if hints is not None:
+                    node_parent.hints.update(hints)
+                hints = node_parent.hints
 
-                    if not use_native:
-                        if len(node_parent.nodes_only_code) > 2:
-                            # While this should always be true, while editing it can be empty at times.
-                            # Don't error in this case because it's annoying.
-                            node_parent.nodes_only_code[2].force_newline = True
-
-                    apply_relaxed_wrap(node_parent, cfg.style)
-
-            elif data_strip == 'cond':  # Also: `cond*`.
-                if cfg.use_wrap:
-                    # If the S-expression is data, don't attempt to evaluate it as a function call.
-                    # This applies to:
-                    #    (cond
-                    #      (symbol
-                    #        (function X Y Z)
-                    #        result))
-                    # In this case it's incorrect to wrap `symbol` as if it is a function with two arguments.
-                    # Instead, the first argument should be considered "data".
-                    for subnode in node_parent.nodes_only_code[1:]:
-                        subnode.force_newline = True
-                        if isinstance(subnode, NdSexp):
-                            if len(subnode.nodes_only_code) >= 2:
-                                subnode.nodes_only_code[1].force_newline = True
-                                apply_relaxed_wrap_when_multiple_args(subnode, cfg.style)
-                            subnode.hints["is_data"] = True
-
-            elif data_strip == 'pcase':
-                if cfg.use_wrap:
-                    # If the S-expression is data, don't attempt to evaluate it as a function call.
-                    # This applies to:
-                    #    (pcase var
-                    #      (symbol x))
-                    # In this case it's incorrect to wrap `symbol` as if it is a function with two arguments.
-                    # Instead, the first argument should be considered "data".
-                    for subnode in node_parent.nodes_only_code[2:]:
-                        # subnode.force_newline = True
-                        if isinstance(subnode, NdSexp):
-                            if len(subnode.nodes_only_code) >= 3:
-                                subnode.nodes_only_code[1].force_newline = True
-                                apply_relaxed_wrap_when_multiple_args(subnode, cfg.style)
-                            subnode.hints["is_data"] = True
-
-                    # Needed so the "value" is is not wrapped.
-                    node_parent.index_wrap_hint = 2
-                    # Needed so the body of the error cases is de-dented.
-                    node_parent.hints['indent'] = 1
-                    apply_relaxed_wrap(node_parent, cfg.style)
-
-            elif node.data in {
-                    'condition-case',
-                    'condition-case-unless-debug',
-            }:
-                if cfg.use_wrap:
-                    # If the S-expression is data, don't attempt to evaluate it as a function call.
-                    # This applies to:
-                    #    (condition-case error
-                    #        (progn
-                    #          result)
-                    #      (error
-                    #       result)
-                    # In this case it's incorrect to wrap `error` as if it is a function with two arguments.
-                    # Instead, the first argument should be considered "data".
-                    for subnode in node_parent.nodes_only_code[3:]:
-                        subnode.force_newline = True
-                        if isinstance(subnode, NdSexp):
-                            if len(subnode.nodes_only_code) >= 2:
-                                subnode.nodes_only_code[1].force_newline = True
-                                apply_relaxed_wrap_when_multiple_args(subnode, cfg.style)
-                            subnode.hints["is_data"] = True
-
-                    # Needed so the "error" id is not indented.
-                    node_parent.index_wrap_hint = 2
-                    # Needed so the body of the error cases is de-dented.
-                    node_parent.hints['indent'] = 2
-                    apply_relaxed_wrap(node_parent, cfg.style)
-            else:
-                # First lookup built-in definitions, if they exist.
-                if node_parent.hints.get("is_data"):
-                    pass
-                elif (fn_data := cfg.defs.fn_arity.get(node.data)) is not None:
-                    # May be `FnArity` or a list.
-                    symbol_type, nargs_min, nargs_max, hints = fn_data
-                    if nargs_min is None:
-                        nargs_min = 0
-
-                    if hints is not None:
-                        node_parent.hints.update(hints)
-                    hints = node_parent.hints
-
-                    hint_indent = hints.get('indent')
-                    if hint_indent is not None:
-                        # node_parent.index_wrap_hint = 1 + hint_indent
-                        if symbol_type in {'special', 'macro'}:
-                            if 'break' not in hints:
-                                hints['break'] = 'always'
-
-                    # First symbol counts for 1, another since wrapping takes place after this argument.
-                    node_parent.index_wrap_hint = nargs_min + 1
-
-                    # Wrap the first argument, instead of the last argument
-                    # so all arguments are at an equal level as having the last
-                    # argument split from the rest doesn't signify an important difference.
-                    if symbol_type == 'func':
-                        if hint_indent is None:
-                            if hints is not None and hints.get('break_point') != 'overflow':
-                                if node_parent.index_wrap_hint >= len(node_parent.nodes_only_code):
-                                    node_parent.index_wrap_hint = 1
-
-                    elif symbol_type == 'macro':
-                        if nargs_max == 'many':
-                            # So (with ...) macros don't keep the first argument aligned.
-                            node_parent.wrap_all_or_nothing_hint = True
-                            hints['break_point'] = 'overflow'
-
-                    elif symbol_type == 'special':
-                        # Used for special forms `unwind-protect`, `progn` .. etc.
-                        node_parent.wrap_all_or_nothing_hint = True
-                        if hints is None:
-                            hints = {}
+                hint_indent = hints.get('indent')
+                if hint_indent is not None:
+                    # node_parent.index_wrap_hint = 1 + hint_indent
+                    if symbol_type in {'special', 'macro'}:
                         if 'break' not in hints:
                             hints['break'] = 'always'
 
-                    if hints:
-                        # Always wrap the doc-string.
-                        if (hint_docstring := hints.get('doc-string')) is not None:
-                            # NOTE: no support for evaluating EMACS-lisp from Python
-                            # (so no support for symbol types).
-                            if isinstance(hint_docstring, int):
-                                node_parent.index_wrap_hint = min(node_parent.index_wrap_hint, hint_docstring)
+                # First symbol counts for 1, another since wrapping takes place after this argument.
+                node_parent.index_wrap_hint = nargs_min + 1
 
-                        if (hint_group := hints.get('group')) is not None:
-                            assert isinstance(hint_group, list) and len(hint_group) == 2
-                            group_beg, group_len = hint_group
-                            assert isinstance(group_beg, int)
-                            assert isinstance(group_len, int)
-                            if len(node_parent.nodes_only_code) > group_beg + group_len + 1:
-                                node_parent.index_wrap_hint = group_beg + group_len + 1
+                # Wrap the first argument, instead of the last argument
+                # so all arguments are at an equal level as having the last
+                # argument split from the rest doesn't signify an important difference.
+                if symbol_type == 'func':
+                    if hint_indent is None:
+                        if hints is not None and hints.get('break_point') != 'overflow':
+                            if node_parent.index_wrap_hint >= len(node_parent.nodes_only_code):
+                                node_parent.index_wrap_hint = 1
+
+                elif symbol_type == 'macro':
+                    if nargs_max == 'many':
+                        # So (with ...) macros don't keep the first argument aligned.
+                        node_parent.wrap_all_or_nothing_hint = True
+                        hints['break_point'] = 'overflow'
+
+                elif symbol_type == 'special':
+                    # Used for special forms `unwind-protect`, `progn` .. etc.
+                    node_parent.wrap_all_or_nothing_hint = True
+                    if hints is None:
+                        hints = {}
+                    if 'break' not in hints:
+                        hints['break'] = 'always'
+
+                if hints:
+                    # Always wrap the doc-string.
+                    if (hint_docstring := hints.get('doc-string')) is not None:
+                        # NOTE: no support for evaluating EMACS-lisp from Python
+                        # (so no support for symbol types).
+                        if isinstance(hint_docstring, int):
+                            node_parent.index_wrap_hint = min(node_parent.index_wrap_hint, hint_docstring)
+
+                    if (hint_group := hints.get('group')) is not None:
+                        assert isinstance(hint_group, list) and len(hint_group) == 2
+                        group_beg, group_len = hint_group
+                        assert isinstance(group_beg, int)
+                        assert isinstance(group_len, int)
+                        if len(node_parent.nodes_only_code) > group_beg + group_len:
+                            node_parent.index_wrap_hint = group_beg + group_len
+                        else:
+                            # Group not in use.
+                            del hints['group']
+
+                    if cfg.use_wrap:
+                        # Process per-argument formatting rules.
+                        if use_native:
+                            args_hints = hints.get('args_native')
+                            if args_hints is None:
+                                args_hints = hints.get('args')
+                        else:
+                            args_hints = hints.get('args')
+                        if args_hints is not None:
+                            apply_args_hints(cfg, node_parent, args_hints)
+
+                        if (val := hints.get('break')) is not None:
+                            if val == 'always':
+                                apply_relaxed_wrap(node_parent, cfg.style)
+                            elif val == 'multi':
+                                apply_relaxed_wrap_when_multiple_args(node_parent, cfg.style)
+                            elif val == 'to_wrap':  # Default
+                                pass
                             else:
-                                # Group not in use.
-                                del hints['group']
-
-                        if cfg.use_wrap:
-                            if (val := hints.get('break')) is not None:
-                                if val == 'always':
-                                    apply_relaxed_wrap(node_parent, cfg.style)
-                                elif val == 'multi':
-                                    apply_relaxed_wrap_when_multiple_args(node_parent, cfg.style)
-                                elif val == 'to_wrap':  # Default
-                                    pass
-                                else:
-                                    raise FmtException((
-                                        'unknown "break" for {:s}, expected a value in '
-                                        '["always", "multi", "to_wrap"]'
-                                    ).format(node.data))
-                else:
-                    if LOG_MISSING_DEFS is not None:
-                        with open(LOG_MISSING_DEFS, 'a', encoding='utf-8') as fh:
-                            fh.write('Missing: {:s}\n'.format(node.data))
+                                raise FmtException((
+                                    'unknown "break" for {:s}, expected a value in '
+                                    '["always", "multi", "to_wrap"]'
+                                ).format(node.data))
+            else:
+                # Unknown symbol: treat as a function call, wrapping after
+                # the first element (the function name).
+                node_parent.index_wrap_hint = 1
+                if LOG_MISSING_DEFS is not None:
+                    with open(LOG_MISSING_DEFS, 'a', encoding='utf-8') as fh:
+                        fh.write('Missing: {:s}\n'.format(node.data))
 
     if wrap_locked:
         if not node_parent.wrap_locked:
@@ -853,6 +854,95 @@ class FmtDefs:
         'fn_arity',
     )
 
+    @staticmethod
+    def _warn_json(filepath: str, context: str, msg: str) -> None:
+        sys.stderr.write('JSON definition: {:s}: {:s} in {!r}!\n'.format(context, msg, filepath))
+
+    @staticmethod
+    def _validate_condition(condition: Any, filepath: str, context: str) -> None:
+        if not isinstance(condition, list) or not condition:
+            FmtDefs._warn_json(filepath, context, 'condition must be a non-empty list, got {!r}'.format(condition))
+            return
+        op = condition[0]
+        if op == 'not':
+            if len(condition) != 2:
+                FmtDefs._warn_json(filepath, context, '"not" takes exactly 1 argument, got {:d}'.format(
+                    len(condition) - 1,
+                ))
+                return
+            FmtDefs._validate_condition(condition[1], filepath, context)
+        elif op in ('and', 'or'):
+            if len(condition) < 2:
+                FmtDefs._warn_json(filepath, context, '{!r} requires at least 1 argument'.format(op))
+                return
+            for sub in condition[1:]:
+                FmtDefs._validate_condition(sub, filepath, context)
+        elif op in ('==', '!=', '>=', '>', '<=', '<'):
+            if len(condition) != 3:
+                FmtDefs._warn_json(filepath, context, '{!r} takes exactly 2 arguments, got {:d}'.format(
+                    op, len(condition) - 1,
+                ))
+                return
+            if condition[1] not in ('children_count', 'bracket_type'):
+                FmtDefs._warn_json(filepath, context, 'unknown condition property {!r}'.format(condition[1]))
+        else:
+            FmtDefs._warn_json(filepath, context, 'unknown condition operator {!r}'.format(op))
+
+    @staticmethod
+    def _validate_props(props: Any, filepath: str, context: str) -> None:
+        if not isinstance(props, dict):
+            FmtDefs._warn_json(filepath, context, 'expected a dict, got {!r}'.format(type(props).__name__))
+            return
+        valid = {'if', 'newline', 'is_data', 'break', 'children', 'group'}
+        for key in props:
+            if key not in valid:
+                FmtDefs._warn_json(filepath, context, 'unexpected property {!r}'.format(key))
+        if 'if' in props:
+            FmtDefs._validate_condition(props['if'], filepath, context)
+        if 'children' in props:
+            FmtDefs._validate_args_list(props['children'], filepath, context + ' children')
+
+    @staticmethod
+    def _validate_args_list(args_list: Any, filepath: str, context: str) -> None:
+        if not isinstance(args_list, list):
+            FmtDefs._warn_json(filepath, context, 'expected a list, got {!r}'.format(type(args_list).__name__))
+            return
+        for entry in args_list:
+            if not isinstance(entry, list) or len(entry) != 2:
+                FmtDefs._warn_json(filepath, context, 'args entry must be a 2-element list, got {!r}'.format(entry))
+                continue
+            _range, props = entry
+            FmtDefs._validate_props(props, filepath, context)
+
+    @staticmethod
+    def _validate_hints(hints: Any, filepath: str, context: str) -> None:
+        if not isinstance(hints, dict):
+            FmtDefs._warn_json(filepath, context, 'expected a dict, got {!r}'.format(type(hints).__name__))
+            return
+        valid = {'indent', 'break', 'break_point', 'doc-string', 'group', 'args', 'args_native', 'is_data'}
+        for key in hints:
+            if key not in valid:
+                FmtDefs._warn_json(filepath, context, 'unexpected hint {!r}'.format(key))
+        for args_key in ('args', 'args_native'):
+            if args_key in hints:
+                FmtDefs._validate_args_list(hints[args_key], filepath, context)
+
+    @staticmethod
+    def _validate_func_entry(key: str, val: Any, filepath: str) -> None:
+        if isinstance(val, str):
+            return  # Alias, validated separately during resolution.
+        context = 'function {!r}'.format(key)
+        if not isinstance(val, list):
+            FmtDefs._warn_json(filepath, context, 'expected a list or string, got {!r}'.format(type(val).__name__))
+            return
+        if len(val) != 4:
+            FmtDefs._warn_json(filepath, context, 'expected 4 elements, got {:d}'.format(len(val)))
+            return
+        symbol_type = val[0]
+        if symbol_type not in ('func', 'macro', 'special'):
+            FmtDefs._warn_json(filepath, context, 'unknown type {!r}'.format(symbol_type))
+        FmtDefs._validate_hints(val[3], filepath, context)
+
     def __init__(
             self,
             *,
@@ -888,20 +978,44 @@ class FmtDefs:
                     sys.stderr.write('JSON definition: error ({:s}) parsing {!r}!\n'.format(str(ex), filepath))
                     continue
 
+                for key in fh_as_json:
+                    if key != 'functions':
+                        FmtDefs._warn_json(filepath, 'top-level', 'unexpected key {!r}'.format(key))
+
                 functions_from_json = fh_as_json.get('functions')
                 if functions_from_json is None:
                     continue
 
                 if type(functions_from_json) is not dict:
-                    sys.stderr.write(
-                        'JSON definition: "functions" entry is a {!r}, expected a dict in {!r}!\n'.format(
-                            type(functions_from_json).__name__,
-                            filepath,
-                        )
-                    )
+                    FmtDefs._warn_json(filepath, 'top-level', '"functions" must be a dict, got {!r}'.format(
+                        type(functions_from_json).__name__,
+                    ))
                     continue
 
+                for key, val in functions_from_json.items():
+                    FmtDefs._validate_func_entry(key, val, filepath)
+
                 self.fn_arity.update(functions_from_json)
+
+                # Resolve aliases (string values referencing another entry).
+                for key, val in functions_from_json.items():
+                    if isinstance(val, str):
+                        target: Any = val
+                        visited: set[str] = set()
+                        while isinstance(target, str):
+                            if target in visited:
+                                target = None
+                                break
+                            visited.add(target)
+                            target = self.fn_arity.get(target)
+                        if target is not None:
+                            self.fn_arity[key] = target
+                        else:
+                            sys.stderr.write(
+                                'JSON definition: alias {!r} -> {!r} not found in {!r}!\n'.format(
+                                    key, val, filepath,
+                                )
+                            )
 
 
 class FmtWriteCtx:
@@ -1073,7 +1187,7 @@ class NdSexp(Node):
         '''
         Return the ``FnArity`` from the first argument of this S-expressions symbol (if it is a symbol).
         '''
-        if self.nodes_only_code and (not self.hints.get("is_data")):
+        if self.nodes_only_code and (not self.hints.get('is_data')):
             node = self.nodes_only_code[0]
             if isinstance(node, NdSymbol):
                 return defs.fn_arity.get(node.data)
@@ -1084,7 +1198,7 @@ class NdSexp(Node):
         Return true if this may be a function call signature.
         '''
         if not allow_data:
-            if self.hints.get("is_data"):
+            if self.hints.get('is_data'):
                 return False
 
         if self.nodes_only_code:
@@ -1161,16 +1275,27 @@ class NdSexp(Node):
                 yield node
                 yield from node.iter_nodes_recursive_only_sexp()
 
+    def _iter_nodes_recursive_only_sexp_without_wrap_locked(self) -> Generator[NdSexp, None, None]:
+        '''
+        Iterate over all S-expression nodes recursively, skipping wrap-locked nodes.
+        '''
+        for node in self.nodes_only_code:
+            if isinstance(node, NdSexp) and not node.wrap_locked:
+                yield node
+                yield from node._iter_nodes_recursive_only_sexp_without_wrap_locked()
+
     def iter_nodes_recursive_with_self_only_sexp_without_wrap_locked(self) -> Generator[NdSexp, None, None]:
         '''
         Iterate over all S-expression nodes recursively, including this node (first).
         '''
         if not self.wrap_locked:
             yield self
-            for node in self.nodes_only_code:
-                if isinstance(node, NdSexp) and not node.wrap_locked:
-                    yield node
-                    yield from node.iter_nodes_recursive_only_sexp()
+            # Must filter `wrap_locked` at every level of recursion, not just direct children.
+            # A non-wrap-locked node can contain a wrap-locked descendant
+            # (e.g. a quoted `'(...)` nested inside a regular function call).
+            # These descendants must be excluded so they never receive `prior_states`,
+            # which would cause the unwrap pass to attempt modifying nodes whose formatting must be preserved.
+            yield from self._iter_nodes_recursive_only_sexp_without_wrap_locked()
 
     def iter_nodes_recursive_with_parent(self) -> Generator[tuple[Node, NdSexp], None, None]:
         '''
@@ -1288,8 +1413,11 @@ class NdSexp(Node):
                     if self.nodes_only_code[1].force_newline is False:
                         # Add 1 for the space for the trailing space.
                         # Values may be overwritten below.
-                        level_next_first = level_next_pre = level_next_base + len(self.nodes_only_code[0].data) + 2
-                        node_code_index_pre_newline = 1
+                        #
+                        # Grouped data lists use simple indent, not alignment to the first value.
+                        if not (self.hints.get('is_data') and self.hints.get('group') is not None):
+                            level_next_first = level_next_pre = level_next_base + len(self.nodes_only_code[0].data) + 2
+                            node_code_index_pre_newline = 1
 
             if indent is not None:
                 if isinstance(self.nodes_only_code[0], NdSymbol):
@@ -1413,23 +1541,34 @@ class NdSexp(Node):
         '''
         Ensure some kinds of expressions are wrapped onto new files.
         '''
-        # Ensure There is never trailing non-wrapped S-expressions: e.g:
+        # A multi-line S-expression must always wrap onto the next line. e.g:
         #
         #    (a b c d (e
         #              f
         #              g))
         #
-        # This is only permissible for the first or second arguments, e.g:
+        # .. becomes:
+        #
+        #    (a b c d
+        #       (e
+        #        f
+        #        g))
+        #
+        # Function calls exempt the first argument (index 1), since a multi-line
+        # first argument on the same line as the function name produces the
+        # canonical:
         #
         #    (a (e
         #        f
         #        g))
         #
-        # While this could be supported currently it's not and I feel this adds awkward right shift.
+        # Data lists have no function-name exemption, so a multi-line value at
+        # index 1 must also wrap.
         # `assert cfg.use_native` # If we have `cfg`.
+        i_min = 1 if self.hints.get('is_data') else 2
         changed = False
         for i, node in enumerate(self.nodes_only_code):
-            if i > 1 and isinstance(node, NdSexp) and not node.force_newline and node.is_multiline():
+            if i >= i_min and isinstance(node, NdSexp) and not node.force_newline and node.is_multiline():
                 node.force_newline = True
                 changed = True
                 # if not self.force_newline:
@@ -1440,9 +1579,10 @@ class NdSexp(Node):
         '''
         Run ``flush_newlines_from_nodes_for_native`` recursively.
         '''
+        i_min = 1 if self.hints.get('is_data') else 2
         changed = False
         for i, node in enumerate(self.nodes_only_code):
-            if i > 1 and isinstance(node, NdSexp) and not node.force_newline and node.is_multiline():
+            if i >= i_min and isinstance(node, NdSexp) and not node.force_newline and node.is_multiline():
                 node.force_newline = True
                 changed = True
                 # if not self.force_newline:
@@ -1493,22 +1633,27 @@ class NdSexp(Node):
         Perform final operations after parsing.
         '''
         # Connect: ' (  to '(
-        i = len(self.nodes) - 1
-        while i > 0:
-            node = self.nodes[i]
-            if isinstance(node, NdSexp):
-                node_prev = self.nodes[i - 1]
-                if isinstance(node_prev, NdSymbol):
-                    if (
-                            not node_prev.data.strip('#,`\'') or
-                            # Some macros use `#foo(a(b(c)))` which need to be connected.
-                            is_hash_prefix_special_case(node_prev.data)
-                    ):
-                        del self.nodes[i - 1]
-                        node.prefix = node_prev.data
-                        i -= 1
-            i -= 1
-
+        if len(self.nodes) > 1:
+            has_merge_prefix = False
+            # The first check compares with its parent, but it's a NOOP.
+            # As we need the types to be different anyway.
+            node_prev = self
+            for node in self.nodes:
+                if isinstance(node, NdSexp):
+                    if isinstance(node_prev, NdSymbol):
+                        # Some macros use `#foo(a(b(c)))` which need to be connected.
+                        if is_prefix_symbol(node_prev.data):
+                            node.prefix = node_prev.data
+                            # Mark for removal.
+                            node_prev.data = ''
+                            has_merge_prefix = True
+                node_prev = node
+            if has_merge_prefix:
+                self.nodes = [
+                    node for node in self.nodes
+                    # Check if this is marked for removal.
+                    if not (isinstance(node, NdSymbol) and (node.data == ''))
+                ]
         self.nodes_only_code: list[Node] = [
             node for node in self.nodes
             if isinstance(node, NODE_CODE_TYPES)
@@ -1546,17 +1691,16 @@ class NdSexp(Node):
             if isinstance(node, NdSexp):
                 node.finalize_style(cfg)
 
-    def fmt_check_exceeds_column_max(
+    def fmt_check_exceeds_column_max_and_score(
             self,
             cfg: FmtConfig,
             level: int,
             trailing_parens: int,
             *,
-            calc_score: bool,
             test_node_terminate: Node | None = None,
     ) -> int:
         '''
-        :arg calc_score: When true, the return value is a score.
+        Return a score for how much lines exceed the fill column (bigger is worse).
         '''
         if cfg.fill_column == 0:
             raise RuntimeError('internal error, this should not be called')
@@ -1566,80 +1710,40 @@ class NdSexp(Node):
         level = 0
         _ctx = FmtWriteCtx(cfg)
 
-        # Avoid writing the string:
-        # Either calculate a score or early exit with an exception on the first over-length line found.
-        # This block can be removed without causing any problems, it just avoids some excessive work.
-        if test_node_terminate is None:
+        # Score or early-exit without building a string
+        # Works for both with and without test_node_terminate.
+        line_length = 0
+        score = 0
 
-            line_length = 0
-            score = 0
+        # Accumulate a score.
 
-            if calc_score:
-                # Accumulate a score.
-
-                def write_fn_fast(text: str) -> None:
-                    nonlocal line_length
-                    nonlocal score
-                    i = text.find('\n')
-                    if i == -1:
-                        line_length += len(text)
-                    else:
-                        i_prev = 0
-                        while True:
-                            line_length += i - i_prev
-                            if line_length > fill_column:
-                                score += 2 ** (line_length - fill_column)
-
-                            i_prev = i + 1
-                            i = text.find('\n', i_prev)
-                            if i == -1:
-                                line_length = len(text) - i_prev
-                                break
-                            line_length = 0
-
-                self.fmt_with_terminate_node(_ctx, write_fn_fast, level, test=True)
-                line_length += trailing_parens
-                if line_length > fill_column:
-                    score += 2 ** (line_length - fill_column)
+        def write_fn_fast(text: str) -> None:
+            nonlocal line_length
+            nonlocal score
+            i = text.find('\n')
+            if i == -1:
+                line_length += len(text)
             else:
-                # Simple, detect if the line length is exceeded.
-                # (score is effectively a boolean).
+                i_prev = 0
+                while True:
+                    line_length += i - i_prev
+                    if line_length > fill_column:
+                        score += 2 ** (line_length - fill_column)
 
-                def write_fn_fast(text: str) -> None:
-                    nonlocal line_length
-                    i = text.find('\n')
+                    i_prev = i + 1
+                    i = text.find('\n', i_prev)
                     if i == -1:
-                        line_length += len(text)
-                        if line_length > fill_column:
-                            raise FmtExceptionEarlyExit
-                    else:
-                        i_prev = 0
-                        while True:
-                            line_length += i - i_prev
-                            if line_length > fill_column:
-                                raise FmtExceptionEarlyExit
+                        line_length = len(text) - i_prev
+                        break
+                    line_length = 0
 
-                            i_prev = i + 1
-                            i = text.find('\n', i_prev)
-                            if i == -1:
-                                line_length = len(text) - i_prev
-                                break
-                            line_length = 0
+        self.fmt_with_terminate_node(
+            _ctx, write_fn_fast, level, test=True,
+            test_node_terminate=test_node_terminate,
+        )
 
-                try:
-                    self.fmt_with_terminate_node(_ctx, write_fn_fast, level, test=True)
-                except FmtExceptionEarlyExit:
-                    score = 1
-                if line_length + trailing_parens > fill_column:
-                    score = 1
-
-            return score
-
-        _data: list[str] = []
-        write_fn = _data.append
-
-        self.fmt_with_terminate_node(_ctx, write_fn, level, test=True, test_node_terminate=test_node_terminate)
-
+        # trailing_parens is only added when line_terminate is set
+        # (the terminate node is on the last formatted line).
         line_terminate = -1
         if not cfg.use_trailing_parens:
             if _ctx.line_terminate == _ctx.line:
@@ -1647,11 +1751,110 @@ class NdSexp(Node):
             elif test_node_terminate is None:
                 line_terminate = _ctx.line
 
-        data = ''.join(_data)
+        if line_terminate != -1:
+            line_length += trailing_parens
+        if line_length > fill_column:
+            score += 2 ** (line_length - fill_column)
 
+        return score
+
+    def fmt_check_exceeds_column_max(
+            self,
+            cfg: FmtConfig,
+            level: int,
+            trailing_parens: int,
+            *,
+            test_node_terminate: Node | None = None,
+    ) -> bool:
+        '''
+        Return true when any lines exceed the fill column.
+        '''
+        if cfg.fill_column == 0:
+            raise RuntimeError('internal error, this should not be called')
+
+        # Simple optimization, don't calculate excess white-space.
+        fill_column = cfg.fill_column - level
+        level = 0
+        _ctx = FmtWriteCtx(cfg)
+
+        # Score or early-exit without building a string.
+        # Works for both with and without test_node_terminate.
+        line_length = 0
+        score = False
+
+        # Simple, detect if the line length is exceeded.
+        # (score is effectively a boolean).
+
+        def write_fn_fast(text: str) -> None:
+            nonlocal line_length
+            i = text.find('\n')
+            if i == -1:
+                line_length += len(text)
+                if line_length > fill_column:
+                    raise FmtExceptionEarlyExit
+            else:
+                i_prev = 0
+                while True:
+                    line_length += i - i_prev
+                    if line_length > fill_column:
+                        raise FmtExceptionEarlyExit
+
+                    i_prev = i + 1
+                    i = text.find('\n', i_prev)
+                    if i == -1:
+                        line_length = len(text) - i_prev
+                        break
+                    line_length = 0
+
+        try:
+            self.fmt_with_terminate_node(
+                _ctx, write_fn_fast, level, test=True,
+                test_node_terminate=test_node_terminate,
+            )
+        except FmtExceptionEarlyExit:
+            score = True
+
+        if score is False:
+            line_terminate = -1
+            if not cfg.use_trailing_parens:
+                if _ctx.line_terminate == _ctx.line:
+                    line_terminate = _ctx.line_terminate
+                elif test_node_terminate is None:
+                    line_terminate = _ctx.line
+
+            if line_terminate != -1:
+                line_length += trailing_parens
+            if line_length > fill_column:
+                score = True
+
+        return score
+
+    def fmt_check_exceeds_column_max_maybe_score(
+            self,
+            cfg: FmtConfig,
+            level: int,
+            trailing_parens: int,
+            *,
+            test_node_terminate: Node | None,
+            calc_score: bool,
+    ) -> int:
+        '''
+        Us ``calc_score`` to select between calculating the score or a binary check.
+        Where 1 exceeds the width and 0 doesn't.
+        '''
         if calc_score:
-            return calc_over_long_line_score(data, fill_column, trailing_parens, line_terminate)
-        return calc_over_long_line_length_test(data, fill_column, trailing_parens, line_terminate)
+            return self.fmt_check_exceeds_column_max_and_score(
+                cfg,
+                level,
+                trailing_parens,
+                test_node_terminate=test_node_terminate,
+            )
+        return int(self.fmt_check_exceeds_column_max(
+            cfg,
+            level,
+            trailing_parens,
+            test_node_terminate=test_node_terminate,
+        ))
 
     def fmt(self,
             ctx: FmtWriteCtx,
@@ -1834,7 +2037,7 @@ def fmt_solver_fill_column_wrap_relaxed(
     Perform relaxed wrapping for blocks where any lines exceed the fill-column.
     '''
     # First be relaxed, then again if it fails.
-    if node_parent.fmt_check_exceeds_column_max(cfg, level, trailing_parens, calc_score=False):
+    if node_parent.fmt_check_exceeds_column_max(cfg, level, trailing_parens):
 
         if cfg.fill_column != 0:
             if not node_parent.wrap_all_or_nothing_hint:
@@ -1873,11 +2076,10 @@ def fmt_solver_fill_column_wrap_each_argument(
     assert i > 0
 
     node = node_parent.nodes_only_code[i]
-    score_init = node_parent.fmt_check_exceeds_column_max(
+    score_init = node_parent.fmt_check_exceeds_column_max_and_score(
         cfg,
         level,
         trailing_parens,
-        calc_score=True,
         test_node_terminate=node,
     )
 
@@ -1897,7 +2099,17 @@ def fmt_solver_fill_column_wrap_each_argument(
         #   (argument
         #     "Long string that does not fit")
         #
+        hint_group = node_parent.hints.get('group')
+        if hint_group is not None:
+            group_beg, group_len = hint_group
         while i != 0:
+            # When grouping, only wrap at group boundaries.
+            if hint_group is not None:
+                idx = i - group_beg
+                if idx >= 0 and (idx % group_len) != 0:
+                    i -= 1
+                    continue
+
             node = node_parent.nodes_only_code[i]
             if not node.force_newline:
                 node.force_newline = True
@@ -1908,7 +2120,6 @@ def fmt_solver_fill_column_wrap_each_argument(
                     cfg,
                     level,
                     trailing_parens,
-                    calc_score=False,
                     test_node_terminate=node,
                 ):
                     # Imply 'node_parent.wrap_all_or_nothing_hint', even when not set.
@@ -1932,11 +2143,10 @@ def fmt_solver_fill_column_wrap_each_argument(
 
         i = min(node_parent.index_wrap_hint, i_last)
         node = node_parent.nodes_only_code[i]
-        score_test = node_parent.fmt_check_exceeds_column_max(
+        score_test = node_parent.fmt_check_exceeds_column_max_and_score(
             cfg,
             level,
             trailing_parens,
-            calc_score=True,
             test_node_terminate=node,
         )
 
@@ -1956,19 +2166,17 @@ def fmt_solver_fill_column_wrap_each_argument(
     if cfg.style.use_native:
         node = node_parent.nodes_only_code[1]
         if not node.force_newline:
-            score_init = node_parent.fmt_check_exceeds_column_max(
+            score_init = node_parent.fmt_check_exceeds_column_max_and_score(
                 cfg,
                 level,
                 trailing_parens,
-                calc_score=True,
             )
             if score_init:
                 node.force_newline = True
-                score_test = node_parent.fmt_check_exceeds_column_max(
+                score_test = node_parent.fmt_check_exceeds_column_max_and_score(
                     cfg,
                     level,
                     trailing_parens,
-                    calc_score=True,
                 )
                 if score_test < score_init:
                     # Success, don't exclude.
@@ -2070,11 +2278,10 @@ def fmt_solver_fill_column_unwrap_aggressive(
         # It's possible there are no new states worth testing.
         if nodes_recursive:
             # Calculate this before making the first change.
-            parent_score_curr = node_parent.fmt_check_exceeds_column_max(
+            parent_score_curr = node_parent.fmt_check_exceeds_column_max_and_score(
                 cfg,
                 level,
                 trailing_parens,
-                calc_score=True,
             )
             if parent_score_curr == 0:
                 calc_score = False
@@ -2084,10 +2291,11 @@ def fmt_solver_fill_column_unwrap_aggressive(
                 node.newline_state_set(state_test)
 
             fmt_solver_newline_constraints_apply_recursive(node_parent, cfg, check_parent_multiline=True)
-            parent_score_test = node_parent.fmt_check_exceeds_column_max(
+            parent_score_test = node_parent.fmt_check_exceeds_column_max_maybe_score(
                 cfg,
                 level,
                 trailing_parens,
+                test_node_terminate=None,
                 calc_score=calc_score,
             )
             if parent_score_test <= parent_score_curr:
@@ -2141,10 +2349,11 @@ def fmt_solver_fill_column_unwrap_test_state(
             node.newline_state_set(state_curr)
             return None
 
-    parent_score_test = node_parent.fmt_check_exceeds_column_max(
+    parent_score_test = node_parent.fmt_check_exceeds_column_max_maybe_score(
         cfg,
         level,
         trailing_parens,
+        test_node_terminate=None,
         # If the current state has no over-length lines (such as long comments).
         # There is no need to do extra work. Any over-long line caused by the state being
         # tested can immediately be considered an error and early exit.
@@ -2403,11 +2612,10 @@ def fmt_solver_fill_column_unwrap_recursive(
 
             # Calculate the score to compare new states to.
             if parent_score_curr == -1:
-                parent_score_curr = node_parent.fmt_check_exceeds_column_max(
+                parent_score_curr = node_parent.fmt_check_exceeds_column_max_and_score(
                     cfg,
                     level,
                     trailing_parens,
-                    calc_score=True,
                 )
 
             # Attempt to load or calculate a better state
@@ -2784,7 +2992,7 @@ def diff_range_calc(data_src: str, data_dst: str) -> tuple[str, int, int]:
 
     # The buffers are a complete match.
     if i + 1 == data_len_min and len(data_src) == len(data_dst):
-        return "", -1, -1
+        return '', -1, -1
 
     ofs_beg = max(0, i - 1)
     i = len(data_src) - 1
@@ -3173,9 +3381,9 @@ def format_file(
 
         if diff_ofs_beg == -1 and diff_ofs_end == -1:
             # No change.
-            sys.stdout.write("(-1 . -1)\n")
+            sys.stdout.write('(-1 . -1)\n')
         else:
-            sys.stdout.write("({:d} . {:d})\n".format(
+            sys.stdout.write('({:d} . {:d})\n'.format(
                 diff_ofs_beg + 1,
                 (len(diff_range_data_src) - diff_ofs_end) + 1,
             ))
