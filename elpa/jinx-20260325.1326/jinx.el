@@ -5,8 +5,8 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2023
-;; Package-Version: 20260309.1544
-;; Package-Revision: 61bed3f77d37
+;; Package-Version: 20260325.1326
+;; Package-Revision: 70d7a0680edc
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/jinx
 ;; Keywords: convenience, text
@@ -103,7 +103,7 @@
     ;; while they should better be conf- or prog-modes.
     (yaml-mode . conf-mode)
     (yaml-ts-mode . conf-mode))
-  "Alist of faces per major mode.
+  "Alist of faces per mode (major or minor).
 These faces mark regions which should be included in spell
 checking."
   :type '(alist :key-type symbol :value-type (choice symbol (repeat face))))
@@ -150,15 +150,21 @@ Set to t to enable camelCase everywhere."
      message-header-xheader message-cited-text-1 message-cited-text-2
      message-cited-text-3 message-cited-text-4 gnus-cite-1 gnus-cite-2
      gnus-cite-3 gnus-cite-4 gnus-cite-5 gnus-cite-6 gnus-cite-7 gnus-cite-8
-     gnus-cite-9 gnus-cite-10 gnus-cite-11))
-  "Alist of faces per major mode.
+     gnus-cite-9 gnus-cite-10 gnus-cite-11)
+    (git-commit-mode
+     git-commit-keyword
+     git-commit-comment-branch-local git-commit-comment-branch-remote
+     git-commit-comment-button git-commit-comment-file
+     git-commit-comment-action))
+  "Alist of faces per mode (major or minor).
 These faces mark regions which should be excluded in spell
 checking."
   :type '(alist :key-type symbol :value-type (choice symbol (repeat face))))
 
 (defcustom jinx-exclude-properties
-  '((t read-only))
-  "Alist of properties per major mode.
+  '((t read-only)
+    (git-commit-mode invisible))
+  "Alist of properties per mode (major or minor).
 These properties mark regions which should be excluded in spell
 checking."
   :type '(alist :key-type symbol :value-type (choice symbol (repeat symbol))))
@@ -172,7 +178,7 @@ checking."
        "<?[-+_.~a-zA-Z][-+_.~:a-zA-Z0-9]*@[-.a-zA-Z0-9]+>?" ;; Email
        "\\(?:Local Variables\\|End\\):\\s-*$" ;; Local variable indicator
        "jinx-\\(?:languages\\|local-words\\):\\s-+.*$")) ;; Local variables
-  "List of excluded regexps per major mode.
+  "List of excluded regexps per mode (major or minor).
 The regexp must match at the beginning of the spell-checked word.
 Therefore `jinx-exclude-regexps' cannot be used to exclude larger parts
 of a buffer.  Write a custom predicate instead, see `jinx--predicates'."
@@ -573,9 +579,9 @@ If CHECK is non-nil, always check first."
   nil)
 
 (defun jinx--mode-list (list)
-  "Lookup by major mode in LIST."
+  "Lookup by mode (major or minor) in LIST."
   (cl-loop for (mode . vals) in list
-           if (or (eq mode t) (derived-mode-p mode))
+           if (or (and (boundp mode) (symbol-value mode)) (derived-mode-p mode))
            append (if (symbolp vals) (alist-get vals list) vals)))
 
 (defun jinx--get-org-language ()
