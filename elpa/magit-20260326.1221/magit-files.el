@@ -45,6 +45,7 @@
 (add-hook 'magit-find-blob-hook #'magit-blob-mode)
 
 (defvar-local magit-buffer--volatile nil)
+(put 'magit-buffer--volatile 'permanent-local t)
 
 ;;;###autoload
 (defun magit-find-file (rev file)
@@ -108,11 +109,11 @@ REV is a revision or one of \"{worktree}\" or \"{index}\"."
                               (buffer-local-value 'auto-revert-mode $))
                         (cons "." revert-without-query)
                       revert-without-query)))
-               (find-file-noselect file)))
+               (find-file-noselect file volatile)))
             ((not topdir)
              (error "%s is not inside a Git repository" file))
             ([defdir (file-name-directory file)]
-             [rev (magit--abbrev-if-hash rev)]
+             [rev (magit--abbrev-if-oid rev)]
              (unless (file-in-directory-p file topdir)
                (error "%s is not inside Git repository %s" file topdir))
              (with-current-buffer
@@ -140,11 +141,16 @@ REV is a revision or one of \"{worktree}\" or \"{index}\"."
      (with-current-buffer buf
        (when (and (not volatile) magit-buffer--volatile)
          (setq magit-buffer--volatile nil)
-         (rename-buffer (magit--blob-buffer-name rev file))))
+         (rename-buffer (magit--blob-buffer-name rev file))
+         (magit--blob-cache-remove buf)))
      buf)
     ([buf (get-buffer-create (magit--blob-buffer-name rev file volatile))]
      (with-current-buffer buf
-       (setq magit-buffer--volatile volatile))
+       ;; Undo is disabled in hidden buffers by default.  While this
+       ;; may look like it is doing the opposite, this enabled undo.
+       (setq buffer-undo-list nil)
+       (setq magit-buffer--volatile volatile)
+       (magit--blob-cache-put buf))
      buf)))
 
 (defun magit--blob-buffer-name (rev file &optional volatile)
@@ -169,8 +175,8 @@ REV is a revision or one of \"{worktree}\" or \"{index}\"."
         (erase-buffer)
         (save-excursion
           (magit--insert-blob-contents magit-buffer-revision
-                                       (magit-file-relative-name))))))
-  (magit--blob-normal-mode))
+                                       (magit-file-relative-name))))
+      (magit--blob-normal-mode))))
 
 (defun magit--blob-normal-mode ()
   (let ((buffer-file-name magit-buffer-file-name)
@@ -180,11 +186,25 @@ REV is a revision or one of \"{worktree}\" or \"{index}\"."
                          '(global-diff-hl-mode-enable-in-buffer ; Emacs >= 30
                            global-diff-hl-mode-enable-in-buffers ; Emacs < 30
                            eglot--maybe-activate-editing-mode)
-                         #'eq)))
-    ;; We want `normal-mode' to respect nil `enable-local-variables'.
-    ;; The FIND-FILE argument wasn't designed for our use case,
-    ;; so we have to use this strange invocation to achieve that.
-    (normal-mode (not enable-local-variables))
+                         #'eq))
+        (buffer-name (buffer-name)))
+    ;; `font-lock-mode' contains a hardcoded condition that prevents it
+    ;; from being enabled in hidden buffers.  Use a fake `buffer-name'
+    ;; to trick it into believing the buffer is not hidden.
+    (if (eq (aref buffer-name 0) ?\s)
+        (letrec ((adv (lambda (fn &optional buffer)
+                        (let ((name (funcall fn buffer)))
+                          (if (equal name buffer-name)
+                              (substring name 1)
+                            name)))))
+          (advice-add 'buffer-name :around adv)
+          (unwind-protect
+              (normal-mode (not enable-local-variables))
+            (advice-remove 'buffer-name adv)))
+      ;; We want `normal-mode' to respect nil `enable-local-variables'.
+      ;; The FIND-FILE argument wasn't designed for our use case,
+      ;; so we have to use this strange invocation to achieve that.
+      (normal-mode (not enable-local-variables)))
     (setq buffer-read-only t)
     (set-buffer-modified-p nil)
     (run-hooks 'magit-find-blob-hook)))
@@ -221,6 +241,72 @@ REV is a revision or one of \"{worktree}\" or \"{index}\"."
         (_
          (magit-diff-visit--offset line file before rev)))))
     (move-to-column col)))
+
+(defvar magit--blob-cache-limit 100
+  "Limit number of volatile blob buffers to be kept alive.
+If nil, only use `magit--blob-cache-timeout'.")
+(defvar magit--blob-cache-timeout 1800
+  "Limit age, since last access, of volatile blob buffers to be kept alive.
+Age is tracked in seconds.  If nil, only use `magit--blob-cache-limit'.")
+(defvar magit--blob-cache-interval 600
+  "Seconds between volatile blob buffer pruning runs.")
+(defvar magit--blob-cache-timer nil)
+(defvar magit--blob-cache nil)
+
+(defun magit--blob-cache-put (buffer)
+  (if-let ((elt (assq buffer magit--blob-cache)))
+      (setcdr elt (current-time))
+    (push (cons buffer (current-time)) magit--blob-cache))
+  (magit--blob-cache-start))
+
+(defun magit--blob-cache-remove (buffer)
+  (and$ (assq buffer magit--blob-cache)
+        (delq $ magit--blob-cache)))
+
+(defun magit--blob-cache-start ()
+  (when (and magit--blob-cache-interval
+             (not magit--blob-cache-timer))
+    (setq magit--blob-cache-timer
+          (run-with-timer magit--blob-cache-interval nil
+                          #'magit--blob-cache-prune))))
+
+(defun magit--blob-cache-prune ()
+  (when magit--blob-cache-timer
+    (cancel-timer magit--blob-cache-timer))
+  (pcase-let
+      ((`(,active ,rest)
+        (magit--separate
+         (pcase-lambda (`(,buffer))
+           (or (get-buffer-window buffer t)
+               (not (eq (buffer-local-value 'magit-buffer--volatile buffer) t))))
+         magit--blob-cache)))
+    (when magit--blob-cache-timeout
+      (setq rest
+            (seq-filter (pcase-lambda (`(,buffer . ,time))
+                          (cond
+                            ((not (buffer-live-p buffer)) nil)
+                            ((time-less-p (time-subtract (current-time) time)
+                                          magit--blob-cache-timeout)
+                             buffer)
+                            (t (kill-buffer buffer) nil)))
+                        rest)))
+    (when-let* ((_ magit--blob-cache-limit)
+                (ceiling (- magit--blob-cache-limit (length active)))
+                (_ (length> rest ceiling)))
+      (let ((sorted (static-if (>= emacs-major-version 30)
+                        (sort rest :key (##float-time (cdr %))
+                              :lessp #'< :reverse t)
+                      (cl-sort rest #'> :key (##float-time (cdr %))))))
+        (dolist (kill (nthcdr ceiling sorted))
+          (kill-buffer (car kill)))
+        (setq rest (ntake ceiling sorted))))
+    (setq magit--blob-cache (nconc active rest)))
+  (magit--blob-cache-start))
+
+(defun magit--blob-cache-zap ()
+  (pcase-dolist (`(,buffer) magit--blob-cache)
+    (kill-buffer buffer))
+  (setq magit--blob-cache nil))
 
 (define-advice lsp (:around (fn &rest args) magit-find-file)
   "Do nothing when visiting blob using `magit-find-file' and similar.
