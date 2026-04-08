@@ -6,8 +6,8 @@
 ;; Homepage: https://github.com/magit/transient
 ;; Keywords: extensions
 
-;; Package-Version: 20260310.2036
-;; Package-Revision: 7131bec61e55
+;; Package-Version: 20260324.1304
+;; Package-Revision: 63f907237d24
 ;; Package-Requires: (
 ;;     (emacs   "28.1")
 ;;     (compat  "30.1")
@@ -136,7 +136,9 @@ from Emacs commit e680827e814e155cf79175d87ff7c6ee3a08b69a."
          ,(macroexp-progn body))
      ((debug error)
       (transient--emergency-exit ,id)
-      (signal (car err) (cdr err)))))
+      (static-if (fboundp 'error-type-p) ; since Emacs 31.1
+          (signal err)
+        (signal (car err) (cdr err))))))
 
 (defun transient--exit-and-debug (&rest args)
   (transient--emergency-exit :debugger)
@@ -3049,9 +3051,11 @@ value.  Otherwise return CHILDREN as is.")
                 (when (symbolp command)
                   (remove-function (symbol-function command) advice))
                 (oset prefix unwind-suffix nil)))))
-        (add-function :around (if (symbolp this-command)
-                                  (symbol-function this-command)
-                                this-command)
+        (add-function :around
+                      (if (and (symbolp this-command)
+                               (not (subrp (symbol-function this-command))))
+                          (symbol-function this-command)
+                        this-command)
                       advice '((depth . -99)))
         (cl-assert
          (>= emacs-major-version 30) nil
@@ -3102,9 +3106,11 @@ value.  Otherwise return CHILDREN as is.")
       (setq advice `(lambda (fn &rest args)
                       (interactive ,advice-interactive)
                       (apply ',advice-body fn args)))
-      (add-function :around (if (symbolp this-command)
-                                (symbol-function this-command)
-                              this-command)
+      (add-function :around
+                    (if (and (symbolp this-command)
+                             (not (subrp (symbol-function this-command))))
+                        (symbol-function this-command)
+                      this-command)
                     advice '((depth . -99))))))
 
 (defun transient--premature-post-command ()
@@ -3892,7 +3898,7 @@ Call `transient-default-value' but because that is a noop for
               (case-fold-search nil)
               (regexp (if (slot-exists-p obj 'argument-regexp)
                           (oref obj argument-regexp)
-                        (format "\\`%s\\(.*\\)" (oref obj argument)))))
+                        (format "\\`%s\\([^z-a]*\\)\\'" (oref obj argument)))))
           (if (memq multi-value '(t rest))
               (cdr (assoc argument value))
             (let ((match (lambda (v)
@@ -3987,7 +3993,9 @@ it\", in which case it is pointless to preserve history.)"
              (reader (oref obj reader))
              (choices (if (functionp choices) (funcall choices) choices))
              (prompt (transient-prompt obj))
-             (value (if multi-value (string-join value ",") value))
+             (value (if (and multi-value value)
+                        (string-join value ",")
+                      value))
              (history-key (or (oref obj history-key)
                               (oref obj command)))
              (transient--history (alist-get history-key transient-history))
