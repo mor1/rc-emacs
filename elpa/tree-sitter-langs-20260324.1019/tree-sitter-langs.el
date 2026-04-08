@@ -6,8 +6,8 @@
 ;; Maintainer: Jen-Chieh Shen <jcs090218@gmail.com>
 ;; Keywords: languages tools parsers tree-sitter
 ;; Homepage: https://github.com/emacs-tree-sitter/tree-sitter-langs
-;; Package-Version: 20260316.32
-;; Package-Revision: adddf398dd86
+;; Package-Version: 20260324.1019
+;; Package-Revision: 2100fb92dac0
 ;; Package-Requires: ((emacs "26.1") (tree-sitter "0.15.0"))
 ;; SPDX-License-Identifier: MIT
 
