@@ -93,6 +93,10 @@
 
 (use-package emacs
   :ensure nil
+  :hook
+  ;; auto-chmod scripts on save
+  (after-save-hook . #'executable-make-buffer-file-executable-if-script-p)
+
   :init
   ;; codings
   (prefer-coding-system 'utf-8)
@@ -109,6 +113,11 @@
   (global-hl-line-mode t)
   (global-visual-line-mode t)
 
+  (repeat-mode 1) ;; repeat-mode - press the last key to repeat commands without the prefix
+  (global-visual-wrap-prefix-mode 1) ;; wrapped lines respect the indentation of the original line
+  (minibuffer-regexp-mode 1) ;; live visual feedback when writing regexps in the minibuffer
+  (add-to-list 'initial-frame-alist '(fullscreen . maximized)) ;; maximize the initial frame automatically
+
   (add-to-list 'interpreter-mode-alist '("uv" . python-mode))
   (put 'narrow-to-region 'disabled nil)
 
@@ -118,15 +127,16 @@
   (auto-window-vscroll nil)
   (scroll-bar-mode nil)
   (scroll-conservatively 10000)
+  (scroll-margin 1)
   (scroll-preserve-screen-position t)
   (scroll-step 1)
 
   ;; indentation
   (fill-column 80)
-  (indent-tabs-mode nil)
+  (indent-tabs-mode nil) ;; don't use tabs
+  (tab-width 8) ;; but maintain correct appearance
   (lisp-indent-offset 2)
   (tab-always-indent 'complete)
-  (tab-width 4)
 
   ;; bibtex
   (bibtex-autokey-titleword-separator ".")
@@ -138,19 +148,66 @@
   (ns-function-modifier 'hyper)
 
   ;; misc
-  (column-number-mode t)
+  ;; minibuffers
+  (context-menu-mode t)
+  (enable-recursive-minibuffers t)
+  (read-extended-command-predicate #'command-completion-default-include-p)
+  (minibuffer-prompt-properties
+   '(read-only t cursor-intangible t face minibuffer-prompt))
 
+  ;; highlight the current error in compilation/grep buffers
+  (next-error-message-highlight t)
+  (use-short-answers t) ;; enable y/n answers
+
+  ;; ;; mode line settings
+  (line-number-mode t)
+  (column-number-mode t)
+  (size-indication-mode t)
+
+  ;; turn off bidirectional text scanning
+  (bidi-display-reordering 'left-to-right)
+  (bidi-paragraph-direction 'left-to-right)
+  (bidi-inhibit-bpa t)
+
+  (redisplay-skip-fontification-on-input t) ;; skip fontification during input
+  (read-process-output-max (* 4 1024 1024)) ;; grow to 4MB, useful for LSPs
+
+  ;; no cursors in non-selected windows
+  (cursor-in-non-selected-windows nil)
+  (highlight-nonselected-windows nil)
+
+  ;; kill ring
+  (save-interprogram-paste-before-kill t) ; clipboard into kill ring *before* overwriting it
+  (kill-do-not-save-duplicates t) ; dedup kill ring
+
+  (set-mark-command-repeat-pop t) ;; faster mark popping C-u C-SPC followed by C-SPC only
+
+  (reb-re-syntax 'string) ;; sane syntax in re-builder
+  (ffap-machine-p-known 'reject) ;; don't try to ping text that looks like a hostname
+
+  (window-combination-resize t) ;; proportionally resize windows on split
+
+  (help-window-select t) ;; auto-select help window on opening
+
+  ;; counting lazy isearch matches
+  (isearch-lazy-count t)
+  (lazy-count-prefix-format nil)
+  (lazy-count-suffix-format " [%s/%s]")
+
+  ;; misc
+  (blink-cursor-mode -1)
+  (large-file-warning-threshold (* 100 1024 1024))
+  (load-prefer-newer t)
+  (column-number-mode t)
   (comment-auto-fill-only-comments t)
   (completion-cycle-threshold 3)
-  (context-menu-mode t)
   (custom-safe-themes
    '("7fea145741b3ca719ae45e6533ad1f49b2a43bf199d9afaee5b6135fd9e6f9b8" default))
 
-  (default-major-mode 'text-mode t)
+  (default-major-mode 'text-mode)
 
   (display-time-day-and-date t)
 
-  (enable-recursive-minibuffers t)
   (epg-pinentry-mode 'loopback)
 
   (frame-title-format "%b  %f" t)
@@ -173,7 +230,7 @@
   (uniquify-buffer-name-style 'post-forward-angle-brackets nil (uniquify))
   (unkillable-scratch t)
   (vc-follow-symlinks t)
-  (visible-bell t)
+  (ring-bell-function 'ignore) ;;  (visible-bell t)
   (visual-line-fringe-indicators '(right-triangle right-curly-arrow)))
 
 (use-package auto-compile
@@ -1267,6 +1324,19 @@
  ("<home>" . beginning-of-buffer) ; M-<
  ("<end>" . end-of-buffer) ; M->
  )
+
+;; reversible C-x 1
+
+(winner-mode +1)
+
+(defun toggle-delete-other-windows ()
+  "Delete other windows in frame if any, or restore previous window config."
+  (interactive)
+  (if (and winner-mode (equal (selected-window) (next-window)))
+      (winner-undo)
+    (delete-other-windows)))
+
+(global-set-key (kbd "C-x 1") #'toggle-delete-other-windows)
 
 ;; Horizontal scrolling mouse events should actually scroll left and right.
 (global-set-key
