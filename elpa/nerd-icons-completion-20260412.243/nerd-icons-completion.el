@@ -4,8 +4,8 @@
 
 ;; Author: Hongyu Ding <rainstormstudio@yahoo.com>
 ;; Keywords: lisp
-;; Package-Version: 20251029.2106
-;; Package-Revision: d09ea987ed3d
+;; Package-Version: 20260412.243
+;; Package-Revision: 45b585d97219
 ;; Package-Requires: ((emacs "25.1") (nerd-icons "0.0.1") (compat "30"))
 ;; URL: https://github.com/rainstormstudio/nerd-icons-completion
 ;; Keywords: convenient, files, icons
@@ -161,13 +161,15 @@ This should map the kind to `eglot--kind-names' and
 
 (cl-defmethod nerd-icons-completion-get-icon (cand (_cat (eql buffer)))
   "Return the icon for the candidate CAND of completion category buffer."
-  (let ((icon (with-current-buffer cand
-                (nerd-icons-icon-for-buffer :height nerd-icons-completion-icon-size))))
-    (concat
-     (if (symbolp icon)
-         (nerd-icons-faicon "nf-fa-sticky_note_o" :height nerd-icons-completion-icon-size)
-       icon)
-     " ")))
+  (if-let* ((buf (get-buffer cand)))
+      (let ((icon (with-current-buffer buf
+                    (nerd-icons-icon-for-buffer :height nerd-icons-completion-icon-size))))
+        (concat
+         (if (symbolp icon)
+             (nerd-icons-faicon "nf-fa-sticky_note_o" :height nerd-icons-completion-icon-size)
+           icon)
+         " "))
+    ""))
 
 (autoload 'bookmark-get-filename "bookmark")
 (cl-defmethod nerd-icons-completion-get-icon (cand (_cat (eql bookmark)))
