@@ -3,8 +3,8 @@
 ;; Copyright 2018 Jane Street Group, LLC <opensource@janestreet.com>
 ;;           2017- Christophe Troestler
 ;; URL: https://github.com/ocaml/dune
-;; Package-Version: 20260401.1726
-;; Package-Revision: 8aefc6cb021f
+;; Package-Version: 20260410.1721
+;; Package-Revision: df26745e52be
 
 ;;; Commentary:
 
