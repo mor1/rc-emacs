@@ -1,9 +1,9 @@
 ;; -*- no-byte-compile: t; lexical-binding: nil -*-
-(define-package "python-mode" "20260131.1655"
+(define-package "python-mode" "20260410.1849"
   "Python major mode."
   ()
   :url "https://gitlab.com/groups/python-mode-devs"
-  :commit "2a6fdb1c823bf8125f6354727db63c8894092821"
-  :revdesc "2a6fdb1c823b"
+  :commit "c6f7bcd79d43b2a4915b75c481355601f95968a0"
+  :revdesc "c6f7bcd79d43"
   :keywords '("python" "languages" "oop")
   :maintainers '((nil . "python-mode@python.org")))

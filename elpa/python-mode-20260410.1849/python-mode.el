@@ -1,7 +1,7 @@
 ;;; python-mode.el --- Edit, debug, develop, run Python programs. -*- lexical-binding: t; -*- 
 
-;; Package-Version: 20260131.1655
-;; Package-Revision: 2a6fdb1c823b
+;; Package-Version: 20260410.1849
+;; Package-Revision: c6f7bcd79d43
 
 ;; URL: https://gitlab.com/groups/python-mode-devs
 
@@ -13548,7 +13548,7 @@ module-qualified names."
           (and (boundp (quote py-comment-auto-fill-p))(not py-comment-auto-fill-p)))
       (progn
         (set (make-local-variable (quote py-comment-auto-fill-p)) t)
-        (setq fill-column py-comment-fill-column)
+        (setq-local fill-column py-comment-fill-column)
         (auto-fill-mode 1))
     (set (make-local-variable (quote py-comment-auto-fill-p)) nil)
     (auto-fill-mode -1)))
@@ -13565,10 +13565,10 @@ module-qualified names."
   "Internal use by ‘py--run-auto-fill-timer’"
   (let ((pps (parse-partial-sexp (point-min) (point))))
     (cond ((and (nth 4 pps)(numberp py-comment-fill-column))
-           (setq fill-column py-comment-fill-column))
+           (setq-local fill-column py-comment-fill-column))
           ((and (nth 3 pps)(numberp py-docstring-fill-column))
-           (setq fill-column py-docstring-fill-column))
-          (t (setq fill-column py-fill-column-orig)))))
+           (setq-local fill-column py-docstring-fill-column))
+          (t (setq-local fill-column py-fill-column-orig)))))
 
 (defun py--run-auto-fill-timer ()
   "Set fill-column to values according to environment.
@@ -24998,7 +24998,7 @@ Fill according to ‘py-docstring-style’ "
             (and (bolp) (looking-at "[ \t]*#[# \t]*")))
            (py-fill-comment))
           (docstring
-           ;; (setq fill-column py-docstring-fill-colum;; n)
+           ;; (setq-local fill-column py-docstring-fill-colum;; n)
            (py--fill-docstring beg end justify)
            )
           (t
