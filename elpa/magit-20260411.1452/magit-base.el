@@ -504,6 +504,9 @@ and delay of your graphical environment or operating system."
    (heading-highlight-face :initform 'magit-diff-hunk-heading-highlight)
    (heading-selection-face :initform 'magit-diff-hunk-heading-selection)))
 
+(defun magit--meta-hunk-p (section)
+  (not (cdr (oref section value))))
+
 (setf (alist-get 'file   magit--section-type-alist) 'magit-file-section)
 (setf (alist-get 'module magit--section-type-alist) 'magit-module-section)
 (setf (alist-get 'hunk   magit--section-type-alist) 'magit-hunk-section)
@@ -1041,6 +1044,17 @@ Imenu's potentially outdated and therefore unreliable cache by
 setting `imenu--index-alist' to nil before calling that function."
   (setq imenu--index-alist nil)
   (which-function))
+
+(static-if (version< emacs-version "31.1")
+    (define-advice dabbrev-capf (:around (fn) git-commit)
+      "Backport bugfix from debbug#80645 / a7d05207214 / 31.1.
+See #5551 and #5556."
+      (cl-letf (((symbol-function #'user-error)
+                 (lambda (format &rest args)
+                   (unless (string-prefix-p "No dynamic expansion" format)
+                     (signal 'user-error
+                             (list (apply #'format-message format args)))))))
+        (funcall fn))))
 
 ;;; Kludges for Custom
 
